@@ -2,7 +2,6 @@ import threading
 from pathlib import Path
 
 import pytest
-
 from physicslens.costguard import (
     BudgetExceeded,
     CircuitOpen,
@@ -330,10 +329,13 @@ def test_voice_bills_whole_seconds(harness):
 
 def test_voice_concurrency_cap(harness):
     c = harness.client
-    with c.voice_session(run_id="a", max_seconds=5), c.voice_session(run_id="b", max_seconds=5):
-        with pytest.raises(Exception, match="too many concurrent"):
-            with c.voice_session(run_id="c", max_seconds=5):
-                pass
+    with (
+        c.voice_session(run_id="a", max_seconds=5),
+        c.voice_session(run_id="b", max_seconds=5),
+        pytest.raises(Exception, match="too many concurrent"),
+        c.voice_session(run_id="c", max_seconds=5),
+    ):
+        pass
 
 
 def test_reasoning_reported_separately_is_billed(harness):

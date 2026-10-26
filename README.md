@@ -80,7 +80,7 @@ SAM 3.1 is used here as a **scientific measurement instrument**: its masks becom
 - **Active experimentation.** The agent detects when the data is ambiguous and requests the experiment that resolves it.
 - **Live mode.** Equations converge on screen in real time; if the dynamics change mid-recording (say, the string is shortened), PhysicsLens detects the regime change and refits.
 - **Uncertainty, not just numbers.** Parameters come with bootstrap confidence intervals.
-- **Cost-safe by construction.** Every paid API call goes through a cost guard with hard budget caps, a model allowlist, rate limiting, caching, and a kill switch. A typical 10-second analysis costs about $0.10.
+- **Cost-safe by construction.** Every paid API call goes through a cost guard with hard budget caps, a model allowlist, rate limiting, caching, and a kill switch. Identical clips hit a response cache, so re-processing costs nothing.
 
 ## Tech stack
 
@@ -136,7 +136,7 @@ tests/         unit tests (run with mocked models)
 
 All code in this repository was written during the hackathon building period (Oct 27 to Nov 4, 2026). This list is updated as features land.
 
-- [ ] Cost guard: budgets, allowlist, rate limiting, caching, kill switch
+- [x] Cost guard: budgets, allowlist, rate limiting, caching, kill switch, persistent spend ledger (tested with mocked models)
 - [ ] Recorded mode: video → SAM 3.1 tracking → calibrated trajectory
 - [ ] Hypothesis generation with Muse Spark Open
 - [ ] Fitting (SciPy + PySINDy) with BIC model selection

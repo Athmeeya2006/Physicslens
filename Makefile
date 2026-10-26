@@ -28,7 +28,7 @@ test:
 	MOCK_MODELS=1 APP_ENV=dev $(BIN)/pytest -q tests
 
 smoke:
-	@read -p "This makes REAL paid API calls (expected < \$$0.25). Continue? [y/N] " ans; \
+	@read -p "This makes REAL paid API calls (capped by smoke_cap_usd in config/budget.yaml). Continue? [y/N] " ans; \
 	if [ "$$ans" = "y" ]; then APP_ENV=dev MOCK_MODELS=0 $(BIN)/python -m physicslens.smoke; else echo "Cancelled."; fi
 
 report:

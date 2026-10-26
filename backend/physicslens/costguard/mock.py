@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Self
 
 import httpx
 import openai
@@ -34,10 +34,10 @@ class _Stream:
     def __init__(self, final: Any):
         self._final = final
 
-    def __enter__(self) -> _Stream:
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         return None
 
     def get_final_response(self) -> Any:

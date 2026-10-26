@@ -1,5 +1,4 @@
 import pytest
-
 from physicslens.settings import ConfigError, Settings, load_budget, validate
 
 

@@ -468,7 +468,7 @@ def _get(obj: Any, *path: str) -> Any:
 def _dump(resp: Any) -> dict[str, Any]:
     try:
         return resp.model_dump(mode="json") if hasattr(resp, "model_dump") else {}
-    except Exception as e:  # raw payload is diagnostic only; losing it must not lose the result
+    except (TypeError, ValueError) as e:  # raw payload is diagnostic only; losing it must not lose the result
         log.warning("Could not serialize response for cache: %s", e)
         return {}
 
