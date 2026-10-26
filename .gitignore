@@ -1,0 +1,78 @@
+# ---------- Secrets (never commit) ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.modal.toml
+
+# ---------- Private: personal budgets, spend data, planning notes ----------
+config/budget.yaml
+docs/
+reports/
+
+# ---------- Runtime data ----------
+var/
+*.db
+*.sqlite
+*.sqlite3
+.KILL
+outputs/
+cache/
+logs/
+*.log
+
+# ---------- Media (keep only small public clips in samples/) ----------
+samples/private/
+*.mov
+*.webm
+*.wav
+*.mp3
+/*.mp4
+var/**/*.mp4
+
+# ---------- Model weights (never commit) ----------
+*.gguf
+*.safetensors
+*.pte
+*.ptd
+*.bin
+models/
+hf_cache/
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# ---------- Node / Next.js ----------
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
+next-env.d.ts
+
+# ---------- Editors / OS ----------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

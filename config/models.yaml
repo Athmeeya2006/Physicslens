@@ -1,0 +1,29 @@
+# Model allowlist. costguard/client.py refuses any model ID not listed here.
+# NEVER add: muse-wonder-1.0, muse-image-1.0 (too expensive / not needed).
+
+meta_api:
+  base_url: https://api.meta.ai/v1
+  api_key_env: MODEL_API_KEY
+  models:
+    muse-spark-1.3:
+      use: fallback reasoning, simulation-code generation (demo/prod)
+      api: responses
+    muse-spark-1.3-contributor:
+      use: same as muse-spark-1.3 in APP_ENV=dev only, if the account has access
+      api: responses
+      note: Meta may train on inputs/outputs; 150 RPM; no "max" reasoning
+    sam-3.1:
+      use: video tracking + reference-object segmentation
+      api: responses (streaming)
+    muse-voice-transcribe-1.0:
+      use: voice what-if questions
+      api: websocket wss://api.meta.ai/v1/asr/realtime
+
+baseten:
+  base_url: https://inference.baseten.co/v1
+  api_key_env: BASETEN_API_KEY
+  models:
+    meta-models/muse-spark-open-1026:
+      use: primary reasoning (scene understanding, hypotheses, agent decisions, explanations)
+      api: chat_completions
+      note: hackathon guide model string; smoke test must confirm it exists (alt name meta-models/muse-spark-open)

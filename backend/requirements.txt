@@ -1,0 +1,19 @@
+# Pinned backend dependencies (Python 3.11+).
+openai==3.39.0
+pydantic==2.14.1
+PyYAML==6.0.3
+python-dotenv==1.2.4
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+websockets==17.3
+httpx==0.28.1
+meta-sam-parser==0.1.0
+numpy==2.5.4
+scipy==1.18.1
+pysindy==2.1.0
+opencv-python-headless==5.0.0.93
+mujoco==3.17.0
+
+# Dev / test
+pytest==9.1.1
+ruff==0.17.2
