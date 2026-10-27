@@ -143,8 +143,8 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Fitting (SciPy + PySINDy) with BIC model selection and bootstrap uncertainty
 - [x] Verification agent with simulate-and-compare on held-out data
 - [x] Ghost overlay on the real video (web UI)
-- [ ] Live camera mode with converging equations
-- [ ] Experiment requests for ambiguous data
+- [x] Live camera mode with converging equations (instant on-server tracking, refined by SAM 3.1 in parallel chunks; tap the object to lock on)
+- [x] Experiment requests for ambiguous data, with the agent's full decision trail on screen
 - [ ] Regime-change detection
 - [ ] Voice what-ifs with Muse Voice Transcribe
 - [ ] Exports: JSON, Python simulation, MuJoCo MJCF, shareable MP4
