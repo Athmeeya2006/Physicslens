@@ -6,7 +6,8 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:static": "STATIC_EXPORT=1 next build"
   },
   "dependencies": {
     "katex": "0.19.1",

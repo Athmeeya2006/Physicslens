@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Gallery } from "@/components/Gallery";
 import { ResultView } from "@/components/ResultView";
-import type { Budget, Health, RunView } from "@/lib/api";
-import { getBudget, getHealth, getRun, startRun } from "@/lib/api";
+import type { Budget, GalleryItem, Health, RunView } from "@/lib/api";
+import { accessCode as readAccessCode, getBudget, getGallery, getHealth, getRun, startRun } from "@/lib/api";
+
+declare global {
+  interface Window {
+    turnstile?: { render: (el: HTMLElement, opts: { sitekey: string; callback: (token: string) => void }) => void };
+  }
+}
 
 const POLL_MS = 1000;
 
@@ -14,9 +21,13 @@ export default function Home() {
   const [lengthCm, setLengthCm] = useState("");
   const [run, setRun] = useState<RunView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const turnstileBox = useRef<HTMLDivElement>(null);
 
-  const accessCode = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("code");
+  const accessCode = readAccessCode();
+  const withCode = (path: string) => (accessCode ? `${path}${path.includes("?") ? "&" : "?"}code=${encodeURIComponent(accessCode)}` : path);
 
   useEffect(() => {
     getHealth()
@@ -25,6 +36,7 @@ export default function Home() {
         if (h.app_env === "dev") getBudget().then(setBudget).catch(() => setBudget(null));
       })
       .catch(() => setError("Cannot reach the PhysicsLens backend."));
+    getGallery().then(setGallery).catch(() => setGallery([]));
     // ?run=<id> opens a finished run, so results can be reloaded and shared by link.
     const shared = new URLSearchParams(window.location.search).get("run");
     if (shared) poll(shared);
@@ -46,6 +58,28 @@ export default function Home() {
       .catch((e: Error) => setError(e.message));
   };
 
+  useEffect(() => {
+    // Bot check for public uploads only, and only when the deployment configures it.
+    const key = health?.turnstile_site_key;
+    if (!key || !health?.can_upload || !turnstileBox.current) return;
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    script.async = true;
+    script.onload = () => window.turnstile?.render(turnstileBox.current!, { sitekey: key, callback: setTurnstileToken });
+    document.body.appendChild(script);
+    return () => script.remove();
+  }, [health]);
+
+  const openRun = (id: string) => {
+    if (timer.current) clearTimeout(timer.current);
+    const url = new URL(window.location.href);
+    url.searchParams.set("run", id);
+    window.history.replaceState(null, "", url);
+    setError(null);
+    poll(id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
@@ -53,7 +87,7 @@ export default function Home() {
     setRun(null);
     try {
       const length = lengthCm ? Number(lengthCm) / 100 : null;
-      const r = await startRun(file, length, accessCode);
+      const r = await startRun(file, length, turnstileToken);
       setRun(r);
       const url = new URL(window.location.href);
       url.searchParams.set("run", r.run_id);
@@ -72,7 +106,10 @@ export default function Home() {
       <header>
         <h1>PhysicsLens</h1>
         <p className="tagline">Film something moving. Get the equation that governs it, verified.</p>
-        <p className="small"><a href={`/live${accessCode ? `?code=${encodeURIComponent(accessCode)}` : ""}`}>Go live with the camera</a></p>
+        <nav className="small nav">
+          {health?.can_go_live && <a href={withCode("/live")}>Go live with the camera</a>}
+          <a href={withCode("/health")}>Machine health</a>
+        </nav>
         {budget && (
           <div className="budget" title="Dev only: spend vs caps">
             {Object.entries(budget).map(([p, b]) => (
@@ -84,6 +121,10 @@ export default function Home() {
         )}
       </header>
 
+      {health && !health.can_upload && (
+        <p className="card muted">Uploading your own clip is closed right now. Explore the gallery below: every result there is a real analysis.</p>
+      )}
+      {(!health || health.can_upload) && (
       <form className="card upload" onSubmit={submit}>
         <label className="file">
           <input type="file" accept="video/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
@@ -97,7 +138,9 @@ export default function Home() {
         <p className="muted small">
           Tips: hold the phone still and side-on to the motion, and keep an A4 sheet flat in the same plane for scale.
         </p>
+        {health?.turnstile_site_key && <div ref={turnstileBox} />}
       </form>
+      )}
 
       {error && <p className="error">{error}</p>}
 
@@ -110,7 +153,16 @@ export default function Home() {
         </ol>
       )}
 
-      {run?.status === "done" && run.result && <ResultView runId={run.run_id} result={run.result} />}
+      {run?.status === "done" && run.result && (
+        <>
+          {gallery.find((g) => g.id === run.run_id) && (
+            <p className="credit">{gallery.find((g) => g.id === run.run_id)!.credit}</p>
+          )}
+          <ResultView runId={run.run_id} result={run.result} />
+        </>
+      )}
+
+      <Gallery items={gallery} onOpen={openRun} />
     </main>
   );
 }

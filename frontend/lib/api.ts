@@ -77,6 +77,30 @@ export interface Health {
   status: string;
   app_env: string;
   mock_mode: boolean;
+  audience: "dev" | "judge" | "public";
+  can_upload: boolean;
+  can_go_live: boolean;
+  turnstile_site_key: string;
+}
+
+export interface GalleryItem {
+  id: string;
+  title: string;
+  description: string;
+  credit: string;
+  status?: string;
+  family?: string;
+  equation_title?: string;
+  object?: string;
+}
+
+export function accessCode(): string | null {
+  return typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("code");
+}
+
+function codeHeaders(): HeadersInit {
+  const code = accessCode();
+  return code ? { "X-Access-Code": code } : {};
 }
 
 export type Budget = Record<string, { spent_usd: number; hard_cap_usd: number; spent_today_usd: number; daily_cap_usd: number }>;
@@ -95,7 +119,8 @@ async function json<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const getHealth = () => fetch(`${API_BASE}/api/health`).then((r) => json<Health>(r));
+export const getHealth = () => fetch(`${API_BASE}/api/health`, { headers: codeHeaders() }).then((r) => json<Health>(r));
+export const getGallery = () => fetch(`${API_BASE}/api/gallery`).then((r) => json<GalleryItem[]>(r));
 export const getBudget = () => fetch(`${API_BASE}/api/budget`).then((r) => json<Budget>(r));
 export const getRun = (id: string) => fetch(`${API_BASE}/api/runs/${id}`).then((r) => json<RunView>(r));
 export const clipUrl = (id: string) => `${API_BASE}/api/runs/${id}/clip.mp4`;
@@ -116,10 +141,10 @@ export function makeShareVideo(id: string): Promise<string> {
     .then((r) => `${API_BASE}${r.url}`);
 }
 
-export function startRun(file: File, pendulumLengthM: number | null, accessCode: string | null): Promise<RunView> {
+export function startRun(file: File, pendulumLengthM: number | null, turnstileToken: string | null): Promise<RunView> {
   const form = new FormData();
   form.append("video", file);
   if (pendulumLengthM) form.append("pendulum_length_m", String(pendulumLengthM));
-  const headers: HeadersInit = accessCode ? { "X-Access-Code": accessCode } : {};
-  return fetch(`${API_BASE}/api/runs`, { method: "POST", body: form, headers }).then((r) => json<RunView>(r));
+  if (turnstileToken) form.append("turnstile_token", turnstileToken);
+  return fetch(`${API_BASE}/api/runs`, { method: "POST", body: form, headers: codeHeaders() }).then((r) => json<RunView>(r));
 }

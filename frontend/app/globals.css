@@ -120,3 +120,10 @@ tr.flagged td { color: var(--bad); font-weight: 600; }
 .trend-chart .tooltip rect { fill: var(--bg); stroke: var(--line); }
 .trend-chart .tooltip text { fill: var(--text); font-size: 11px; }
 .upload textarea { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; }
+.nav { display: flex; gap: 16px; flex-wrap: wrap; }
+.section-title { font-size: 1.2rem; margin: 24px 0 4px; }
+.gallery { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); margin-top: 12px; }
+.gallery-card { display: grid; gap: 6px; text-align: left; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+  border-radius: 12px; padding: 14px; font-weight: 400; justify-items: start; }
+.gallery-card:hover { border-color: var(--accent); }
+.credit { font-size: 0.75rem; color: var(--muted); }

@@ -15,10 +15,13 @@ from typing import Any
 from .agent.llm import LLMError
 from .costguard import CostGuardClient, CostGuardError
 from .costguard.guard import BUSY_MESSAGE
+from .perception.media import MediaError
 from .pipeline import AnalysisError, RunOptions, analyze
 from .settings import Settings
 
 log = logging.getLogger("physicslens.runs")
+
+PUBLIC_PAUSED_MESSAGE = "Free analyses are paused for today. Browse the gallery above, or come back tomorrow."
 
 
 @dataclass
@@ -36,12 +39,15 @@ class RunManager:
         self.settings = settings
         self.client = client
         self.root = settings.data_dir / "runs"
+        self.gallery_root = settings.repo_root / "gallery"
         self._runs: dict[str, RunState] = {}
         self._lock = threading.Lock()
         self._pool = ThreadPoolExecutor(max_workers=workers)
 
     def run_dir(self, run_id: str) -> Path:
-        return self.root / run_id
+        # Curated gallery entries (tracked in the repo) are looked up first; they are read-only showcases.
+        gallery = self.gallery_root / run_id
+        return gallery if gallery.is_dir() else self.root / run_id
 
     def start(self, video: Path, options: RunOptions) -> RunState:
         state = RunState(run_id=video.parent.name)
@@ -73,10 +79,12 @@ class RunManager:
             (video.parent / "result.json").write_text(json.dumps(state.result, default=str))
         except (AnalysisError, LLMError) as e:
             state.status, state.error = "error", str(e)
+        except MediaError:
+            state.status, state.error = "error", "Couldn't read that video. Please upload an MP4 or MOV file."
         except CostGuardError as e:
-            # Judges and public visitors never see budget wording.
+            # Judges and public visitors never see budget wording; public visitors are pointed to the gallery.
             state.status = "error"
-            state.error = str(e) if options.audience == "dev" else BUSY_MESSAGE
+            state.error = {"dev": str(e), "judge": BUSY_MESSAGE}.get(options.audience, PUBLIC_PAUSED_MESSAGE)
             log.error("Run %s stopped by costguard: %s", state.run_id, e)
         except Exception:
             log.exception("Run %s crashed", state.run_id)
@@ -84,3 +92,16 @@ class RunManager:
 
     def public_view(self, state: RunState) -> dict[str, Any]:
         return {k: v for k, v in asdict(state).items() if k != "started"}
+
+
+    def gallery(self) -> list[dict[str, Any]]:
+        """Curated, precomputed results anyone can open for free."""
+        items = []
+        for d in sorted(self.gallery_root.glob("*/meta.json")):
+            meta = json.loads(d.read_text())
+            result_file = d.parent / "result.json"
+            result = json.loads(result_file.read_text()) if result_file.is_file() else {}
+            eq = result.get("equation") or {}
+            items.append({"id": d.parent.name, **meta, "status": result.get("status"), "family": result.get("family"),
+                          "equation_title": eq.get("title"), "object": (result.get("scene") or {}).get("moving_object")})
+        return sorted(items, key=lambda i: i.get("order", 99))

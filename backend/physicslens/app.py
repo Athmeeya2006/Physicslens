@@ -18,6 +18,7 @@ from fastapi import (
     Form,
     Header,
     HTTPException,
+    Request,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
@@ -41,6 +42,7 @@ from .physics.health import (
     trend,
 )
 from .pipeline import AnalysisError, RunOptions, trajectory_from_result
+from .public import PublicQuota, client_address, turnstile_ok
 from .runs import RunManager
 from .settings import load_settings
 from .voice.events import final_turn, partial_text
@@ -51,6 +53,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 settings = load_settings()
 client = CostGuardClient(settings)
 runs = RunManager(settings, client)
+public_quota = PublicQuota(settings.data_dir / "public.db", int(client.guard.budget.get("public_per_ip_daily_analyses", 3)))
 
 MAX_UPLOAD_BYTES = 200 * 1024 * 1024
 MAX_FRAME_BYTES = 2 * 1024 * 1024
@@ -75,10 +78,22 @@ def audience_for(access_code: str | None) -> str:
     return "public"
 
 
+def public_try_enabled() -> bool:
+    return os.environ.get("PUBLIC_TRY_ENABLED", "0") == "1"
+
+
 @app.get("/api/health")
-def health() -> dict[str, object]:
-    # mock_mode drives the red "MOCK MODE" banner in the UI.
-    return {"status": "ok", "app_env": settings.app_env, "mock_mode": settings.mock_models}
+def health(x_access_code: Annotated[str | None, Header()] = None) -> dict[str, object]:
+    # mock_mode drives the red "MOCK MODE" banner; audience decides what the page offers (never any quota numbers).
+    audience = audience_for(x_access_code)
+    return {"status": "ok", "app_env": settings.app_env, "mock_mode": settings.mock_models, "audience": audience,
+            "can_upload": audience != "public" or public_try_enabled(), "can_go_live": audience != "public",
+            "turnstile_site_key": os.environ.get("TURNSTILE_SITE_KEY", "") if audience == "public" else ""}
+
+
+@app.get("/api/gallery")
+def gallery() -> list[dict]:
+    return runs.gallery()
 
 
 @app.get("/api/budget")
@@ -91,13 +106,22 @@ def budget() -> dict[str, object]:
 
 @app.post("/api/runs")
 def create_run(
+    request: Request,
     video: Annotated[UploadFile, File()],
     pendulum_length_m: Annotated[float | None, Form()] = None,
+    turnstile_token: Annotated[str | None, Form()] = None,
     x_access_code: Annotated[str | None, Header()] = None,
+    x_forwarded_for: Annotated[str | None, Header()] = None,
 ) -> dict[str, object]:
     audience = audience_for(x_access_code)
-    if audience == "public" and os.environ.get("PUBLIC_TRY_ENABLED", "0") != "1":
-        raise HTTPException(status_code=403, detail="Uploads are closed right now; please browse the gallery.")
+    if audience == "public":
+        if not public_try_enabled():
+            raise HTTPException(status_code=403, detail="Uploads are closed right now; please browse the gallery.")
+        addr = client_address(request.client.host if request.client else None, x_forwarded_for)
+        if not turnstile_ok(turnstile_token, addr):
+            raise HTTPException(status_code=403, detail="Please complete the quick check above the upload button.")
+        if not public_quota.take(addr):
+            raise HTTPException(status_code=429, detail="You've used today's free analyses. Browse the gallery, or come back tomorrow.")
     suffix = Path(video.filename or "").suffix.lower()
     if suffix not in VIDEO_SUFFIXES:
         raise HTTPException(status_code=400, detail="Please upload a video file (MP4 or MOV).")
