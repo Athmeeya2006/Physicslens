@@ -26,9 +26,9 @@ from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
 from .physics.coords import Coordinates, fit_circle, to_coordinates
 from .physics.fit import FitResult, fit_model
 from .physics.models import MODELS, models_for
+from .physics.regime import RegimeChange, detect_change
 from .physics.sindy import discover
 from .physics.uncertainty import bootstrap
-from .physics.regime import RegimeChange, detect_change
 from .physics.verify import Verdict, assess, judge_candidates
 from .sigproc.cleanup import detect_impacts, fill_short_gaps, split_at
 from .sigproc.summary import summarize
