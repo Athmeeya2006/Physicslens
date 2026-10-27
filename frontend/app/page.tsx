@@ -132,10 +132,10 @@ export default function Home() {
             {offline ? (
               <p className="muted">
                 The analysis server isn&apos;t connected to this preview, so new clips can&apos;t be analyzed here. Every recording
-                on the right is a complete, real analysis you can open.
+                in the list is a complete, real analysis you can open.
               </p>
             ) : health && !health.can_upload ? (
-              <p className="muted">Analyzing your own clip is closed right now. Every recording on the right is a complete, real analysis.</p>
+              <p className="muted">Analyzing your own clip is closed right now. Every recording in the list is a complete, real analysis.</p>
             ) : (
               <form className="stack" onSubmit={submit}>
                 <label className={`dropzone ${file ? "has-file" : ""}`}>

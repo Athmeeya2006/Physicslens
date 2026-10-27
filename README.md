@@ -9,7 +9,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | | |
 |---|---|
 | 🎥 **Demo video (3 min)** | _link coming_ |
-| 🌐 **Try it** | _link coming_ (judges: the access code is in the submission notes) |
+| 🌐 **Try it** | [physicslens.vercel.app](https://physicslens.vercel.app): real analyses with the ghost overlay, decision trail and exports. Analyzing your own clip needs the hosted backend (judges: the access code is in the submission notes) |
 
 ---
 
