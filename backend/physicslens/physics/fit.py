@@ -102,13 +102,14 @@ def fit_window(spec: ModelSpec, c: Coordinates, stop: int, theta0: np.ndarray, l
                          max_nfev=max_nfev).x
 
 
-def fit_model(spec: ModelSpec, c: Coordinates) -> FitResult:
+def fit_model(spec: ModelSpec, c: Coordinates, warm: dict[str, float] | None = None) -> FitResult:
+    """warm: parameters from a previous fit of the same model (live mode); skips the slow continuation start."""
     if spec.family != c.family:
         raise ValueError(f"{spec.id} is a {spec.family} model, coordinates are {c.family}.")
     n_samples, d = c.q.shape
     kin = differentiate(c.q, 1.0 / (c.t[1] - c.t[0]))
     noise = noise_sigma(c.q, kin.pos, 1.0 / (c.t[1] - c.t[0]))
-    guess = initial_guess(spec, c)
+    guess = {**initial_guess(spec, c), **(warm or {})}
     theta = np.concatenate([[guess[p] for p in spec.param_names], kin.pos[0], kin.vel[0]])
     span = np.ptp(c.q, axis=0).max() + 1e-9
     vspan = np.abs(kin.vel).max() + 1e-9
@@ -116,7 +117,7 @@ def fit_model(spec: ModelSpec, c: Coordinates) -> FitResult:
     upper = np.concatenate([[p.upper for p in spec.params], c.q.max(axis=0) + span, 3 * vspan * np.ones(d)])
 
     n_train = int(n_samples * TRAIN_FRACTION)
-    for frac in CONTINUATION:
+    for frac in (1.0,) if warm else CONTINUATION:
         theta = fit_window(spec, c, max(8, int(n_train * frac)), theta, lower, upper)
     params_train, y0_train = _unpack(spec, theta)
     sim_train = simulate(spec, params_train, y0_train, c.t, c.ctx)

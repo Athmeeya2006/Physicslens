@@ -94,3 +94,5 @@ details summary { cursor: pointer; }
 .chip.accepted { background: var(--ok); }
 .chip.tied { background: var(--warn); }
 .chip.rejected { background: var(--bad); }
+
+a { color: var(--accent); }

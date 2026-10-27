@@ -72,6 +72,7 @@ export default function Home() {
       <header>
         <h1>PhysicsLens</h1>
         <p className="tagline">Film something moving. Get the equation that governs it, verified.</p>
+        <p className="small"><a href={`/live${accessCode ? `?code=${encodeURIComponent(accessCode)}` : ""}`}>Go live with the camera</a></p>
         {budget && (
           <div className="budget" title="Dev only: spend vs caps">
             {Object.entries(budget).map(([p, b]) => (

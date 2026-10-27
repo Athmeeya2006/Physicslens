@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hmac
 import logging
 import os
@@ -9,11 +10,21 @@ import shutil
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import (
+    FastAPI,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from .costguard import CostGuardClient
+from .live import LiveConfig, LiveSession
 from .pipeline import RunOptions
 from .runs import RunManager
 from .settings import load_settings
@@ -26,6 +37,8 @@ client = CostGuardClient(settings)
 runs = RunManager(settings, client)
 
 MAX_UPLOAD_BYTES = 200 * 1024 * 1024
+MAX_FRAME_BYTES = 2 * 1024 * 1024
+MAX_LIVE_FRAMES = 25 * 60 * 10  # 10 minutes at 25 fps; budget caps normally end a session long before
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".webm", ".mkv"}
 
 app = FastAPI(title="PhysicsLens")
@@ -104,3 +117,40 @@ def get_clip(run_id: str) -> FileResponse:
     if not path.is_file():
         raise HTTPException(status_code=404)
     return FileResponse(path, media_type="video/mp4")
+
+
+@app.websocket("/ws/live")
+async def live(ws: WebSocket) -> None:
+    """First message: JSON {fps, pendulum_length_m?, access_code?}. Then one binary JPEG per camera frame."""
+    await ws.accept()
+    init = await ws.receive_json()
+    audience = audience_for(init.get("access_code"))
+    if audience == "public":
+        await ws.send_json({"type": "notice", "level": "error", "message": "Live mode needs the access code; the gallery is open to everyone."})
+        await ws.close()
+        return
+    loop = asyncio.get_running_loop()
+
+    def send(msg: dict) -> None:
+        # Called from worker threads; the socket belongs to the event loop.
+        asyncio.run_coroutine_threadsafe(ws.send_json(msg), loop)
+
+    run_dir = runs.new_run_dir()
+    fps = min(float(init.get("fps") or 25), 30.0)
+    length = init.get("pendulum_length_m")
+    session = LiveSession(client, run_dir, f"live-{run_dir.name}",
+                          LiveConfig(fps=fps, pendulum_length_m=float(length) if length else None, audience=audience), send)
+    await ws.send_json({"type": "ready", "run_id": run_dir.name})
+    try:
+        for _ in range(MAX_LIVE_FRAMES):
+            data = await ws.receive_bytes()
+            if len(data) > MAX_FRAME_BYTES:
+                continue
+            session.add_frame(data)
+        await ws.send_json({"type": "notice", "level": "info", "message": "Session length limit reached."})
+    except WebSocketDisconnect:
+        pass
+    except ValueError as e:
+        await ws.send_json({"type": "notice", "level": "error", "message": str(e)})
+    finally:
+        session.close()
