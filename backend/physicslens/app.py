@@ -25,6 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from .costguard import CostGuardClient
+from .export.mp4 import ExportError, render_share_video
 from .live import LiveConfig, LiveSession
 from .pipeline import RunOptions
 from .runs import RunManager
@@ -110,14 +111,43 @@ def get_run(run_id: str) -> dict[str, object]:
     return runs.public_view(state)
 
 
-@app.get("/api/runs/{run_id}/clip.mp4")
-def get_clip(run_id: str) -> FileResponse:
+def _run_file(run_id: str, name: str) -> Path:
     if not run_id.replace("-", "").isalnum():
         raise HTTPException(status_code=404)
-    path = runs.run_dir(run_id) / "clip.mp4"
+    return runs.run_dir(run_id) / name
+
+
+@app.get("/api/runs/{run_id}/clip.mp4")
+def get_clip(run_id: str) -> FileResponse:
+    path = _run_file(run_id, "clip.mp4")
     if not path.is_file():
         raise HTTPException(status_code=404)
     return FileResponse(path, media_type="video/mp4")
+
+
+@app.post("/api/runs/{run_id}/share")
+def make_share_video(run_id: str) -> dict[str, str]:
+    """Render (once) the clip with the trail, ghost and equation burned in. Local only: costs nothing."""
+    state = runs.get(run_id)
+    if state is None or state.status != "done" or state.result is None:
+        raise HTTPException(status_code=404, detail="That analysis is not finished.")
+    out = _run_file(run_id, "share.mp4")
+    result_file = _run_file(run_id, "result.json")
+    stale = not out.is_file() or (result_file.is_file() and result_file.stat().st_mtime > out.stat().st_mtime)
+    if stale:
+        try:
+            render_share_video(state.result, _run_file(run_id, "clip.mp4"), out)
+        except ExportError as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
+    return {"url": f"/api/runs/{run_id}/share.mp4"}
+
+
+@app.get("/api/runs/{run_id}/share.mp4")
+def get_share_video(run_id: str) -> FileResponse:
+    path = _run_file(run_id, "share.mp4")
+    if not path.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(path, media_type="video/mp4", filename=f"physicslens-{run_id}.mp4")
 
 
 def live_cap() -> float:

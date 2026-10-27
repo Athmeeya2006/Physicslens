@@ -63,6 +63,22 @@ def test_pendulum_clip_end_to_end(harness, tmp_path):
     assert all(i["status"] in ("accepted", "tied", "rejected") and i["why"] for i in verification["items"])
     assert steps[-1] == "Done"
 
+    # Shareable video: same length as the clip, H.264, and the ghost really drawn where the simulation says.
+    from physicslens.export.mp4 import render_share_video
+    share = render_share_video(result, tmp_path / "run" / "clip.mp4", tmp_path / "run" / "share.mp4")
+    import subprocess
+    probe = subprocess.run(["ffprobe", "-v", "error", "-count_packets", "-show_entries", "stream=codec_name,nb_read_packets",
+                            "-of", "csv=p=0", str(share)], capture_output=True, text=True, check=True).stdout.strip()
+    assert probe == "h264,60"
+    import cv2
+    cap = cv2.VideoCapture(str(share))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 30)
+    ok, frame = cap.read()
+    _, gx, gy = next(p for p in result["ghosts"][0]["points"] if p[0] == 30)
+    r = int(result["object_size_px"] / 2)
+    b, g, red = (int(v) for v in frame[round(gy), round(gx) + r])  # outline at angle 0 (inside the first dash)
+    assert ok and b > 150 and g > 150 and red < 120
+
     calls = harness.sdk("meta_api").calls
     sam = next(c for c in calls if c["kind"] == "stream")
     prompt = sam["input"][0]["content"][0]["text"]

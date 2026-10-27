@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import type { AnalysisResult } from "@/lib/api";
-import { clipUrl } from "@/lib/api";
+import { clipUrl, makeShareVideo } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
 import { Tex } from "./Equation";
 import { GhostPlayer } from "./GhostPlayer";
@@ -20,6 +21,15 @@ function fmt(v: number): string {
 
 export function ResultView({ runId, result }: { runId: string; result: AnalysisResult }) {
   const r = result;
+  const [share, setShare] = useState<{ state: "idle" | "busy" | "done" | "error"; url?: string; error?: string }>({ state: "idle" });
+
+  const onShare = () => {
+    setShare({ state: "busy" });
+    makeShareVideo(runId)
+      .then((url) => setShare({ state: "done", url }))
+      .catch((e: Error) => setShare({ state: "error", error: e.message }));
+  };
+
   return (
     <section className="result">
       <h2 className={`status ${r.status}`}>{STATUS_TEXT[r.status]}</h2>
@@ -39,6 +49,19 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <h3>Agent decision trail</h3>
           <AgentTrail steps={r.trail ?? []} />
         </div>
+      </div>
+
+      <div className="card share">
+        <button onClick={onShare} disabled={share.state === "busy"}>
+          {share.state === "busy" ? "Rendering video..." : "Make shareable video"}
+        </button>
+        {share.state === "error" && <p className="error">{share.error}</p>}
+        {share.state === "done" && share.url && (
+          <>
+            <video src={share.url} controls playsInline muted className="share-preview" />
+            <a href={share.url} download>Download MP4</a>
+          </>
+        )}
       </div>
 
       {r.equation && (

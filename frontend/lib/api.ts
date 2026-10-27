@@ -88,6 +88,12 @@ export const getBudget = () => fetch(`${API_BASE}/api/budget`).then((r) => json<
 export const getRun = (id: string) => fetch(`${API_BASE}/api/runs/${id}`).then((r) => json<RunView>(r));
 export const clipUrl = (id: string) => `${API_BASE}/api/runs/${id}/clip.mp4`;
 
+export function makeShareVideo(id: string): Promise<string> {
+  return fetch(`${API_BASE}/api/runs/${id}/share`, { method: "POST" })
+    .then((r) => json<{ url: string }>(r))
+    .then((r) => `${API_BASE}${r.url}`);
+}
+
 export function startRun(file: File, pendulumLengthM: number | null, accessCode: string | null): Promise<RunView> {
   const form = new FormData();
   form.append("video", file);

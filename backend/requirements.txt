@@ -12,6 +12,7 @@ meta-sam-parser==0.1.0
 numpy==2.5.4
 scipy==1.18.1
 pysindy==2.1.0
+matplotlib==3.11.2
 opencv-python-headless==5.0.0.93
 mujoco==3.17.0
 

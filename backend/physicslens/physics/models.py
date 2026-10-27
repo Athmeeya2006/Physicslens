@@ -95,9 +95,9 @@ MODELS: dict[str, ModelSpec] = {
         ModelSpec("free_fall", "projectile", "Projectile, no drag",
                   r"\ddot x = 0,\quad \ddot y = -g", (G,), _projectile(None)),
         ModelSpec("linear_drag", "projectile", "Projectile with linear drag",
-                  r"\dot{\mathbf v} = -g\hat y - k\mathbf v", (G, Param("k", "k", "1/s", 0.0, 50.0)), _projectile("linear")),
+                  r"\dot{\mathbf{v}} = -g\hat{y} - k\mathbf{v}", (G, Param("k", "k", "1/s", 0.0, 50.0)), _projectile("linear")),
         ModelSpec("quadratic_drag", "projectile", "Projectile with quadratic drag",
-                  r"\dot{\mathbf v} = -g\hat y - c|\mathbf v|\mathbf v", (G, Param("c", "c", "1/m", 0.0, 50.0)), _projectile("quadratic")),
+                  r"\dot{\mathbf{v}} = -g\hat{y} - c|\mathbf{v}|\mathbf{v}", (G, Param("c", "c", "1/m", 0.0, 50.0)), _projectile("quadratic")),
     ]
 }
 
