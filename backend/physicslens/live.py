@@ -32,7 +32,7 @@ from .perception.calibration import (
     from_known_length,
     from_reference,
 )
-from .perception.local_track import TemplateTracker, to_gray
+from .perception.local_track import TemplateTracker, box_around_tap, to_gray
 from .perception.sam_track import ObjectTrack, tracks_from_text
 from .physics.coords import fit_circle, to_coordinates
 from .physics.fit import FitResult, fit_model, simulate
@@ -103,6 +103,7 @@ class LiveSession:
         self.history: list[dict[str, float]] = []
         self.paused_reason: str | None = None
         self._scene_started = False
+        self.selected_by_tap = False
         self._since_refit = 0
         self._pending_local: list[list[float]] = []
         self._refit_busy = threading.Lock()
@@ -134,6 +135,31 @@ class LiveSession:
         else:
             self._wake.set()
         return idx
+
+    def select(self, x: float, y: float) -> None:
+        """The user tapped the object: start tracking at the newest frame now, without waiting for the scene model."""
+        with self.lock:
+            idx = self.latest
+            jpeg = self.frames.get(idx)
+            if jpeg is None:
+                return
+            gray = to_gray(jpeg)
+            box = box_around_tap(gray, x, y)
+            self.tracker = TemplateTracker(gray, box)
+            self.object_size = float(max(box[2] - box[0], box[3] - box[1]))
+            # A new selection starts a new measurement: earlier tracks and fits belonged to whatever was tracked before.
+            self.local = {idx: (self.tracker.cx, self.tracker.cy)}
+            self.sam.clear()
+            self.warm.clear()
+            self.history.clear()
+            self.local_next = idx + 1
+            self.next_chunk = idx
+            self.selected_by_tap = True
+        self.send({"type": "selected", "frame": idx, "box": list(box)})
+        if self.sync:
+            self._local_step()
+        else:
+            self._wake.set()
 
     def close(self) -> None:
         self._closed = True
@@ -179,10 +205,11 @@ class LiveSession:
         assert self.size is not None
         box = self.scene.moving_object_box.to_pixels(*self.size)
         with self.lock:
-            self.tracker = TemplateTracker(to_gray(first), box)
-            self.object_size = float(max(box[2] - box[0], box[3] - box[1]))
-            self.local[0] = (self.tracker.cx, self.tracker.cy)
-            self.local_next = 1
+            if not self.selected_by_tap:  # a tap is the user's explicit choice and wins over the model's box
+                self.tracker = TemplateTracker(to_gray(first), box)
+                self.object_size = float(max(box[2] - box[0], box[3] - box[1]))
+                self.local[0] = (self.tracker.cx, self.tracker.cy)
+                self.local_next = 1
         self.send({"type": "scene", "object": self.scene.moving_object, "family": self.scene.motion_family,
                    "reference": self.scene.reference_kind, "model": call.model, "provider": call.provider})
         if self.sync:
@@ -241,7 +268,7 @@ class LiveSession:
     # ---------- SAM refinement (parallel chunks) ----------
 
     def _schedule_chunks(self) -> None:
-        while self.paused_reason is None and self.scene is not None:
+        while self.paused_reason is None and (self.scene is not None or self.selected_by_tap):
             with self.lock:
                 start = self.next_chunk
                 indices = list(range(start, start + self.chunk_span, self.cfg.sam_stride))
@@ -265,9 +292,10 @@ class LiveSession:
         if self.paused_reason is not None:
             return
         path = self._encode(indices[0], jpegs)
-        text = self.sam_fn(path, self._prompt(box, first_chunk=indices[0] == 0), indices)
+        first = self.calibration is None and self.scene is not None
+        text = self.sam_fn(path, self._prompt(box, first_chunk=first), indices)
         tracks = tracks_from_text(text) if text.strip() else {}
-        if self.calibration is None and indices[0] == 0:
+        if first:
             self.calibration = self._calibrate(tracks.get(REFERENCE_ID))
         moving = tracks.get(MOVING_ID)
         if moving is None:
@@ -295,11 +323,11 @@ class LiveSession:
             self.reanchor = (int(g), (int(x - half), int(y - half), int(x + half) + 1, int(y + half) + 1))
 
     def _prompt(self, box: tuple[float, ...], first_chunk: bool) -> str:
-        assert self.size is not None and self.scene is not None
+        assert self.size is not None
         w, h = self.size
         b = msp.PromptBox(max(0, int(box[0])), max(0, int(box[1])), min(w, int(box[2]) + 1), min(h, int(box[3]) + 1))
         objects = [msp.PromptObject(id=int(MOVING_ID), prompts=[msp.FramePrompt(frame=0, box=b)])]
-        if first_chunk and self.scene.reference_box is not None:
+        if first_chunk and self.scene is not None and self.scene.reference_box is not None:
             rx1, ry1, rx2, ry2 = self.scene.reference_box.to_pixels(w, h)
             objects.append(msp.PromptObject(id=int(REFERENCE_ID), prompts=[
                 msp.FramePrompt(frame=0, box=msp.PromptBox(rx1, ry1, max(rx2, rx1 + 1), max(ry2, ry1 + 1)))]))
@@ -377,6 +405,8 @@ class LiveSession:
             return None
         traj = from_pixels(seg_frames, seg_centers, fps, ppm)
         if self.family is None:
+            if self.scene is None:
+                return None  # tracking started from a tap; the scene model hasn't answered yet
             self._choose_family(traj)
         try:
             coords = to_coordinates(traj, self.family)  # type: ignore[arg-type]

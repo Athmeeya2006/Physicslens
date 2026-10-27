@@ -96,3 +96,4 @@ details summary { cursor: pointer; }
 .chip.rejected { background: var(--bad); }
 
 a { color: var(--accent); }
+.stage canvas.tappable { pointer-events: auto; cursor: crosshair; touch-action: none; }

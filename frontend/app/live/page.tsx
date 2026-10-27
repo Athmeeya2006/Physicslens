@@ -67,6 +67,7 @@ export default function LivePage() {
       setFit(msg as FitMsg);
       if (msg.ghost) ghost.current = new Map((msg.ghost as Point[]).map(([f, x, y]) => [f, [x, y]]));
     }
+    if (msg.type === "selected") setStatus("Locked on. Keep the camera still while it moves.");
     if (msg.type === "notice") setNotices((n) => [{ level: msg.level, message: msg.message }, ...n].slice(0, 4));
   };
 
@@ -100,7 +101,7 @@ export default function LivePage() {
       ws.send(JSON.stringify({ fps: FPS, pendulum_length_m: lengthCm ? Number(lengthCm) / 100 : null, access_code: code }));
       running.current = true;
       setLive(true);
-      setStatus("Streaming. The first equation appears after a few seconds of motion.");
+      setStatus("Streaming. Tap the moving object to lock on (or wait a moment for it to be found).");
       captureLoop(v, w, h);
     };
   };
@@ -122,6 +123,20 @@ export default function LivePage() {
       next += 1000 / FPS;
       await new Promise((r) => setTimeout(r, Math.max(0, next - performance.now())));
     }
+  };
+
+  const onTap = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const ws = socket.current;
+    const c = overlay.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN || !c) return;
+    // Convert the tap from CSS pixels to the frame pixels the server sees.
+    const r = c.getBoundingClientRect();
+    const x = ((e.clientX - r.left) * c.width) / r.width;
+    const y = ((e.clientY - r.top) * c.height) / r.height;
+    ws.send(JSON.stringify({ type: "select", x, y }));
+    track.current.clear();
+    ghost.current.clear();
+    setFit(null);
   };
 
   useEffect(() => {
@@ -172,7 +187,13 @@ export default function LivePage() {
       <div className="split">
         <div className="stage" style={{ aspectRatio: size ? `${size.w} / ${size.h}` : "4 / 3" }}>
           <video ref={video} playsInline muted />
-          <canvas ref={overlay} width={size?.w ?? 640} height={size?.h ?? 480} />
+          <canvas
+            ref={overlay}
+            width={size?.w ?? 640}
+            height={size?.h ?? 480}
+            className={live ? "tappable" : ""}
+            onPointerDown={onTap}
+          />
         </div>
 
         <div className="card">

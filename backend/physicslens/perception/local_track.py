@@ -61,3 +61,26 @@ def to_gray(jpeg: bytes) -> np.ndarray:
     if img is None:
         raise ValueError("Frame is not a JPEG.")
     return img
+
+
+def box_around_tap(gray: np.ndarray, x: float, y: float, tolerance: int = 18) -> tuple[int, int, int, int]:
+    """Estimate the tapped object's box by growing the region of similar brightness around the tap.
+
+    Falls back to a fixed-size box when the region leaks into the background (low contrast) or is tiny.
+    """
+    H, W = gray.shape
+    xi, yi = int(np.clip(x, 0, W - 1)), int(np.clip(y, 0, H - 1))
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    mask = np.zeros((H + 2, W + 2), np.uint8)
+    flags = 4 | cv2.FLOODFILL_MASK_ONLY | cv2.FLOODFILL_FIXED_RANGE | (255 << 8)
+    cv2.floodFill(blurred, mask, (xi, yi), 0, (tolerance,), (tolerance,), flags)
+    ys, xs = np.nonzero(mask[1:-1, 1:-1])
+    default = max(16, int(0.08 * min(H, W)))
+    if len(xs) < 30:
+        side = default
+    else:
+        side = max(int(np.ptp(xs)), int(np.ptp(ys))) + 1
+        if side > 0.4 * min(H, W):  # leaked into the background
+            side = default
+    half = side / 2
+    return int(xi - half), int(yi - half), int(xi + half) + 1, int(yi + half) + 1

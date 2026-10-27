@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hmac
+import json
 import logging
 import os
 import shutil
@@ -151,12 +152,21 @@ async def live(ws: WebSocket) -> None:
                                      run_cap_usd=live_cap()), send)
     await ws.send_json({"type": "ready", "run_id": run_dir.name})
     try:
-        for _ in range(MAX_LIVE_FRAMES):
-            data = await ws.receive_bytes()
-            if len(data) > MAX_FRAME_BYTES:
-                continue
-            session.add_frame(data)
-        await ws.send_json({"type": "notice", "level": "info", "message": "Session length limit reached."})
+        frames = 0
+        while frames < MAX_LIVE_FRAMES:
+            message = await ws.receive()
+            if message["type"] == "websocket.disconnect":
+                break
+            if message.get("bytes") is not None:
+                if len(message["bytes"]) <= MAX_FRAME_BYTES:
+                    session.add_frame(message["bytes"])
+                    frames += 1
+            elif message.get("text"):
+                cmd = json.loads(message["text"])
+                if cmd.get("type") == "select":
+                    session.select(float(cmd["x"]), float(cmd["y"]))
+        else:
+            await ws.send_json({"type": "notice", "level": "info", "message": "Session length limit reached."})
     except WebSocketDisconnect:
         pass
     except ValueError as e:

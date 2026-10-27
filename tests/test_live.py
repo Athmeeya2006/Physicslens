@@ -174,3 +174,38 @@ def test_live_session_uses_its_own_cap(harness, tmp_path, monkeypatch):
     g = harness.client.guard
     g.check_and_reserve("meta_api", "sam-3.1", 0.15, "live-cap2", run_cap_usd=2.0).commit(0.15)
     g.check_and_reserve("meta_api", "sam-3.1", 0.15, "live-cap2", run_cap_usd=2.0).commit(0.15)
+
+
+def test_tap_box_fits_the_ball():
+    from physicslens.perception.local_track import box_around_tap, to_gray
+    gray = to_gray(clip_jpegs()[0])
+    x1, y1, x2, y2 = box_around_tap(gray, 439, 259)  # ball centre in frame 0 (radius 22)
+    assert 38 <= x2 - x1 <= 52 and 38 <= y2 - y1 <= 52
+    assert x1 < 439 < x2 and y1 < 259 < y2
+
+
+def test_tap_starts_tracking_before_the_scene_model(harness, tmp_path):
+    sam = FakeSam()
+    session, sent = make_session(harness, tmp_path, sam)
+    frames = clip_jpegs()
+    for i in range(11):
+        session.add_frame(frames[i])
+    x, y = fixture_ball_center(10)
+    session.select(x, y)  # frame 10, before the scene call (made at frame 25)
+    for i in range(11, 130):
+        session.add_frame(frames[i % CLIP_FRAMES])
+    kinds = [m["type"] for m in sent]
+    assert kinds.index("selected") < kinds.index("scene")
+    local = points(sent, "local")
+    assert local[0][0] == 11  # tracking started right after the tap frame
+    # The scene model's box did not replace the user's choice: tracking stayed on the ball throughout.
+    truth = {f: fixture_ball_center(f % CLIP_FRAMES) for f in range(11, 130)}
+    err = [np.hypot(p[1] - truth[p[0]][0], p[2] - truth[p[0]][1]) for p in local]
+    assert max(err) < 3
+    assert sam.indices[0][0] == 10  # first SAM chunk begins at the tap frame
+
+
+def fixture_ball_center(frame: int) -> tuple[float, float]:
+    line = fixture_lines()[frame]
+    x1, y1, x2, y2 = map(int, re.search(r"x1=(\d+);y1=(\d+);x2=(\d+);y2=(\d+)", line).groups())
+    return (x1 + x2 + 1) / 2, (y1 + y2 + 1) / 2
