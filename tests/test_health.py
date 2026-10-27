@@ -61,3 +61,33 @@ def test_compare_endpoint():
     r = TestClient(app_module.app).post("/api/compare", json={"baseline": a, "current": b})
     body = r.json()
     assert r.status_code == 200 and body["drift"] and body["runs"]["baseline"]["id"] == a
+
+
+def test_trend_catches_slowly_rising_damping():
+    from physicslens.physics.health import trend
+    series = [health_metrics(pendulum([(8, 0.6, g)], seed=30 + i), "pendulum") for i, g in enumerate([0.05, 0.06, 0.07, 0.08, 0.09])]
+    out = trend(series)
+    d = out["metrics"]["decay_rate_per_s"]
+    assert out["drift"] and d["steady_change"] and d["slope_per_recording"] > 0
+    assert not out["metrics"]["natural_freq_hz"]["steady_change"]
+    assert "damping rising" in out["summary"]
+
+
+def test_no_trend_when_nothing_changes():
+    from physicslens.physics.health import trend
+    series = [health_metrics(pendulum([(8, 0.6, 0.05)], seed=40 + i), "pendulum") for i in range(4)]
+    assert not trend(series)["drift"]
+
+
+def test_trend_endpoint_caches_metrics():
+    from fastapi.testclient import TestClient
+    from physicslens import app as app_module
+
+    ids = [stored_run(app_module, pendulum([(6, 0.6, g)], seed=50 + i)) for i, g in enumerate([0.05, 0.08, 0.12])]
+    client = TestClient(app_module.app)
+    body = client.post("/api/health/trend", json={"runs": ids}).json()
+    assert [r["id"] for r in body["recordings"]] == ids
+    assert body["recordings"][0]["flagged"] == {"natural_freq_hz": False, "decay_rate_per_s": False}
+    assert body["recordings"][2]["flagged"]["decay_rate_per_s"]
+    assert all((app_module.runs.run_dir(i) / "health.json").is_file() for i in ids)
+    assert client.post("/api/health/trend", json={"runs": ids[:2]}).status_code == 400

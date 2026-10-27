@@ -31,7 +31,15 @@ from .export.mjcf import build_mjcf
 from .export.mp4 import ExportError, render_share_video
 from .export.script import parameters_json, python_script
 from .live import LiveConfig, LiveSession
-from .physics.health import HealthError, compare, health_metrics
+from .physics.health import (
+    HealthError,
+    HealthMetrics,
+    compare,
+    health_metrics,
+    metrics_from_dict,
+    metrics_to_dict,
+    trend,
+)
 from .pipeline import AnalysisError, RunOptions, trajectory_from_result
 from .runs import RunManager
 from .settings import load_settings
@@ -332,11 +340,44 @@ def compare_runs(
     a, b = _finished_result(baseline), _finished_result(current)
     if a.get("family") != b.get("family"):
         raise HTTPException(status_code=409, detail=f"Can't compare a {a.get('family')} with a {b.get('family')}.")
-    try:
-        out = compare(health_metrics(trajectory_from_result(a), a["family"]),
-                      health_metrics(trajectory_from_result(b), b["family"]))
-    except (HealthError, AnalysisError) as e:
-        raise HTTPException(status_code=409, detail=str(e)) from e
+    out = compare(_health(baseline), _health(current))
     out["runs"] = {"baseline": {"id": baseline, "object": a.get("scene", {}).get("moving_object")},
                    "current": {"id": current, "object": b.get("scene", {}).get("moving_object")}}
+    return out
+
+
+def _health(run_id: str) -> HealthMetrics:
+    """Health metrics of one finished run, computed once (about 7 s) and cached beside its result."""
+    cache = _run_file(run_id, "health.json")
+    if cache.is_file():
+        return metrics_from_dict(json.loads(cache.read_text()))
+    result = _finished_result(run_id)
+    try:
+        m = health_metrics(trajectory_from_result(result), result["family"])
+    except (HealthError, AnalysisError) as e:
+        raise HTTPException(status_code=409, detail=f"{run_id}: {e}") from e
+    cache.write_text(json.dumps(metrics_to_dict(m)))
+    return m
+
+
+@app.post("/api/health/trend")
+def health_trend(runs: Annotated[list[str], Body(embed=True)]) -> dict:
+    """Health metrics across 3 to 12 recordings in the given order, each checked against the first."""
+    if not 3 <= len(runs) <= 12:
+        raise HTTPException(status_code=400, detail="Give between 3 and 12 recordings, oldest first.")
+    series = [_health(r) for r in runs]
+    try:
+        out = trend(series)
+    except HealthError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    out["recordings"] = []
+    for run_id, m in zip(runs, series, strict=True):
+        vs = compare(series[0], m)
+        flags = {row["metric"]: row["flagged"] for row in vs["metrics"]}
+        out["recordings"].append({
+            "id": run_id,
+            "natural_freq_hz": [m.natural_freq_hz.value, m.natural_freq_hz.std],
+            "decay_rate_per_s": [m.decay_rate_per_s.value, m.decay_rate_per_s.std],
+            "flagged": flags,
+        })
     return out

@@ -150,6 +150,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Shareable MP4 with the measured trail, the simulated ghost and the typeset equation burned in
 - [x] Exports: MuJoCo MJCF (replayed in MuJoCo and checked against the fitted motion), standalone Python simulation, parameters as JSON
 - [x] Machine-health drift comparison: natural frequency and damping of two recordings, with uncertainty and conservative flagging
+- [x] Machine-health trend view: frequency and damping across up to 12 recordings, with a test for steady drift
 - [x] Bouncing objects: hybrid model (free flight plus restitution), per-impact coefficient of restitution with uncertainty, later bounces predicted from earlier ones
 
 ## Limitations

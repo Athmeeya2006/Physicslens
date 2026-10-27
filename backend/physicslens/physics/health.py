@@ -107,3 +107,49 @@ def compare(baseline: HealthMetrics, current: HealthMetrics) -> dict[str, Any]:
         summary = "No significant change: both recordings show the same dynamics within their uncertainty."
     return {"family": baseline.family, "model_id": baseline.model_id, "drift": bool(changed), "summary": summary,
             "metrics": rows, "durations_s": [baseline.duration_s, current.duration_s]}
+
+
+TREND_Z = 3.0  # slope must be this many standard errors from zero
+
+
+def metrics_to_dict(m: HealthMetrics) -> dict[str, Any]:
+    return {"family": m.family, "model_id": m.model_id, "duration_s": m.duration_s,
+            "natural_freq_hz": [m.natural_freq_hz.value, m.natural_freq_hz.std],
+            "decay_rate_per_s": [m.decay_rate_per_s.value, m.decay_rate_per_s.std]}
+
+
+def metrics_from_dict(d: dict[str, Any]) -> HealthMetrics:
+    return HealthMetrics(d["family"], d["model_id"], Metric(*d["natural_freq_hz"]), Metric(*d["decay_rate_per_s"]),
+                         d["duration_s"])
+
+
+def trend(series: list[HealthMetrics]) -> dict[str, Any]:
+    """Weighted straight-line fit of each metric across recordings in order; flags a steady change."""
+    if len(series) < 3:
+        raise HealthError("A trend needs at least three recordings.")
+    if len({m.family for m in series}) != 1:
+        raise HealthError("All recordings in a trend must be the same kind of system.")
+    x = np.arange(len(series), dtype=float)
+    out = {}
+    for name in ("natural_freq_hz", "decay_rate_per_s"):
+        vals = np.array([getattr(m, name).value for m in series])
+        sig = np.array([getattr(m, name).std for m in series])
+        w = 1 / np.maximum(sig, 1e-12) ** 2
+        xm, ym = np.average(x, weights=w), np.average(vals, weights=w)
+        sxx = np.sum(w * (x - xm) ** 2)
+        slope = float(np.sum(w * (x - xm) * (vals - ym)) / sxx)
+        se = float(np.sqrt(1 / sxx))
+        ref = max(abs(vals[0]), DECAY_FLOOR if name == "decay_rate_per_s" else 1e-12)
+        total_rel = slope * (len(series) - 1) / ref
+        steady = abs(slope / se) > TREND_Z and abs(total_rel) > MIN_RELATIVE_CHANGE[name]
+        out[name] = {"slope_per_recording": slope, "slope_se": se, "relative_per_recording": slope / ref,
+                     "total_relative_change": total_rel, "steady_change": bool(steady)}
+    changing = [k for k, v in out.items() if v["steady_change"]]
+    words = {"natural_freq_hz": "natural frequency", "decay_rate_per_s": "damping"}
+    if changing:
+        summary = "Steady drift: " + "; ".join(
+            f"{words[k]} {'rising' if out[k]['slope_per_recording'] > 0 else 'falling'} about "
+            f"{abs(out[k]['relative_per_recording']):.1%} per recording" for k in changing) + "."
+    else:
+        summary = "No steady trend across these recordings."
+    return {"metrics": out, "summary": summary, "drift": bool(changing)}

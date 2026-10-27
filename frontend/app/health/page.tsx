@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { TrendChart } from "@/components/TrendChart";
 import { API_BASE } from "@/lib/api";
 
 interface MetricRow {
@@ -36,6 +37,77 @@ function runId(input: string): string {
 
 function fmt(v: number): string {
   return Math.abs(v) >= 0.01 ? v.toFixed(4) : v.toPrecision(3);
+}
+
+interface Trend {
+  drift: boolean;
+  summary: string;
+  recordings: { id: string; natural_freq_hz: [number, number]; decay_rate_per_s: [number, number]; flagged: Record<string, boolean> }[];
+}
+
+function TrendSection() {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [trend, setTrend] = useState<Trend | null>(null);
+
+  const run = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const runs = text.split(/\s+/).map((l) => l.trim()).filter(Boolean).map(runId);
+    setBusy(true);
+    setError(null);
+    setTrend(null);
+    try {
+      const r = await fetch(`${API_BASE}/api/health/trend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runs }),
+      });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body.detail ?? `${r.status}`);
+      setTrend(body as Trend);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    // ?trend=id1,id2,... opens a trend directly (shareable link).
+    const ids = new URLSearchParams(window.location.search).get("trend");
+    if (ids) {
+      setText(ids.split(",").join("\n"));
+      setTimeout(() => (document.getElementById("trend-submit") as HTMLButtonElement | null)?.click(), 0);
+    }
+  }, []);
+
+  const series = (key: "natural_freq_hz" | "decay_rate_per_s") =>
+    trend?.recordings.map((rec, i) => ({ label: `#${i + 1}`, value: rec[key][0], std: rec[key][1], flagged: rec.flagged[key] })) ?? [];
+
+  return (
+    <section className="card">
+      <h3>Trend across recordings</h3>
+      <form className="upload" onSubmit={run}>
+        <label>
+          3 to 12 result links or ids, oldest first, one per line
+          <textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} />
+        </label>
+        <button id="trend-submit" type="submit" disabled={busy || !text.trim()}>{busy ? "Measuring each recording..." : "Show trend"}</button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {trend && (
+        <>
+          <p className={trend.drift ? "error" : ""}><strong>{trend.summary}</strong></p>
+          <div className="trend-grid">
+            <TrendChart title="Natural frequency" unit="Hz" points={series("natural_freq_hz")} />
+            <TrendChart title="Damping (amplitude decay rate)" unit="1/s" points={series("decay_rate_per_s")} />
+          </div>
+          <p className="muted small">Error bars: one standard error. Points marked drift differ significantly from recording #1.</p>
+        </>
+      )}
+    </section>
+  );
 }
 
 export default function HealthPage() {
@@ -94,6 +166,8 @@ export default function HealthPage() {
       </form>
 
       {error && <p className="error">{error}</p>}
+
+      <TrendSection />
 
       {result && (
         <section className="card">

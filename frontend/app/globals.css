@@ -110,3 +110,13 @@ button.listening { background: #e879f9; }
 .export-links { display: flex; flex-wrap: wrap; gap: 16px; }
 .upload input:not([type]) { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 1rem; }
 tr.flagged td { color: var(--bad); font-weight: 600; }
+.trend-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.trend-chart { margin: 0; }
+.trend-chart figcaption { font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+.trend-chart svg { width: 100%; height: auto; overflow: visible; }
+.trend-chart .grid { stroke: var(--line); stroke-width: 1; }
+.trend-chart .tick { fill: var(--muted); font-size: 10px; }
+.trend-chart .flag-label { fill: var(--text); font-size: 10px; font-weight: 600; }
+.trend-chart .tooltip rect { fill: var(--bg); stroke: var(--line); }
+.trend-chart .tooltip text { fill: var(--text); font-size: 11px; }
+.upload textarea { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; }
