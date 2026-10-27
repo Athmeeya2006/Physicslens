@@ -6,6 +6,8 @@ import { clipUrl, makeShareVideo } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
 import { Tex } from "./Equation";
 import { GhostPlayer } from "./GhostPlayer";
+import { WhatIf } from "./WhatIf";
+import type { TrackPoint } from "@/lib/api";
 
 const STATUS_TEXT: Record<AnalysisResult["status"], string> = {
   accepted: "Verified equation",
@@ -21,6 +23,7 @@ function fmt(v: number): string {
 
 export function ResultView({ runId, result }: { runId: string; result: AnalysisResult }) {
   const r = result;
+  const [whatIfGhost, setWhatIfGhost] = useState<{ label: string; points: TrackPoint[] } | null>(null);
   const [share, setShare] = useState<{ state: "idle" | "busy" | "done" | "error"; url?: string; error?: string }>({ state: "idle" });
 
   const onShare = () => {
@@ -43,6 +46,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           fps={r.clip.fps}
           real={r.real_track_px}
           objectSizePx={r.object_size_px}
+          whatIf={whatIfGhost}
           ghosts={r.ghosts ?? []}
         />
         <div className="card trail-card">
@@ -50,6 +54,8 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <AgentTrail steps={r.trail ?? []} />
         </div>
       </div>
+
+      {r.fit_state && <WhatIf runId={runId} onGhost={setWhatIfGhost} />}
 
       <div className="card share">
         <button onClick={onShare} disabled={share.state === "busy"}>

@@ -100,3 +100,10 @@ a { color: var(--accent); }
 .stage canvas.tappable { pointer-events: auto; cursor: crosshair; touch-action: none; }
 .share { display: grid; gap: 10px; justify-items: start; }
 .share-preview { width: 100%; max-width: 640px; border-radius: 10px; }
+.whatif-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.whatif-form { display: flex; gap: 8px; flex: 1; min-width: 220px; }
+.whatif-form input { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 1rem; }
+button.listening { background: #e879f9; }
+.transcript { font-style: italic; }
+.whatif-answer { border-left: 3px solid #e879f9; padding-left: 10px; margin-top: 8px; }
+.whatif-answer p { margin: 4px 0; }

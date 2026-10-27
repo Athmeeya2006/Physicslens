@@ -5,6 +5,7 @@ import type { TrackPoint } from "@/lib/api";
 
 const GHOST_COLORS = ["#22d3ee", "#f472b6", "#facc15"];
 const TRAIL_FRAMES = 20;
+const WHATIF_COLOR = "#e879f9";
 
 interface Props {
   src: string;
@@ -13,6 +14,7 @@ interface Props {
   fps: number;
   real: TrackPoint[];
   objectSizePx?: number;
+  whatIf?: { label: string; points: TrackPoint[] } | null;
   ghosts: { model_id: string; points: TrackPoint[] }[];
 }
 
@@ -20,7 +22,7 @@ function byFrame(points: TrackPoint[]): Map<number, [number, number]> {
   return new Map(points.map(([f, x, y]) => [f, [x, y]]));
 }
 
-export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghosts }: Props) {
+export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghosts, whatIf }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [showReal, setShowReal] = useState(true);
@@ -33,6 +35,7 @@ export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghost
     if (!ctx) return;
     const realMap = byFrame(real);
     const ghostMaps = ghosts.map((g) => byFrame(g.points));
+    const whatIfMap = whatIf ? byFrame(whatIf.points) : null;
     // Canvas works in clip pixels (the same space as the track), CSS scales it with the video.
     // Ghost drawn at the tracked object's own size, so it visibly covers (or misses) the real thing.
     const radius = objectSizePx ? objectSizePx / 2 : Math.max(6, Math.min(width, height) / 40);
@@ -65,11 +68,21 @@ export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghost
         ctx.stroke();
         ctx.setLineDash([]);
       });
+      const wp = whatIfMap?.get(frame);
+      if (wp) {
+        ctx.strokeStyle = WHATIF_COLOR;
+        ctx.fillStyle = WHATIF_COLOR + "44";
+        ctx.lineWidth = Math.max(3, width / 300);
+        ctx.beginPath();
+        ctx.arc(wp[0], wp[1], radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [real, ghosts, fps, width, height, showReal, objectSizePx]);
+  }, [real, ghosts, fps, width, height, showReal, objectSizePx, whatIf]);
 
   return (
     <div className="player">
@@ -83,6 +96,11 @@ export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghost
             <i style={{ borderColor: GHOST_COLORS[i % GHOST_COLORS.length] }} /> ghost: {g.model_id}
           </span>
         ))}
+        {whatIf && (
+          <span>
+            <i style={{ borderColor: WHATIF_COLOR, borderStyle: "solid" }} /> what if: {whatIf.label}
+          </span>
+        )}
         <label>
           <input type="checkbox" checked={showReal} onChange={(e) => setShowReal(e.target.checked)} /> measured trail
         </label>

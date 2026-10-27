@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import (
+    Body,
     FastAPI,
     File,
     Form,
@@ -24,12 +25,14 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from .costguard import CostGuardClient
+from .agent.whatif import run_whatif
+from .costguard import CostGuardClient, CostGuardError
 from .export.mp4 import ExportError, render_share_video
 from .live import LiveConfig, LiveSession
 from .pipeline import RunOptions
 from .runs import RunManager
 from .settings import load_settings
+from .voice.events import final_turn, partial_text
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -203,3 +206,88 @@ async def live(ws: WebSocket) -> None:
         await ws.send_json({"type": "notice", "level": "error", "message": str(e)})
     finally:
         session.close()
+
+
+VOICE_MAX_SECONDS = 60.0
+VOICE_KEYWORDS = ["pendulum", "string", "length", "damping", "gravity", "spring", "twice", "half", "drag", "Mars", "Moon"]
+
+
+def _finished_result(run_id: str) -> dict:
+    state = runs.get(run_id)
+    if state is None or state.status != "done" or state.result is None:
+        raise HTTPException(status_code=404, detail="That analysis is not finished.")
+    return state.result
+
+
+@app.post("/api/runs/{run_id}/whatif")
+def whatif(
+    run_id: str,
+    question: Annotated[str, Body(embed=True)],
+    x_access_code: Annotated[str | None, Header()] = None,
+) -> dict:
+    """Typed what-if (the voice path ends here too)."""
+    result = _finished_result(run_id)
+    try:
+        return run_whatif(client, question[:500], result, f"whatif-{run_id}", audience_for(x_access_code))
+    except CostGuardError as e:
+        detail = str(e) if settings.app_env == "dev" else "Temporarily busy, please retry later."
+        raise HTTPException(status_code=503, detail=detail) from e
+
+
+@app.websocket("/ws/voice")
+async def voice(ws: WebSocket) -> None:
+    """First message: JSON {run_id, access_code?}. Then binary 24 kHz s16le mono PCM; text {"type": "stop"} ends it."""
+    await ws.accept()
+    init = await ws.receive_json()
+    run_id = str(init.get("run_id", ""))
+    audience = audience_for(init.get("access_code"))
+    state = runs.get(run_id) if run_id.replace("-", "").isalnum() else None
+    if audience == "public" or state is None or state.result is None:
+        await ws.send_json({"type": "notice", "level": "error",
+                            "message": "Voice questions need a finished analysis and the access code."})
+        await ws.close()
+        return
+    result = state.result
+    chunks: asyncio.Queue[bytes | None] = asyncio.Queue()
+
+    async def audio():
+        while (chunk := await chunks.get()) is not None:
+            yield chunk
+
+    async def on_event(event: dict) -> None:
+        turn = final_turn(event)
+        if turn is not None:
+            _, text = turn
+            await ws.send_json({"type": "transcript", "text": text, "final": True})
+            answer = await asyncio.to_thread(run_whatif, client, text, result, f"voice-{run_id}", audience)
+            await ws.send_json({"type": "whatif", **answer})
+            return
+        partial = partial_text(event)
+        if partial:
+            await ws.send_json({"type": "transcript", "text": partial, "final": False})
+
+    async def reader() -> None:
+        try:
+            while True:
+                message = await ws.receive()
+                if message["type"] == "websocket.disconnect":
+                    break
+                if message.get("bytes") is not None:
+                    await chunks.put(message["bytes"])
+                elif message.get("text") and json.loads(message["text"]).get("type") == "stop":
+                    break
+        finally:
+            await chunks.put(None)
+
+    read_task = asyncio.create_task(reader())
+    try:
+        usage = await client.voice_transcribe(audio=audio(), on_event=on_event, run_id=f"voice-{run_id}",
+                                              max_seconds=VOICE_MAX_SECONDS, audience=audience, keywords=VOICE_KEYWORDS)
+        await ws.send_json({"type": "voice_done", "audio_seconds": round(usage.audio_seconds, 1)})
+    except CostGuardError as e:
+        await ws.send_json({"type": "notice", "level": "warning",
+                            "message": str(e) if audience == "dev" else "Voice is temporarily busy, please type your question."})
+    except WebSocketDisconnect:
+        pass
+    finally:
+        read_task.cancel()

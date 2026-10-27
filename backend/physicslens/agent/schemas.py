@@ -89,3 +89,16 @@ class AgentTurn(Strict):
     message: str = Field(description="Plain-language text for the user: explanation, experiment request, or why no equation fits.")
     next_family: Family | None = Field(description="Only for try_family; otherwise null.")
     reasoning_summary: str = Field(description="Two or three sentences summarizing your reasoning, shown in the UI.")
+
+
+class ParamChange(Strict):
+    parameter: str = Field(description="Exactly one of the parameter names listed in the request.")
+    operation: Literal["multiply", "set", "add"]
+    value: float
+
+
+class WhatIfPlan(Strict):
+    understood: bool = Field(description="False if the question isn't a change to this system's parameters.")
+    changes: list[ParamChange] = Field(max_length=3)
+    description: str = Field(description="Short label for the new scenario, e.g. 'String twice as long'.")
+    reply: str = Field(description="One sentence for the user: what will be simulated, or why it can't be.")

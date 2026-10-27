@@ -111,3 +111,44 @@ def sam_result(frames: int | None = 60, text: str = "") -> Any:
 
 def mock_sdk_factory(provider: str, base_url: str, api_key_env: str, timeout: float) -> MockSDK:
     return MockSDK(provider)
+
+
+class _MockVoiceSocket:
+    """Stands in for the realtime transcription socket: one final turn after the stream ends."""
+
+    def __init__(self, text: str):
+        self.text = text
+        self.sent: list[Any] = []
+        self._ended = False
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        return None
+
+    async def send(self, data: Any) -> None:
+        self.sent.append(data)
+        if isinstance(data, str) and '"endStream"' in data:
+            self._ended = True
+
+    def __aiter__(self) -> _MockVoiceSocket:
+        return self
+
+    async def __anext__(self) -> str:
+        import asyncio
+        import json
+
+        while not self._ended:
+            await asyncio.sleep(0.01)
+        if self.text is None:
+            raise StopAsyncIteration
+        text, self.text = self.text, None
+        return json.dumps({"type": "speechComplete", "turnId": "mock-1", "text": text})
+
+
+MOCK_VOICE_TEXT = "what if the string were twice as long"
+
+
+def mock_voice_connect(url: str, **kwargs: Any) -> _MockVoiceSocket:
+    return _MockVoiceSocket(MOCK_VOICE_TEXT)

@@ -4,20 +4,23 @@ kill switch -> allowlist -> price exists -> budget reserve -> rate limiter -> ca
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import math
 import os
 import random
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import openai
+import websockets
 from openai import OpenAI
+from websockets.exceptions import ConnectionClosed
 
 from ..settings import (
     BASETEN_REASONING_MODEL,
@@ -47,6 +50,9 @@ log = logging.getLogger("physicslens.costguard")
 
 META_EFFORTS = ("minimal", "low", "medium")  # never high/xhigh/max; "none" is a 400
 BASETEN_EFFORTS = ("low", "medium")  # Baseten defaults to xhigh if omitted, so it is always sent
+VOICE_URL = "wss://api.meta.ai/v1/asr/realtime"
+VOICE_BYTES_PER_SECOND = 24_000 * 2  # 24 kHz, 16-bit, mono
+VOICE_MAX_AHEAD_S = 5.0
 IMAGE_TOKEN_ESTIMATE = 1600  # ~1,300-1,500 for a 1280 px image, rounded up
 CHARS_PER_TOKEN = 3  # deliberately pessimistic
 
@@ -108,6 +114,7 @@ class CostGuardClient:
         sdk_factory: SdkFactory | None = None,
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
+        voice_connect: Callable[..., Any] | None = None,
     ):
         self.settings = settings
         cfg = settings.config_dir
@@ -128,6 +135,13 @@ class CostGuardClient:
             else:
                 sdk_factory = openai_sdk_factory
         self._sdk_factory = sdk_factory
+        if voice_connect is None:
+            if settings.mock_models:
+                from .mock import mock_voice_connect
+                voice_connect = mock_voice_connect
+            else:
+                voice_connect = websockets.connect
+        self._voice_connect = voice_connect
         self._sdks: dict[str, Any] = {}
         self._sleep = sleep
         timeouts = self.limits.get("timeouts_seconds") or {}
@@ -448,7 +462,7 @@ class CostGuardClient:
         sdk = self._sdk(provider, self.llm_timeout)
         return sorted(m.id for m in sdk.models.list())
 
-    # ---------- Voice: budget + concurrency only; the realtime socket lands with the voice feature ----------
+    # ---------- Voice: Muse Voice Transcribe realtime ----------
 
     @contextmanager
     def voice_session(self, *, run_id: str, max_seconds: float, audience: str = "dev") -> Iterator[Usage]:
@@ -466,6 +480,69 @@ class CostGuardClient:
             res.commit(self.pricing.cost(provider, model, usage), usage, note="session ended with an error")
             raise
         res.commit(self.pricing.cost(provider, model, usage), usage)
+
+    async def voice_transcribe(
+        self,
+        *,
+        audio: AsyncIterator[bytes],
+        on_event: Callable[[dict[str, Any]], Awaitable[None]],
+        run_id: str,
+        max_seconds: float = 60.0,
+        audience: str = "dev",
+        keywords: list[str] | None = None,
+    ) -> Usage:
+        """Relay raw 24 kHz s16le mono PCM to the realtime endpoint and hand every JSON event to on_event.
+
+        Billed by whole seconds streamed. The audio source should already be real time (a microphone,
+        silence included); this also never lets the stream run more than 5 s ahead of the wall clock.
+        """
+        self.check_kill_switch()
+        handshake: dict[str, Any] = {
+            "authorization": {"accessToken": f"Bearer {self._voice_key()}"},  # headers are ignored by this endpoint
+            "model": VOICE_MODEL, "audioEncoding": "PCM_24KHZ", "mode": "ENDPOINTING", "partialMode": "CUMULATIVE",
+        }
+        if keywords:
+            handshake["keywords"] = keywords
+        with self.voice_session(run_id=run_id, max_seconds=max_seconds, audience=audience) as usage:
+            async with self._voice_connect(VOICE_URL, max_size=2**20, open_timeout=10) as ws:
+                await ws.send(json.dumps(handshake))
+                pump = asyncio.create_task(self._pump_audio(ws, audio, usage, max_seconds))
+                try:
+                    async for raw in ws:
+                        if isinstance(raw, str):
+                            await on_event(json.loads(raw))
+                except ConnectionClosed as e:
+                    if e.rcvd is not None and e.rcvd.code == 1013:
+                        raise CostGuardError("Voice: the provider's stream limit is reached; try again in a moment.") from e
+                    raise ProviderCallFailed(f"Voice stream closed unexpectedly ({e}).") from e
+                finally:
+                    pump.cancel()
+            log.info("paid-call provider=meta_api model=%s run=%s audio_seconds=%.1f", VOICE_MODEL, run_id, usage.audio_seconds)
+        return usage
+
+    async def _pump_audio(self, ws: Any, audio: AsyncIterator[bytes], usage: Usage, max_seconds: float) -> None:
+        start = time.monotonic()
+        try:
+            async for chunk in audio:
+                self.check_kill_switch()
+                if usage.audio_seconds >= max_seconds:
+                    break
+                ahead = usage.audio_seconds - (time.monotonic() - start)
+                if ahead > VOICE_MAX_AHEAD_S:
+                    await asyncio.sleep(ahead - VOICE_MAX_AHEAD_S)
+                await ws.send(chunk)
+                usage.audio_seconds += len(chunk) / VOICE_BYTES_PER_SECOND
+        finally:
+            # Ending the stream lets the service flush the last turn and close with code 1000.
+            await ws.send(json.dumps({"type": "endStream"}))
+
+    def _voice_key(self) -> str:
+        if self.settings.mock_models:
+            return "mock"
+        key = os.environ.get(self.allowlist.api_key_env("meta_api"), "").strip()
+        if not key:
+            raise CostGuardError("MODEL_API_KEY is not set. Add it to .env (never commit it).")
+        return key
 
 
 # ---------- response parsing ----------

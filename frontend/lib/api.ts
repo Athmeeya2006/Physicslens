@@ -51,6 +51,7 @@ export interface AnalysisResult {
   llm_calls: { step: string; provider: string; model: string; cached: boolean }[];
   trail: TrailStep[];
   regime_change?: { t_estimate: number; t_safe: number; error_ratio: number };
+  fit_state?: Record<string, unknown>;
 }
 
 export interface RunView {
@@ -87,6 +88,15 @@ export const getHealth = () => fetch(`${API_BASE}/api/health`).then((r) => json<
 export const getBudget = () => fetch(`${API_BASE}/api/budget`).then((r) => json<Budget>(r));
 export const getRun = (id: string) => fetch(`${API_BASE}/api/runs/${id}`).then((r) => json<RunView>(r));
 export const clipUrl = (id: string) => `${API_BASE}/api/runs/${id}/clip.mp4`;
+
+export function askWhatIf(id: string, question: string) {
+  const code = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("code");
+  return fetch(`${API_BASE}/api/runs/${id}/whatif`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(code ? { "X-Access-Code": code } : {}) },
+    body: JSON.stringify({ question }),
+  }).then((r) => json<import("@/components/WhatIf").WhatIfAnswer>(r));
+}
 
 export function makeShareVideo(id: string): Promise<string> {
   return fetch(`${API_BASE}/api/runs/${id}/share`, { method: "POST" })

@@ -146,7 +146,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Live camera mode with converging equations (instant on-server tracking, refined by SAM 3.1 in parallel chunks; tap the object to lock on)
 - [x] Experiment requests for ambiguous data, with the agent's full decision trail on screen
 - [x] Regime-change detection (live and recorded: refits on the new motion, reports each regime separately)
-- [ ] Voice what-ifs with Muse Voice Transcribe
+- [x] Voice what-ifs with Muse Voice Transcribe (spoken question, parameter change, re-simulated ghost; typing works too)
 - [x] Shareable MP4 with the measured trail, the simulated ghost and the typeset equation burned in
 - [ ] Exports: JSON, Python simulation, MuJoCo MJCF
 - [ ] Machine-health drift comparison

@@ -170,6 +170,15 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         if points:
             # One ghost made of each regime's own fit: it should hug the object on both sides of the change.
             result.setdefault("ghosts", []).insert(0, {"model_id": "fit per regime", "points": points})
+    lead = verdict.winner or (verdict.contenders[0] if verdict.contenders else None)
+    if lead is not None and coords is not None:
+        # Everything a what-if needs to re-simulate from the measured starting state and draw it on the clip.
+        result["fit_state"] = {
+            "model_id": lead.model_id, "params": lead.params, "y0": [float(v) for v in lead.y0],
+            "ctx": {k: float(v) for k, v in coords.ctx.items()}, "fps": traj.fps,
+            "origin_px": [float(origin_px[0]), float(origin_px[1])], "px_per_m": calibration.px_per_m,
+            "first_frame": int(traj.frames[0]),
+        }
     if verdict.status == "accepted" and verdict.winner and coords is not None:
         progress("Estimating uncertainty")
         spec = MODELS[verdict.winner.model_id]
