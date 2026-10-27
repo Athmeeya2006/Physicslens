@@ -349,6 +349,8 @@ def export(run_id: str, kind: str) -> Response:
         body = python_script(result)
     else:
         xml, notes = build_mjcf(result["fit_state"])
+        if result.get("scale_note"):
+            notes = [*notes, "No scale reference in the clip: lengths in this model are in arbitrary units."]
         body = xml if not notes else xml.replace("<worldbody>", "<!-- " + " ".join(notes).replace("--", "-") + " -->\n  <worldbody>", 1)
     media, ext = EXPORTS[kind]
     return Response(body, media_type=media,

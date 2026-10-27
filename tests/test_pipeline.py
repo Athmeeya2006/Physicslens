@@ -96,10 +96,22 @@ def test_pendulum_clip_end_to_end(harness, tmp_path):
     assert "input_video" not in kinds and 1 <= kinds.count("input_image") <= 4
 
 
-def test_missing_scale_is_a_clear_error(harness, tmp_path):
-    script(harness, responses_result(text=json.dumps(SCENE)), sam_result(frames=60, text=sam_text_as_object_1()))
-    with pytest.raises(AnalysisError, match="A4"):
-        analyze(harness.client, CLIP, tmp_path / "run", "run-noscale")
+def test_missing_scale_still_analyzes_scale_free_quantities(harness, tmp_path):
+    script(harness,
+           responses_result(text=json.dumps(SCENE)),
+           sam_result(frames=60, text=sam_text_as_object_1()),
+           responses_result(text=json.dumps(HYPOTHESES)),
+           responses_result(text=json.dumps(AGENT)))
+    result = analyze(harness.client, CLIP, tmp_path / "run", "run-noscale")  # no A4 sheet, no length given
+    assert result["calibration"]["source"] == "none" and "arbitrary units" in result["scale_note"]
+    for p in result.get("parameters", []):
+        assert p["uncalibrated"] == (p["unit"] in ("m/s^2", "m"))
+
+
+def test_unit_scale_detection():
+    from physicslens.pipeline import needs_scale
+    assert all(needs_scale(u) for u in ("m", "m/s^2", "1/m"))
+    assert not any(needs_scale(u) for u in ("1/s", "rad/s", "rad/s^2", "1/rad", ""))
 
 
 def test_short_clip_rejected_before_any_paid_call(harness, tmp_path):

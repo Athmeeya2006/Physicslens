@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,6 +44,17 @@ from .sigproc.summary import summarize
 from .sigproc.trajectory import Trajectory, from_pixels
 
 log = logging.getLogger("physicslens.pipeline")
+
+NOMINAL_PX_PER_M = 1000.0  # used only when nothing in the clip gives a scale
+SCALE_NOTE = ("No reference of known size was found, so lengths and g are in arbitrary units. Frequency, damping "
+              "and friction rates don't depend on scale and are exact. For a calibrated result, put an A4 sheet "
+              "flat in the plane of motion or enter the pendulum length.")
+_LENGTH_UNIT = re.compile(r"(^|[^a-z])m($|[^a-z])")
+
+
+def needs_scale(unit: str) -> bool:
+    """True for anything measured in meters (m, m/s^2, 1/m); angles, times and rates are scale-free."""
+    return bool(_LENGTH_UNIT.search(unit or ""))
 
 BOUNCE_LATEX = r"\ddot y = -g \ \text{between impacts},\qquad v_y^{+} = -e\, v_y^{-}"
 
@@ -140,6 +152,7 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             "agent": {"action": turn.action, "message": turn.message, "reasoning_summary": turn.reasoning_summary},
             "ranking": [], "real_track_px": dbl.pop("inner_track_px"), "object_size_px": float(np.median(moving.long_px)),
             "llm_calls": llm_calls, "trail": trail, "summary": summary, "ghosts": ghosts, "double": dbl,
+            **({"scale_note": SCALE_NOTE} if calibration.source == "none" else {}),
         }
 
     tried: list[str] = []
@@ -176,6 +189,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             trail.append(regime_trail_step(change, regimes))
         progress("Agent reviewing the verdict")
         context = agent_context(verdict, family, summary, scene, tried)
+        if calibration.source == "none":
+            context["scale"] = "none: lengths and g are uncalibrated, frequency, damping and friction are exact"
         if design is not None:
             context["experiment_design"] = {k: design[k] for k in ("recommended", "decisive", "noise_mm", "models")}
         if bounces is not None:
@@ -257,6 +272,10 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
              "ci95": [est[p.name].ci_low, est[p.name].ci_high]}
             for p in spec.params
         ] + derived_parameters(coords)
+    if calibration.source == "none":
+        result["scale_note"] = SCALE_NOTE
+        for p in result.get("parameters", []):
+            p["uncalibrated"] = needs_scale(p["unit"])
     progress("Done")
     return result
 
@@ -492,8 +511,10 @@ def calibrate(scene: Scene, reference: ObjectTrack | None, moving: ObjectTrack, 
     if options.pendulum_length_m is not None:
         radius_px = fit_circle(moving.centers_px * np.array([1.0, -1.0]))[2]
         return from_known_length(radius_px, options.pendulum_length_m)
-    raise AnalysisError("No reference object for scale. Put an A4 or letter sheet flat in the plane of motion, "
-                        "or enter the pendulum length.")
+    # No scale: carry on. Frequency, damping and friction don't depend on scale; everything measured in
+    # meters is reported as uncalibrated instead of the whole analysis being refused.
+    log.info("No scale reference; continuing with a nominal scale (lengths and g will be marked uncalibrated).")
+    return Calibration(NOMINAL_PX_PER_M, 0.0, "none")
 
 
 def build_trajectory(moving: ObjectTrack, fps: float, px_per_m: float) -> tuple[Trajectory, np.ndarray]:
