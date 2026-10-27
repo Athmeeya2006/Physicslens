@@ -7,7 +7,7 @@ from physicslens.physics.fit import fit_model
 from physicslens.physics.models import MODELS, models_for
 from physicslens.physics.sindy import discover
 from physicslens.physics.uncertainty import bootstrap
-from physicslens.physics.verify import assess
+from physicslens.physics.verify import assess, judge_candidates
 from physicslens.sigproc.trajectory import Trajectory
 from scipy.integrate import solve_ivp
 
@@ -105,3 +105,11 @@ def test_coordinates_map_back_to_xy(damped_pendulum):
     xy = c.to_xy(v.winner.sim)
     truth = pendulum_xy(0.9, 0.08, 10)
     assert np.sqrt(np.mean((xy - truth) ** 2)) < 3 * NOISE_M
+
+
+def test_trail_explains_each_rejection(damped_pendulum):
+    _, v = damped_pendulum
+    judged = judge_candidates(v)
+    assert judged["pendulum_linear_damping"][0] == "accepted"
+    assert judged["pendulum"][0] == "rejected" and "forecast error" in judged["pendulum"][1]
+    assert sum(st == "accepted" for st, _ in judged.values()) == 1

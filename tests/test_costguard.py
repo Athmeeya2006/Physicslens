@@ -371,3 +371,16 @@ def test_report_renders(harness):
     text_call(harness.client)
     out = render(harness.client.ledger, harness.client.guard)
     assert "muse-spark-1.3" in out and "dashboard" in out
+
+
+def test_cached_sam_result_never_uploads(harness, tmp_path):
+    clip = tmp_path / "clip.mp4"
+    clip.write_bytes(b"fake video bytes")
+    from physicslens.costguard.cache import file_digest
+    kw = {"prompt": "red ball", "video_hash": file_digest(clip), "video_path": clip, "est_frames": 60, "run_id": "r"}
+    harness.client.sam_video(**kw)
+    uploads = [c for c in harness.sdk().calls if c["kind"] == "files"]
+    assert len(uploads) == 1
+    r = harness.client.sam_video(**kw)
+    assert r.cached
+    assert len([c for c in harness.sdk().calls if c["kind"] == "files"]) == 1

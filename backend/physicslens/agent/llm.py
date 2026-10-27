@@ -12,7 +12,7 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from ..costguard import CostGuardClient, PriceMissing
+from ..costguard import CostGuardClient, CostGuardError, PriceMissing
 from ..costguard.errors import CircuitOpen, ProviderCallFailed
 from ..settings import BASETEN_REASONING_MODEL
 
@@ -26,6 +26,17 @@ _SCHEMA_KEYS = {"type", "properties", "required", "enum", "items", "anyOf", "add
 
 class LLMError(RuntimeError):
     pass
+
+
+class OpenWeightUnavailable(CostGuardError):
+    """The submitted build must reason on the open-weight model; it never silently switches to the Meta API.
+
+    Subclasses CostGuardError so judges and public visitors see the polite busy message.
+    """
+
+
+def fallback_allowed(client: CostGuardClient) -> bool:
+    return client.settings.app_env == "dev"
 
 
 @dataclass(frozen=True)
@@ -123,7 +134,11 @@ def _call(client: CostGuardClient, *, task: str, system: str, text: str, schema_
                                     run_id=run_id, audience=audience, max_tokens=max_output_tokens * 2)
             return r.text, LLMCall("baseten", r.model, r.reasoning, r.cost_usd, r.cached)
         except (ProviderCallFailed, CircuitOpen) as e:
-            log.warning("Baseten failed for %s (%s); falling back to Muse Spark on the Meta API.", task, e)
+            if not fallback_allowed(client):
+                raise OpenWeightUnavailable(f"Muse Spark Open failed for {task}: {e}") from e
+            log.warning("Baseten failed for %s (%s); falling back to Muse Spark on the Meta API (dev only).", task, e)
+    elif not fallback_allowed(client):
+        raise OpenWeightUnavailable("Muse Spark Open is not configured (BASETEN_API_KEY or its price is missing).")
     content = [{"type": "input_text", "text": text}] + [{"type": "input_image", "image_url": image_b64(j)} for j in images]
     r = client.meta_text(
         input=[{"role": "user", "content": content}], instructions=system, schema=schema, schema_name=task,

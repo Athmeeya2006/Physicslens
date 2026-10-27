@@ -21,6 +21,17 @@ export interface RankedFit {
   rationale: string | null;
 }
 
+export interface TrailStep {
+  step: "scene" | "tracking" | "hypotheses" | "verification" | "agent";
+  provider: string | null;
+  model: string;
+  text: string;
+  status?: string;
+  action?: string;
+  reasoning_summary?: string;
+  items?: { model_id: string; title: string; why: string; status?: "accepted" | "tied" | "rejected" }[];
+}
+
 export interface AnalysisResult {
   status: "accepted" | "ambiguous" | "no_fit";
   reason: string;
@@ -32,11 +43,13 @@ export interface AnalysisResult {
   agent: { action: string; message: string; reasoning_summary: string };
   ranking: RankedFit[];
   real_track_px: TrackPoint[];
+  object_size_px?: number;
   ghosts?: { model_id: string; points: TrackPoint[] }[];
   sindy?: Record<string, string> | null;
   equation?: { model_id: string; title: string; latex: string };
   parameters?: Parameter[];
   llm_calls: { step: string; provider: string; model: string; cached: boolean }[];
+  trail: TrailStep[];
 }
 
 export interface RunView {

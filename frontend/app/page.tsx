@@ -25,6 +25,9 @@ export default function Home() {
         if (h.app_env === "dev") getBudget().then(setBudget).catch(() => setBudget(null));
       })
       .catch(() => setError("Cannot reach the PhysicsLens backend."));
+    // ?run=<id> opens a finished run, so results can be reloaded and shared by link.
+    const shared = new URLSearchParams(window.location.search).get("run");
+    if (shared) poll(shared);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
@@ -52,6 +55,9 @@ export default function Home() {
       const length = lengthCm ? Number(lengthCm) / 100 : null;
       const r = await startRun(file, length, accessCode);
       setRun(r);
+      const url = new URL(window.location.href);
+      url.searchParams.set("run", r.run_id);
+      window.history.replaceState(null, "", url);
       poll(r.run_id);
     } catch (err) {
       setError((err as Error).message);

@@ -55,6 +55,12 @@ def test_pendulum_clip_end_to_end(harness, tmp_path):
     worst = max(abs(x - real[f][0]) + abs(y - real[f][1]) for f, x, y in result["ghosts"][0]["points"])
     assert worst < 6
     assert [c["step"] for c in result["llm_calls"]] == ["scene", "hypotheses", "agent"]
+    trail = result["trail"]
+    assert [t["step"] for t in trail] == ["scene", "tracking", "hypotheses", "verification", "agent"]
+    assert all(t["model"] for t in trail)
+    verification = trail[3]
+    assert {i["model_id"] for i in verification["items"]} == {f["model_id"] for f in result["ranking"]}
+    assert all(i["status"] in ("accepted", "tied", "rejected") and i["why"] for i in verification["items"])
     assert steps[-1] == "Done"
 
     calls = harness.sdk("meta_api").calls
@@ -111,3 +117,62 @@ def test_invalid_json_retried_once_then_fails(harness):
     with pytest.raises(LLMError):
         ask_json(harness.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r")
     assert len(harness.sdk("meta_api").calls) == 2
+
+
+# ---------- Open Weight: no silent Meta fallback outside dev ----------
+
+def demo_harness(settings):
+    from physicslens.settings import Settings
+
+    from .conftest import Harness
+    demo = Settings(app_env="demo", repo_root=settings.repo_root, config_dir=settings.config_dir, var_dir=settings.var_dir)
+    return Harness(demo)
+
+
+def test_demo_refuses_meta_fallback_when_open_weight_missing(settings, monkeypatch):
+    from physicslens.agent.llm import OpenWeightUnavailable
+    monkeypatch.delenv("BASETEN_API_KEY", raising=False)
+    h = demo_harness(settings)
+    with pytest.raises(OpenWeightUnavailable):
+        ask_json(h.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r", audience="judge")
+    assert h.sdk("meta_api").calls == []
+
+
+def test_demo_does_not_fall_back_when_baseten_fails(settings, monkeypatch):
+    from physicslens.agent.llm import OpenWeightUnavailable
+    from physicslens.costguard.mock import api_error
+
+    from .conftest import set_baseten_price
+    set_baseten_price(settings)
+    monkeypatch.setenv("BASETEN_API_KEY", "test-not-a-real-key")
+    h = demo_harness(settings)
+    h.sdk("baseten").script.extend([api_error(503)] * 3)
+    with pytest.raises(OpenWeightUnavailable):
+        ask_json(h.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r", audience="judge")
+    assert h.sdk("meta_api").calls == []
+
+
+def test_dev_falls_back_to_meta_when_baseten_fails(harness, settings, monkeypatch):
+    from physicslens.costguard.mock import api_error
+
+    from .conftest import Harness, set_baseten_price
+    set_baseten_price(settings)
+    monkeypatch.setenv("BASETEN_API_KEY", "test-not-a-real-key")
+    h = Harness(settings)
+    h.sdk("baseten").script.extend([api_error(503)] * 3)
+    h.sdk("meta_api").script.append(responses_result(text=json.dumps(SCENE)))
+    scene, call = ask_json(h.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r")
+    assert call.provider == "meta_api" and scene.moving_object == "red ball"
+
+
+def test_baseten_used_when_configured(settings, monkeypatch):
+    from physicslens.costguard.mock import chat_result
+
+    from .conftest import set_baseten_price
+    set_baseten_price(settings)
+    monkeypatch.setenv("BASETEN_API_KEY", "test-not-a-real-key")
+    h = demo_harness(settings)
+    h.sdk("baseten").script.append(chat_result(text=json.dumps(SCENE)))
+    _, call = ask_json(h.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r", audience="judge")
+    assert call.provider == "baseten" and call.model == "meta-models/muse-spark-open-1026"
+    assert h.sdk("baseten").calls[0]["reasoning_effort"] == "low"

@@ -74,3 +74,23 @@ th { color: var(--muted); font-weight: 500; }
 .card table { display: block; overflow-x: auto; }
 code { display: block; margin-top: 4px; font-size: 0.8rem; word-break: break-word; }
 details summary { cursor: pointer; }
+
+.split { display: grid; gap: 16px; align-items: start; }
+@media (min-width: 900px) { .split { grid-template-columns: 3fr 2fr; } main { max-width: 1280px; } }
+.trail-card { margin: 16px 0; }
+.trail { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.trail-step { border-left: 3px solid var(--line); padding: 2px 0 2px 12px; }
+.trail-step p { margin: 4px 0; font-size: 0.92rem; }
+.trail-step.verification { border-color: var(--accent); }
+.trail-step.highlight { border-color: var(--warn); background: rgba(251, 191, 36, 0.08); border-radius: 0 8px 8px 0; padding: 8px 8px 8px 12px; }
+.trail-step.highlight p:first-of-type { font-weight: 600; }
+.trail-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 0.9rem; }
+.who { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.who.open { border-color: var(--ok); color: var(--ok); }
+.who.math { border-color: var(--accent); color: var(--accent); }
+.trail-items { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; font-size: 0.85rem; }
+.trail-items li.rejected .item-title { text-decoration: line-through; color: var(--muted); }
+.chip { display: inline-block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 4px; margin-right: 6px; color: #111; }
+.chip.accepted { background: var(--ok); }
+.chip.tied { background: var(--warn); }
+.chip.rejected { background: var(--bad); }

@@ -98,7 +98,7 @@ def get_run(run_id: str) -> dict[str, object]:
 
 @app.get("/api/runs/{run_id}/clip.mp4")
 def get_clip(run_id: str) -> FileResponse:
-    if not run_id.isalnum():
+    if not run_id.replace("-", "").isalnum():
         raise HTTPException(status_code=404)
     path = runs.run_dir(run_id) / "clip.mp4"
     if not path.is_file():

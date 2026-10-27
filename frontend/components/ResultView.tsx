@@ -2,6 +2,7 @@
 
 import type { AnalysisResult } from "@/lib/api";
 import { clipUrl } from "@/lib/api";
+import { AgentTrail } from "./AgentTrail";
 import { Tex } from "./Equation";
 import { GhostPlayer } from "./GhostPlayer";
 
@@ -24,14 +25,21 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
       <h2 className={`status ${r.status}`}>{STATUS_TEXT[r.status]}</h2>
       <p className="muted">{r.reason}</p>
 
-      <GhostPlayer
-        src={clipUrl(runId)}
-        width={r.clip.width}
-        height={r.clip.height}
-        fps={r.clip.fps}
-        real={r.real_track_px}
-        ghosts={r.ghosts ?? []}
-      />
+      <div className="split">
+        <GhostPlayer
+          src={clipUrl(runId)}
+          width={r.clip.width}
+          height={r.clip.height}
+          fps={r.clip.fps}
+          real={r.real_track_px}
+          objectSizePx={r.object_size_px}
+          ghosts={r.ghosts ?? []}
+        />
+        <div className="card trail-card">
+          <h3>Agent decision trail</h3>
+          <AgentTrail steps={r.trail ?? []} />
+        </div>
+      </div>
 
       {r.equation && (
         <div className="card">
@@ -55,12 +63,6 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           </table>
         </div>
       )}
-
-      <div className="card agent">
-        <h3>Agent</h3>
-        <p>{r.agent.message}</p>
-        <p className="muted"><strong>Reasoning:</strong> {r.agent.reasoning_summary}</p>
-      </div>
 
       <div className="card">
         <h3>Candidates tested</h3>

@@ -14,6 +14,7 @@ import numpy as np
 from .agent.reasoning import agent_turn, propose_hypotheses, understand_scene
 from .agent.schemas import Scene
 from .costguard import CostGuardClient
+from .costguard.cache import file_digest
 from .perception import media
 from .perception.calibration import (
     Calibration,
@@ -27,7 +28,7 @@ from .physics.fit import FitResult, fit_model
 from .physics.models import MODELS, models_for
 from .physics.sindy import discover
 from .physics.uncertainty import bootstrap
-from .physics.verify import Verdict, assess
+from .physics.verify import Verdict, assess, judge_candidates
 from .sigproc.cleanup import detect_impacts, fill_short_gaps, split_at
 from .sigproc.summary import summarize
 from .sigproc.trajectory import Trajectory, from_pixels
@@ -60,10 +61,13 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     media_cfg = limits.get("media") or {}
     max_turns = int((limits.get("agent") or {}).get("max_turns", 4))
     llm_calls: list[dict[str, Any]] = []
+    # What the agent and the verifier decided, in order, each tagged with who decided it (shown on screen).
+    trail: list[dict[str, Any]] = []
 
-    def record(step: str, call) -> None:
+    def record(step: str, call, text: str, **extra: Any) -> None:
         llm_calls.append({"step": step, "provider": call.provider, "model": call.model, "cached": call.cached,
                           "reasoning": call.reasoning})
+        trail.append({"step": step, "provider": call.provider, "model": call.model, "text": text, **extra})
 
     progress("Preparing video")
     clip = run_dir / "clip.mp4"
@@ -77,13 +81,16 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     progress("Understanding the scene")
     frames_jpeg = media.keyframes(clip, int(media_cfg.get("llm_keyframes_max", 4)), int(media_cfg.get("llm_image_long_side_px", 768)))
     scene, call = understand_scene(client, frames_jpeg, run_id, options.audience)
-    record("scene", call)
+    ref = "no reference object" if scene.reference_kind == "none" else f"reference: {scene.reference_kind.replace('_', ' ')}"
+    record("scene", call, f"Sees a {scene.moving_object} moving like a {scene.motion_family}; {ref}.")
 
     progress(f"Tracking the {scene.moving_object} with SAM 3.1")
     tracks = track_objects(client, clip, info, scene, run_id, options.audience)
     moving = tracks.get(MOVING_ID)
     if moving is None or len(moving.frames) < min_frames // 2:
         raise AnalysisError(f"SAM could not follow the {scene.moving_object} through the clip.")
+    trail.append({"step": "tracking", "provider": "meta_api", "model": "sam-3.1",
+                  "text": f"Tracked the {scene.moving_object} in {len(moving.frames)} of {info.frames} frames."})
 
     progress("Calibrating scale")
     calibration = calibrate(scene, tracks.get(REFERENCE_ID), moving, options)
@@ -92,7 +99,7 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     summary = summarize(traj)
     progress("Proposing hypotheses")
     hyp, call = propose_hypotheses(client, summary, scene, run_id, options.audience)
-    record("hypotheses", call)
+    record("hypotheses", call, f"Proposes {len(hyp.candidates)} {hyp.family} models to test.", items=_hypothesis_items(hyp))
 
     tried: list[str] = []
     family, candidate_ids = hyp.family, _with_control(hyp.family, [h.model_id for h in hyp.candidates])
@@ -104,13 +111,17 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         tried.append(family)
         progress(f"Fitting and simulating {len(candidate_ids)} {family} models")
         coords, verdict = fit_and_verify(traj, family, candidate_ids)
+        judged = judge_candidates(verdict)
+        trail.append({"step": "verification", "provider": None, "model": "simulate-and-compare", "text": verdict.reason,
+                      "status": verdict.status,
+                      "items": [{"model_id": m, "title": MODELS[m].title, "status": st, "why": why} for m, (st, why) in judged.items()]})
         progress("Agent reviewing the verdict")
         turn, call = agent_turn(client, agent_context(verdict, family, summary, scene, tried), run_id, options.audience)
-        record("agent", call)
+        record("agent", call, turn.message, action=turn.action, reasoning_summary=turn.reasoning_summary)
         if verdict.status != "no_fit" or turn.action != "try_family" or not turn.next_family or turn.next_family in tried:
             break
         hyp, call = propose_hypotheses(client, summary, scene, run_id, options.audience, exclude_families=tried)
-        record("hypotheses", call)
+        record("hypotheses", call, f"Switches to {hyp.family} models.", items=_hypothesis_items(hyp))
         if hyp.family in tried:
             break
         family, candidate_ids = hyp.family, _with_control(hyp.family, [h.model_id for h in hyp.candidates])
@@ -128,7 +139,9 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         "agent": {"action": turn.action, "message": turn.message, "reasoning_summary": turn.reasoning_summary},
         "ranking": [fit_summary(f, rationales.get(f.model_id)) for f in verdict.ranked],
         "real_track_px": _track_points(traj.frames, traj.xy, origin_px, calibration.px_per_m),
+        "object_size_px": float(np.median(moving.long_px)),
         "llm_calls": llm_calls,
+        "trail": trail,
         "summary": summary,
     }
     if coords is not None:
@@ -160,12 +173,8 @@ def track_objects(client: CostGuardClient, clip: Path, info: media.VideoInfo, sc
     if scene.reference_box is not None:
         objects.append(msp.PromptObject(id=int(REFERENCE_ID), prompts=[msp.FramePrompt(frame=0, box=_box(scene.reference_box, info))]))
     prompt = msp.build_object_prompt(size=(info.width, info.height), objects=objects)
-    file_id, video_hash = client.upload_video(clip)
-    try:
-        r = client.sam_video(prompt=prompt, file_id=file_id, video_hash=video_hash, est_frames=info.frames,
-                             metadata=SAM_METADATA, run_id=run_id, audience=audience)
-    finally:
-        client.delete_file(file_id, video_hash)
+    r = client.sam_video(prompt=prompt, video_path=clip, video_hash=file_digest(clip), est_frames=info.frames,
+                         metadata=SAM_METADATA, run_id=run_id, audience=audience)
     try:
         return tracks_from_text(r.text, completed=r.finish_reason in (None, "completed"))
     except TrackingError as e:
@@ -212,6 +221,10 @@ def fit_and_verify(traj: Trajectory, family: str, candidate_ids: list[str]) -> t
         return None, Verdict("no_fit", None, (), (), f"The motion does not look like a {family}: {e}")
     fits = [fit_model(MODELS[m], coords) for m in candidate_ids]
     return coords, assess(coords, fits)
+
+
+def _hypothesis_items(hyp) -> list[dict[str, Any]]:
+    return [{"model_id": h.model_id, "title": MODELS[h.model_id].title, "why": h.rationale} for h in hyp.candidates]
 
 
 def _with_control(family: str, ids: list[str]) -> list[str]:

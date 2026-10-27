@@ -376,26 +376,39 @@ class CostGuardClient:
         run_id: str,
         file_id: str | None = None,
         video_url: str | None = None,
+        video_path: Path | None = None,
         metadata: dict[str, str] | None = None,
         audience: str = "dev",
         run_cap_usd: float | None = None,
     ) -> CallResult:
-        if (file_id is None) == (video_url is None):
-            raise InvalidRequest("Pass exactly one of file_id or video_url.")
+        """video_path uploads lazily inside the request, so a cached result never uploads anything."""
+        if sum(x is not None for x in (file_id, video_url, video_path)) != 1:
+            raise InvalidRequest("Pass exactly one of file_id, video_url or video_path.")
         metadata = metadata or {}
         if not all(isinstance(v, str) for v in metadata.values()):
             raise InvalidRequest("SAM metadata values must all be strings.")
         provider, model = "meta_api", SAM_MODEL
         self.check_kill_switch()
         self._check_model(model, provider)
-        video = {"type": "input_video", "file_id": file_id} if file_id else {"type": "input_video", "video_url": video_url}
-        sam_input = [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": prompt}, video]}]
         est_cost = self.pricing.cost(provider, model, Usage(video_frames=est_frames), video_requests=1)
         sdk = self._sdk(provider, self.sam_timeout)
 
-        def request() -> tuple[Any, Any]:
+        def stream_once(video: dict[str, Any]) -> tuple[Any, Any]:
+            sam_input = [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": prompt}, video]}]
             with sdk.responses.stream(model=model, input=sam_input, metadata=metadata, timeout=self.sam_timeout) as stream:
                 return stream.get_final_response(), None
+
+        def request() -> tuple[Any, Any]:
+            if video_path is not None:
+                uploaded_id, _ = self.upload_video(video_path)
+                try:
+                    return stream_once({"type": "input_video", "file_id": uploaded_id})
+                finally:
+                    # Uploaded clips are deleted as soon as SAM is done with them, not left to expire.
+                    self.delete_file(uploaded_id, video_hash)
+            if file_id is not None:
+                return stream_once({"type": "input_video", "file_id": file_id})
+            return stream_once({"type": "input_video", "video_url": video_url})
 
         # Keyed by the video's content hash, never the file_id: the same clip re-uploaded must still hit.
         cache_key = make_key(model, {"prompt": prompt, "metadata": metadata}, media=[video_hash])

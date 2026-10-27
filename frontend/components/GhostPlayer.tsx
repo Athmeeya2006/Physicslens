@@ -12,6 +12,7 @@ interface Props {
   height: number;
   fps: number;
   real: TrackPoint[];
+  objectSizePx?: number;
   ghosts: { model_id: string; points: TrackPoint[] }[];
 }
 
@@ -19,7 +20,7 @@ function byFrame(points: TrackPoint[]): Map<number, [number, number]> {
   return new Map(points.map(([f, x, y]) => [f, [x, y]]));
 }
 
-export function GhostPlayer({ src, width, height, fps, real, ghosts }: Props) {
+export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghosts }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [showReal, setShowReal] = useState(true);
@@ -33,7 +34,8 @@ export function GhostPlayer({ src, width, height, fps, real, ghosts }: Props) {
     const realMap = byFrame(real);
     const ghostMaps = ghosts.map((g) => byFrame(g.points));
     // Canvas works in clip pixels (the same space as the track), CSS scales it with the video.
-    const radius = Math.max(6, Math.min(width, height) / 40);
+    // Ghost drawn at the tracked object's own size, so it visibly covers (or misses) the real thing.
+    const radius = objectSizePx ? objectSizePx / 2 : Math.max(6, Math.min(width, height) / 40);
     let raf = 0;
 
     const draw = () => {
@@ -54,8 +56,9 @@ export function GhostPlayer({ src, width, height, fps, real, ghosts }: Props) {
         if (!p) return;
         ctx.strokeStyle = GHOST_COLORS[i % GHOST_COLORS.length];
         ctx.fillStyle = GHOST_COLORS[i % GHOST_COLORS.length] + "55";
-        ctx.lineWidth = 3;
-        ctx.setLineDash([6, 4]);
+        const stroke = Math.max(3, width / 300);
+        ctx.lineWidth = stroke;
+        ctx.setLineDash([stroke * 2, stroke * 1.5]);
         ctx.beginPath();
         ctx.arc(p[0], p[1], radius, 0, Math.PI * 2);
         ctx.fill();
@@ -66,7 +69,7 @@ export function GhostPlayer({ src, width, height, fps, real, ghosts }: Props) {
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [real, ghosts, fps, width, height, showReal]);
+  }, [real, ghosts, fps, width, height, showReal, objectSizePx]);
 
   return (
     <div className="player">
