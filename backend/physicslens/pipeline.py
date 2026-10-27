@@ -118,7 +118,9 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     progress("Calibrating scale")
     calibration = calibrate(scene, tracks.get(REFERENCE_ID), moving, options)
     full, full_origin = full_track(moving, info.fps, calibration.px_per_m)
-    traj, origin_px = longest_flight(full, full_origin, calibration.px_per_m)
+    # The whole track until the family is known: splitting at "impacts" only makes sense for a thrown or
+    # bouncing object, and would chop an oscillator at its turning points (found on a real spring clip).
+    traj, origin_px = full, full_origin
     rotation: Coordinates | None = None
     if scene.motion_family == "rotation":
         progress("Measuring the spin from the mask orientation")
@@ -166,6 +168,9 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     bounces: dict[str, Any] | None = None
     for _ in range(max_turns):
         tried.append(family)
+        if rotation is None:
+            traj, origin_px = (longest_flight(full, full_origin, calibration.px_per_m) if family == "projectile"
+                               else (full, full_origin))
         progress(f"Fitting and simulating {len(candidate_ids)} {family} models")
         coords, verdict = fit_and_verify(traj, family, candidate_ids, rotation if family == "rotation" else None)
         judged = judge_candidates(verdict)

@@ -94,11 +94,21 @@ class Hypotheses(Strict):
         return self
 
 
+def _plain_dashes(text: str) -> str:
+    """Model prose is shown in the UI, whose copy uses no em or en dashes; turn them into commas and 'to'."""
+    return text.replace(" \u2014 ", ", ").replace("\u2014", ", ").replace(" \u2013 ", " to ").replace("\u2013", " to ")
+
+
 class AgentTurn(Strict):
     action: Literal["explain", "request_experiment", "try_family", "give_up"]
     message: str = Field(description="Plain-language text for the user: explanation, experiment request, or why no equation fits.")
     next_family: Family | None = Field(description="Only for try_family; otherwise null.")
     reasoning_summary: str = Field(description="Two or three sentences summarizing your reasoning, shown in the UI.")
+
+    @field_validator("message", "reasoning_summary")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)
 
 
 class ParamChange(Strict):
@@ -112,3 +122,8 @@ class WhatIfPlan(Strict):
     changes: list[ParamChange] = Field(max_length=3)
     description: str = Field(description="Short label for the new scenario, e.g. 'String twice as long'.")
     reply: str = Field(description="One sentence for the user: what will be simulated, or why it can't be.")
+
+    @field_validator("description", "reply")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)

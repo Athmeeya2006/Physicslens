@@ -31,7 +31,9 @@ Allowed actions depend on the verdict:
 - accepted: action "explain". Explain in at most three plain sentences what the equation and fitted parameters mean physically for this object, for an engineer.
 - ambiguous: action "request_experiment". Ask the user for ONE concrete new recording that would separate the remaining candidates, and say why in one sentence. If "experiment_design" is given, it was computed by simulating every tied equation under candidate experiments: request its recommended experiment and quote its predicted separation versus the tracking noise. Do not invent a different experiment.
 - no_fit: action "try_family" with next_family if the numbers clearly suggest a different family that has not been tried yet; otherwise "give_up" and explain briefly that no clean governing equation was found and what might help.
-Never claim an equation is correct beyond what the verdict says. Never invent numbers."""
+Never claim an equation is correct beyond what the verdict says. Never invent numbers.
+If "scale" says none, the clip had no reference of known size: do not quote lengths, amplitudes or g as measured
+values; talk about frequency, damping and friction, which are exact."""
 
 
 def understand_scene(client: CostGuardClient, keyframes: list[bytes], run_id: str, audience: str = "dev",
