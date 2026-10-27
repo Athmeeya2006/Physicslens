@@ -31,7 +31,8 @@ from .export.mjcf import build_mjcf
 from .export.mp4 import ExportError, render_share_video
 from .export.script import parameters_json, python_script
 from .live import LiveConfig, LiveSession
-from .pipeline import RunOptions
+from .physics.health import HealthError, compare, health_metrics
+from .pipeline import AnalysisError, RunOptions, trajectory_from_result
 from .runs import RunManager
 from .settings import load_settings
 from .voice.events import final_turn, partial_text
@@ -320,3 +321,22 @@ def export(run_id: str, kind: str) -> Response:
     media, ext = EXPORTS[kind]
     return Response(body, media_type=media,
                     headers={"Content-Disposition": f'attachment; filename="physicslens-{run_id}.{ext}"'})
+
+
+@app.post("/api/compare")
+def compare_runs(
+    baseline: Annotated[str, Body()],
+    current: Annotated[str, Body()],
+) -> dict:
+    """Machine-health drift between two finished analyses of the same system. Local math only: free."""
+    a, b = _finished_result(baseline), _finished_result(current)
+    if a.get("family") != b.get("family"):
+        raise HTTPException(status_code=409, detail=f"Can't compare a {a.get('family')} with a {b.get('family')}.")
+    try:
+        out = compare(health_metrics(trajectory_from_result(a), a["family"]),
+                      health_metrics(trajectory_from_result(b), b["family"]))
+    except (HealthError, AnalysisError) as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    out["runs"] = {"baseline": {"id": baseline, "object": a.get("scene", {}).get("moving_object")},
+                   "current": {"id": current, "object": b.get("scene", {}).get("moving_object")}}
+    return out

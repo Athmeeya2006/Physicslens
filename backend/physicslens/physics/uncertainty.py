@@ -19,8 +19,9 @@ class ParamEstimate:
     ci_high: float
 
 
-def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 24, seed: int = 0) -> dict[str, ParamEstimate]:
-    """Refit on (fitted trajectory + resampled residual blocks).
+def bootstrap_samples(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 24,
+                      seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
+    """Refit on (fitted trajectory + resampled residual blocks): (param samples [reps, k], length samples [reps]).
 
     Blocks, not single samples, because tracking errors are correlated frame to frame.
     For a pendulum the length is redrawn from its own spread each time, since g is proportional to L.
@@ -33,7 +34,7 @@ def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 24, s
     lower = np.concatenate([[p.lower for p in spec.params], np.full(len(fit.y0), -np.inf)])
     upper = np.concatenate([[p.upper for p in spec.params], np.full(len(fit.y0), np.inf)])
 
-    samples = []
+    samples, lengths = [], []
     for _ in range(reps):
         starts = rng.integers(0, n - block + 1, size=n // block + 1)
         boot_resid = np.concatenate([resid[s:s + block] for s in starts])[:n]
@@ -43,8 +44,12 @@ def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 24, s
         boot = Coordinates(c.family, c.t, fit.sim + boot_resid, c.names, ctx)
         theta = fit_window(spec, boot, n, theta_hat, lower, upper, max_nfev=40)
         samples.append(theta[: len(spec.params)])
+        lengths.append(ctx.get("length_m", np.nan))
+    return np.array(samples), np.array(lengths)
 
-    arr = np.array(samples)
+
+def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 24, seed: int = 0) -> dict[str, ParamEstimate]:
+    arr, _ = bootstrap_samples(spec, c, fit, reps, seed)
     out = {}
     for i, name in enumerate(spec.param_names):
         lo, hi = np.percentile(arr[:, i], [2.5, 97.5])

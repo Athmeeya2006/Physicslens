@@ -149,7 +149,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Voice what-ifs with Muse Voice Transcribe (spoken question, parameter change, re-simulated ghost; typing works too)
 - [x] Shareable MP4 with the measured trail, the simulated ghost and the typeset equation burned in
 - [x] Exports: MuJoCo MJCF (replayed in MuJoCo and checked against the fitted motion), standalone Python simulation, parameters as JSON
-- [ ] Machine-health drift comparison
+- [x] Machine-health drift comparison: natural frequency and damping of two recordings, with uncertainty and conservative flagging
 
 ## Limitations
 

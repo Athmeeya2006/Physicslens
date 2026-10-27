@@ -344,3 +344,12 @@ def _track_points(frames: np.ndarray, xy: np.ndarray, origin_px: np.ndarray, ppm
 
 def ghost(c: Coordinates, f: FitResult, traj: Trajectory, origin_px: np.ndarray, ppm: float) -> dict[str, Any]:
     return {"model_id": f.model_id, "points": _track_points(traj.frames, c.to_xy(f.sim), origin_px, ppm)}
+
+
+def trajectory_from_result(result: dict[str, Any]) -> Trajectory:
+    """Rebuild the calibrated trajectory from a stored result (its pixel track, frame rate and scale)."""
+    points = np.array(result["real_track_px"], dtype=float)
+    if len(points) < 10:
+        raise AnalysisError("This analysis has too little track to reuse.")
+    return from_pixels(points[:, 0].astype(int), points[:, 1:3], float(result["clip"]["fps"]),
+                       float(result["calibration"]["px_per_m"]))

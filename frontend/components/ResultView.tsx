@@ -73,6 +73,9 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
             <a href={exportUrl(runId, "json")} download>Parameters (JSON)</a>
           </div>
           {r.mujoco?.notes.map((n, i) => <p key={i} className="muted small">Note: {n}</p>)}
+          {(r.family === "pendulum" || r.family === "oscillator") && (
+            <p className="small"><a href={`/health?baseline=${runId}`}>Machine health: compare this recording with a later one</a></p>
+          )}
         </div>
       )}
 
