@@ -46,7 +46,11 @@ def strict_schema(model: type[BaseModel]) -> dict[str, Any]:
         if isinstance(node, dict):
             if "$ref" in node:
                 return clean(copy.deepcopy(defs[node["$ref"].split("/")[-1]]))
-            return {k: clean(v) for k, v in node.items() if k in _SCHEMA_KEYS}
+            out = {k: clean(v) for k, v in node.items() if k in _SCHEMA_KEYS and k != "properties"}
+            if "properties" in node:
+                # Keys under "properties" are field names, not schema keywords: keep them all.
+                out["properties"] = {name: clean(sub) for name, sub in node["properties"].items()}
+            return out
         if isinstance(node, list):
             return [clean(v) for v in node]
         return node

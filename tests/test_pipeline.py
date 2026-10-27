@@ -98,7 +98,12 @@ def test_hypotheses_must_match_family():
 def test_strict_schema_is_self_contained():
     schema = json.dumps(strict_schema(Scene))
     assert "$ref" not in schema and "$defs" not in schema
-    assert strict_schema(Scene)["additionalProperties"] is False
+    schema = strict_schema(Scene)
+    assert schema["additionalProperties"] is False
+    # Every required field must actually be defined (an empty "properties" made the API return 500).
+    assert set(schema["required"]) == set(schema["properties"]) == set(Scene.model_fields)
+    box = schema["properties"]["moving_object_box"]
+    assert set(box["properties"]) == {"x1", "y1", "x2", "y2"} and box["additionalProperties"] is False
 
 
 def test_invalid_json_retried_once_then_fails(harness):
