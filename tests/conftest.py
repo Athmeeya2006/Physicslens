@@ -11,9 +11,7 @@ REPO_CONFIG = Path(__file__).resolve().parents[1] / "config"
 
 TEST_BUDGET = {
     "meta_api": {"hard_cap_usd": 1.00, "daily_cap_usd": 0.50},
-    "baseten": {"hard_cap_usd": 1.00, "daily_cap_usd": 0.50},
     "glimmer": {"hard_cap_usd": 0.00, "daily_cap_usd": 0.00},
-    "modal": {"hard_cap_usd": 1.00, "daily_cap_usd": 0.50},
     "per_run_cap_usd": 0.20,
     "smoke_cap_usd": 0.10,
     "judge_daily_cap_usd": 0.30,
@@ -36,13 +34,6 @@ def settings(tmp_path) -> Settings:
         shutil.copy(REPO_CONFIG / name, config / name)
     (config / "budget.yaml").write_text(yaml.safe_dump(TEST_BUDGET))
     return Settings(app_env="dev", mock_models=True, repo_root=tmp_path, config_dir=config, var_dir=tmp_path / "var")
-
-
-def set_baseten_price(settings: Settings, input_price: float = 1.0, output_price: float = 2.0) -> None:
-    path = settings.config_dir / "prices.yaml"
-    prices = yaml.safe_load(path.read_text())
-    prices["baseten"]["meta-models/muse-spark-open-1026"] = {"input": input_price, "output": output_price}
-    path.write_text(yaml.safe_dump(prices))
 
 
 class Harness:

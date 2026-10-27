@@ -77,12 +77,23 @@ flowchart LR
 
 | Model | Where it runs | What it does in PhysicsLens |
 |---|---|---|
-| **Muse Spark Open** (open weights) | Baseten | The agent's reasoning: scene understanding from keyframes, candidate equations, experiment requests, explanations, turning what-if questions into parameter changes |
+| **Muse Glimmer 30B** (open weights) | Self-hosted with llama.cpp on a free Kaggle GPU notebook (two T4s) | The agent's reasoning: scene understanding from keyframes (vision), candidate equations, the agent's own free-form laws, experiment requests, explanations, turning what-if questions into parameter changes |
 | **SAM 3.1** | Meta Model API | Box-prompted segmentation and tracking of the moving object(s) and the reference object in one request; in live mode, refinement of an on-device tracker in parallel chunks |
 | **Muse Voice Transcribe** | Meta Model API | Hands-free what-if questions over the realtime endpoint, with automatic end-of-speech detection |
-| **Muse Spark 1.3** | Meta Model API | Development-only fallback with the same prompts and schemas; the submitted build never falls back from the open-weight model |
+| **Muse Spark 1.3** | Meta Model API | Development convenience only, with the same prompts and schemas; demo and production refuse to reason on anything but the open-weight model |
 
-**Open-weight status, stated plainly:** the submitted build runs every reasoning step on Muse Spark Open via Baseten, and in the demo/production configuration it refuses to switch to any other model (it shows a "busy" message instead). Each result shows which model produced each step. During development, before Baseten access was granted, the same prompts ran on Muse Spark 1.3; this section will be updated once the Muse Spark Open runs are verified.
+**Open-weight status, stated plainly:** every reasoning step behind the published gallery results ran on **Muse Glimmer 30B**, Meta's open-weight model, using the official `meta-models/Muse-Glimmer-30B-GGUF` weights (Q4_K_M plus the vision encoder) on llama.cpp. It ran in a Kaggle GPU notebook, so it cost nothing per call. Each result shows the model behind every step. In demo and production the app refuses to reason on any other model: if the open-weight server is down it shows a "busy" message instead of switching. During early development the same prompts ran on Muse Spark 1.3; those results are not in the gallery.
+
+How the split works: the notebook never holds a Meta key. SAM 3.1 tracking runs through the cost guard on the developer's machine, and its results reach the notebook as cached responses (`PHYSICSLENS_CACHE_ONLY=meta_api` makes the Meta provider answer only from cache). Both sides analyze the same frozen clip and keyframe bytes, so their caches agree. `scripts/glimmer_batch.py` runs the handoff:
+
+```bash
+# on the GPU machine, after starting llama-server with the Glimmer GGUF (see the script's docstring)
+REASONING_PROVIDER=glimmer PHYSICSLENS_CACHE_ONLY=meta_api \
+GLIMMER_BASE_URL=http://127.0.0.1:8080/v1 GLIMMER_API_KEY=<llama-server key> \
+python scripts/glimmer_batch.py run --bundles bundles --out out
+```
+
+To serve the full app on open weights, point `GLIMMER_BASE_URL` at any reachable llama-server running Muse Glimmer and set `REASONING_PROVIDER=glimmer`.
 
 SAM 3.1 is used as a **scientific measurement instrument**: its masks become position and orientation time series that feed differential-equation fitting.
 
@@ -118,7 +129,8 @@ Python 3.11+ · FastAPI · NumPy / SciPy · PySINDy · OpenCV · MuJoCo · matpl
 ### Prerequisites
 
 - Python 3.11+, Node.js 20.17+ (or 22.9+), ffmpeg (`sudo apt install ffmpeg`)
-- A Meta Model API key ([dev.meta.ai](https://dev.meta.ai)); a Baseten API key for Muse Spark Open
+- A Meta Model API key ([dev.meta.ai](https://dev.meta.ai)) for SAM 3.1 and Muse Voice Transcribe
+- For open-weight reasoning: a GPU machine with about 20 GB of GPU memory running llama.cpp `llama-server` (b10353 or newer) with `meta-models/Muse-Glimmer-30B-GGUF`; a free Kaggle notebook with two T4 GPUs works
 
 ### Setup
 
@@ -146,7 +158,7 @@ Open `http://localhost:3000` for the gallery and uploads, `/live` for the camera
 make report                   # spend so far per provider/model/day and per audience, remaining budget
 make kill                     # instantly block every paid API call
 make unkill                   # re-enable
-make smoke                    # one cheap real call per model (asks before spending)
+make smoke                    # one cheap real call per model (asks before spending); checks Glimmer if configured
 ```
 
 Budget caps live in `config/budget.yaml` (created from `config/budget.example.yaml` by `make setup`); prices in `config/prices.yaml`.
@@ -155,7 +167,8 @@ Budget caps live in `config/budget.yaml` (created from `config/budget.example.ya
 
 | Variable | Effect |
 |---|---|
-| `APP_ENV=demo` or `prod` | No development fallback; mocks refused at startup |
+| `APP_ENV=demo` or `prod` | Reasoning only on the open-weight model, no development fallback; mocks refused at startup |
+| `REASONING_PROVIDER=glimmer`, `GLIMMER_BASE_URL`, `GLIMMER_API_KEY` | The llama-server running Muse Glimmer |
 | `DEMO_ACCESS_CODE` | Judges append `?code=...` to the URL for uploads, live mode and voice |
 | `PUBLIC_TRY_ENABLED=1` | Visitors without a code may analyze a few short clips per day; otherwise gallery only |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Optional Cloudflare Turnstile check on public uploads |
@@ -179,7 +192,9 @@ All code in this repository was written during the hackathon building period (Oc
 
 - [x] Cost guard: budgets, allowlist, rate limiting, caching, kill switch, persistent spend ledger
 - [x] Recorded mode: video → SAM 3.1 tracking → calibrated trajectory
-- [x] Hypothesis generation and agent decisions with structured outputs (running on Muse Spark Open once Baseten access is active; Muse Spark 1.3 in development until then)
+- [x] Hypothesis generation and agent decisions with validated structured outputs, running on Muse Glimmer (open weights, self-hosted)
+- [x] Equations the agent writes itself, parsed by a closed math grammar (no eval) and verified like any built-in model
+- [x] Scale from a known object size, slow-motion clips in real time, and a hint for what to track
 - [x] Fitting (SciPy + PySINDy) with BIC model selection and bootstrap uncertainty
 - [x] Verification with simulate-and-compare on held-out data
 - [x] Ghost overlay on the real video, and an on-screen decision trail showing who decided what
@@ -209,8 +224,8 @@ All code in this repository was written during the hackathon building period (Oc
 
 ## Acknowledgements
 
-- Meta's Muse Spark Open, SAM 3.1, Muse Voice Transcribe and Muse Spark models, and the `meta-sam-parser` library.
-- Baseten for open-weight model inference.
+- Meta's Muse Glimmer, SAM 3.1, Muse Voice Transcribe and Muse Spark models, and the `meta-sam-parser` library.
+- llama.cpp for serving the open-weight model, and Kaggle for the free GPU notebook it ran on.
 - Pendulum footage in the gallery: Rhetos / Mathe-AC Lernwerkstatt (CC BY-SA 4.0), via Wikimedia Commons.
 
 ## License

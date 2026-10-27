@@ -3,15 +3,9 @@
 meta_api:
   hard_cap_usd: 10.00
   daily_cap_usd: 2.00
-baseten:
-  hard_cap_usd: 10.00
-  daily_cap_usd: 2.00
 glimmer:
   hard_cap_usd: 0.00
   daily_cap_usd: 0.00
-modal:
-  hard_cap_usd: 10.00
-  daily_cap_usd: 2.00
 per_run_cap_usd: 0.50
 live_session_cap_usd: 1.00
 smoke_cap_usd: 0.25

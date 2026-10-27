@@ -113,6 +113,14 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         raise AnalysisError(f"SAM could not follow the {scene.moving_object} through the clip.")
     trail.append({"step": "tracking", "provider": "meta_api", "model": "sam-3.1",
                   "text": f"Tracked the {scene.moving_object} in {len(moving.frames)} of {info.frames} frames."})
+    if scene.motion_family != "rotation":  # a spin turns in place; everything else must actually travel
+        travel = float(np.ptp(moving.centers_px, axis=0).max())
+        size = float(np.median(moving.long_px))
+        if travel < max(0.5 * size, 0.02 * max(info.width, info.height)):
+            # Fitting equations to a mark that never moved would only find patterns in noise.
+            raise AnalysisError(
+                f"What SAM followed as the {scene.moving_object} barely moves ({travel:.0f} px). It may have locked on to "
+                "the wrong thing: say what to measure in the hint field, or start the clip where the object is in view.")
 
     progress("Calibrating scale")
     calibration = calibrate(scene, tracks.get(REFERENCE_ID), moving, options)
@@ -174,7 +182,10 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             traj, origin_px = (longest_flight(full, full_origin, calibration.px_per_m) if family == "projectile"
                                else (full, full_origin))
         progress(f"Fitting and simulating {len(candidate_ids)} {family} models")
-        coords, verdict = fit_and_verify(traj, family, candidate_ids, rotation if family == "rotation" else None)
+        given = known_length_geometry(moving, origin_px, calibration, options) if family == "pendulum" else None
+        coords, verdict = fit_and_verify(traj, family, candidate_ids,
+                                         rotation if family == "rotation" else
+                                         to_coordinates(traj, "pendulum", given) if given else None)
         judged = judge_candidates(verdict)
         trail.append({"step": "verification", "provider": None, "model": "simulate-and-compare", "text": verdict.reason,
                       "status": verdict.status,
@@ -667,11 +678,32 @@ def fit_summary(f: FitResult, rationale: str | None = None) -> dict[str, Any]:
             "param_meta": [{"name": p.name, "latex": p.latex, "unit": p.unit} for p in spec.params]}
 
 
+def known_length_geometry(moving: ObjectTrack, origin_px: np.ndarray, calibration: Calibration,
+                          options: RunOptions) -> dict[str, float] | None:
+    """With the length given, the swing is measured on that length rather than on a re-fitted arc.
+
+    With the pivot out of frame a short arc's radius and centre are poorly pinned down (on a real clip two
+    stretches of one swing gave radii 50% apart), and g would move with them.
+    """
+    if calibration.source != "user" or options.pendulum_length_m is None:
+        return None
+    ppm = calibration.px_per_m
+    x = (moving.centers_px[:, 0] - origin_px[0]) / ppm
+    y = (origin_px[1] - moving.centers_px[:, 1]) / ppm
+    # The pivot hangs straight above the rest point (the middle of the swing, at the bottom of the arc), so the
+    # angle swings about zero; with the length known, g then rests on the period alone.
+    rest_x = float(np.percentile(x, 5) + np.percentile(x, 95)) / 2
+    bottom_y = float(np.percentile(y, 2))
+    L = options.pendulum_length_m
+    return {"pivot_x": rest_x, "pivot_y": bottom_y + L, "length_m": L, "length_std": 0.0, "length_given": 1.0}
+
+
 def derived_parameters(c: Coordinates) -> list[dict[str, Any]]:
     if c.family == "pendulum":
         L, s = c.ctx["length_m"], c.ctx["length_std"]
+        how = "given by you; g then follows from the period" if c.ctx.get("length_given") else "radius of the fitted swing arc"
         return [{"name": "L", "latex": "L", "unit": "m", "value": L, "std": s, "ci95": [L - 1.96 * s, L + 1.96 * s],
-                 "derived": "radius of the fitted swing arc"}]
+                 "derived": how}]
     return []
 
 

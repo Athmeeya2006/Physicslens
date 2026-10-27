@@ -2,6 +2,7 @@ import threading
 from pathlib import Path
 
 import pytest
+import yaml
 from physicslens.costguard import (
     BudgetExceeded,
     CircuitOpen,
@@ -21,7 +22,7 @@ from physicslens.costguard.mock import api_error, responses_result, sam_result
 from physicslens.costguard.report import render
 from physicslens.settings import Settings
 
-from .conftest import Harness, set_baseten_price
+from .conftest import Harness
 
 BACKEND = Path(__file__).resolve().parents[1] / "backend" / "physicslens"
 
@@ -61,14 +62,19 @@ def test_allowlist_blocks_wonder(harness):
 
 def test_model_must_match_provider(harness):
     with pytest.raises(ModelNotAllowed):
-        text_call(harness.client, model="meta-models/muse-spark-open-1026")
+        text_call(harness.client, model="muse-glimmer-30b")
 
 
-def test_missing_price_refuses_call(harness):
-    # Baseten prices are null (TODO(verify)) in the real prices.yaml.
+def test_missing_price_refuses_call(settings, monkeypatch):
+    path = settings.config_dir / "prices.yaml"
+    prices = yaml.safe_load(path.read_text())
+    del prices["glimmer"]
+    path.write_text(yaml.safe_dump(prices))
+    monkeypatch.setenv("GLIMMER_BASE_URL", "http://127.0.0.1:8080/v1")
+    h = Harness(settings)
     with pytest.raises(PriceMissing):
-        harness.client.baseten_chat(messages=[{"role": "user", "content": "hi"}], run_id="r")
-    assert harness.sdk("baseten").calls == []
+        h.client.glimmer_chat(messages=[{"role": "user", "content": "hi"}], run_id="r")
+    assert h.sdk("glimmer").calls == []
 
 
 def test_contributor_refused_outside_dev(settings):
@@ -106,10 +112,10 @@ def test_expensive_meta_effort_refused(harness, effort):
         text_call(harness.client, effort=effort)
 
 
-@pytest.mark.parametrize("effort", ["high", "xhigh", "minimal"])
-def test_baseten_effort_refused(harness, effort):
+@pytest.mark.parametrize("strength", ["high", "xhigh", "minimal"])
+def test_expensive_glimmer_strength_refused(harness, strength):
     with pytest.raises(InvalidRequest):
-        harness.client.baseten_chat(messages=[], run_id="r", reasoning_effort=effort)
+        harness.client.glimmer_chat(messages=[], run_id="r", strength=strength)
 
 
 def test_meta_request_shape(harness):
@@ -121,16 +127,6 @@ def test_meta_request_shape(harness):
     assert call["prompt_cache_key"] == "physicslens-test-v1"
     assert call["text"]["format"]["strict"] is True
     assert "temperature" not in call and "top_p" not in call
-
-
-def test_baseten_always_sends_low_effort(harness, settings):
-    set_baseten_price(settings)
-    h = Harness(settings)
-    r = h.client.baseten_chat(messages=[{"role": "user", "content": "hi"}], run_id="r")
-    call = h.sdk("baseten").calls[0]
-    assert call["reasoning_effort"] == "low" and call["max_tokens"] == 4000
-    assert r.reasoning == "mock reasoning"
-    assert r.cost_usd == pytest.approx((100 * 1.0 + 50 * 2.0) / 1e6)
 
 
 # ---------- budget ----------
@@ -166,7 +162,7 @@ def test_per_run_cap(harness):
 def test_judge_cap_shows_polite_message(harness):
     g = harness.client.guard
     g.check_and_reserve("meta_api", "muse-spark-1.3", 0.15, "j1", audience="judge").commit(0.15)
-    g.check_and_reserve("baseten", "x", 0.15, "j2", audience="judge").commit(0.15)
+    g.check_and_reserve("meta_api", "sam-3.1", 0.15, "j2", audience="judge").commit(0.15)
     with pytest.raises(BudgetExceeded) as e:
         g.check_and_reserve("meta_api", "muse-spark-1.3", 0.05, "j3", audience="judge")
     assert str(e.value) == BUSY_MESSAGE

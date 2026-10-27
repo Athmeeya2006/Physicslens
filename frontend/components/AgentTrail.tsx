@@ -30,7 +30,6 @@ const DESIGN_STATUS: Record<string, string> = { accepted: "Decisive", tied: "Too
 
 function actor(step: TrailStep): { name: string; tone: "open" | "meta" | "math" } {
   if (step.model === "simulate-and-compare") return { name: "Numerical simulation, not the language model", tone: "math" };
-  if (step.model?.startsWith("meta-models/muse-spark-open")) return { name: "Muse Spark Open (open weights, Baseten)", tone: "open" };
   if (step.model?.startsWith("muse-glimmer")) return { name: "Muse Glimmer 30B (open weights, self-hosted)", tone: "open" };
   if (step.model === "sam-3.1") return { name: "SAM 3.1", tone: "meta" };
   // Only reachable in dev: demo and prod refuse to fall back from the open-weight model.

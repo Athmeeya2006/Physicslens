@@ -23,7 +23,6 @@ from openai import OpenAI
 from websockets.exceptions import ConnectionClosed
 
 from ..settings import (
-    BASETEN_REASONING_MODEL,
     GLIMMER_MODEL,
     META_CONTRIBUTOR_MODEL,
     SAM_MODEL,
@@ -51,7 +50,6 @@ from .pricing import Pricing, Usage
 log = logging.getLogger("physicslens.costguard")
 
 META_EFFORTS = ("minimal", "low", "medium")  # never high/xhigh/max; "none" is a 400
-BASETEN_EFFORTS = ("low", "medium")  # Baseten defaults to xhigh if omitted, so it is always sent
 GLIMMER_STRENGTHS = ("low", "medium")  # the chat template defaults to high, so it is always sent
 VOICE_URL = "wss://api.meta.ai/v1/asr/realtime"
 VOICE_BYTES_PER_SECOND = 24_000 * 2  # 24 kHz, 16-bit, mono
@@ -158,7 +156,6 @@ class CostGuardClient:
         self._sam_policy = _RetryPolicy(int(retries.get("on_429_max", 3)), int(retries.get("sam_max", 1)))
         out = self.limits.get("output_token_limits") or {}
         self.meta_max_output_default = int(out.get("meta_max_output_tokens_default", 2000))
-        self.baseten_max_tokens_default = int(out.get("baseten_max_tokens_default", 4000))
         self.glimmer_max_tokens_default = int(out.get("glimmer_max_tokens_default", 8000))
         # Providers listed in PHYSICSLENS_CACHE_ONLY answer from the cache or not at all. A GPU notebook
         # running the open-weight model replays SAM results this way and never holds a Meta key.
@@ -355,40 +352,6 @@ class CostGuardClient:
         keys = ("model", "input", "instructions", "reasoning", "text")
         resp = sdk.responses.input_tokens.count(**{k: body[k] for k in keys if k in body})
         return int(resp.input_tokens)
-
-    # ---------- Baseten: Muse Spark Open (Chat Completions) ----------
-
-    def baseten_chat(
-        self,
-        *,
-        messages: list[dict[str, Any]],
-        run_id: str,
-        model: str = BASETEN_REASONING_MODEL,
-        reasoning_effort: str = "low",
-        max_tokens: int | None = None,
-        audience: str = "dev",
-        use_cache: bool = True,
-        run_cap_usd: float | None = None,
-    ) -> CallResult:
-        if reasoning_effort not in BASETEN_EFFORTS:
-            raise InvalidRequest(f"Baseten reasoning_effort must be one of {BASETEN_EFFORTS}, got {reasoning_effort!r}.")
-        provider = "baseten"
-        self.check_kill_switch()
-        self._check_model(model, provider)
-        max_tok = max_tokens or self.baseten_max_tokens_default
-        body = {"model": model, "messages": messages, "reasoning_effort": reasoning_effort, "max_tokens": max_tok}
-        est_cost = self.pricing.worst_case_tokens(provider, model, _estimate_input_tokens(messages), max_tok)
-
-        def request() -> tuple[Any, Any]:
-            sdk = self._sdk(provider, self.llm_timeout)
-            raw = sdk.chat.completions.with_raw_response.create(**body, timeout=self.llm_timeout)
-            return raw.parse(), raw.headers
-
-        return self._execute(
-            provider=provider, model=model, run_id=run_id, audience=audience, est_cost=est_cost,
-            cache_key=make_key(model, body) if use_cache else None, request=request,
-            parse=_parse_chat, policy=self._llm_policy, run_cap_usd=run_cap_usd,
-        )
 
     # ---------- Muse Glimmer: open weights on our own llama-server (Chat Completions) ----------
 

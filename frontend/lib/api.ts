@@ -191,7 +191,7 @@ export function startRun(file: File, inputs: RunInputs, turnstileToken: string |
   return fetch(`${API_BASE}/api/runs`, { method: "POST", body: form, headers: codeHeaders() }).then((r) => json<RunView>(r));
 }
 
-// Open-weight reasoning models: Muse Spark Open on Baseten, or Muse Glimmer on our own GPU.
+// The open-weight reasoning model: Muse Glimmer, served from our own GPU.
 export function isOpenWeight(model: string | undefined): boolean {
-  return !!model && (model.startsWith("meta-models/muse-spark-open") || model.startsWith("muse-glimmer"));
+  return !!model && model.startsWith("muse-glimmer");
 }

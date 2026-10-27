@@ -16,13 +16,6 @@ meta_api:
   muse-voice-transcribe-1.0:
     audio_hour: 0.18      # billed in whole seconds
 
-baseten:
-  meta-models/muse-spark-open-1026:
-    input: null           # TODO(verify) from Baseten model page. While null, costguard refuses Baseten calls.
-    output: null          # TODO(verify)
-
-# Expected cost of one 10-second recorded run: ~$0.10. Much more than that = a bug; stop and investigate.
-
 glimmer:
   muse-glimmer-30b:       # self-hosted on a free GPU notebook: no per-token charge
     input: 0.0

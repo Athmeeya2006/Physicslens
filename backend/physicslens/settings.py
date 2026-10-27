@@ -17,7 +17,6 @@ META_TEXT_MODEL = "muse-spark-1.3"
 META_CONTRIBUTOR_MODEL = "muse-spark-1.3-contributor"
 SAM_MODEL = "sam-3.1"
 VOICE_MODEL = "muse-voice-transcribe-1.0"
-BASETEN_REASONING_MODEL = "meta-models/muse-spark-open-1026"
 GLIMMER_MODEL = "muse-glimmer-30b"
 
 

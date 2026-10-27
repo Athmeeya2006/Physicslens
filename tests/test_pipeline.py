@@ -168,51 +168,31 @@ def demo_harness(settings):
 
 def test_demo_refuses_meta_fallback_when_open_weight_missing(settings, monkeypatch):
     from physicslens.agent.llm import OpenWeightUnavailable
-    monkeypatch.delenv("BASETEN_API_KEY", raising=False)
+    monkeypatch.delenv("REASONING_PROVIDER", raising=False)
     h = demo_harness(settings)
     with pytest.raises(OpenWeightUnavailable):
         ask_json(h.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r", audience="judge")
     assert h.sdk("meta_api").calls == []
 
 
-def test_demo_does_not_fall_back_when_baseten_fails(settings, monkeypatch):
+def test_demo_does_not_fall_back_when_glimmer_fails(settings, monkeypatch):
     from physicslens.agent.llm import OpenWeightUnavailable
     from physicslens.costguard.mock import api_error
 
-    from .conftest import set_baseten_price
-    set_baseten_price(settings)
-    monkeypatch.setenv("BASETEN_API_KEY", "test-not-a-real-key")
+    monkeypatch.setenv("REASONING_PROVIDER", "glimmer")
+    monkeypatch.setenv("GLIMMER_BASE_URL", "http://127.0.0.1:8080/v1")
     h = demo_harness(settings)
-    h.sdk("baseten").script.extend([api_error(503)] * 3)
+    h.sdk("glimmer").script.extend([api_error(503)] * 3)
     with pytest.raises(OpenWeightUnavailable):
         ask_json(h.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r", audience="judge")
     assert h.sdk("meta_api").calls == []
 
 
-def test_dev_falls_back_to_meta_when_baseten_fails(harness, settings, monkeypatch):
-    from physicslens.costguard.mock import api_error
-
-    from .conftest import Harness, set_baseten_price
-    set_baseten_price(settings)
-    monkeypatch.setenv("BASETEN_API_KEY", "test-not-a-real-key")
-    h = Harness(settings)
-    h.sdk("baseten").script.extend([api_error(503)] * 3)
-    h.sdk("meta_api").script.append(responses_result(text=json.dumps(SCENE)))
-    scene, call = ask_json(h.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r")
+def test_dev_uses_meta_when_no_open_weight_server(harness, monkeypatch):
+    monkeypatch.delenv("REASONING_PROVIDER", raising=False)
+    harness.sdk("meta_api").script.append(responses_result(text=json.dumps(SCENE)))
+    scene, call = ask_json(harness.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r")
     assert call.provider == "meta_api" and scene.moving_object == "red ball"
-
-
-def test_baseten_used_when_configured(settings, monkeypatch):
-    from physicslens.costguard.mock import chat_result
-
-    from .conftest import set_baseten_price
-    set_baseten_price(settings)
-    monkeypatch.setenv("BASETEN_API_KEY", "test-not-a-real-key")
-    h = demo_harness(settings)
-    h.sdk("baseten").script.append(chat_result(text=json.dumps(SCENE)))
-    _, call = ask_json(h.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r", audience="judge")
-    assert call.provider == "baseten" and call.model == "meta-models/muse-spark-open-1026"
-    assert h.sdk("baseten").calls[0]["reasoning_effort"] == "low"
 
 
 def test_slow_motion_factor_puts_the_physics_in_real_time(harness, tmp_path):

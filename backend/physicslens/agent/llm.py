@@ -1,7 +1,7 @@
 """Structured (Pydantic-validated) calls to the reasoning model.
 
-Open-weight first: self-hosted Muse Glimmer when selected, else Muse Spark Open on Baseten; the Meta API
-fallback exists only in dev.
+The submitted build reasons on Muse Glimmer (open weights, self-hosted). Muse Spark 1.3 on the Meta API is a
+development convenience only: demo and production refuse to reason on anything but the open-weight model.
 """
 
 from __future__ import annotations
@@ -16,9 +16,8 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from ..costguard import CostGuardClient, CostGuardError, PriceMissing
+from ..costguard import CostGuardClient, CostGuardError
 from ..costguard.errors import CircuitOpen, ProviderCallFailed
-from ..settings import BASETEN_REASONING_MODEL
 
 log = logging.getLogger("physicslens.agent")
 T = TypeVar("T", bound=BaseModel)
@@ -92,15 +91,6 @@ def _strip_fences(text: str) -> str:
     return t.strip()
 
 
-def baseten_available(client: CostGuardClient) -> bool:
-    if not os.environ.get("BASETEN_API_KEY", "").strip():
-        return False
-    try:
-        client.pricing.entry("baseten", BASETEN_REASONING_MODEL)
-    except PriceMissing:
-        return False
-    return True
-
 
 def ask_json(
     client: CostGuardClient,
@@ -150,18 +140,8 @@ def _call(client: CostGuardClient, *, task: str, system: str, text: str, schema_
         except (ProviderCallFailed, CircuitOpen) as e:
             raise OpenWeightUnavailable(f"Muse Glimmer failed for {task}: {e}") from e
         return r.text, LLMCall("glimmer", r.model, r.reasoning, r.cost_usd, r.cached)
-    if baseten_available(client):
-        try:
-            r = client.baseten_chat(messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": content}],
-                                    run_id=run_id, audience=audience, max_tokens=max_output_tokens * 2,
-                                    run_cap_usd=run_cap_usd)
-            return r.text, LLMCall("baseten", r.model, r.reasoning, r.cost_usd, r.cached)
-        except (ProviderCallFailed, CircuitOpen) as e:
-            if not fallback_allowed(client):
-                raise OpenWeightUnavailable(f"Muse Spark Open failed for {task}: {e}") from e
-            log.warning("Baseten failed for %s (%s); falling back to Muse Spark on the Meta API (dev only).", task, e)
-    elif not fallback_allowed(client):
-        raise OpenWeightUnavailable("Muse Spark Open is not configured (BASETEN_API_KEY or its price is missing).")
+    if not fallback_allowed(client):
+        raise OpenWeightUnavailable("The open-weight model is not configured (REASONING_PROVIDER=glimmer and GLIMMER_BASE_URL).")
     meta_content = [{"type": "input_text", "text": text}] + [{"type": "input_image", "image_url": image_b64(j)} for j in images]
     r = client.meta_text(
         input=[{"role": "user", "content": meta_content}], instructions=system, schema=schema, schema_name=task,

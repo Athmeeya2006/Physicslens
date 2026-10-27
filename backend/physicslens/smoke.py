@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -11,7 +12,7 @@ from pathlib import Path
 
 from .costguard import CostGuardClient, CostGuardError, ProviderCallFailed
 from .settings import (
-    BASETEN_REASONING_MODEL,
+    GLIMMER_MODEL,
     META_CONTRIBUTOR_MODEL,
     META_TEXT_MODEL,
     SAM_MODEL,
@@ -21,7 +22,6 @@ from .settings import (
 
 SMOKE_CLIP = Path("samples/smoke_ball.mp4")
 FIXTURES = Path("tests/fixtures")
-BASETEN_CANDIDATES = (BASETEN_REASONING_MODEL, "meta-models/muse-spark-open")
 
 
 def clip_frames(path: Path) -> int:
@@ -83,16 +83,18 @@ def main() -> None:
     print(f"   {len(r.text.splitlines())} output lines, frames billed={r.usage.video_frames}, cost=${r.cost_usd:.5f}")
     print(f"   raw response saved to {FIXTURES / 'sam_smoke_response.json'}")
 
-    print("4) Baseten: Muse Spark Open model name (free list call)")
-    try:
-        names = client.list_models("baseten")
-        for m in BASETEN_CANDIDATES:
-            print(f"   {m:<36} {'available' if m in names else 'NOT LISTED'}")
-        if not any(m in names for m in BASETEN_CANDIDATES):
-            print("   FAIL: neither Muse Spark Open model name is listed.")
-    except CostGuardError as e:
-        print(f"   skipped: {e}")
-    print("   (Baseten generation is skipped until its price in config/prices.yaml is verified.)")
+    print("4) Muse Glimmer (open weights, self-hosted): free, only if a server is configured")
+    if not os.environ.get("GLIMMER_BASE_URL", "").strip():
+        print("   skipped: set GLIMMER_BASE_URL (and GLIMMER_API_KEY) to the llama-server serving it.")
+    else:
+        try:
+            names = client.list_models("glimmer")
+            print(f"   served models: {names}")
+            r = client.glimmer_chat(messages=[{"role": "user", "content": "Reply with the single word: ok"}],
+                                    run_id=run_id, max_tokens=1000, use_cache=False)
+            print(f"   {GLIMMER_MODEL}: {r.text.strip()!r}  usage={r.usage.as_dict()}  cost=${r.cost_usd:.5f}")
+        except CostGuardError as e:
+            print(f"   FAIL: {e}")
 
     print(f"\nSmoke total (ledger estimate): ${total:.5f}  (cap ${cap:.2f})")
     print("Now compare with the Meta dashboard Usage page; the dashboard is the truth.")
