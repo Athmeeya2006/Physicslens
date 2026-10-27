@@ -119,6 +119,14 @@ def get_clip(run_id: str) -> FileResponse:
     return FileResponse(path, media_type="video/mp4")
 
 
+def live_cap() -> float:
+    cap = client.guard.budget.get("live_session_cap_usd")
+    if cap is None:
+        logging.getLogger("physicslens").warning("live_session_cap_usd missing from config/budget.yaml; using per_run_cap_usd.")
+        return float(client.guard.budget["per_run_cap_usd"])
+    return float(cap)
+
+
 @app.websocket("/ws/live")
 async def live(ws: WebSocket) -> None:
     """First message: JSON {fps, pendulum_length_m?, access_code?}. Then one binary JPEG per camera frame."""
@@ -139,7 +147,8 @@ async def live(ws: WebSocket) -> None:
     fps = min(float(init.get("fps") or 25), 30.0)
     length = init.get("pendulum_length_m")
     session = LiveSession(client, run_dir, f"live-{run_dir.name}",
-                          LiveConfig(fps=fps, pendulum_length_m=float(length) if length else None, audience=audience), send)
+                          LiveConfig(fps=fps, pendulum_length_m=float(length) if length else None, audience=audience,
+                                     run_cap_usd=live_cap()), send)
     await ws.send_json({"type": "ready", "run_id": run_dir.name})
     try:
         for _ in range(MAX_LIVE_FRAMES):

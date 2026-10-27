@@ -33,20 +33,22 @@ Allowed actions depend on the verdict:
 Never claim an equation is correct beyond what the verdict says. Never invent numbers."""
 
 
-def understand_scene(client: CostGuardClient, keyframes: list[bytes], run_id: str, audience: str = "dev") -> tuple[Scene, LLMCall]:
+def understand_scene(client: CostGuardClient, keyframes: list[bytes], run_id: str, audience: str = "dev",
+                     run_cap_usd: float | None = None) -> tuple[Scene, LLMCall]:
     text = (f"{len(keyframes)} frames from the clip, first frame first. "
             "Return the JSON for the moving object and reference object.")
     return ask_json(client, task="scene", system=SCENE_SYSTEM, text=text, schema_model=Scene, run_id=run_id,
-                    images=keyframes, audience=audience)
+                    images=keyframes, audience=audience, run_cap_usd=run_cap_usd)
 
 
 def propose_hypotheses(client: CostGuardClient, summary: dict[str, Any], scene: Scene, run_id: str,
-                       audience: str = "dev", exclude_families: list[str] | None = None) -> tuple[Hypotheses, LLMCall]:
+                       audience: str = "dev", exclude_families: list[str] | None = None,
+                       run_cap_usd: float | None = None) -> tuple[Hypotheses, LLMCall]:
     payload = {"scene": {"object": scene.moving_object, "family_guess_from_video": scene.motion_family,
                          "observations": scene.observations},
                "trajectory_summary": summary, "families_already_ruled_out": exclude_families or []}
     return ask_json(client, task="hypotheses", system=HYPOTHESES_SYSTEM, text=json.dumps(payload), schema_model=Hypotheses,
-                    run_id=run_id, audience=audience)
+                    run_id=run_id, audience=audience, run_cap_usd=run_cap_usd)
 
 
 def agent_turn(client: CostGuardClient, context: dict[str, Any], run_id: str, audience: str = "dev") -> tuple[AgentTurn, LLMCall]:

@@ -52,6 +52,7 @@ class LiveConfig:
     pendulum_length_m: float | None = None
     audience: str = "dev"
     chunk_frames: int = 50
+    run_cap_usd: float | None = None  # live sessions have their own cap (budget.yaml live_session_cap_usd)
 
 
 @dataclass
@@ -148,7 +149,7 @@ class LiveSession:
     def _understand(self, jpegs: list[bytes]) -> None:
         picks = [jpegs[0], *jpegs[len(jpegs) // 3::max(1, len(jpegs) // 3)]][:4]
         keyframes = [_downscale(j, 768) for j in picks]
-        self.scene, call = understand_scene(self.client, keyframes, self.run_id, self.cfg.audience)
+        self.scene, call = understand_scene(self.client, keyframes, self.run_id, self.cfg.audience, self.cfg.run_cap_usd)
         assert self.size is not None
         self.last_box = _to_box(self.scene.moving_object_box, *self.size)
         self.send({"type": "scene", "object": self.scene.moving_object, "family": self.scene.motion_family,
@@ -176,7 +177,8 @@ class LiveSession:
 
     def _sam_via_client(self, path: Path, prompt: str, frames: int) -> str:
         r = self.client.sam_video(prompt=prompt, video_path=path, video_hash=file_digest(path), est_frames=frames,
-                                  metadata=SAM_METADATA, run_id=self.run_id, audience=self.cfg.audience)
+                                  metadata=SAM_METADATA, run_id=self.run_id, audience=self.cfg.audience,
+                                  run_cap_usd=self.cfg.run_cap_usd)
         return r.text
 
     def _ingest(self, start: int, n: int, tracks: dict[str, ObjectTrack]) -> None:
@@ -291,7 +293,8 @@ class LiveSession:
         """One LLM call per session (hypotheses); afterwards refits are local math only."""
         assert self.scene is not None
         try:
-            hyp, call = propose_hypotheses(self.client, summarize(traj), self.scene, self.run_id, self.cfg.audience)
+            hyp, call = propose_hypotheses(self.client, summarize(traj), self.scene, self.run_id, self.cfg.audience,
+                                           run_cap_usd=self.cfg.run_cap_usd)
             self.family = hyp.family
             ids = [h.model_id for h in hyp.candidates]
             self.send({"type": "hypotheses", "family": hyp.family, "model": call.model, "provider": call.provider,

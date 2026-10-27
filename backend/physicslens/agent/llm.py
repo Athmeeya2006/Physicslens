@@ -105,6 +105,7 @@ def ask_json(
     audience: str = "dev",
     meta_effort: str = "low",
     max_output_tokens: int = 2000,
+    run_cap_usd: float | None = None,
 ) -> tuple[T, LLMCall]:
     """System prompt and schema come first and stay fixed per task so provider prompt caching applies."""
     images = images or []
@@ -112,7 +113,8 @@ def ask_json(
     for attempt in range(2):  # one retry on malformed output, then fail clearly
         prompt = text + error_note
         call = _call(client, task=task, system=system, text=prompt, schema_model=schema_model, run_id=run_id,
-                     images=images, audience=audience, meta_effort=meta_effort, max_output_tokens=max_output_tokens)
+                     images=images, audience=audience, meta_effort=meta_effort, max_output_tokens=max_output_tokens,
+                     run_cap_usd=run_cap_usd)
         raw_text, info = call
         try:
             return schema_model.model_validate_json(_strip_fences(raw_text)), info
@@ -123,7 +125,8 @@ def ask_json(
 
 
 def _call(client: CostGuardClient, *, task: str, system: str, text: str, schema_model: type[BaseModel], run_id: str,
-          images: list[bytes], audience: str, meta_effort: str, max_output_tokens: int) -> tuple[str, LLMCall]:
+          images: list[bytes], audience: str, meta_effort: str, max_output_tokens: int,
+          run_cap_usd: float | None = None) -> tuple[str, LLMCall]:
     schema = strict_schema(schema_model)
     if baseten_available(client):
         content: list[dict[str, Any]] = [{"type": "text", "text": text}]
@@ -131,7 +134,8 @@ def _call(client: CostGuardClient, *, task: str, system: str, text: str, schema_
         sys_prompt = f"{system}\n\nReply with only a JSON object matching this JSON schema:\n{json.dumps(schema)}"
         try:
             r = client.baseten_chat(messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": content}],
-                                    run_id=run_id, audience=audience, max_tokens=max_output_tokens * 2)
+                                    run_id=run_id, audience=audience, max_tokens=max_output_tokens * 2,
+                                    run_cap_usd=run_cap_usd)
             return r.text, LLMCall("baseten", r.model, r.reasoning, r.cost_usd, r.cached)
         except (ProviderCallFailed, CircuitOpen) as e:
             if not fallback_allowed(client):
@@ -143,6 +147,6 @@ def _call(client: CostGuardClient, *, task: str, system: str, text: str, schema_
     r = client.meta_text(
         input=[{"role": "user", "content": content}], instructions=system, schema=schema, schema_name=task,
         effort=meta_effort, max_output_tokens=max_output_tokens, prompt_cache_key=f"physicslens-{task}-v1",
-        run_id=run_id, audience=audience,
+        run_id=run_id, audience=audience, run_cap_usd=run_cap_usd,
     )
     return r.text, LLMCall("meta_api", r.model, r.reasoning, r.cost_usd, r.cached)

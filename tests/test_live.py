@@ -136,3 +136,20 @@ def test_public_visitors_get_no_live_mode(monkeypatch):
         ws.send_json({"fps": 25})
         msg = ws.receive_json()
         assert msg["type"] == "notice" and "access code" in msg["message"]
+
+
+def test_live_session_uses_its_own_cap(harness, tmp_path, monkeypatch):
+    seen = []
+    real = harness.client.sam_video
+    monkeypatch.setattr(harness.client, "sam_video", lambda **kw: (seen.append(kw["run_cap_usd"]), real(**kw))[1])
+    harness.sdk("meta_api").script.extend([responses_result(text=json.dumps(SCENE)), responses_result(text=json.dumps(HYPOTHESES))])
+    session = LiveSession(harness.client, tmp_path / "live", "live-cap", LiveConfig(fps=FPS, pendulum_length_m=0.6, run_cap_usd=2.0),
+                          lambda m: None, synchronous=True)
+    frames = clip_jpegs()
+    for i in range(50):
+        session.add_frame(frames[i])
+    assert seen == [2.0]
+    # The guard honours it: a session may exceed the per-run cap (0.20 in tests) up to its own cap.
+    g = harness.client.guard
+    g.check_and_reserve("meta_api", "sam-3.1", 0.15, "live-cap2", run_cap_usd=2.0).commit(0.15)
+    g.check_and_reserve("meta_api", "sam-3.1", 0.15, "live-cap2", run_cap_usd=2.0).commit(0.15)
