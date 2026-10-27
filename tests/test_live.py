@@ -102,7 +102,9 @@ def test_live_stream_tracks_fits_and_predicts(harness, tmp_path):
     assert np.median(err) < 3
 
 
-def test_budget_pause_keeps_local_tracking(harness, tmp_path):
+def test_budget_pause_keeps_local_tracking(harness, tmp_path, monkeypatch):
+    import physicslens.live as live_module
+    monkeypatch.setattr(live_module, "REFIT_EVERY", 10**6)  # this test is about tracking and SAM, not fitting
     sam = FakeSam(fail_on_call=2)
     session, sent = make_session(harness, tmp_path, sam)
     frames = clip_jpegs()

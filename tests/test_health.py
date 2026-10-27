@@ -1,10 +1,21 @@
 """Machine-health drift between two recordings: real changes flagged, re-recording noise never."""
 
+import functools
 import json
 
 import numpy as np
 import pytest
-from physicslens.physics.health import compare, health_metrics
+from physicslens.physics import health as health_module
+from physicslens.physics.health import compare
+
+# Fewer bootstrap samples than the app (20) keep the suite fast; the flagging logic is unchanged.
+health_metrics = functools.partial(health_module.health_metrics, reps=8)
+
+
+@pytest.fixture(autouse=True)
+def _fast_endpoint_bootstrap(monkeypatch):
+    from physicslens import app as app_module
+    monkeypatch.setattr(app_module, "health_metrics", health_metrics)
 
 from .test_regime import FPS, pendulum
 
