@@ -101,6 +101,7 @@ git clone <this-repo-url> physicslens
 cd physicslens
 cp .env.example .env        # then fill in your keys; never commit .env
 make setup                  # creates .venv and installs backend dependencies
+(cd frontend && npm install) # frontend dependencies
 make test                   # unit tests with mocked models (no API spend)
 ```
 
@@ -137,11 +138,11 @@ tests/         unit tests (run with mocked models)
 All code in this repository was written during the hackathon building period (Oct 27 to Nov 4, 2026). This list is updated as features land.
 
 - [x] Cost guard: budgets, allowlist, rate limiting, caching, kill switch, persistent spend ledger (tested with mocked models)
-- [ ] Recorded mode: video → SAM 3.1 tracking → calibrated trajectory
+- [x] Recorded mode: video → SAM 3.1 tracking → calibrated trajectory
 - [ ] Hypothesis generation with Muse Spark Open
-- [ ] Fitting (SciPy + PySINDy) with BIC model selection
-- [ ] Verification agent with simulate-and-compare
-- [ ] Ghost overlay on the real video
+- [x] Fitting (SciPy + PySINDy) with BIC model selection and bootstrap uncertainty
+- [x] Verification agent with simulate-and-compare on held-out data
+- [x] Ghost overlay on the real video (web UI)
 - [ ] Live camera mode with converging equations
 - [ ] Experiment requests for ambiguous data
 - [ ] Regime-change detection

@@ -1,0 +1,89 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import type { TrackPoint } from "@/lib/api";
+
+const GHOST_COLORS = ["#22d3ee", "#f472b6", "#facc15"];
+const TRAIL_FRAMES = 20;
+
+interface Props {
+  src: string;
+  width: number;
+  height: number;
+  fps: number;
+  real: TrackPoint[];
+  ghosts: { model_id: string; points: TrackPoint[] }[];
+}
+
+function byFrame(points: TrackPoint[]): Map<number, [number, number]> {
+  return new Map(points.map(([f, x, y]) => [f, [x, y]]));
+}
+
+export function GhostPlayer({ src, width, height, fps, real, ghosts }: Props) {
+  const video = useRef<HTMLVideoElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [showReal, setShowReal] = useState(true);
+
+  useEffect(() => {
+    const v = video.current;
+    const c = canvas.current;
+    if (!v || !c) return;
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+    const realMap = byFrame(real);
+    const ghostMaps = ghosts.map((g) => byFrame(g.points));
+    // Canvas works in clip pixels (the same space as the track), CSS scales it with the video.
+    const radius = Math.max(6, Math.min(width, height) / 40);
+    let raf = 0;
+
+    const draw = () => {
+      const frame = Math.round(v.currentTime * fps);
+      ctx.clearRect(0, 0, width, height);
+      if (showReal) {
+        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let f = frame - TRAIL_FRAMES; f <= frame; f++) {
+          const p = realMap.get(f);
+          if (p) ctx.lineTo(p[0], p[1]);
+        }
+        ctx.stroke();
+      }
+      ghostMaps.forEach((m, i) => {
+        const p = m.get(frame);
+        if (!p) return;
+        ctx.strokeStyle = GHOST_COLORS[i % GHOST_COLORS.length];
+        ctx.fillStyle = GHOST_COLORS[i % GHOST_COLORS.length] + "55";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [real, ghosts, fps, width, height, showReal]);
+
+  return (
+    <div className="player">
+      <div className="stage" style={{ aspectRatio: `${width} / ${height}` }}>
+        <video ref={video} src={src} controls playsInline muted loop />
+        <canvas ref={canvas} width={width} height={height} />
+      </div>
+      <div className="legend">
+        {ghosts.map((g, i) => (
+          <span key={g.model_id}>
+            <i style={{ borderColor: GHOST_COLORS[i % GHOST_COLORS.length] }} /> ghost: {g.model_id}
+          </span>
+        ))}
+        <label>
+          <input type="checkbox" checked={showReal} onChange={(e) => setShowReal(e.target.checked)} /> measured trail
+        </label>
+      </div>
+    </div>
+  );
+}
