@@ -3,10 +3,19 @@ math language of expr.py (see custom.py). Either way only fitting and held-out v
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
+
+_LENGTH_UNIT = re.compile(r"(^|[^a-z])m($|[^a-z])")
+
+
+def needs_scale(unit: str) -> bool:
+    """True for anything measured in meters (m, m/s^2, 1/m); angles, times and rates are scale-free."""
+    return bool(_LENGTH_UNIT.search(unit or ""))
+
 
 Rhs = Callable[[np.ndarray, dict[str, float], dict[str, float]], np.ndarray]
 

@@ -9,7 +9,10 @@ import { getBudget, getGallery, getHealth, getRun, HAS_BACKEND, startRun } from 
 
 declare global {
   interface Window {
-    turnstile?: { render: (el: HTMLElement, opts: { sitekey: string; callback: (token: string) => void }) => void };
+    turnstile?: {
+      render: (el: HTMLElement, opts: { sitekey: string; callback: (token: string) => void }) => void;
+      reset: (el?: HTMLElement) => void;
+    };
   }
 }
 
@@ -22,6 +25,8 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [lengthCm, setLengthCm] = useState("");
   const [sizeCm, setSizeCm] = useState("");
+  const [slowMo, setSlowMo] = useState("");
+  const [hint, setHint] = useState("");
   const [run, setRun] = useState<RunView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
@@ -45,13 +50,17 @@ export default function Home() {
     };
   }, []);
 
-  const poll = (id: string) => {
+  const poll = (id: string, failures = 0) => {
     getRun(id)
       .then((r) => {
         setRun(r);
         if (r.status === "queued" || r.status === "running") timer.current = setTimeout(() => poll(id), POLL_MS);
       })
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => {
+        // A dropped request on a phone shouldn't end a two-minute analysis: retry with backoff first.
+        if (failures < 5) timer.current = setTimeout(() => poll(id, failures + 1), POLL_MS * 2 ** (failures + 1));
+        else setError(e.message);
+      });
   };
 
   useEffect(() => {
@@ -95,7 +104,12 @@ export default function Home() {
     try {
       const length = lengthCm ? Number(lengthCm) / 100 : null;
       const size = sizeCm ? Number(sizeCm) / 100 : null;
-      const r = await startRun(file, length, size, turnstileToken);
+      const token = turnstileToken;
+      // A bot-check token is single use: ask for a fresh one before the next upload.
+      setTurnstileToken(null);
+      if (turnstileBox.current) window.turnstile?.reset(turnstileBox.current);
+      const r = await startRun(file, { pendulumLengthM: length, objectSizeM: size,
+                                       slowMotion: slowMo ? Number(slowMo) : null, objectHint: hint || null }, token);
       setRun(r);
       setRunParam(r.run_id);
       poll(r.run_id);
@@ -141,10 +155,14 @@ export default function Home() {
             ) : (
               <form className="stack" onSubmit={submit}>
                 <label className={`dropzone ${file ? "has-file" : ""}`}>
-                  <input type="file" accept="video/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                  <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
                   <Upload size={22} strokeWidth={1.8} aria-hidden="true" />
                   <strong>{file ? file.name : "Choose or record a video"}</strong>
-                  <span className="small muted">2 to 20 seconds, MP4 or MOV</span>
+                  <span className="small muted">2 to 20 seconds, MP4 or MOV; longer clips are trimmed</span>
+                </label>
+                <label className="field">
+                  What should it measure? Optional, for busy scenes
+                  <input type="text" maxLength={60} placeholder="e.g. the red ball" value={hint} onChange={(e) => setHint(e.target.value)} />
                 </label>
                 <fieldset className="scale-fields">
                   <legend>Scale, optional: only needed when nothing of known size is in view</legend>
@@ -157,6 +175,10 @@ export default function Home() {
                     <input type="number" inputMode="decimal" min="0.5" step="0.1" value={sizeCm} onChange={(e) => setSizeCm(e.target.value)} />
                   </label>
                 </fieldset>
+                <label className="field">
+                  Slow-motion clip? How many times slower it plays (8 for 240 fps shown at 30), else leave empty
+                  <input type="number" inputMode="decimal" min="1" step="any" value={slowMo} onChange={(e) => setSlowMo(e.target.value)} />
+                </label>
                 {health?.turnstile_site_key && <div ref={turnstileBox} />}
                 <button type="submit" disabled={!file || busy || !canUpload}>
                   {busy ? <><Loader2 size={16} className="spin" aria-hidden="true" />Analyzing</> : "Analyze the motion"}

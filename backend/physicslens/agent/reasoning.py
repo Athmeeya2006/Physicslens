@@ -53,9 +53,12 @@ values; talk about frequency, damping and friction, which are exact."""
 
 
 def understand_scene(client: CostGuardClient, keyframes: list[bytes], run_id: str, audience: str = "dev",
-                     run_cap_usd: float | None = None) -> tuple[Scene, LLMCall]:
+                     run_cap_usd: float | None = None, hint: str | None = None) -> tuple[Scene, LLMCall]:
     text = (f"{len(keyframes)} frames from the clip, first frame first. "
             "Return the JSON for the moving object and reference object.")
+    if hint:
+        # The user's own words about what to measure: a busy scene can have several candidates.
+        text += f" The user says the object to measure is: {json.dumps(hint)}."
     return ask_json(client, task="scene", system=SCENE_SYSTEM, text=text, schema_model=Scene, run_id=run_id,
                     images=keyframes, audience=audience, run_cap_usd=run_cap_usd)
 

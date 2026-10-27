@@ -335,9 +335,10 @@ class CostGuardClient:
 
         est_in = self.count_input_tokens(body) if preflight_tokens else _estimate_input_tokens([instructions, input])
         est_cost = self.pricing.worst_case_tokens(provider, model, est_in, max_out)
-        sdk = self._sdk(provider, self.llm_timeout)
 
         def request() -> tuple[Any, Any]:
+            # Created on first real request: a cache hit (or a cache-only machine) needs no key.
+            sdk = self._sdk(provider, self.llm_timeout)
             raw = sdk.responses.with_raw_response.create(**body, timeout=self.llm_timeout)
             return raw.parse(), raw.headers
 
@@ -377,9 +378,9 @@ class CostGuardClient:
         max_tok = max_tokens or self.baseten_max_tokens_default
         body = {"model": model, "messages": messages, "reasoning_effort": reasoning_effort, "max_tokens": max_tok}
         est_cost = self.pricing.worst_case_tokens(provider, model, _estimate_input_tokens(messages), max_tok)
-        sdk = self._sdk(provider, self.llm_timeout)
 
         def request() -> tuple[Any, Any]:
+            sdk = self._sdk(provider, self.llm_timeout)
             raw = sdk.chat.completions.with_raw_response.create(**body, timeout=self.llm_timeout)
             return raw.parse(), raw.headers
 
@@ -452,9 +453,9 @@ class CostGuardClient:
         self.check_kill_switch()
         self._check_model(model, provider)
         est_cost = self.pricing.cost(provider, model, Usage(video_frames=est_frames), video_requests=1)
-        sdk = self._sdk(provider, self.sam_timeout)
 
         def stream_once(video: dict[str, Any]) -> tuple[Any, Any]:
+            sdk = self._sdk(provider, self.sam_timeout)
             sam_input = [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": prompt}, video]}]
             with sdk.responses.stream(model=model, input=sam_input, metadata=metadata, timeout=self.sam_timeout) as stream:
                 return stream.get_final_response(), None

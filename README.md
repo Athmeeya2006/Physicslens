@@ -26,7 +26,7 @@ It is system identification, normally a specialist task, made as easy as filming
 ## What it does
 
 1. **Record, upload, or go live.** Live mode streams the phone camera; tap the object to lock on.
-2. **It reads the scene.** The reasoning model looks at four keyframes, names the moving object, guesses the kind of motion, and finds a reference of known size (A4 or letter sheet, credit card, coin).
+2. **It reads the scene.** The reasoning model looks at four keyframes, names the moving object, guesses the kind of motion, and finds a reference of known size (A4 or letter sheet, credit card, coin). No reference? Give the pendulum length or the moving object's size, or skip it: frequency, damping and friction need no scale.
 3. **It tracks precisely.** SAM 3.1 follows the object, and the reference, through every frame in a single request.
 4. **It hypothesizes, then proves.** The agent proposes candidate equations; regular math fits and simulates each one and keeps only what forecasts held-out data. The simplest adequate model wins (BIC).
 5. **It asks for better data.** If candidates tie, the agent says which experiment would separate them ("release it from a larger angle and film 20 seconds").
@@ -46,6 +46,9 @@ When nothing fits, it says so: *"no clean governing equation found."* It never i
 | Bouncing ball | free flight plus restitution (hybrid) | g shared by every flight, coefficient of restitution at each bounce |
 | Double pendulum | point-mass double pendulum, fitted on short restarted predictions | g, mass ratio, and how chaotic it is: Lyapunov exponent and how many seconds the motion can be forecast |
 | Spinning object slowing down | free spin, dry friction, viscous, air drag, dry plus viscous | the friction law and its coefficients |
+| **Anything else that moves** (rolling, sliding, braking, a falling leaf) | constant velocity and constant acceleration as controls, plus up to three equations **the agent writes itself** | the law that forecasts the motion, its fitted coefficients, and the same ghost, exports and what-ifs |
+
+**Equations the agent writes itself.** For motion outside the named families the agent proposes the acceleration law as text, for example `-mu*9.81*sign(v) - c*v*abs(v)` for a cart slowed by rolling friction and air drag. A small recursive-descent parser over a closed grammar (numbers, declared parameters, the state variables, `+ - * / ^` and a whitelist of functions) turns it into a model; nothing is ever passed to `eval`. The parsed tree drives the ODE solver, the LaTeX shown in the app and the exported Python script, so what you see is exactly what was fitted. Each law must beat "nothing acts on it" and "a constant force" on held-out motion, and a malformed proposal goes back to the agent with the parser's error. On synthetic data an agent-written air-drag law recovers its coefficient within 5% and a wrong spring law is rejected.
 
 Changes during a clip (say, the string is shortened mid-recording) are detected; each regime is fitted separately, and live mode refits on the new motion.
 
@@ -95,6 +98,7 @@ SAM 3.1 is used as a **scientific measurement instrument**: its masks become pos
 - bouncing ball: coefficient of restitution within 0.01 and g within about 1% with up to 8 mm tracking noise
 - double pendulum: g within 0.4%, mass ratio within 1%, chaos detected (predictable for about 1.6 s at 2 mm noise); random motion is rejected
 - spin-down: all four friction laws identified, coefficients within 3%, orientation from masks to 0.004 rad
+- free-form laws: an air-drag law written as text recovers its coefficient within 5%; a 2D drag law recovers g within 3%; a wrong law loses to the controls
 - machine health: no false alarm when the same system is re-recorded; a 50% rise in damping and a 2% frequency shift are flagged
 
 ## Engineering highlights

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TrendChart } from "@/components/TrendChart";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, HAS_BACKEND } from "@/lib/api";
 
 interface MetricRow {
   metric: string;
@@ -23,6 +23,16 @@ interface Comparison {
   metrics: MetricRow[];
   durations_s: [number, number];
   runs: { baseline: { id: string; object?: string }; current: { id: string; object?: string } };
+}
+
+// The server answers JSON; anything else (an HTML error page, a proxy) becomes a readable message.
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const r = await fetch(`${API_BASE}${path}`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  const data = await r.json().catch(() => null);
+  if (!r.ok || data === null) throw new Error(data?.detail ?? "The analysis server didn't answer. Try again in a moment.");
+  return data as T;
 }
 
 // Accept a pasted result link (".../?run=abc123") or a bare run id.
@@ -58,14 +68,7 @@ function TrendSection() {
     setError(null);
     setTrend(null);
     try {
-      const r = await fetch(`${API_BASE}/api/health/trend`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ runs }),
-      });
-      const body = await r.json();
-      if (!r.ok) throw new Error(body.detail ?? `${r.status}`);
-      setTrend(body as Trend);
+      setTrend(await postJson<Trend>("/api/health/trend", { runs }));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -128,14 +131,7 @@ export default function HealthPage() {
     setError(null);
     setResult(null);
     try {
-      const r = await fetch(`${API_BASE}/api/compare`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ baseline: runId(baseline), current: runId(current) }),
-      });
-      const body = await r.json();
-      if (!r.ok) throw new Error(body.detail ?? `${r.status}`);
-      setResult(body as Comparison);
+      setResult(await postJson<Comparison>("/api/compare", { baseline: runId(baseline), current: runId(current) }));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -152,7 +148,20 @@ export default function HealthPage() {
         </p>
       </header>
 
-      <form className="panel upload" onSubmit={run}>
+      {!HAS_BACKEND && (
+        <section className="panel">
+          <h2>Needs the analysis server</h2>
+          <p className="muted">
+            This preview has no analysis server connected, so recordings can&apos;t be compared here. With the server, you
+            paste two result links of the same machine part; PhysicsLens refits both and flags a change in natural frequency
+            or damping only when it exceeds 3 standard errors and a practical threshold (0.5% in frequency, 10% in damping),
+            with a repeatability allowance for re-recording. In tests it raises no false alarm when the same system is
+            re-recorded, and catches a 50% rise in damping and a 2% frequency shift.
+          </p>
+        </section>
+      )}
+
+      {HAS_BACKEND && <form className="panel upload" onSubmit={run}>
         <label>
           Baseline recording (result link or id)
           <input value={baseline} onChange={(e) => setBaseline(e.target.value)} placeholder="e.g. the analysis from last month" />
@@ -162,17 +171,17 @@ export default function HealthPage() {
           <input value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="the analysis from today" />
         </label>
         <button type="submit" disabled={busy || !baseline || !current}>{busy ? "Comparing (about 15 s)..." : "Compare dynamics"}</button>
-      </form>
+      </form>}
 
       {error && <p className="error">{error}</p>}
 
-      <TrendSection />
+      {HAS_BACKEND && <TrendSection />}
 
       {result && (
         <section className="panel">
           <h2 className={`status ${result.drift ? "no_fit" : "accepted"}`}>{result.drift ? "Drift detected" : "No significant change"}</h2>
           <p>{result.summary}</p>
-          <table>
+          <div className="table-wrap"><table>
             <thead>
               <tr><th>Metric</th><th>Baseline</th><th>Current</th><th>Change</th><th>Significance</th></tr>
             </thead>
@@ -187,7 +196,7 @@ export default function HealthPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
           <p className="muted small">
             A change is flagged only if it exceeds 3 standard errors and is large enough to matter (0.5% in frequency, 10% in damping).
             Uncertainties include a repeatability allowance for re-recording.

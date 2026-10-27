@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,7 +33,7 @@ from .physics.double import DoublePendulumError, fit_double, to_double_coords
 from .physics.double import simulate as double_simulate
 from .physics.double import summary as double_summary
 from .physics.fit import FitResult, fit_model
-from .physics.models import MODELS, models_for
+from .physics.models import MODELS, models_for, needs_scale
 from .physics.regime import RegimeChange, detect_change
 from .physics.rotation import RotationError, rotation_coordinates
 from .physics.sindy import discover
@@ -50,12 +49,8 @@ NOMINAL_PX_PER_M = 1000.0  # used only when nothing in the clip gives a scale
 SCALE_NOTE = ("No reference of known size was found, so lengths and g are in arbitrary units. Frequency, damping "
               "and friction rates don't depend on scale and are exact. For a calibrated result, put an A4 sheet "
               "flat in the plane of motion or enter the pendulum length.")
-_LENGTH_UNIT = re.compile(r"(^|[^a-z])m($|[^a-z])")
 
 
-def needs_scale(unit: str) -> bool:
-    """True for anything measured in meters (m, m/s^2, 1/m); angles, times and rates are scale-free."""
-    return bool(_LENGTH_UNIT.search(unit or ""))
 
 BOUNCE_LATEX = r"\ddot y = -g \ \text{between impacts},\qquad v_y^{+} = -e\, v_y^{-}"
 
@@ -73,6 +68,8 @@ class RunOptions:
     audience: str = "dev"
     pendulum_length_m: float | None = None  # alternative scale source when no reference object is visible
     object_size_m: float | None = None  # known longest dimension of the moving object (a ball, a car, an astronaut)
+    object_hint: str | None = None  # the user's words for what to measure, e.g. "the astronaut"
+    slow_motion: float = 1.0  # capture rate / playback rate, e.g. 8 for a phone's 240 fps slow motion saved at 30 fps
     prepared: Path | None = None  # a media.save_prepared bundle: analyze exactly these bytes (see save_prepared)
 
 
@@ -103,9 +100,11 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         raise AnalysisError(f"The clip is too short: at least {min_frames} frames (about 2 seconds) are needed.")
 
     progress("Understanding the scene")
-    scene, call = understand_scene(client, frames_jpeg, run_id, options.audience)
+    hint = (options.object_hint or "").strip()[:60] or None
+    scene, call = understand_scene(client, frames_jpeg, run_id, options.audience, hint=hint)
     ref = "no reference object" if scene.reference_kind == "none" else f"reference: {scene.reference_kind.replace('_', ' ')}"
-    record("scene", call, f"Sees a {scene.moving_object} {MOTION_PHRASE[scene.motion_family]}; {ref}.")
+    told = f" (asked to measure: {hint})" if hint else ""
+    record("scene", call, f"Sees a {scene.moving_object} {MOTION_PHRASE[scene.motion_family]}; {ref}{told}.")
 
     progress(f"Tracking the {scene.moving_object} with SAM 3.1")
     tracks = track_objects(client, clip, info, scene, run_id, options.audience)
@@ -117,14 +116,16 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
 
     progress("Calibrating scale")
     calibration = calibrate(scene, tracks.get(REFERENCE_ID), moving, options)
-    full, full_origin = full_track(moving, info.fps, calibration.px_per_m)
+    # Physics runs in real time; drawing on the clip uses frame indices, so the video keeps its own rate.
+    fps = info.fps * options.slow_motion
+    full, full_origin = full_track(moving, fps, calibration.px_per_m)
     # The whole track until the family is known: splitting at "impacts" only makes sense for a thrown or
     # bouncing object, and would chop an oscillator at its turning points (found on a real spring clip).
     traj, origin_px = full, full_origin
     rotation: Coordinates | None = None
     if scene.motion_family == "rotation":
         progress("Measuring the spin from the mask orientation")
-        rotation, traj, origin_px = rotation_track(moving, info.fps, calibration.px_per_m)
+        rotation, traj, origin_px = rotation_track(moving, fps, calibration.px_per_m)
 
     summary = rotation_summary(rotation) if rotation is not None else summarize(traj)
     progress("Proposing hypotheses")
@@ -136,7 +137,7 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         if second is None:
             raise AnalysisError("A double pendulum needs both bobs tracked, and SAM did not find the outer one.")
         progress("Fitting the double pendulum with short-horizon predictions")
-        dbl, ghosts, steps = double_analysis(moving, second, info.fps, calibration.px_per_m)
+        dbl, ghosts, steps = double_analysis(moving, second, fps, calibration.px_per_m)
         trail.extend(steps)
         status = "accepted" if dbl["accepted"] else ("ambiguous" if not dbl["length_reliable"] else "no_fit")
         progress("Agent reviewing the verdict")
@@ -149,7 +150,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         return {
             "status": status, "reason": dbl["reason"], "family": "double_pendulum", "families_tried": ["double_pendulum"],
             "scene": scene.model_dump(),
-            "clip": {"width": info.width, "height": info.height, "fps": info.fps, "frames": info.frames},
+            "clip": {"width": info.width, "height": info.height, "fps": info.fps, "frames": info.frames,
+                 "slow_motion": options.slow_motion},
             "calibration": {"px_per_m": calibration.px_per_m, "rel_std": calibration.rel_std, "source": calibration.source},
             "agent": {"action": turn.action, "message": turn.message, "reasoning_summary": turn.reasoning_summary},
             "ranking": [], "real_track_px": dbl.pop("inner_track_px"), "object_size_px": float(np.median(moving.long_px)),
@@ -222,7 +224,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         "family": family,
         "families_tried": tried,
         "scene": scene.model_dump(),
-        "clip": {"width": info.width, "height": info.height, "fps": info.fps, "frames": info.frames},
+        "clip": {"width": info.width, "height": info.height, "fps": info.fps, "frames": info.frames,
+                 "slow_motion": options.slow_motion},
         "calibration": {"px_per_m": calibration.px_per_m, "rel_std": calibration.rel_std, "source": calibration.source},
         "agent": {"action": turn.action, "message": turn.message, "reasoning_summary": turn.reasoning_summary},
         "ranking": [fit_summary(f, rationales.get(f.model_id)) for f in verdict.ranked],
@@ -559,9 +562,12 @@ def calibrate(scene: Scene, reference: ObjectTrack | None, moving: ObjectTrack, 
             if options.pendulum_length_m is None and options.object_size_m is None:
                 raise AnalysisError(str(e)) from e
             log.warning("Reference calibration failed (%s); using the size given by the user.", e)
-    if options.pendulum_length_m is not None:
+    if options.pendulum_length_m is not None and scene.motion_family == "pendulum":
         radius_px = fit_circle(moving.centers_px * np.array([1.0, -1.0]))[2]
         return from_known_length(radius_px, options.pendulum_length_m)
+    if options.pendulum_length_m is not None:
+        # A circle fitted to a spring's straight stroke would give a nonsense scale.
+        log.warning("Ignoring the pendulum length: the clip shows %s motion.", scene.motion_family)
     if options.object_size_m is not None:
         # The object's own mask, measured in every tracked frame: its spread is reported as the scale's uncertainty.
         long_px = np.asarray(moving.long_px, dtype=float)
@@ -655,8 +661,10 @@ def agent_context(v: Verdict, family: str, summary: dict[str, Any], scene: Scene
 
 
 def fit_summary(f: FitResult, rationale: str | None = None) -> dict[str, Any]:
-    return {"model_id": f.model_id, "title": MODELS[f.model_id].title, "params": f.params, "bic": f.bic,
-            "heldout_nrmse": f.heldout_nrmse, "rmse": f.rmse, "rationale": rationale}
+    spec = MODELS[f.model_id]
+    return {"model_id": f.model_id, "title": spec.title, "params": f.params, "bic": f.bic,
+            "heldout_nrmse": f.heldout_nrmse, "rmse": f.rmse, "rationale": rationale,
+            "param_meta": [{"name": p.name, "latex": p.latex, "unit": p.unit} for p in spec.params]}
 
 
 def derived_parameters(c: Coordinates) -> list[dict[str, Any]]:

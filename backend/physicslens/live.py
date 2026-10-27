@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import struct
 import subprocess
 import threading
 import time
@@ -43,8 +44,10 @@ from .physics.regime import detect_change
 from .physics.verify import assess
 from .pipeline import (
     MOVING_ID,
+    NOMINAL_PX_PER_M,
     REFERENCE_ID,
     SAM_METADATA,
+    SCALE_NOTE,
     _candidates,
     _hypothesis_items,
     _with_control,
@@ -62,7 +65,7 @@ HISTORY = 6  # recent fits used to show how well the parameters have converged
 SCENE_AFTER_FRAMES = 25  # ask the scene model after ~1 s of video
 REFIT_EVERY = 12  # frames of new local track between refits (~0.5 s)
 LOCAL_BATCH = 5  # local points are sent in small batches
-BUFFER_S = 40.0  # frames kept for chunk encoding and tracker re-anchoring
+BUFFER_S = 25.0  # frames kept for chunk encoding and tracker re-anchoring (fit window plus SAM's lag)
 DRIFT_FRACTION = 0.5  # re-anchor when local and SAM disagree by more than this share of the object size
 SAM_WORKERS = 4
 LLM_MIN_INTERVAL_S = 5.0  # live mode never calls the language model more often than this
@@ -95,6 +98,11 @@ class LiveSession:
 
         self.lock = threading.RLock()
         self.frames: dict[int, bytes] = {}
+        # Capture time of every frame, from the phone's clock: phones rarely hold the nominal rate, and a fit on
+        # arrival order would compress time (15 fps taken as 25 inflates g almost threefold).
+        self.times: dict[int, float] = {}
+        self.uncalibrated_noted = False
+        self.t0: float | None = None  # capture time of the first frame: session times are relative to it
         self.latest = -1
         self.size: tuple[int, int] | None = None
         self.scene: Scene | None = None
@@ -129,8 +137,9 @@ class LiveSession:
 
     # ---------- input ----------
 
-    def add_frame(self, jpeg: bytes) -> int:
+    def add_frame(self, data: bytes) -> int:
         """Frames are numbered in arrival order; the phone counts the same way, so indices line up."""
+        jpeg, captured = split_frame(data)
         if self.size is None:
             gray = to_gray(jpeg)
             self.size = (gray.shape[1] - gray.shape[1] % 2, gray.shape[0] - gray.shape[0] % 2)
@@ -138,8 +147,12 @@ class LiveSession:
             self.latest += 1
             idx = self.latest
             self.frames[idx] = jpeg
+            self.times[idx] = captured if captured is not None else idx / self.cfg.fps
+            if self.t0 is None:
+                self.t0 = self.times[idx]
             for old in [k for k in self.frames if k < idx - BUFFER_S * self.cfg.fps]:
                 del self.frames[old]
+                self.times.pop(old, None)
         if not self._scene_started and idx + 1 >= SCENE_AFTER_FRAMES:
             self._scene_started = True
             self._run(self._understand)
@@ -306,7 +319,10 @@ class LiveSession:
             return
         path = self._encode(indices[0], jpegs)
         first = self.calibration is None and self.scene is not None
-        text = self.sam_fn(path, self._prompt(box, first_chunk=first), indices)
+        try:
+            text = self.sam_fn(path, self._prompt(box, first_chunk=first), indices)
+        finally:
+            path.unlink(missing_ok=True)  # chunks are only an upload format; the cache keys on their hash
         tracks = tracks_from_text(text) if text.strip() else {}
         if first:
             self.calibration = self._calibrate(tracks.get(REFERENCE_ID))
@@ -412,11 +428,24 @@ class LiveSession:
         if len(seg_frames) < MIN_FIT_S * fps:
             return None
         ppm = self._scale(seg_centers)
-        if ppm is None:
-            self.send({"type": "notice", "level": "warning",
-                       "message": "No scale yet: show an A4 sheet in the swing plane, or enter the pendulum length."})
+        uncalibrated = ppm is None
+        if uncalibrated:
+            # Like recorded mode: keep going on a nominal scale; frequency and damping don't need one.
+            ppm = NOMINAL_PX_PER_M
+            if not self.uncalibrated_noted:
+                self.uncalibrated_noted = True
+                self.send({"type": "notice", "level": "info", "message": SCALE_NOTE})
+        with self.lock:
+            ts = np.array([self.times.get(int(f), int(f) / fps) for f in seg_frames])
+        ts = ts + np.arange(len(ts)) * 1e-6  # identical stamps (a clock tick) must still be strictly increasing
+        ts = np.maximum.accumulate(ts)
+        if ts[-1] - ts[0] <= 0:
             return None
-        traj = from_pixels(seg_frames, seg_centers, fps, ppm)
+        # Resample onto an even grid at the rate the phone really managed: the fitter assumes even sampling.
+        rate = (len(ts) - 1) / (ts[-1] - ts[0])
+        grid = ts[0] + np.arange(len(ts)) / rate
+        even = np.column_stack([np.interp(grid, ts, seg_centers[:, 0]), np.interp(grid, ts, seg_centers[:, 1])])
+        traj = from_pixels(np.arange(len(grid)), even, rate, ppm)
         if self.family is None:
             if self.scene is None:
                 return None  # tracking started from a tap; the scene model hasn't answered yet
@@ -434,13 +463,16 @@ class LiveSession:
         verdict = assess(coords, fits)
         change = detect_change(traj, self.family, max(self.candidates, key=lambda m: len(MODELS[m].params)))  # type: ignore[arg-type]
         if change is not None:
-            self._new_regime(int(seg_frames[change.index]), change.t_estimate + float(seg_frames[0]) / fps, change.error_ratio)
+            at = grid[min(change.index, len(grid) - 1)]
+            frame = int(seg_frames[min(np.searchsorted(ts, at), len(seg_frames) - 1)])
+            self._new_regime(frame, change.t_estimate + float(ts[0] - (self.t0 or 0.0)), change.error_ratio)
             return None
         lead: FitResult | None = verdict.winner or (verdict.contenders[0] if verdict.contenders else None)
         with self.lock:
             sam_share = sum(1 for f in seg_frames if int(f) in self.sam) / len(seg_frames)
         msg: dict[str, Any] = {"type": "fit", "status": verdict.status, "reason": verdict.reason, "samples": len(traj),
-                               "window_s": round(float(traj.t[-1]), 2), "sam_share": round(sam_share, 2)}
+                               "window_s": round(float(traj.t[-1]), 2), "sam_share": round(sam_share, 2),
+                               "measured_fps": round(rate, 1), "uncalibrated": uncalibrated}
         if lead is not None:
             spec = MODELS[lead.model_id]
             self.history = [*self.history, lead.params][-HISTORY:]
@@ -451,7 +483,7 @@ class LiveSession:
                  "spread": float(np.std([h[p.name] for h in same])) if len(same) >= 3 else None}
                 for p in spec.params
             ]
-            msg["ghost"] = self._prediction(spec, lead, coords, seg_frames, seg_centers[0], ppm)
+            msg["ghost"] = self._prediction(spec, lead, coords, seg_frames, ts, rate, seg_centers[0], ppm)
         self.send(msg)
         return msg
 
@@ -502,17 +534,30 @@ class LiveSession:
             self.send({"type": "notice", "level": "warning", "message": f"Hypotheses unavailable ({e}); testing every {self.family} model."})
         self.candidates = _with_control(self.family, ids or [m.id for m in models_for(self.family)])
 
-    def _prediction(self, spec, lead: FitResult, coords, frames: np.ndarray, origin: np.ndarray, ppm: float) -> list[list[float]]:
-        fps = self.cfg.fps
-        t = np.arange(len(frames) + int(PREDICT_S * fps)) / fps
-        q = simulate(spec, lead.params, lead.y0, t, coords.ctx)
+    def _prediction(self, spec, lead: FitResult, coords, frames: np.ndarray, ts: np.ndarray, rate: float,
+                    origin: np.ndarray, ppm: float) -> list[list[float]]:
+        """Ghost points for the frames shown so far (at their real capture times) and PREDICT_S ahead."""
+        ahead = round(PREDICT_S * rate)
+        rel = np.concatenate([ts - ts[0], (ts[-1] - ts[0]) + np.arange(1, ahead + 1) / rate])
+        ids = np.concatenate([frames, frames[-1] + np.arange(1, ahead + 1)])
+        q = simulate(spec, lead.params, lead.y0, rel, coords.ctx)
         if q is None:
             return []
         xy = coords.to_xy(q)
-        f0 = int(frames[0])
         px = origin[0] + xy[:, 0] * ppm
         py = origin[1] - xy[:, 1] * ppm
-        return [[f0 + i, round(float(x), 2), round(float(y), 2)] for i, (x, y) in enumerate(zip(px, py, strict=True))]
+        return [[int(f), round(float(x), 2), round(float(y), 2)] for f, x, y in zip(ids, px, py, strict=True)]
+
+
+FRAME_HEADER = b"PLT1"  # magic, then the capture time in seconds as little-endian float64, then the JPEG
+
+
+def split_frame(data: bytes) -> tuple[bytes, float | None]:
+    """A bare JPEG (starts FF D8) from an older client has no timestamp; the nominal rate is assumed then."""
+    if data[:4] == FRAME_HEADER and len(data) > 12:
+        (t,) = struct.unpack("<d", data[4:12])
+        return data[12:], float(t) if np.isfinite(t) else None
+    return data, None
 
 
 def _downscale(jpeg: bytes, long_side: int) -> bytes:

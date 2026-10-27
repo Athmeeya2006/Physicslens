@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import shutil
+import uuid
 from pathlib import Path
 from typing import Annotated
 
@@ -110,11 +111,22 @@ def create_run(
     video: Annotated[UploadFile, File()],
     pendulum_length_m: Annotated[float | None, Form()] = None,
     object_size_m: Annotated[float | None, Form()] = None,
+    slow_motion: Annotated[float, Form()] = 1.0,
+    object_hint: Annotated[str | None, Form(max_length=60)] = None,
     turnstile_token: Annotated[str | None, Form()] = None,
     x_access_code: Annotated[str | None, Header()] = None,
     x_forwarded_for: Annotated[str | None, Header()] = None,
 ) -> dict[str, object]:
     audience = audience_for(x_access_code)
+    for name, value in (("pendulum length", pendulum_length_m), ("object size", object_size_m)):
+        if value is not None and not 0.005 <= value <= 100:
+            raise HTTPException(status_code=400, detail=f"The {name} should be between 0.5 cm and 100 m.")
+    if not 1 <= slow_motion <= 1000:
+        raise HTTPException(status_code=400, detail="The slow-motion factor should be between 1 (normal speed) and 1000.")
+    suffix = Path(video.filename or "").suffix.lower()
+    if suffix not in VIDEO_SUFFIXES:
+        raise HTTPException(status_code=400, detail="Please upload a video file (MP4 or MOV).")
+    # Public checks come after the cheap request checks, so a wrong file never uses up a visitor's daily analysis.
     if audience == "public":
         if not public_try_enabled():
             raise HTTPException(status_code=403, detail="Uploads are closed right now; please browse the gallery.")
@@ -123,12 +135,6 @@ def create_run(
             raise HTTPException(status_code=403, detail="Please complete the quick check above the upload button.")
         if not public_quota.take(addr):
             raise HTTPException(status_code=429, detail="You've used today's free analyses. Browse the gallery, or come back tomorrow.")
-    for name, value in (("pendulum length", pendulum_length_m), ("object size", object_size_m)):
-        if value is not None and not 0.005 <= value <= 100:
-            raise HTTPException(status_code=400, detail=f"The {name} should be between 0.5 cm and 100 m.")
-    suffix = Path(video.filename or "").suffix.lower()
-    if suffix not in VIDEO_SUFFIXES:
-        raise HTTPException(status_code=400, detail="Please upload a video file (MP4 or MOV).")
     run_dir = runs.new_run_dir()
     dest = run_dir / f"input{suffix}"
     written = 0
@@ -141,7 +147,8 @@ def create_run(
     if written > MAX_UPLOAD_BYTES:
         shutil.rmtree(run_dir)
         raise HTTPException(status_code=413, detail="That video is too large; trim it to under 30 seconds.")
-    state = runs.start(dest, RunOptions(audience=audience, pendulum_length_m=pendulum_length_m, object_size_m=object_size_m))
+    state = runs.start(dest, RunOptions(audience=audience, pendulum_length_m=pendulum_length_m, object_size_m=object_size_m,
+                                         slow_motion=slow_motion, object_hint=object_hint))
     return runs.public_view(state)
 
 
@@ -272,10 +279,14 @@ def whatif(
     question: Annotated[str, Body(embed=True)],
     x_access_code: Annotated[str | None, Header()] = None,
 ) -> dict:
-    """Typed what-if (the voice path ends here too)."""
+    """Typed what-if (the voice path ends here too). Judges and development only, like voice."""
+    audience = audience_for(x_access_code)
+    if audience == "public":
+        raise HTTPException(status_code=403, detail="What-if questions need the access code.")
     result = _finished_result(run_id)
     try:
-        return run_whatif(client, question[:500], result, f"whatif-{run_id}", audience_for(x_access_code))
+        # One budget "run" per question: a shared id would fill the lifetime per-run cap and lock everyone out.
+        return run_whatif(client, question[:500], result, f"whatif-{run_id}-{uuid.uuid4().hex[:8]}", audience)
     except CostGuardError as e:
         detail = str(e) if settings.app_env == "dev" else "Temporarily busy, please retry later."
         raise HTTPException(status_code=503, detail=detail) from e
@@ -306,7 +317,8 @@ async def voice(ws: WebSocket) -> None:
         if turn is not None:
             _, text = turn
             await ws.send_json({"type": "transcript", "text": text, "final": True})
-            answer = await asyncio.to_thread(run_whatif, client, text, result, f"voice-{run_id}", audience)
+            answer = await asyncio.to_thread(run_whatif, client, text, result,
+                                             f"voice-{run_id}-{uuid.uuid4().hex[:8]}", audience)
             await ws.send_json({"type": "whatif", **answer})
             return
         partial = partial_text(event)

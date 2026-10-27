@@ -28,10 +28,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
-from physicslens.costguard import CacheOnlyMiss, CostGuardClient  # noqa: E402
-from physicslens.perception import media  # noqa: E402
-from physicslens.pipeline import RunOptions, analyze, prepare  # noqa: E402
-from physicslens.settings import GLIMMER_MODEL, SAM_MODEL, load_settings  # noqa: E402
+from physicslens.costguard import CacheOnlyMiss, CostGuardClient
+from physicslens.perception import media
+from physicslens.pipeline import RunOptions, analyze, prepare
+from physicslens.settings import GLIMMER_MODEL, SAM_MODEL, load_settings
 
 BUNDLES = ROOT / "var" / "glimmer" / "bundles"
 
@@ -48,7 +48,8 @@ def cmd_prepare(a: argparse.Namespace) -> None:
                                  start_s=a.start, seconds=a.seconds)
     media.save_prepared(clip, info, frames, out)
     shutil.rmtree(run_dir)
-    (out / "options.json").write_text(json.dumps({"pendulum_length_m": a.length, "object_size_m": a.size}))
+    (out / "options.json").write_text(json.dumps({"pendulum_length_m": a.length, "object_size_m": a.size,
+                                                   "slow_motion": a.slowmo, "object_hint": a.hint}))
     print(f"bundle {out}: {info.frames} frames at {info.fps:.2f} fps, {len(frames)} keyframes")
 
 
@@ -63,13 +64,15 @@ def _run_bundles(bundles: Path, out: Path, names: list[str] | None) -> dict[str,
         try:
             result = analyze(client, b / "clip.mp4", run_dir, f"glimmer-{b.name}",
                              RunOptions(pendulum_length_m=opts.get("pendulum_length_m"),
-                                        object_size_m=opts.get("object_size_m"), prepared=b),
+                                        object_size_m=opts.get("object_size_m"),
+                                        slow_motion=opts.get("slow_motion", 1.0),
+                                        object_hint=opts.get("object_hint"), prepared=b),
                              progress=lambda m, n=b.name: print(f"[{n}] {m}", flush=True))
         except CacheOnlyMiss as e:
             status[b.name] = f"waiting: {e}"
             print(f"[{b.name}] stopped: {e}", flush=True)
             continue
-        except Exception as e:  # one bad clip must not lose the others' results
+        except Exception as e:  # noqa: BLE001  one bad clip must not lose the others' results (traceback printed)
             status[b.name] = f"error: {type(e).__name__}: {e}"
             traceback.print_exc()
             continue
@@ -127,6 +130,8 @@ def main() -> None:
     p.add_argument("name")
     p.add_argument("--length", type=float, default=None, help="pendulum length in m, if known")
     p.add_argument("--size", type=float, default=None, help="longest dimension of the moving object in m, if known")
+    p.add_argument("--hint", default=None, help="what to measure, in the user's words")
+    p.add_argument("--slowmo", type=float, default=1.0, help="capture fps / playback fps for slow-motion footage")
     p.add_argument("--start", type=float, default=0.0, help="seconds into the source video")
     p.add_argument("--seconds", type=float, default=None, help="length to keep")
     p.set_defaults(fn=cmd_prepare)

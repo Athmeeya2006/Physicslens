@@ -129,3 +129,13 @@ def test_no_design_without_a_tie(damped_pendulum):
     from physicslens.physics.design import design_experiment
     c, v = damped_pendulum
     assert design_experiment(c, list(v.contenders)) is None  # accepted: a single contender
+
+
+def test_small_angle_approximation_is_not_a_rival_theory():
+    """A small swing can't separate sin(theta) from theta: keep the exact law, note the approximation, no experiment."""
+    _, verdict = run(track(pendulum_xy(0.3, 0.0, 6.0, length=0.6), seed=5), "pendulum")
+    assert verdict.status == "accepted" and verdict.winner.model_id == "pendulum"
+    assert "indistinguishable" in verdict.reason
+    assert verdict.winner.params["g"] == pytest.approx(G, rel=0.03)
+    why = judge_candidates(verdict)["pendulum_small_angle"]
+    assert why[0] == "rejected" and "approximation" in why[1]

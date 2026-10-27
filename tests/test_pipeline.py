@@ -213,3 +213,19 @@ def test_baseten_used_when_configured(settings, monkeypatch):
     _, call = ask_json(h.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r", audience="judge")
     assert call.provider == "baseten" and call.model == "meta-models/muse-spark-open-1026"
     assert h.sdk("baseten").calls[0]["reasoning_effort"] == "low"
+
+
+def test_slow_motion_factor_puts_the_physics_in_real_time(harness, tmp_path):
+    """The same frames declared as 1.2x slow motion: real time is shorter by 1.2, so g comes out 1.44 times larger."""
+    out = {}
+    script(harness, responses_result(text=json.dumps(SCENE)), sam_result(frames=60, text=sam_text_as_object_1()))
+    for factor in (1.0, 1.2):
+        # Scene and tracking replay from the cache the second time; the time-scaled summary is a new prompt.
+        script(harness, responses_result(text=json.dumps(HYPOTHESES)), responses_result(text=json.dumps(AGENT)))
+        out[factor] = analyze(harness.client, CLIP, tmp_path / f"run{factor}", f"run-slow-{factor}",
+                              RunOptions(pendulum_length_m=0.6, slow_motion=factor))
+    g1 = out[1.0]["ranking"][0]
+    g2 = next(f for f in out[1.2]["ranking"] if f["model_id"] == g1["model_id"])
+    assert g2["params"]["g"] == pytest.approx(1.44 * g1["params"]["g"], rel=0.02)
+    assert out[1.2]["clip"]["fps"] == out[1.0]["clip"]["fps"]  # drawing on the video keeps the file's rate
+    assert out[1.2]["forecast"]["t"][-1] == pytest.approx(out[1.0]["forecast"]["t"][-1] / 1.2, rel=0.02)

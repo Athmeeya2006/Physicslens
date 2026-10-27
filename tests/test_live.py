@@ -211,3 +211,29 @@ def fixture_ball_center(frame: int) -> tuple[float, float]:
     line = fixture_lines()[frame]
     x1, y1, x2, y2 = map(int, re.search(r"x1=(\d+);y1=(\d+);x2=(\d+);y2=(\d+)", line).groups())
     return (x1 + x2 + 1) / 2, (y1 + y2 + 1) / 2
+
+
+def test_capture_timestamps_set_the_time_base(harness, tmp_path):
+    """A phone that can't hold the nominal rate: frames stamped with real capture times still give the right g."""
+    import struct
+
+    from physicslens.live import FRAME_HEADER
+
+    def final_g(fps_nominal: float, stamped: bool, name: str) -> float:
+        harness.sdk("meta_api").script.extend([responses_result(text=json.dumps(SCENE)),
+                                               responses_result(text=json.dumps(HYPOTHESES))])
+        sent: list[dict] = []
+        session = LiveSession(harness.client, tmp_path / name, f"live-{name}",
+                              LiveConfig(fps=fps_nominal, pendulum_length_m=0.6), sent.append, sam_fn=FakeSam(),
+                              synchronous=True)
+        frames = clip_jpegs()
+        for i in range(150):
+            jpeg = frames[i % CLIP_FRAMES]
+            session.add_frame(FRAME_HEADER + struct.pack("<d", 100.0 + i / FPS) + jpeg if stamped else jpeg)
+        fit = [m for m in sent if m["type"] == "fit" and m.get("parameters")][-1]
+        return next(p["value"] for p in fit["parameters"] if p["name"] == "g"), fit
+
+    g_true, _ = final_g(FPS, False, "nominal")
+    g_stamped, fit = final_g(25, True, "stamped")  # the server's nominal rate is wrong; the stamps are right
+    assert g_stamped == pytest.approx(g_true, rel=0.02)
+    assert fit["measured_fps"] == pytest.approx(FPS, rel=0.01)

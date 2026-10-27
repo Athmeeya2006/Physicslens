@@ -158,3 +158,30 @@ def test_voice_socket_end_to_end(fit_state):
     assert transcript == {"type": "transcript", "text": "what if the string were twice as long", "final": True}
     assert answer["type"] == "whatif" and answer["understood"] and answer["points"]
     assert done["type"] == "voice_done" and done["audio_seconds"] == pytest.approx(0.5)
+
+
+def test_uncalibrated_clip_refuses_absolute_lengths(harness, fit_state):
+    from physicslens.agent.whatif import run_whatif
+
+    set_plan = {**PLAN, "changes": [{"parameter": "L", "operation": "set", "value": 0.3}], "description": "30 cm string"}
+    harness.sdk("meta_api").script.append(responses_result(text=json.dumps(set_plan)))
+    result = {"clip": {"frames": 120, "fps": FPS}, "fit_state": fit_state, "calibration": {"source": "none"}}
+    out = run_whatif(harness.client, "what if the string were 30 cm", result, "w1")
+    assert not out["understood"] and "no scale reference" in out["reply"]
+
+
+def test_uncalibrated_clip_still_scales(harness, fit_state):
+    from physicslens.agent.whatif import run_whatif
+
+    harness.sdk("meta_api").script.append(responses_result(text=json.dumps(PLAN)))
+    result = {"clip": {"frames": 120, "fps": FPS}, "fit_state": fit_state, "calibration": {"source": "none"}}
+    out = run_whatif(harness.client, "what if the string were twice as long", result, "w2")
+    assert out["understood"] and out["length_m"] == pytest.approx(2 * fit_state["ctx"]["length_m"])
+
+
+def test_unparseable_answer_is_a_polite_no_not_a_500(harness, fit_state):
+    from physicslens.agent.whatif import run_whatif
+
+    harness.sdk("meta_api").script.extend([responses_result(text="not json"), responses_result(text="still not json")])
+    out = run_whatif(harness.client, "what if?", {"clip": {"frames": 120, "fps": FPS}, "fit_state": fit_state}, "w3")
+    assert not out["understood"] and "couldn't" in out["reply"]

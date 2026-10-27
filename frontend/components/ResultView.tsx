@@ -34,6 +34,11 @@ function fmtAt(v: number, d: number | null): string {
   return v.toFixed(d);
 }
 
+// Units that carry a length depend on the scale (m, m/s^2, 1/m); angles, times and pure numbers don't.
+function needsScale(unit: string): boolean {
+  return /(^|[^a-z])m($|[^a-z])/.test(unit);
+}
+
 function mujocoGap(m: number): string {
   const mm = m * 1000;
   return mm < 0.001 ? "less than 0.001 mm" : `${mm.toFixed(mm < 1 ? 3 : 1)} mm`;
@@ -50,6 +55,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
   const titles = Object.fromEntries(r.ranking.map((f) => [f.model_id, f.title]));
   const models = Array.from(new Set((r.trail ?? []).map((t) => t.model).filter((m) => m && m !== "simulate-and-compare")));
   const canAsk = HAS_BACKEND || !isGallery(runId);
+  const bestBic = Math.min(...r.ranking.map((f) => f.bic));
 
   const onShare = () => {
     setShare({ state: "busy" });
@@ -185,14 +191,19 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
             )}
           </p>
           <div className="export-links">
-            <a className="button" href={exportUrl(runId, "mjcf")} download><Boxes size={16} aria-hidden="true" />MuJoCo model</a>
-            <a className="button secondary" href={exportUrl(runId, "py")} download><FileCode2 size={16} aria-hidden="true" />Python simulation</a>
+            {r.mujoco && <a className="button" href={exportUrl(runId, "mjcf")} download><Boxes size={16} aria-hidden="true" />MuJoCo model</a>}
+            <a className={`button ${r.mujoco ? "secondary" : ""}`} href={exportUrl(runId, "py")} download><FileCode2 size={16} aria-hidden="true" />Python simulation</a>
             <a className="button secondary" href={exportUrl(runId, "json")} download><FileJson size={16} aria-hidden="true" />Parameters</a>
             <button className="secondary" onClick={onShare} disabled={share.state === "busy"}>
               <Film size={16} aria-hidden="true" />{share.state === "busy" ? "Rendering video" : "Shareable video"}
             </button>
           </div>
           {r.mujoco?.notes.map((n, i) => <p key={i} className="muted small" style={{ marginTop: 8 }}>{n}</p>)}
+          {!r.mujoco && (
+            <p className="muted small" style={{ marginTop: 8 }}>
+              No MuJoCo model for this law: MuJoCo has no built-in element for it. The Python simulation runs the exact fitted equation.
+            </p>
+          )}
           {share.state === "error" && <p className="error small" style={{ marginTop: 8 }}>{share.error}</p>}
           {share.state === "done" && share.url && (
             <>
@@ -210,18 +221,30 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         <h3>Every candidate tested</h3>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Model, and why it was tested</th><th>BIC</th><th>Held-out error</th></tr></thead>
+            <thead><tr><th>Model, and why it was tested</th><th>Fitted values</th><th>ΔBIC</th><th>Held-out error</th></tr></thead>
             <tbody>
               {r.ranking.map((f) => (
                 <tr key={f.model_id}>
                   <td>{f.title}<div className="muted small">{f.rationale ?? "Baseline, always tested as a control."}</div></td>
-                  <td className="num">{f.bic.toFixed(0)}</td>
+                  <td className="fitted">
+                    {(f.param_meta ?? Object.keys(f.params).map((name) => ({ name, latex: name, unit: "" }))).map((p) => (
+                      <div key={p.name}>
+                        <Tex tex={p.latex} /> = {fmt(f.params[p.name])} {p.unit}
+                        {r.scale_note && needsScale(p.unit) && <span className="uncal">uncalibrated</span>}
+                      </div>
+                    ))}
+                  </td>
+                  <td className="num">{f.bic - bestBic < 0.5 ? "best" : `+${(f.bic - bestBic).toFixed(0)}`}</td>
                   <td className="num">{(f.heldout_nrmse * 100).toFixed(1)}%</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <p className="muted small" style={{ marginTop: 8 }}>
+          ΔBIC is how much worse a model scores than the best one after a penalty for every extra parameter; above 10 is very
+          strong evidence against it. Held-out error is how far its forecast of the last quarter, fitted without it, misses.
+        </p>
         {r.sindy && (
           <div className="sindy" style={{ marginTop: 12 }}>
             <p className="small muted">Model-free discovery with PySINDy, shown as independent evidence:</p>
@@ -235,7 +258,8 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         <ul>
           <li>Object: {r.scene.moving_object}. {r.scene.observations}</li>
           <li>Scale: {r.calibration.source === "none" ? "no reference in view (nominal scale)" : `${r.calibration.px_per_m.toFixed(1)} px/m from ${r.calibration.source.replaceAll("_", " ")}`}</li>
-          <li>Clip: {r.clip.width} by {r.clip.height} px at {r.clip.fps.toFixed(1)} fps, {r.clip.frames} frames</li>
+          <li>Clip: {r.clip.width} by {r.clip.height} px at {r.clip.fps.toFixed(1)} fps, {r.clip.frames} frames
+            {r.clip.slow_motion && r.clip.slow_motion > 1 ? `, slow motion ${r.clip.slow_motion} times (times are real time)` : ""}</li>
           <li>Model calls: {r.llm_calls.map((c) => `${c.step}: ${c.model}${c.cached ? " (cached)" : ""}`).join(", ")}; tracking: sam-3.1</li>
         </ul>
       </details>

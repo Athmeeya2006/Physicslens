@@ -28,6 +28,7 @@ export interface RankedFit {
   bic: number;
   heldout_nrmse: number;
   rationale: string | null;
+  param_meta?: { name: string; latex: string; unit: string }[];
 }
 
 export interface TrailStep {
@@ -47,7 +48,7 @@ export interface AnalysisResult {
   family: string;
   families_tried: string[];
   scene: { moving_object: string; motion_family: string; reference_kind: string; observations: string };
-  clip: { width: number; height: number; fps: number; frames: number };
+  clip: { width: number; height: number; fps: number; frames: number; slow_motion?: number };
   calibration: { px_per_m: number; rel_std: number; source: string };
   agent: { action: string; message: string; reasoning_summary: string };
   ranking: RankedFit[];
@@ -171,12 +172,21 @@ export function makeShareVideo(id: string): Promise<string> {
     .then((r) => `${API_BASE}${r.url}`);
 }
 
-export function startRun(file: File, pendulumLengthM: number | null, objectSizeM: number | null,
-                         turnstileToken: string | null): Promise<RunView> {
+export interface RunInputs {
+  pendulumLengthM: number | null;
+  objectSizeM: number | null;
+  slowMotion: number | null;
+  objectHint: string | null;
+}
+
+export function startRun(file: File, inputs: RunInputs, turnstileToken: string | null): Promise<RunView> {
+  const { pendulumLengthM, objectSizeM, slowMotion, objectHint } = inputs;
   const form = new FormData();
   form.append("video", file);
+  if (objectHint?.trim()) form.append("object_hint", objectHint.trim().slice(0, 60));
   if (pendulumLengthM) form.append("pendulum_length_m", String(pendulumLengthM));
   if (objectSizeM) form.append("object_size_m", String(objectSizeM));
+  if (slowMotion && slowMotion > 1) form.append("slow_motion", String(slowMotion));
   if (turnstileToken) form.append("turnstile_token", turnstileToken);
   return fetch(`${API_BASE}/api/runs`, { method: "POST", body: form, headers: codeHeaders() }).then((r) => json<RunView>(r));
 }

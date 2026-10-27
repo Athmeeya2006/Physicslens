@@ -74,3 +74,23 @@ def test_cache_only_provider_replays_hits_and_refuses_misses(settings, monkeypat
     assert replay.sdk().calls == []
     # Nothing was reserved or billed for the miss.
     assert replay.client.guard.summary()["meta_api"]["spent_usd"] == pytest.approx(first.cost_usd, abs=1e-6)
+
+
+def test_cache_only_machine_needs_no_meta_key(settings, monkeypatch):
+    """The GPU notebook replays SAM from the cache with the real SDK factory and no key at all."""
+    from physicslens.costguard import CostGuardClient
+    from physicslens.costguard.client import openai_sdk_factory
+    from physicslens.costguard.mock import sam_result
+
+    h = Harness(settings)
+    h.sdk().script.append(sam_result(frames=60, text="<0f>1<|box;x1=1;y1=1;x2=5;y2=5;w=64;h=64|>"))
+    args = {"prompt": "p", "video_hash": "abc", "est_frames": 60, "video_url": "data:video/mp4;base64,AAAA"}
+    first = h.client.sam_video(run_id="r", **args)
+
+    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    monkeypatch.setenv("PHYSICSLENS_CACHE_ONLY", "meta_api")
+    gpu_side = CostGuardClient(settings, sdk_factory=openai_sdk_factory)
+    replay = gpu_side.sam_video(run_id="r2", **args)
+    assert replay.cached and replay.text == first.text
+    with pytest.raises(CacheOnlyMiss):
+        gpu_side.sam_video(run_id="r3", **{**args, "prompt": "other"})

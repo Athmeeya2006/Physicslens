@@ -122,10 +122,16 @@ export default function LivePage() {
     let next = performance.now();
     while (running.current && socket.current?.readyState === WebSocket.OPEN) {
       g.drawImage(v, 0, 0, w, h);
+      // The capture time travels with the frame: phones rarely hold the nominal rate, and the server fits on
+      // these times, not on arrival order. Header: "PLT1" then seconds as little-endian float64.
+      const captured = performance.now() / 1000;
       // Sequential awaits keep frames in capture order; the server numbers them in arrival order.
       const blob = await new Promise<Blob | null>((res) => grab.toBlob(res, "image/jpeg", 0.7));
       if (blob && socket.current?.readyState === WebSocket.OPEN && socket.current.bufferedAmount < 4_000_000) {
-        socket.current.send(await blob.arrayBuffer());
+        const header = new ArrayBuffer(12);
+        new Uint8Array(header).set([0x50, 0x4c, 0x54, 0x31]);
+        new DataView(header).setFloat64(4, captured, true);
+        socket.current.send(await new Blob([header, blob]).arrayBuffer());
         sentFrames.current += 1;
       }
       next += 1000 / FPS;
