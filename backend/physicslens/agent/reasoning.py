@@ -14,7 +14,7 @@ SCENE_SYSTEM = """You look at up to four frames from a short phone video of some
 Identify the single object whose motion should be measured and a reference object of known size in the same plane.
 - moving_object: a short concrete noun phrase (1-4 words) naming only the object, e.g. "metal ball", "red weight". It is sent to a segmentation model, so no commands, lists, colors of other things, or positions.
 - Boxes are on a 0-1000 grid relative to the FIRST image (x right, y down) and must tightly enclose the object in that first image.
-- motion_family: pendulum (swings on a string or rod), oscillator (bounces on a spring or elastic, back and forth along a line), projectile (thrown, dropped or falling), double_pendulum (a second arm hinged to the end of the first), rotation (spins in place about its own centre and slows down, e.g. a spun bottle, wheel or bar), other.
+- motion_family: pendulum (swings on a string or rod), oscillator (bounces on a spring or elastic, back and forth along a line), projectile (thrown, dropped or falling), double_pendulum (a second arm hinged to the end of the first), rotation (spins in place about its own centre and slows down, e.g. a spun bottle, wheel or bar), other (anything else that moves: rolling, sliding, braking, a toy car, a falling leaf).
 - For a double_pendulum, moving_object/moving_object_box is the INNER bob (nearest the pivot) and second_object/second_object_box the OUTER bob; otherwise both are null.
 - reference_kind: only an object from the allowed list that is clearly visible and roughly flat facing the camera; otherwise "none". Never guess a size."""
 
@@ -23,7 +23,23 @@ every candidate you name will be fitted and simulated, and only numerical verifi
 Pick the family that matches the numbers, then 1 to 4 candidate model ids from that family that are physically plausible.
 Prefer including the simplest model plus the variants the evidence suggests (e.g. damping if amplitude decays).
 Available models:
-""" + "\n".join(f"- {m.id} ({m.family}): {m.title}" for m in MODELS.values())
+""" + "\n".join(f"- {m.id} ({m.family}): {m.title}" for m in MODELS.values() if not m.id.startswith("custom_")) + """
+
+Motion that none of the named families describes (a cart braking, a ball rolling down a ramp, a falling leaf, a
+sliding block, a puck slowing on ice) uses family "line" (moving back and forth or onward along one straight path)
+or "plane" (curving freely in the image plane). For these, pick line_/plane_ controls as candidates and write up to
+three laws of your own in free_models. Each law gives the acceleration in a closed math language:
+- line: one expression in s (position along the path, m; it increases to the right, or upward when the path is
+  closer to vertical) and v (its velocity, m/s).
+- plane: two expressions, x then y acceleration, in x, y (m, y up) and vx, vy (m/s).
+- Operators + - * / ^ and parentheses; functions sin cos tan tanh atan exp log sqrt abs sign hypot; constant pi.
+  Every other name must be one of your declared params (at most 4), each with an SI unit, bounds and a guess;
+  every param is fitted to the data. Write a number instead only where two params could not be told apart.
+- Example, a cart slowed by rolling friction and air drag: ["-mu*9.81*sign(v) - c*v*abs(v)"] with params mu (unit
+  empty) and c (1/m); mu and g only ever appear as a product, so g is written as 9.81.
+Write the physics you actually believe, simplest first. Your laws are fitted and tested on held-out motion
+against the controls exactly like the listed models; one that does not beat them is rejected.
+For the named families, free_models must be []."""
 
 AGENT_SYSTEM = """You are the experiment-planning agent of a system-identification tool. Numerical verification has already
 fitted and simulated candidate equations against the measured motion; its verdict is final and you must not contradict it.

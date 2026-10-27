@@ -12,8 +12,8 @@ import mujoco
 import numpy as np
 
 from ..physics.coords import Coordinates
+from ..physics.custom import spec_for
 from ..physics.fit import simulate
-from ..physics.models import MODELS
 
 NOMINAL_MASS = 1.0
 TIMESTEP = 0.0005
@@ -34,7 +34,7 @@ def _header(name: str, gravity: float, note: str) -> str:
 
 def build_mjcf(fit_state: dict[str, Any]) -> tuple[str, list[str]]:
     """(xml, notes). Notes list anything the MJCF can't express exactly, so nobody is misled."""
-    spec = MODELS[fit_state["model_id"]]
+    spec = spec_for(fit_state)
     p, ctx = fit_state["params"], fit_state["ctx"]
     notes: list[str] = []
     if spec.family == "pendulum":
@@ -103,7 +103,7 @@ def simulate_mjcf(xml: str, fit_state: dict[str, Any], seconds: float) -> np.nda
     """Generalized coordinate(s) over time at the clip's frame rate, starting from the measured state."""
     model = mujoco.MjModel.from_xml_string(xml)
     data = mujoco.MjData(model)
-    family = MODELS[fit_state["model_id"]].family
+    family = spec_for(fit_state).family
     y0 = np.array(fit_state["y0"], dtype=float)
     d = len(y0) // 2
     if family == "projectile":
@@ -127,7 +127,7 @@ def simulate_mjcf(xml: str, fit_state: dict[str, Any], seconds: float) -> np.nda
 
 def check_against_fit(fit_state: dict[str, Any], seconds: float) -> dict[str, Any]:
     """Run the exported MJCF in MuJoCo and compare with the fitted ODE; ghost points for the video."""
-    spec = MODELS[fit_state["model_id"]]
+    spec = spec_for(fit_state)
     xml, notes = build_mjcf(fit_state)
     q_mj = simulate_mjcf(xml, fit_state, seconds)
     t = np.arange(len(q_mj)) / fit_state["fps"]

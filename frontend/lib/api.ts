@@ -171,10 +171,12 @@ export function makeShareVideo(id: string): Promise<string> {
     .then((r) => `${API_BASE}${r.url}`);
 }
 
-export function startRun(file: File, pendulumLengthM: number | null, turnstileToken: string | null): Promise<RunView> {
+export function startRun(file: File, pendulumLengthM: number | null, objectSizeM: number | null,
+                         turnstileToken: string | null): Promise<RunView> {
   const form = new FormData();
   form.append("video", file);
   if (pendulumLengthM) form.append("pendulum_length_m", String(pendulumLengthM));
+  if (objectSizeM) form.append("object_size_m", String(objectSizeM));
   if (turnstileToken) form.append("turnstile_token", turnstileToken);
   return fetch(`${API_BASE}/api/runs`, { method: "POST", body: form, headers: codeHeaders() }).then((r) => json<RunView>(r));
 }

@@ -41,7 +41,14 @@ from .physics.fit import FitResult, fit_model, simulate
 from .physics.models import MODELS, models_for
 from .physics.regime import detect_change
 from .physics.verify import assess
-from .pipeline import MOVING_ID, REFERENCE_ID, SAM_METADATA
+from .pipeline import (
+    MOVING_ID,
+    REFERENCE_ID,
+    SAM_METADATA,
+    _candidates,
+    _hypothesis_items,
+    _with_control,
+)
 from .sigproc.cleanup import fill_short_gaps
 from .sigproc.summary import summarize
 from .sigproc.trajectory import from_pixels
@@ -479,7 +486,7 @@ class LiveSession:
             hyp, call = propose_hypotheses(self.client, summarize(traj), self.scene, self.run_id, self.cfg.audience,
                                            run_cap_usd=self.cfg.run_cap_usd)
             self.family = hyp.family
-            ids = [h.model_id for h in hyp.candidates]
+            ids, _ = _candidates(hyp)
             if self.family in ("double_pendulum", "rotation"):
                 # Live mode follows one object's position; both bobs, or a spin angle, need recorded mode.
                 what = "Double pendulum" if self.family == "double_pendulum" else "Spinning object"
@@ -488,14 +495,12 @@ class LiveSession:
                 self.family, ids = ("pendulum" if self.family == "double_pendulum" else self.scene.motion_family
                                     if self.scene.motion_family in ("pendulum", "oscillator", "projectile") else "pendulum"), []
             self.send({"type": "hypotheses", "family": hyp.family, "model": call.model, "provider": call.provider,
-                       "items": [{"model_id": h.model_id, "title": MODELS[h.model_id].title, "why": h.rationale}
-                                 for h in hyp.candidates]})
+                       "items": _hypothesis_items(hyp)})
         except (CostGuardError, LLMError) as e:
             # No usable hypotheses (budget, or invalid output twice): test the whole library of the scene's family.
             self.family = self.scene.motion_family if self.scene.motion_family != "other" else "pendulum"
             self.send({"type": "notice", "level": "warning", "message": f"Hypotheses unavailable ({e}); testing every {self.family} model."})
-        simplest = min(models_for(self.family), key=lambda m: len(m.params)).id
-        self.candidates = list(dict.fromkeys([simplest, *(ids or [m.id for m in models_for(self.family)])]))
+        self.candidates = _with_control(self.family, ids or [m.id for m in models_for(self.family)])
 
     def _prediction(self, spec, lead: FitResult, coords, frames: np.ndarray, origin: np.ndarray, ppm: float) -> list[list[float]]:
         fps = self.cfg.fps

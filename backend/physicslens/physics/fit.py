@@ -71,7 +71,9 @@ def initial_guess(spec: ModelSpec, c: Coordinates) -> dict[str, float]:
     q = c.q[:, 0]
     guess: dict[str, float] = {}
     for p in spec.params:
-        if p.name == "g":
+        if p.guess is not None:
+            guess[p.name] = p.guess
+        elif p.name == "g":
             if c.family == "pendulum":
                 guess["g"] = dominant_omega(c.t, q) ** 2 * c.ctx["length_m"]
             else:

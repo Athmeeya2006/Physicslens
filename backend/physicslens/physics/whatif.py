@@ -8,8 +8,8 @@ from typing import Any, Literal
 import numpy as np
 
 from .coords import Coordinates
+from .custom import spec_for
 from .fit import simulate
-from .models import MODELS
 
 Operation = Literal["multiply", "set", "add"]
 # Geometry a user can change besides the ODE parameters.
@@ -28,13 +28,13 @@ class Change:
 
 
 def changeable(fit_state: dict[str, Any]) -> list[str]:
-    spec = MODELS[fit_state["model_id"]]
+    spec = spec_for(fit_state)
     return [*spec.param_names, *GEOMETRY_PARAMS.get(spec.family, {})]
 
 
 def apply(fit_state: dict[str, Any], changes: list[Change]) -> tuple[dict[str, float], dict[str, float]]:
     """New (params, ctx). Rejects unknown parameters and unphysical results instead of simulating nonsense."""
-    spec = MODELS[fit_state["model_id"]]
+    spec = spec_for(fit_state)
     params = dict(fit_state["params"])
     ctx = dict(fit_state["ctx"])
     geometry = GEOMETRY_PARAMS.get(spec.family, {})
@@ -58,7 +58,7 @@ def apply(fit_state: dict[str, Any], changes: list[Change]) -> tuple[dict[str, f
 
 def simulate_whatif(fit_state: dict[str, Any], changes: list[Change], seconds: float) -> dict[str, Any]:
     """Ghost points in clip pixels for the changed system, starting from the measured initial state."""
-    spec = MODELS[fit_state["model_id"]]
+    spec = spec_for(fit_state)
     params, ctx = apply(fit_state, changes)
     fps = fit_state["fps"]
     t = np.arange(int(seconds * fps)) / fps

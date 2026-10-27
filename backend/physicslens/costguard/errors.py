@@ -37,3 +37,7 @@ class ProviderCallFailed(CostGuardError):
 
 class OutputTruncated(CostGuardError):
     """The model hit its output-token limit. The call was paid for; raise the limit, don't just retry."""
+
+
+class CacheOnlyMiss(CostGuardError):
+    """A cache-only provider was asked for something it has never answered. Nothing was sent or billed."""

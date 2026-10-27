@@ -1,4 +1,5 @@
-"""Candidate ODE models. The language model chooses among these by id; it never writes the math that gets accepted."""
+"""Candidate ODE models. The language model chooses among these by id, or writes a free-form law in the closed
+math language of expr.py (see custom.py). Either way only fitting and held-out verification accept a model."""
 
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ class Param:
     unit: str
     lower: float
     upper: float
+    guess: float | None = None  # starting point for the fit; set for free-form parameters, which have no rule of thumb
 
 
 @dataclass(frozen=True)
@@ -132,6 +134,33 @@ for _m in [
               _spin(False, False, True)),
     ModelSpec("spin_dry_viscous", "rotation", "Spin-down, dry and viscous friction",
               r"\ddot\varphi = -c\,\mathrm{sgn}(\dot\varphi) - k\dot\varphi", (C_DRY, K_VISC), _spin(True, True, False)),
+]:
+    MODELS[_m.id] = _m
+
+
+def _line(accel: bool) -> Rhs:
+    def rhs(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
+        return np.array([s[1], p["a0"] if accel else 0.0])
+    return rhs
+
+
+def _plane(accel: bool) -> Rhs:
+    def rhs(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
+        ax, ay = (p["ax0"], p["ay0"]) if accel else (0.0, 0.0)
+        return np.array([s[2], s[3], ax, ay])
+    return rhs
+
+
+# Controls for motion that fits no named family ("line": along one axis, "plane": anywhere in the image plane).
+# Any free-form law the agent writes is tested against these, so it has to beat "nothing acts on it".
+for _m in [
+    ModelSpec("line_constant_velocity", "line", "Constant velocity (no net force)", r"\ddot s = 0", (), _line(False)),
+    ModelSpec("line_constant_accel", "line", "Constant acceleration", r"\ddot s = a_0",
+              (Param("a0", "a_0", "m/s^2", -100.0, 100.0, 0.0),), _line(True)),
+    ModelSpec("plane_constant_velocity", "plane", "Constant velocity (no net force)", r"\ddot{\mathbf{r}} = 0", (), _plane(False)),
+    ModelSpec("plane_constant_accel", "plane", "Constant acceleration",
+              r"\ddot x = a_x,\quad \ddot y = a_y",
+              (Param("ax0", "a_x", "m/s^2", -100.0, 100.0, 0.0), Param("ay0", "a_y", "m/s^2", -100.0, 100.0, 0.0)), _plane(True)),
 ]:
     MODELS[_m.id] = _m
 

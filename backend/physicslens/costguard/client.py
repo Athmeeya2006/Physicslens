@@ -24,6 +24,7 @@ from websockets.exceptions import ConnectionClosed
 
 from ..settings import (
     BASETEN_REASONING_MODEL,
+    GLIMMER_MODEL,
     META_CONTRIBUTOR_MODEL,
     SAM_MODEL,
     VOICE_MODEL,
@@ -34,6 +35,7 @@ from ..settings import (
 from .allowlist import Allowlist
 from .cache import ResponseCache, file_digest, make_key
 from .errors import (
+    CacheOnlyMiss,
     CostGuardError,
     InvalidRequest,
     KillSwitchActive,
@@ -50,6 +52,7 @@ log = logging.getLogger("physicslens.costguard")
 
 META_EFFORTS = ("minimal", "low", "medium")  # never high/xhigh/max; "none" is a 400
 BASETEN_EFFORTS = ("low", "medium")  # Baseten defaults to xhigh if omitted, so it is always sent
+GLIMMER_STRENGTHS = ("low", "medium")  # the chat template defaults to high, so it is always sent
 VOICE_URL = "wss://api.meta.ai/v1/asr/realtime"
 VOICE_BYTES_PER_SECOND = 24_000 * 2  # 24 kHz, 16-bit, mono
 VOICE_MAX_AHEAD_S = 5.0
@@ -147,6 +150,7 @@ class CostGuardClient:
         timeouts = self.limits.get("timeouts_seconds") or {}
         self.llm_timeout = float(timeouts.get("llm", 60))
         self.sam_timeout = float(timeouts.get("sam_clip", 120))
+        self.glimmer_timeout = float(timeouts.get("glimmer", 900))
         retries = self.limits.get("retries") or {}
         self._backoff_start = float(retries.get("backoff_start_ms", 500)) / 1000
         self._llm_policy = _RetryPolicy(int(retries.get("on_429_max", 3)), int(retries.get("on_transient_5xx_max", 2)))
@@ -155,6 +159,10 @@ class CostGuardClient:
         out = self.limits.get("output_token_limits") or {}
         self.meta_max_output_default = int(out.get("meta_max_output_tokens_default", 2000))
         self.baseten_max_tokens_default = int(out.get("baseten_max_tokens_default", 4000))
+        self.glimmer_max_tokens_default = int(out.get("glimmer_max_tokens_default", 8000))
+        # Providers listed in PHYSICSLENS_CACHE_ONLY answer from the cache or not at all. A GPU notebook
+        # running the open-weight model replays SAM results this way and never holds a Meta key.
+        self.cache_only = {p.strip() for p in os.environ.get("PHYSICSLENS_CACHE_ONLY", "").split(",") if p.strip()}
 
     # ---------- preflight checks ----------
 
@@ -207,6 +215,8 @@ class CostGuardClient:
                     res.commit(0.0, status="cache_hit")
                     log.info("paid-call provider=%s model=%s run=%s cache_hit cost=$0", provider, model, run_id)
                     return CallResult.from_cache(hit)
+            if provider in self.cache_only:
+                raise CacheOnlyMiss(f"{provider}/{model}: not in the cache, and {provider} is cache-only here.")
             self.breaker.check(provider)
             response, headers = self._with_retries(provider, model, request, policy)
             if headers:
@@ -371,6 +381,43 @@ class CostGuardClient:
 
         def request() -> tuple[Any, Any]:
             raw = sdk.chat.completions.with_raw_response.create(**body, timeout=self.llm_timeout)
+            return raw.parse(), raw.headers
+
+        return self._execute(
+            provider=provider, model=model, run_id=run_id, audience=audience, est_cost=est_cost,
+            cache_key=make_key(model, body) if use_cache else None, request=request,
+            parse=_parse_chat, policy=self._llm_policy, run_cap_usd=run_cap_usd,
+        )
+
+    # ---------- Muse Glimmer: open weights on our own llama-server (Chat Completions) ----------
+
+    def glimmer_chat(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        run_id: str,
+        strength: str = "low",
+        max_tokens: int | None = None,
+        audience: str = "dev",
+        use_cache: bool = True,
+        run_cap_usd: float | None = None,
+    ) -> CallResult:
+        if strength not in GLIMMER_STRENGTHS:
+            raise InvalidRequest(f"Glimmer reasoning strength must be one of {GLIMMER_STRENGTHS}, got {strength!r}.")
+        provider, model = "glimmer", GLIMMER_MODEL
+        self.check_kill_switch()
+        self._check_model(model, provider)
+        max_tok = max_tokens or self.glimmer_max_tokens_default
+        # Sampling stays at the model's defaults (temperature 1.0); temperature 0 makes it loop.
+        body = {"model": model, "messages": messages, "max_tokens": max_tok,
+                "chat_template_kwargs": {"reasoning_strength": strength}}
+        est_cost = self.pricing.worst_case_tokens(provider, model, _estimate_input_tokens(messages), max_tok)
+
+        def request() -> tuple[Any, Any]:
+            sdk = self._sdk(provider, self.glimmer_timeout)
+            raw = sdk.chat.completions.with_raw_response.create(
+                model=model, messages=messages, max_tokens=max_tok, timeout=self.glimmer_timeout,
+                extra_body={"chat_template_kwargs": body["chat_template_kwargs"]})
             return raw.parse(), raw.headers
 
         return self._execute(

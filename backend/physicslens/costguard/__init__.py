@@ -3,6 +3,7 @@
 from .client import CallResult, CostGuardClient
 from .errors import (
     BudgetExceeded,
+    CacheOnlyMiss,
     CircuitOpen,
     CostGuardError,
     InvalidRequest,
@@ -16,6 +17,7 @@ from .pricing import Usage
 
 __all__ = [
     "BudgetExceeded",
+    "CacheOnlyMiss",
     "CallResult",
     "CircuitOpen",
     "CostGuardClient",

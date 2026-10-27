@@ -109,6 +109,7 @@ def create_run(
     request: Request,
     video: Annotated[UploadFile, File()],
     pendulum_length_m: Annotated[float | None, Form()] = None,
+    object_size_m: Annotated[float | None, Form()] = None,
     turnstile_token: Annotated[str | None, Form()] = None,
     x_access_code: Annotated[str | None, Header()] = None,
     x_forwarded_for: Annotated[str | None, Header()] = None,
@@ -122,6 +123,9 @@ def create_run(
             raise HTTPException(status_code=403, detail="Please complete the quick check above the upload button.")
         if not public_quota.take(addr):
             raise HTTPException(status_code=429, detail="You've used today's free analyses. Browse the gallery, or come back tomorrow.")
+    for name, value in (("pendulum length", pendulum_length_m), ("object size", object_size_m)):
+        if value is not None and not 0.005 <= value <= 100:
+            raise HTTPException(status_code=400, detail=f"The {name} should be between 0.5 cm and 100 m.")
     suffix = Path(video.filename or "").suffix.lower()
     if suffix not in VIDEO_SUFFIXES:
         raise HTTPException(status_code=400, detail="Please upload a video file (MP4 or MOV).")
@@ -137,7 +141,7 @@ def create_run(
     if written > MAX_UPLOAD_BYTES:
         shutil.rmtree(run_dir)
         raise HTTPException(status_code=413, detail="That video is too large; trim it to under 30 seconds.")
-    state = runs.start(dest, RunOptions(audience=audience, pendulum_length_m=pendulum_length_m))
+    state = runs.start(dest, RunOptions(audience=audience, pendulum_length_m=pendulum_length_m, object_size_m=object_size_m))
     return runs.public_view(state)
 
 

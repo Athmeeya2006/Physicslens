@@ -9,7 +9,7 @@ from scipy.optimize import least_squares
 
 from ..sigproc.trajectory import Trajectory
 
-FAMILIES = ("pendulum", "oscillator", "projectile")
+FAMILIES = ("pendulum", "oscillator", "projectile", "line", "plane")
 
 
 @dataclass(frozen=True)
@@ -32,7 +32,7 @@ class Coordinates:
             ph = q[:, 0]
             arm = self.ctx["arm_m"]
             return np.column_stack([self.ctx["center_x"] + arm * np.cos(ph), self.ctx["center_y"] + arm * np.sin(ph)])
-        if self.family == "oscillator":
+        if self.family in ("oscillator", "line"):
             s = q[:, 0]
             return np.column_stack([self.ctx["origin_x"] + s * self.ctx["axis_x"], self.ctx["origin_y"] + s * self.ctx["axis_y"]])
         return q
@@ -78,7 +78,7 @@ def to_coordinates(traj: Trajectory, family: str, geometry: dict[str, float] | N
         cx, cy = geometry["pivot_x"], geometry["pivot_y"]
         theta = np.arctan2(xy[:, 0] - cx, -(xy[:, 1] - cy))
         return Coordinates(family, traj.t, theta[:, None], ("theta",), dict(geometry))
-    if family == "oscillator" and geometry is not None:
+    if family in ("oscillator", "line") and geometry is not None:
         s = (xy[:, 0] - geometry["origin_x"]) * geometry["axis_x"] + (xy[:, 1] - geometry["origin_y"]) * geometry["axis_y"]
         return Coordinates(family, traj.t, s[:, None], ("s",), dict(geometry))
     if family == "pendulum":
@@ -88,13 +88,17 @@ def to_coordinates(traj: Trajectory, family: str, geometry: dict[str, float] | N
         theta = np.arctan2(xy[:, 0] - cx, -(xy[:, 1] - cy))
         return Coordinates(family, traj.t, theta[:, None], ("theta",),
                            {"pivot_x": cx, "pivot_y": cy, "length_m": r, "length_std": _radius_std(xy)})
-    if family == "oscillator":
+    if family in ("oscillator", "line"):
+        # The principal axis of the path: a spring's stroke, a cart's track, a ramp.
         mean = xy.mean(axis=0)
         _, _, vt = np.linalg.svd(xy - mean, full_matrices=False)
         axis = vt[0] if vt[0][1] >= 0 else -vt[0]  # point the axis up (or right) for readable signs
+        if family == "line" and abs(axis[1]) < abs(axis[0]):
+            # Free-form laws are written against a stated direction: rightward for tracks closer to horizontal.
+            axis = axis if axis[0] > 0 else -axis
         s = (xy - mean) @ axis
         return Coordinates(family, traj.t, s[:, None], ("s",),
                            {"origin_x": float(mean[0]), "origin_y": float(mean[1]), "axis_x": float(axis[0]), "axis_y": float(axis[1])})
-    if family == "projectile":
+    if family in ("projectile", "plane"):
         return Coordinates(family, traj.t, xy.copy(), ("x", "y"))
     raise ValueError(f"Unknown family {family!r}; expected one of {FAMILIES}.")

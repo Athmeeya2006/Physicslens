@@ -22,3 +22,8 @@ baseten:
     output: null          # TODO(verify)
 
 # Expected cost of one 10-second recorded run: ~$0.10. Much more than that = a bug; stop and investigate.
+
+glimmer:
+  muse-glimmer-30b:       # self-hosted on a free GPU notebook: no per-token charge
+    input: 0.0
+    output: 0.0

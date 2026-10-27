@@ -1,4 +1,8 @@
-"""Structured (Pydantic-validated) calls to the reasoning model, with Baseten primary and Meta fallback."""
+"""Structured (Pydantic-validated) calls to the reasoning model.
+
+Open-weight first: self-hosted Muse Glimmer when selected, else Muse Spark Open on Baseten; the Meta API
+fallback exists only in dev.
+"""
 
 from __future__ import annotations
 
@@ -37,6 +41,11 @@ class OpenWeightUnavailable(CostGuardError):
 
 def fallback_allowed(client: CostGuardClient) -> bool:
     return client.settings.app_env == "dev"
+
+
+def glimmer_selected() -> bool:
+    # Chosen explicitly by the machine serving Glimmer, never inferred, so a run's provider is never a surprise.
+    return os.environ.get("REASONING_PROVIDER", "").strip().lower() == "glimmer"
 
 
 @dataclass(frozen=True)
@@ -128,10 +137,20 @@ def _call(client: CostGuardClient, *, task: str, system: str, text: str, schema_
           images: list[bytes], audience: str, meta_effort: str, max_output_tokens: int,
           run_cap_usd: float | None = None) -> tuple[str, LLMCall]:
     schema = strict_schema(schema_model)
+    content: list[dict[str, Any]] = [{"type": "text", "text": text}]
+    content += [{"type": "image_url", "image_url": {"url": image_b64(j)}} for j in images]
+    sys_prompt = f"{system}\n\nReply with only a JSON object matching this JSON schema:\n{json.dumps(schema)}"
+    if glimmer_selected():
+        try:
+            # Glimmer always thinks before answering, so it gets room for reasoning on top of the answer.
+            r = client.glimmer_chat(messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": content}],
+                                    run_id=run_id, audience=audience, max_tokens=max(client.glimmer_max_tokens_default,
+                                                                                     max_output_tokens * 4),
+                                    run_cap_usd=run_cap_usd)
+        except (ProviderCallFailed, CircuitOpen) as e:
+            raise OpenWeightUnavailable(f"Muse Glimmer failed for {task}: {e}") from e
+        return r.text, LLMCall("glimmer", r.model, r.reasoning, r.cost_usd, r.cached)
     if baseten_available(client):
-        content: list[dict[str, Any]] = [{"type": "text", "text": text}]
-        content += [{"type": "image_url", "image_url": {"url": image_b64(j)}} for j in images]
-        sys_prompt = f"{system}\n\nReply with only a JSON object matching this JSON schema:\n{json.dumps(schema)}"
         try:
             r = client.baseten_chat(messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": content}],
                                     run_id=run_id, audience=audience, max_tokens=max_output_tokens * 2,
@@ -143,9 +162,9 @@ def _call(client: CostGuardClient, *, task: str, system: str, text: str, schema_
             log.warning("Baseten failed for %s (%s); falling back to Muse Spark on the Meta API (dev only).", task, e)
     elif not fallback_allowed(client):
         raise OpenWeightUnavailable("Muse Spark Open is not configured (BASETEN_API_KEY or its price is missing).")
-    content = [{"type": "input_text", "text": text}] + [{"type": "input_image", "image_url": image_b64(j)} for j in images]
+    meta_content = [{"type": "input_text", "text": text}] + [{"type": "input_image", "image_url": image_b64(j)} for j in images]
     r = client.meta_text(
-        input=[{"role": "user", "content": content}], instructions=system, schema=schema, schema_name=task,
+        input=[{"role": "user", "content": meta_content}], instructions=system, schema=schema, schema_name=task,
         effort=meta_effort, max_output_tokens=max_output_tokens, prompt_cache_key=f"physicslens-{task}-v1",
         run_id=run_id, audience=audience, run_cap_usd=run_cap_usd,
     )

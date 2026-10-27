@@ -7,11 +7,13 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..perception.calibration import REFERENCE_SIZES
+from ..physics.custom import FreeParam, build
+from ..physics.expr import ExprError
 from ..physics.models import MODELS
 
 ReferenceKind = Literal[tuple(REFERENCE_SIZES) + ("none",)]  # type: ignore[valid-type]
 ModelId = Literal[tuple(MODELS)]  # type: ignore[valid-type]
-Family = Literal["pendulum", "oscillator", "projectile", "double_pendulum", "rotation"]
+Family = Literal["pendulum", "oscillator", "projectile", "double_pendulum", "rotation", "line", "plane"]
 
 _BANNED_PHRASE_WORDS = {"segment", "track", "find", "the", "not", "and", "or", "left", "right", "above", "below", "near"}
 
@@ -82,15 +84,41 @@ class Hypothesis(Strict):
     rationale: str = Field(description="One sentence: which numbers in the summary point to this model.")
 
 
+class FreeParamIn(Strict):
+    name: str = Field(description="Identifier used in the expressions, e.g. mu, k, c_d.")
+    unit: str = Field(description="SI unit, e.g. 1/s, m/s^2, or empty for a pure number.")
+    lower: float
+    upper: float
+    guess: float = Field(description="Physically sensible starting value inside [lower, upper].")
+
+
+class FreeModelIn(Strict):
+    title: str = Field(description="Short name, e.g. 'Sliding with dry friction'.")
+    acceleration: list[str] = Field(min_length=1, max_length=2, description=(
+        "family line: one expression for the acceleration along the path, in s (position, m) and v (velocity, m/s). "
+        "family plane: two expressions, x then y acceleration, in x, y (m, y up) and vx, vy (m/s)."))
+    params: list[FreeParamIn] = Field(max_length=4)
+    rationale: str = Field(description="One sentence: which numbers in the summary point to this law.")
+
+
 class Hypotheses(Strict):
     family: Family
     candidates: list[Hypothesis] = Field(min_length=1, max_length=4)
+    free_models: list[FreeModelIn] = Field(max_length=3, description=(
+        "Only for family line or plane: equations you write yourself when no listed model fits the physics. Otherwise []."))
 
     @model_validator(mode="after")
     def same_family(self) -> Hypotheses:
         wrong = [h.model_id for h in self.candidates if MODELS[h.model_id].family != self.family]
         if wrong:
             raise ValueError(f"candidates {wrong} are not {self.family} models")
+        if self.free_models and self.family not in ("line", "plane"):
+            raise ValueError("free_models are only allowed with family 'line' or 'plane'; use listed model ids otherwise")
+        for i, f in enumerate(self.free_models):
+            try:
+                build(self.family, f.title, f.acceleration, [FreeParam(**p.model_dump()) for p in f.params])
+            except ExprError as e:
+                raise ValueError(f"free_models[{i}] ({f.title}): {e}") from e
         return self
 
 

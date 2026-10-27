@@ -6,7 +6,7 @@ import json
 from typing import Any
 
 from ..costguard import CostGuardClient
-from ..physics.models import MODELS
+from ..physics.custom import spec_for
 from ..physics.whatif import GEOMETRY_PARAMS, Change, changeable
 from .llm import LLMCall, ask_json
 from .schemas import WhatIfPlan
@@ -19,7 +19,7 @@ can't express, set understood to false, leave changes empty, and say briefly in 
 
 
 def describe_parameters(fit_state: dict[str, Any]) -> list[dict[str, Any]]:
-    spec = MODELS[fit_state["model_id"]]
+    spec = spec_for(fit_state)
     out = [{"name": p.name, "meaning": p.latex, "unit": p.unit, "current": fit_state["params"][p.name]} for p in spec.params]
     for name, key in GEOMETRY_PARAMS.get(spec.family, {}).items():
         out.append({"name": name, "meaning": "pendulum length", "unit": "m", "current": fit_state["ctx"][key]})
@@ -28,7 +28,7 @@ def describe_parameters(fit_state: dict[str, Any]) -> list[dict[str, Any]]:
 
 def interpret(client: CostGuardClient, question: str, fit_state: dict[str, Any], run_id: str,
               audience: str = "dev") -> tuple[WhatIfPlan, list[Change], LLMCall]:
-    spec = MODELS[fit_state["model_id"]]
+    spec = spec_for(fit_state)
     payload = {"system": spec.title, "equation": spec.latex, "parameters": describe_parameters(fit_state),
                "question": question}
     plan, call = ask_json(client, task="whatif", system=WHATIF_SYSTEM, text=json.dumps(payload), schema_model=WhatIfPlan,

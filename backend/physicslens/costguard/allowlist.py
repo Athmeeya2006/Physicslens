@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
-from .errors import ModelNotAllowed
+from .errors import CostGuardError, ModelNotAllowed
 
 
 class Allowlist:
@@ -28,7 +29,14 @@ class Allowlist:
         return [m for m, p in self._provider_of.items() if p == provider]
 
     def base_url(self, provider: str) -> str:
-        return self._provider_cfg[provider]["base_url"]
+        cfg = self._provider_cfg[provider]
+        if "base_url" in cfg:
+            return cfg["base_url"]
+        # Self-hosted servers have no fixed address; the machine running them sets it.
+        url = os.environ.get(cfg["base_url_env"], "").strip()
+        if not url:
+            raise CostGuardError(f"{cfg['base_url_env']} is not set: no {provider} server to call.")
+        return url
 
     def api_key_env(self, provider: str) -> str:
         return self._provider_cfg[provider]["api_key_env"]

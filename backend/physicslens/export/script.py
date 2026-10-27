@@ -6,7 +6,7 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-from ..physics.models import MODELS
+from ..physics.custom import FREE_MODELS, spec_for
 
 # Acceleration expressions per model, in the variables the generated script defines.
 _RHS = {
@@ -24,13 +24,29 @@ _RHS = {
     "spin_dry_viscous": "dw = -p['c'] * np.tanh(w / 0.05) - p['k'] * w",
     "linear_drag": "ax, ay = -p['k'] * vx, -p['g'] - p['k'] * vy",
     "quadratic_drag": "speed = np.hypot(vx, vy)\n    ax, ay = -p['c'] * speed * vx, -p['g'] - p['c'] * speed * vy",
+    "line_constant_velocity": "dv = 0.0",
+    "line_constant_accel": "dv = p['a0']",
+    "plane_constant_velocity": "ax, ay = 0.0, 0.0",
+    "plane_constant_accel": "ax, ay = p['ax0'], p['ay0']",
 }
 _STATE = {
     "pendulum": ("th, w = state", "return [w, dw]", "theta_rad"),
     "oscillator": ("s, v = state", "return [v, dv]", "s_m"),
     "projectile": ("x, y, vx, vy = state", "return [vx, vy, ax, ay]", "x_m,y_m"),
     "rotation": ("ph, w = state", "return [w, dw]", "phi_rad"),
+    "line": ("s, v = state", "return [v, dv]", "s_m"),
+    "plane": ("x, y, vx, vy = state", "return [vx, vy, ax, ay]", "x_m,y_m"),
 }
+
+
+def _rhs_body(model_id: str) -> str:
+    free = FREE_MODELS.get(model_id)
+    if free is None:
+        return _RHS[model_id]
+    # Written from the parsed expression tree, so the script runs exactly the law that was fitted.
+    lines = [f"{p.name} = p[{p.name!r}]" for p in free.params]
+    lines += [f"dv = {free.python[0]}"] if free.family == "line" else [f"ax = {free.python[0]}", f"ay = {free.python[1]}"]
+    return "\n    ".join(lines)
 
 
 def _param_lines(result: dict[str, Any]) -> list[str]:
@@ -42,7 +58,7 @@ def _param_lines(result: dict[str, Any]) -> list[str]:
 
 def python_script(result: dict[str, Any], seconds: float | None = None) -> str:
     fs = result["fit_state"]
-    spec = MODELS[fs["model_id"]]
+    spec = spec_for(fs)
     unpack, ret, columns = _STATE[spec.family]
     seconds = seconds or result["clip"]["frames"] / result["clip"]["fps"]
     length = f"L = {fs['ctx']['length_m']!r}  # m, radius of the measured swing arc\n" if spec.family == "pendulum" else ""
@@ -68,7 +84,7 @@ SECONDS = {seconds!r}
 
 def rhs(t, state):
     {unpack}
-    {_RHS[spec.id]}
+    {_rhs_body(spec.id)}
     {ret}
 
 
@@ -89,7 +105,7 @@ if __name__ == "__main__":
 
 def parameters_json(result: dict[str, Any]) -> str:
     fs = result["fit_state"]
-    spec = MODELS[fs["model_id"]]
+    spec = spec_for(fs)
     doc = {
         "generator": "PhysicsLens",
         "created_utc": datetime.now(UTC).isoformat(timespec="seconds"),

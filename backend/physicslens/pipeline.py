@@ -27,6 +27,7 @@ from .perception.calibration import (
 from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
 from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
+from .physics.custom import FREE_MODELS, FreeParam, build, register
 from .physics.design import design_experiment
 from .physics.double import HORIZON_S as DOUBLE_HORIZON_S
 from .physics.double import DoublePendulumError, fit_double, to_double_coords
@@ -71,6 +72,8 @@ class AnalysisError(RuntimeError):
 class RunOptions:
     audience: str = "dev"
     pendulum_length_m: float | None = None  # alternative scale source when no reference object is visible
+    object_size_m: float | None = None  # known longest dimension of the moving object (a ball, a car, an astronaut)
+    prepared: Path | None = None  # a media.save_prepared bundle: analyze exactly these bytes (see save_prepared)
 
 
 Progress = Callable[[str], None]
@@ -93,19 +96,16 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         trail.append({"step": step, "provider": call.provider, "model": call.model, "text": text, **extra})
 
     progress("Preparing video")
-    clip = run_dir / "clip.mp4"
-    info = media.prepare_sam_clip(video, clip, max_fps=float(media_cfg.get("sam_max_fps_recorded", 30)),
-                                  max_seconds=MAX_CLIP_SECONDS[options.audience],
-                                  max_long_side=int(media_cfg.get("dev_max_resolution", 1080)))
+    clip, info, frames_jpeg = (media.load_prepared(options.prepared, run_dir) if options.prepared is not None
+                               else prepare(video, run_dir, options, media_cfg))
     min_frames = int(media_cfg.get("sam_min_frames_per_request", 50))
     if info.frames < min_frames:
         raise AnalysisError(f"The clip is too short: at least {min_frames} frames (about 2 seconds) are needed.")
 
     progress("Understanding the scene")
-    frames_jpeg = media.keyframes(clip, int(media_cfg.get("llm_keyframes_max", 4)), int(media_cfg.get("llm_image_long_side_px", 768)))
     scene, call = understand_scene(client, frames_jpeg, run_id, options.audience)
     ref = "no reference object" if scene.reference_kind == "none" else f"reference: {scene.reference_kind.replace('_', ' ')}"
-    record("scene", call, f"Sees a {scene.moving_object} moving like a {scene.motion_family}; {ref}.")
+    record("scene", call, f"Sees a {scene.moving_object} {MOTION_PHRASE[scene.motion_family]}; {ref}.")
 
     progress(f"Tracking the {scene.moving_object} with SAM 3.1")
     tracks = track_objects(client, clip, info, scene, run_id, options.audience)
@@ -158,8 +158,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         }
 
     tried: list[str] = []
-    family, candidate_ids = hyp.family, _with_control(hyp.family, [h.model_id for h in hyp.candidates])
-    rationales = {h.model_id: h.rationale for h in hyp.candidates}
+    family = hyp.family
+    candidate_ids, rationales = _candidates(hyp)
     verdict: Verdict | None = None
     coords: Coordinates | None = None
     turn = None
@@ -211,8 +211,9 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         record("hypotheses", call, f"Switches to {hyp.family} models.", items=_hypothesis_items(hyp))
         if hyp.family in tried:
             break
-        family, candidate_ids = hyp.family, _with_control(hyp.family, [h.model_id for h in hyp.candidates])
-        rationales.update({h.model_id: h.rationale for h in hyp.candidates})
+        family = hyp.family
+        candidate_ids, more = _candidates(hyp)
+        rationales.update(more)
 
     assert verdict is not None and turn is not None
     result: dict[str, Any] = {
@@ -263,6 +264,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             "origin_px": [float(origin_px[0]), float(origin_px[1])], "px_per_m": calibration.px_per_m,
             "first_frame": int(traj.frames[0]),
         }
+        if lead.model_id in FREE_MODELS:
+            result["fit_state"]["free_model"] = FREE_MODELS[lead.model_id].definition()
     if "fit_state" in result:
         # Run the MuJoCo export from the measured state: proof the exported model is the fitted one.
         try:
@@ -285,6 +288,19 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             p["uncalibrated"] = needs_scale(p["unit"])
     progress("Done")
     return result
+
+
+def prepare(video: Path, run_dir: Path, options: RunOptions, media_cfg: dict[str, Any], start_s: float = 0.0,
+            seconds: float | None = None) -> tuple[Path, media.VideoInfo, list[bytes]]:
+    """The clip SAM sees (downsampled, trimmed, H.264) and the few small keyframes the reasoning model sees."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+    clip = run_dir / "clip.mp4"
+    cap = MAX_CLIP_SECONDS[options.audience]
+    info = media.prepare_sam_clip(video, clip, max_fps=float(media_cfg.get("sam_max_fps_recorded", 30)),
+                                  max_seconds=min(seconds, cap) if seconds else cap, start_s=start_s,
+                                  max_long_side=int(media_cfg.get("dev_max_resolution", 1080)))
+    frames = media.keyframes(clip, int(media_cfg.get("llm_keyframes_max", 4)), int(media_cfg.get("llm_image_long_side_px", 768)))
+    return clip, info, frames
 
 
 def _common_frames(a: ObjectTrack, b: ObjectTrack) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -388,15 +404,21 @@ def rotation_summary(c: Coordinates) -> dict[str, Any]:
 
 
 FORECAST_POINTS = 400
+MOTION_PHRASE = {
+    "pendulum": "swinging like a pendulum", "oscillator": "oscillating back and forth",
+    "projectile": "flying or falling freely", "double_pendulum": "swinging as a double pendulum",
+    "rotation": "spinning in place", "other": "moving in a way none of the named models covers",
+}
 
 
 def forecast_series(c: Coordinates, fit: FitResult) -> dict[str, Any]:
     """Measured motion against the model fitted on the first part only: the verification, as data to plot."""
     spec = MODELS[fit.model_id]
     # One plotted coordinate: the angle for swings and spins, the main axis for springs, height for projectiles.
-    k = 1 if c.family == "projectile" else 0
+    k = 1 if c.family in ("projectile", "plane") else 0
     label = {"pendulum": ("Swing angle", "rad"), "oscillator": ("Displacement", "m"), "projectile": ("Height", "m"),
-             "rotation": ("Spin angle", "rad")}.get(c.family, (c.names[k], ""))
+             "rotation": ("Spin angle", "rad"), "line": ("Position along the path", "m"),
+             "plane": ("Height", "m")}.get(c.family, (c.names[k], ""))
     step = max(1, len(c.t) // FORECAST_POINTS)
     idx = np.arange(0, len(c.t), step)
     return {
@@ -534,12 +556,17 @@ def calibrate(scene: Scene, reference: ObjectTrack | None, moving: ObjectTrack, 
         try:
             return from_reference(reference, scene.reference_kind)
         except CalibrationError as e:
-            if options.pendulum_length_m is None:
+            if options.pendulum_length_m is None and options.object_size_m is None:
                 raise AnalysisError(str(e)) from e
-            log.warning("Reference calibration failed (%s); using the given pendulum length.", e)
+            log.warning("Reference calibration failed (%s); using the size given by the user.", e)
     if options.pendulum_length_m is not None:
         radius_px = fit_circle(moving.centers_px * np.array([1.0, -1.0]))[2]
         return from_known_length(radius_px, options.pendulum_length_m)
+    if options.object_size_m is not None:
+        # The object's own mask, measured in every tracked frame: its spread is reported as the scale's uncertainty.
+        long_px = np.asarray(moving.long_px, dtype=float)
+        size_px = float(np.median(long_px))
+        return Calibration(size_px / options.object_size_m, float(np.std(long_px) / size_px), "object_size")
     # No scale: carry on. Frequency, damping and friction don't depend on scale; everything measured in
     # meters is reported as uncalibrated instead of the whole analysis being refused.
     log.info("No scale reference; continuing with a nominal scale (lengths and g will be marked uncalibrated).")
@@ -585,13 +612,36 @@ def fit_and_verify(traj: Trajectory, family: str, candidate_ids: list[str],
 
 
 def _hypothesis_items(hyp) -> list[dict[str, Any]]:
-    return [{"model_id": h.model_id, "title": MODELS[h.model_id].title, "why": h.rationale} for h in hyp.candidates]
+    items = [{"model_id": h.model_id, "title": MODELS[h.model_id].title, "why": h.rationale} for h in hyp.candidates]
+    for f in hyp.free_models:
+        law = "; ".join(f.acceleration)
+        items.append({"model_id": f.title, "title": f.title, "why": f"{f.rationale} Written by the agent: acceleration = {law}."})
+    return items
+
+
+def _candidates(hyp) -> tuple[list[str], dict[str, str]]:
+    """Listed models plus the agent's own free-form laws (already validated by the schema), with controls."""
+    ids = [h.model_id for h in hyp.candidates]
+    rationales = {h.model_id: h.rationale for h in hyp.candidates}
+    for f in hyp.free_models:
+        spec = register(build(hyp.family, f.title, f.acceleration, [FreeParam(**p.model_dump()) for p in f.params]))
+        ids.append(spec.id)
+        rationales[spec.id] = f"{f.rationale} (written by the agent)"
+    return _with_control(hyp.family, ids), rationales
 
 
 def _with_control(family: str, ids: list[str]) -> list[str]:
-    """Always include the family's simplest model, so a hypothesis list can't hide the baseline."""
-    simplest = min(models_for(family), key=lambda m: len(m.params)).id
-    return list(dict.fromkeys([simplest, *ids]))
+    """Always include the family's simplest model, so a hypothesis list can't hide the baseline.
+
+    For motion outside the named families both controls are kept: a law the agent wrote must beat
+    "nothing acts on it" and "a constant force" to be believed.
+    """
+    controls = [m.id for m in models_for(family) if m.id in GENERIC_CONTROLS] or \
+        [min(models_for(family), key=lambda m: len(m.params)).id]
+    return list(dict.fromkeys([*controls, *ids]))
+
+
+GENERIC_CONTROLS = ("line_constant_velocity", "line_constant_accel", "plane_constant_velocity", "plane_constant_accel")
 
 
 def agent_context(v: Verdict, family: str, summary: dict[str, Any], scene: Scene, tried: list[str]) -> dict[str, Any]:

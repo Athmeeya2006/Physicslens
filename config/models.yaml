@@ -27,3 +27,14 @@ baseten:
       use: primary reasoning (scene understanding, hypotheses, agent decisions, explanations)
       api: chat_completions
       note: hackathon guide model string; smoke test must confirm it exists (alt name meta-models/muse-spark-open)
+
+# Muse Glimmer: open weights, self-hosted with llama.cpp (llama-server, OpenAI Chat Completions).
+# Weights: meta-models/Muse-Glimmer-30B-GGUF, Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf + mmproj (vision).
+glimmer:
+  base_url_env: GLIMMER_BASE_URL    # e.g. http://127.0.0.1:8080/v1 on the GPU machine running llama-server
+  api_key_env: GLIMMER_API_KEY      # the --api-key given to llama-server
+  models:
+    muse-glimmer-30b:
+      use: open-weight reasoning (scene understanding, hypotheses, agent decisions, explanations)
+      api: chat_completions
+      note: reasoning cannot be switched off; strength low|medium|high|xhigh via chat_template_kwargs

@@ -31,12 +31,12 @@ def _library(family: str) -> tuple[ps.GeneralizedLibrary, list[str]]:
             [_lib((lambda x: np.sin(x), lambda x: f"sin({x})")), _lib(_IDENTITY, _ABS)],
             inputs_per_library=[[0], [1]],
         ), ["theta", "theta'"]
-    if family == "oscillator":
+    if family in ("oscillator", "line"):
         return ps.GeneralizedLibrary(
             [_lib(_IDENTITY, (lambda x: x**3, lambda x: f"{x}^3"), bias=True), _lib(_IDENTITY, _ABS)],
             inputs_per_library=[[0], [1]],
         ), ["s", "s'"]
-    if family == "projectile":
+    if family in ("projectile", "plane"):
         drag = _lib(
             (lambda x, y: x * np.hypot(x, y), lambda x, y: f"|v|{x}"),
             (lambda x, y: y * np.hypot(x, y), lambda x, y: f"|v|{y}"),

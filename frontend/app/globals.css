@@ -282,3 +282,6 @@ tr.flagged td { color: var(--bad); font-weight: 650; }
 /* Parameter intervals: their own column on wide screens, under the value on phones. */
 .ci-inline { display: none; }
 @media (max-width: 560px) { .ci-col { display: none; } .ci-inline { display: block; white-space: normal; } }
+
+.scale-fields { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.scale-fields legend { padding: 0; margin-bottom: 8px; font-size: 0.86rem; color: var(--ink-2); }

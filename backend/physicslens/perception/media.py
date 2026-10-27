@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from fractions import Fraction
 from pathlib import Path
 
@@ -96,3 +97,24 @@ def keyframes(path: Path, count: int, long_side: int) -> list[bytes]:
             raise MediaError("JPEG encoding failed.")
         out.append(buf.tobytes())
     return out
+
+
+def save_prepared(clip: Path, info: VideoInfo, frames_jpeg: list[bytes], out_dir: Path) -> None:
+    """Freeze a prepared clip and its keyframes, so another machine analyzes exactly these bytes.
+
+    Cache keys hash the clip and keyframe bytes, and ffmpeg/OpenCV builds differ between machines, so a GPU
+    notebook replaying cached SAM results must start from the same files, not re-encode its own.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(clip, out_dir / "clip.mp4")
+    for i, jpg in enumerate(frames_jpeg):
+        (out_dir / f"keyframe_{i}.jpg").write_bytes(jpg)
+    (out_dir / "info.json").write_text(json.dumps(asdict(info)))
+
+
+def load_prepared(src_dir: Path, run_dir: Path) -> tuple[Path, VideoInfo, list[bytes]]:
+    clip = run_dir / "clip.mp4"
+    shutil.copyfile(src_dir / "clip.mp4", clip)
+    info = VideoInfo(**json.loads((src_dir / "info.json").read_text()))
+    frames = [p.read_bytes() for p in sorted(src_dir.glob("keyframe_*.jpg"), key=lambda p: int(p.stem.split("_")[1]))]
+    return clip, info, frames

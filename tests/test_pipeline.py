@@ -22,7 +22,7 @@ SCENE = {
 HYPOTHESES = {"family": "pendulum", "candidates": [
     {"model_id": "pendulum", "rationale": "Arc-shaped path with a steady period."},
     {"model_id": "pendulum_small_angle", "rationale": "Amplitude is moderate."},
-]}
+], "free_models": []}
 AGENT = {"action": "explain", "message": "The ball swings like a pendulum.", "next_family": None,
          "reasoning_summary": "Verification accepted a pendulum model."}
 
@@ -134,7 +134,8 @@ def test_scene_rejects_command_phrases():
 
 def test_hypotheses_must_match_family():
     with pytest.raises(ValidationError):
-        Hypotheses.model_validate({"family": "projectile", "candidates": [{"model_id": "pendulum", "rationale": "x"}]})
+        Hypotheses.model_validate({"family": "projectile", "candidates": [{"model_id": "pendulum", "rationale": "x"}],
+                                   "free_models": []})
 
 
 def test_strict_schema_is_self_contained():

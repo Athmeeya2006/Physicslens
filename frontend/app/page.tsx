@@ -21,6 +21,7 @@ export default function Home() {
   const [budget, setBudget] = useState<Budget | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [lengthCm, setLengthCm] = useState("");
+  const [sizeCm, setSizeCm] = useState("");
   const [run, setRun] = useState<RunView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
@@ -93,7 +94,8 @@ export default function Home() {
     setRun(null);
     try {
       const length = lengthCm ? Number(lengthCm) / 100 : null;
-      const r = await startRun(file, length, turnstileToken);
+      const size = sizeCm ? Number(sizeCm) / 100 : null;
+      const r = await startRun(file, length, size, turnstileToken);
       setRun(r);
       setRunParam(r.run_id);
       poll(r.run_id);
@@ -144,10 +146,17 @@ export default function Home() {
                   <strong>{file ? file.name : "Choose or record a video"}</strong>
                   <span className="small muted">2 to 20 seconds, MP4 or MOV</span>
                 </label>
-                <label className="field">
-                  Pendulum length in cm (optional, when nothing of known size is in view)
-                  <input type="number" inputMode="decimal" min="1" step="0.1" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
-                </label>
+                <fieldset className="scale-fields">
+                  <legend>Scale, optional: only needed when nothing of known size is in view</legend>
+                  <label className="field">
+                    Pendulum length, cm
+                    <input type="number" inputMode="decimal" min="0.5" step="0.1" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
+                  </label>
+                  <label className="field">
+                    Or the moving object&apos;s longest side, cm
+                    <input type="number" inputMode="decimal" min="0.5" step="0.1" value={sizeCm} onChange={(e) => setSizeCm(e.target.value)} />
+                  </label>
+                </fieldset>
                 {health?.turnstile_site_key && <div ref={turnstileBox} />}
                 <button type="submit" disabled={!file || busy || !canUpload}>
                   {busy ? <><Loader2 size={16} className="spin" aria-hidden="true" />Analyzing</> : "Analyze the motion"}
@@ -156,6 +165,7 @@ export default function Home() {
                   <li>Hold the phone still, side-on to the motion.</li>
                   <li>Lay an A4 sheet flat in the plane of motion for real-world scale.</li>
                   <li>Frequency, damping and friction are exact even without a scale reference.</li>
+                  <li>Anything that moves works: swinging, bouncing, thrown, rolling, sliding or braking.</li>
                 </ul>
               </form>
             )}
