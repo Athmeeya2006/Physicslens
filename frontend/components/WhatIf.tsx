@@ -84,10 +84,10 @@ export function WhatIf({ runId, onGhost }: Props) {
   };
 
   return (
-    <div className="card whatif">
+    <div className="panel">
       <h3>What if?</h3>
-      <p className="muted small">Ask out loud or type, e.g. &ldquo;what if the string were twice as long?&rdquo; The fitted equation is re-simulated and drawn as a magenta ghost.</p>
-      <div className="whatif-row">
+      <p className="muted small" style={{ marginBottom: 12 }}>Ask out loud or type, for example &ldquo;what if the string were twice as long?&rdquo; The language model only turns the question into a parameter change; the fitted equation is re-simulated and drawn as a pink ghost.</p>
+      <div className="row">
         <button type="button" onClick={listening ? stopListening : listen} className={listening ? "listening" : ""}>
           {listening ? "Stop listening" : "Ask by voice"}
         </button>

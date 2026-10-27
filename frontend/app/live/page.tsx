@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Tex } from "@/components/Equation";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, HAS_BACKEND } from "@/lib/api";
 
 const FPS = 25;
 const MAX_WIDTH = 640; // SAM bills per frame, not per pixel; smaller frames just keep the upload light
@@ -79,6 +79,7 @@ export default function LivePage() {
   };
 
   const start = async () => {
+    if (!HAS_BACKEND) return;
     setNotices([]);
     setFit(null);
     track.current.clear();
@@ -185,13 +186,12 @@ export default function LivePage() {
 
   return (
     <main>
-      <header>
-        <h1>PhysicsLens Live</h1>
-        <p className="tagline">{status}</p>
-        <p className="small"><a href="/">Analyze a recorded clip instead</a></p>
+      <header className="page-head">
+        <h1>Live analysis</h1>
+        <p className="tagline">{HAS_BACKEND ? status : "Live analysis needs the analysis server, which isn't connected to this preview. The recordings on the Analyze page are complete, real analyses."}</p>
       </header>
 
-      <div className="split">
+      <div className="live-grid">
         <div className="stage" style={{ aspectRatio: size ? `${size.w} / ${size.h}` : "4 / 3" }}>
           <video ref={video} playsInline muted />
           <canvas
@@ -203,14 +203,14 @@ export default function LivePage() {
           />
         </div>
 
-        <div className="card">
+        <div className="panel">
           {!live && (
             <div className="upload">
               <label>
                 Pendulum length in cm (optional, if no A4 sheet is in view)
                 <input type="number" inputMode="decimal" min="1" step="0.1" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
               </label>
-              <button onClick={start}>Start live analysis</button>
+              <button onClick={start} disabled={!HAS_BACKEND}>Start live analysis</button>
             </div>
           )}
           {live && <button onClick={stop}>Stop</button>}

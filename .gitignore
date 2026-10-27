@@ -76,3 +76,6 @@ next-env.d.ts
 *~
 .DS_Store
 Thumbs.db
+
+# Generated from gallery/ by scripts/build_static_gallery.py
+frontend/public/gallery/

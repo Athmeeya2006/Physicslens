@@ -1,18 +1,25 @@
 import type { Metadata, Viewport } from "next";
+import { Schibsted_Grotesk } from "next/font/google";
 import "katex/dist/katex.min.css";
+import { Shell } from "@/components/Shell";
 import "./globals.css";
+
+// Self-hosted at build time by next/font; a grotesk with real character and tabular figures for data.
+const ui = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-ui", display: "swap" });
 
 export const metadata: Metadata = {
   title: "PhysicsLens",
-  description: "System identification from a phone camera: discover and verify the equations of motion of anything moving.",
+  description: "Film something moving and get the equation that governs it, verified against the real motion and exportable to MuJoCo.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#121820" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className={ui.variable}>
+      <body>
+        <Shell>{children}</Shell>
+      </body>
     </html>
   );
 }

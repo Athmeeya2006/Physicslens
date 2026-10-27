@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { TrackPoint } from "@/lib/api";
 
-const GHOST_COLORS = ["#22d3ee", "#f472b6", "#facc15"];
+// The page's data hues, lifted for contrast on the dark video stage: model blue first, then two alternates.
+const GHOST_COLORS = ["#5aa9ff", "#f5a524", "#c4a1ff"];
 const TRAIL_FRAMES = 20;
-const WHATIF_COLOR = "#e879f9";
-const MUJOCO_COLOR = "#4ade80";
+const WHATIF_COLOR = "#ff6fae";
+const MUJOCO_COLOR = "#46d98a";
 
 interface Props {
   src: string;
@@ -106,22 +107,19 @@ export function GhostPlayer({ src, width, height, fps, real, secondReal, objectS
       </div>
       <div className="legend">
         {ghosts.map((g, i) => (
-          <span key={g.model_id}>
-            <i style={{ borderColor: GHOST_COLORS[i % GHOST_COLORS.length] }} /> ghost: {g.model_id}
+          <span key={g.model_id} className="key">
+            <span className="swatch" style={{ boxShadow: `inset 0 0 0 3px ${GHOST_COLORS[i % GHOST_COLORS.length]}`, background: "var(--stage)" }} />
+            {i === 0 ? "Model ghost" : "Alternative"}: {g.model_id}
           </span>
         ))}
         {mujoco?.length ? (
-          <span>
-            <i style={{ borderColor: MUJOCO_COLOR, background: MUJOCO_COLOR }} /> MuJoCo replay of the export
-          </span>
+          <span className="key"><span className="swatch" style={{ background: MUJOCO_COLOR }} />MuJoCo replay of the export</span>
         ) : null}
         {whatIf && (
-          <span>
-            <i style={{ borderColor: WHATIF_COLOR, borderStyle: "solid" }} /> what if: {whatIf.label}
-          </span>
+          <span className="key"><span className="swatch" style={{ background: WHATIF_COLOR }} />What if: {whatIf.label}</span>
         )}
         <label>
-          <input type="checkbox" checked={showReal} onChange={(e) => setShowReal(e.target.checked)} /> measured trail
+          <input type="checkbox" checked={showReal} onChange={(e) => setShowReal(e.target.checked)} /> Measured trail
         </label>
       </div>
     </div>

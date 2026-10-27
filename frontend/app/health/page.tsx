@@ -86,7 +86,7 @@ function TrendSection() {
     trend?.recordings.map((rec, i) => ({ label: `#${i + 1}`, value: rec[key][0], std: rec[key][1], flagged: rec.flagged[key] })) ?? [];
 
   return (
-    <section className="card">
+    <section className="panel">
       <h3>Trend across recordings</h3>
       <form className="upload" onSubmit={run}>
         <label>
@@ -145,15 +145,14 @@ export default function HealthPage() {
 
   return (
     <main>
-      <header>
+      <header className="page-head">
         <h1>Machine health</h1>
         <p className="tagline">
           Record the same part twice, weeks apart. PhysicsLens compares its natural frequency and damping and flags drift, an early sign of wear.
         </p>
-        <p className="small"><a href="/">Analyze a new recording</a></p>
       </header>
 
-      <form className="card upload" onSubmit={run}>
+      <form className="panel upload" onSubmit={run}>
         <label>
           Baseline recording (result link or id)
           <input value={baseline} onChange={(e) => setBaseline(e.target.value)} placeholder="e.g. the analysis from last month" />
@@ -170,7 +169,7 @@ export default function HealthPage() {
       <TrendSection />
 
       {result && (
-        <section className="card">
+        <section className="panel">
           <h2 className={`status ${result.drift ? "no_fit" : "accepted"}`}>{result.drift ? "Drift detected" : "No significant change"}</h2>
           <p>{result.summary}</p>
           <table>

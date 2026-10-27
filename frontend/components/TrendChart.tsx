@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 
-// One metric per chart (never two y-scales). Colors validated on the dark card surface (#141a26):
+// One metric per chart (never two y-scales). Colors validated on the light panel surface (#f5f6f3):
 // series and flagged pass the lightness band, colorblind separation and contrast checks.
-const SERIES = "#0891b2";
-const FLAGGED = "#dc2626";
+const SERIES = "#0b63ce";
+const FLAGGED = "#b3261e";
 
 export interface TrendPoint {
   label: string;
@@ -64,7 +64,7 @@ export function TrendChart({ title, unit, points }: { title: string; unit: strin
               <line x1={x(i) - 4} x2={x(i) + 4} y1={y(p.value - p.std)} y2={y(p.value - p.std)} stroke={color} strokeWidth={1.5} />
               <line x1={x(i) - 4} x2={x(i) + 4} y1={y(p.value + p.std)} y2={y(p.value + p.std)} stroke={color} strokeWidth={1.5} />
               {/* 2px surface ring keeps the marker readable where it overlaps the line */}
-              <circle cx={x(i)} cy={y(p.value)} r={5} fill={color} stroke="#141a26" strokeWidth={2} />
+              <circle cx={x(i)} cy={y(p.value)} r={5} fill={color} stroke="#f5f6f3" strokeWidth={2} />
               {p.flagged && (
                 <text x={x(i)} y={y(p.value + p.std) - 6} textAnchor="middle" className="flag-label">drift</text>
               )}

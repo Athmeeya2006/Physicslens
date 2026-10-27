@@ -1,17 +1,20 @@
 "use client";
 
+import {
+  Compass, Crosshair, Eye, FlaskConical, GitBranch, Lightbulb, MessageSquareText, Orbit, Split, type LucideIcon,
+} from "lucide-react";
 import type { TrailStep } from "@/lib/api";
 
-const STEP_LABEL: Record<TrailStep["step"], string> = {
-  scene: "Looks at the scene",
-  tracking: "Tracks the object",
-  hypotheses: "Proposes equations",
-  verification: "Tests them against the data",
-  design: "Designs the next experiment",
-  regime: "Notices the dynamics changed",
-  collision: "Analyzes the bounces",
-  chaos: "Measures chaos",
-  agent: "Decides what to do next",
+const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
+  scene: { label: "Looks at the scene", icon: Eye },
+  tracking: { label: "Tracks the object", icon: Crosshair },
+  hypotheses: { label: "Proposes equations", icon: Lightbulb },
+  verification: { label: "Tests them against the data", icon: FlaskConical },
+  design: { label: "Designs the next experiment", icon: Compass },
+  regime: { label: "Notices the dynamics changed", icon: Split },
+  collision: { label: "Analyzes the bounces", icon: GitBranch },
+  chaos: { label: "Measures chaos", icon: Orbit },
+  agent: { label: "Decides what to do next", icon: MessageSquareText },
 };
 
 const ACTION_LABEL: Record<string, string> = {
@@ -21,12 +24,16 @@ const ACTION_LABEL: Record<string, string> = {
   give_up: "Reports no clean equation",
 };
 
+const ITEM_STATUS: Record<string, string> = { accepted: "Accepted", tied: "Tied", rejected: "Rejected" };
+// Candidate experiments are not models: say whether each would settle the question.
+const DESIGN_STATUS: Record<string, string> = { accepted: "Decisive", tied: "Too close", rejected: "Too close" };
+
 function actor(step: TrailStep): { name: string; tone: "open" | "meta" | "math" } {
-  if (step.model === "simulate-and-compare") return { name: "Numerical simulation (code, not the LLM)", tone: "math" };
-  if (step.model?.startsWith("meta-models/muse-spark-open")) return { name: "Muse Spark Open · open weights · Baseten", tone: "open" };
-  if (step.model === "sam-3.1") return { name: "SAM 3.1 · Meta Model API", tone: "meta" };
-  // Only reachable in dev: demo/prod refuse to fall back from the open-weight model.
-  return { name: `${step.model} · Meta API (dev fallback)`, tone: "meta" };
+  if (step.model === "simulate-and-compare") return { name: "Numerical simulation, not the language model", tone: "math" };
+  if (step.model?.startsWith("meta-models/muse-spark-open")) return { name: "Muse Spark Open (open weights, Baseten)", tone: "open" };
+  if (step.model === "sam-3.1") return { name: "SAM 3.1", tone: "meta" };
+  // Only reachable in dev: demo and prod refuse to fall back from the open-weight model.
+  return { name: `${step.model} (development fallback)`, tone: "meta" };
 }
 
 export function AgentTrail({ steps }: { steps: TrailStep[] }) {
@@ -35,25 +42,30 @@ export function AgentTrail({ steps }: { steps: TrailStep[] }) {
       {steps.map((s, i) => {
         const who = actor(s);
         const highlight = s.step === "agent" && s.action === "request_experiment";
+        const { label, icon: Icon } = STEP[s.step] ?? STEP.agent;
         return (
           <li key={i} className={`trail-step ${s.step} ${highlight ? "highlight" : ""}`}>
-            <div className="trail-head">
-              <strong>{s.step === "agent" && s.action ? ACTION_LABEL[s.action] ?? STEP_LABEL.agent : STEP_LABEL[s.step]}</strong>
-              <span className={`who ${who.tone}`}>{who.name}</span>
+            <span className="trail-icon" aria-hidden="true"><Icon size={13} strokeWidth={2.2} /></span>
+            <div>
+              <div className="trail-head">
+                <strong>{s.step === "agent" && s.action ? ACTION_LABEL[s.action] ?? label : label}</strong>
+                <span className={`who ${who.tone}`}>{who.name}</span>
+              </div>
+              <p className={highlight ? "lead" : undefined}>{s.text}</p>
+              {s.items && (
+                <ul className="trail-items">
+                  {s.items.map((it) => (
+                    <li key={it.model_id} className={it.status ?? "proposed"}>
+                      {it.status
+                        ? <span className={`verdict ${it.status}`}>{(s.step === "design" ? DESIGN_STATUS : ITEM_STATUS)[it.status] ?? it.status}</span>
+                        : <span className="verdict">Proposed</span>}
+                      <span><span className="item-title">{it.title}</span> <span className="why">{it.why}</span></span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {s.reasoning_summary && <p className="small muted">Reasoning: {s.reasoning_summary}</p>}
             </div>
-            <p>{s.text}</p>
-            {s.items && (
-              <ul className="trail-items">
-                {s.items.map((it) => (
-                  <li key={it.model_id} className={it.status ?? "proposed"}>
-                    {it.status && <span className={`chip ${it.status}`}>{it.status}</span>}
-                    <span className="item-title">{it.title}</span>
-                    <span className="muted">: {it.why}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {s.reasoning_summary && <p className="muted small">Reasoning: {s.reasoning_summary}</p>}
           </li>
         );
       })}

@@ -1,4 +1,12 @@
+// Empty NEXT_PUBLIC_API_BASE builds a backend-free site: the gallery is served as static files and the
+// analysis features explain that the backend is offline. Unset means local development.
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+export const HAS_BACKEND = API_BASE !== "";
+
+// Gallery entries are precomputed real analyses, bundled as static files; they never need the backend.
+export const isGallery = (id: string) => id.startsWith("gallery-");
+const staticBase = (id: string) => `/gallery/${id}`;
+const EXPORT_EXT = { json: "json", py: "py", mjcf: "xml" } as const;
 
 export type TrackPoint = [frame: number, x: number, y: number];
 
@@ -10,6 +18,7 @@ export interface Parameter {
   std: number;
   ci95: [number, number];
   derived?: string;
+  uncalibrated?: boolean;
 }
 
 export interface RankedFit {
@@ -53,6 +62,15 @@ export interface AnalysisResult {
   regime_change?: { t_estimate: number; t_safe: number; error_ratio: number };
   fit_state?: Record<string, unknown>;
   mujoco?: { rms_vs_fit_m: number | null; notes: string[]; points: TrackPoint[] };
+  forecast?: {
+    model_id: string; title: string; label: string; unit: string;
+    t: number[]; measured: number[]; forecast: number[]; heldout_start: number; heldout_nrmse: number;
+  };
+  experiment_design?: {
+    recommended: { label: string; separation_mm: number; separation_vs_noise: number };
+    decisive: boolean; noise_mm: number; options_tested: number; models: string[];
+  };
+  scale_note?: string;
   double?: {
     params: { g: number; mu: number; gamma: number }; L1: number; L2: number; accepted: boolean; reason: string;
     lyapunov_per_s: number; chaotic: boolean; predictability_s: number | null; latex: string;
@@ -119,12 +137,23 @@ async function json<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const getHealth = () => fetch(`${API_BASE}/api/health`, { headers: codeHeaders() }).then((r) => json<Health>(r));
-export const getGallery = () => fetch(`${API_BASE}/api/gallery`).then((r) => json<GalleryItem[]>(r));
+export const getHealth = (): Promise<Health> =>
+  HAS_BACKEND
+    ? fetch(`${API_BASE}/api/health`, { headers: codeHeaders() }).then((r) => json<Health>(r))
+    : Promise.reject(new Error("offline"));
+const staticGallery = () => fetch("/gallery/index.json").then((r) => json<GalleryItem[]>(r));
+export const getGallery = (): Promise<GalleryItem[]> =>
+  HAS_BACKEND ? fetch(`${API_BASE}/api/gallery`).then((r) => json<GalleryItem[]>(r)).catch(staticGallery) : staticGallery();
 export const getBudget = () => fetch(`${API_BASE}/api/budget`).then((r) => json<Budget>(r));
-export const getRun = (id: string) => fetch(`${API_BASE}/api/runs/${id}`).then((r) => json<RunView>(r));
-export const clipUrl = (id: string) => `${API_BASE}/api/runs/${id}/clip.mp4`;
-export const exportUrl = (id: string, kind: "json" | "py" | "mjcf") => `${API_BASE}/api/runs/${id}/export/${kind}`;
+export const getRun = (id: string): Promise<RunView> =>
+  isGallery(id)
+    ? fetch(`${staticBase(id)}/result.json`).then((r) => json<AnalysisResult>(r))
+        .then((result) => ({ run_id: id, status: "done" as const, progress: ["Done"], error: null, result }))
+    : fetch(`${API_BASE}/api/runs/${id}`).then((r) => json<RunView>(r));
+export const clipUrl = (id: string) => (isGallery(id) ? `${staticBase(id)}/clip.mp4` : `${API_BASE}/api/runs/${id}/clip.mp4`);
+export const posterUrl = (id: string) => `${staticBase(id)}/poster.jpg`;
+export const exportUrl = (id: string, kind: "json" | "py" | "mjcf") =>
+  isGallery(id) ? `${staticBase(id)}/physicslens-${id}.${EXPORT_EXT[kind]}` : `${API_BASE}/api/runs/${id}/export/${kind}`;
 
 export function askWhatIf(id: string, question: string) {
   const code = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("code");
@@ -136,6 +165,7 @@ export function askWhatIf(id: string, question: string) {
 }
 
 export function makeShareVideo(id: string): Promise<string> {
+  if (isGallery(id)) return Promise.resolve(`${staticBase(id)}/share.mp4`);
   return fetch(`${API_BASE}/api/runs/${id}/share`, { method: "POST" })
     .then((r) => json<{ url: string }>(r))
     .then((r) => `${API_BASE}${r.url}`);
