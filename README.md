@@ -152,11 +152,12 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Machine-health drift comparison: natural frequency and damping of two recordings, with uncertainty and conservative flagging
 - [x] Machine-health trend view: frequency and damping across up to 12 recordings, with a test for steady drift
 - [x] Bouncing objects: hybrid model (free flight plus restitution), per-impact coefficient of restitution with uncertainty, later bounces predicted from earlier ones
+- [x] Double pendulum: both bobs tracked in one SAM request, fitted on short restarted predictions, chaos measured (Lyapunov exponent and how many seconds the motion can be forecast)
 
 ## Limitations
 
 - 2D motion in the camera plane; best results with the camera side-on and held still.
-- Single rigid objects. Bouncing is supported (floor impacts); rotation and coupled systems are stretch goals.
+- Single objects, plus double pendulums (two tracked bobs). Bouncing is supported (floor impacts); rotation and other coupled systems are stretch goals. Live mode follows one object.
 - Deformable and fluid motion (cloth, water, smoke) is detected as "no clean equation," not modeled.
 - Accuracy depends on frame rate, lighting and a visible reference object for scale.
 

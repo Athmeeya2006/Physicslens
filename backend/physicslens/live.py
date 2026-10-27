@@ -480,6 +480,11 @@ class LiveSession:
                                            run_cap_usd=self.cfg.run_cap_usd)
             self.family = hyp.family
             ids = [h.model_id for h in hyp.candidates]
+            if self.family == "double_pendulum":
+                # Live mode follows one object; a double pendulum needs both bobs, which recorded mode handles.
+                self.send({"type": "notice", "level": "info",
+                           "message": "Double pendulum detected: live mode follows one bob, so record a clip for the full analysis."})
+                self.family, ids = "pendulum", []
             self.send({"type": "hypotheses", "family": hyp.family, "model": call.model, "provider": call.provider,
                        "items": [{"model_id": h.model_id, "title": MODELS[h.model_id].title, "why": h.rationale}
                                  for h in hyp.candidates]})

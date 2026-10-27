@@ -9,6 +9,7 @@ const STEP_LABEL: Record<TrailStep["step"], string> = {
   verification: "Tests them against the data",
   regime: "Notices the dynamics changed",
   collision: "Analyzes the bounces",
+  chaos: "Measures chaos",
   agent: "Decides what to do next",
 };
 

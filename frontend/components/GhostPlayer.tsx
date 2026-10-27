@@ -14,6 +14,7 @@ interface Props {
   height: number;
   fps: number;
   real: TrackPoint[];
+  secondReal?: TrackPoint[];
   objectSizePx?: number;
   whatIf?: { label: string; points: TrackPoint[] } | null;
   mujoco?: TrackPoint[];
@@ -24,7 +25,7 @@ function byFrame(points: TrackPoint[]): Map<number, [number, number]> {
   return new Map(points.map(([f, x, y]) => [f, [x, y]]));
 }
 
-export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghosts, whatIf, mujoco }: Props) {
+export function GhostPlayer({ src, width, height, fps, real, secondReal, objectSizePx, ghosts, whatIf, mujoco }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [showReal, setShowReal] = useState(true);
@@ -35,7 +36,7 @@ export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghost
     if (!v || !c) return;
     const ctx = c.getContext("2d");
     if (!ctx) return;
-    const realMap = byFrame(real);
+    const realMaps = [byFrame(real), ...(secondReal?.length ? [byFrame(secondReal)] : [])];
     const ghostMaps = ghosts.map((g) => byFrame(g.points));
     const whatIfMap = whatIf ? byFrame(whatIf.points) : null;
     const mujocoMap = mujoco?.length ? byFrame(mujoco) : null;
@@ -50,12 +51,14 @@ export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghost
       if (showReal) {
         ctx.strokeStyle = "rgba(255,255,255,0.7)";
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let f = frame - TRAIL_FRAMES; f <= frame; f++) {
-          const p = realMap.get(f);
-          if (p) ctx.lineTo(p[0], p[1]);
+        for (const realMap of realMaps) {
+          ctx.beginPath();
+          for (let f = frame - TRAIL_FRAMES; f <= frame; f++) {
+            const p = realMap.get(f);
+            if (p) ctx.lineTo(p[0], p[1]);
+          }
+          ctx.stroke();
         }
-        ctx.stroke();
       }
       ghostMaps.forEach((m, i) => {
         const p = m.get(frame);
@@ -93,7 +96,7 @@ export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghost
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [real, ghosts, fps, width, height, showReal, objectSizePx, whatIf, mujoco]);
+  }, [real, secondReal, ghosts, fps, width, height, showReal, objectSizePx, whatIf, mujoco]);
 
   return (
     <div className="player">

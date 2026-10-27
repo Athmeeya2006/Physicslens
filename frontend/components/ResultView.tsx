@@ -45,6 +45,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           height={r.clip.height}
           fps={r.clip.fps}
           real={r.real_track_px}
+          secondReal={r.double?.outer_track_px}
           objectSizePx={r.object_size_px}
           whatIf={whatIfGhost}
           mujoco={r.mujoco?.points}
@@ -91,6 +92,26 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           </>
         )}
       </div>
+
+      {r.double && (
+        <div className="card">
+          <h3>Double pendulum: {r.double.chaotic ? "chaotic" : "regular"} motion</h3>
+          <div className="equation"><Tex tex={r.double.latex} display /></div>
+          <p>
+            <Tex tex="g" /> = {r.double.params.g.toFixed(3)} m/s², mass ratio <Tex tex="\mu" /> = {r.double.params.mu.toFixed(2)},{" "}
+            <Tex tex="L_1" /> = {r.double.L1.toFixed(3)} m, <Tex tex="L_2" /> = {r.double.L2.toFixed(3)} m
+          </p>
+          <p>
+            {r.double.chaotic && r.double.predictability_s
+              ? `Nearby futures separate e-fold every ${(1 / r.double.lyapunov_per_s).toFixed(2)} s (Lyapunov exponent ${r.double.lyapunov_per_s.toFixed(1)}/s). With this tracking noise the motion can be forecast for about ${r.double.predictability_s.toFixed(1)} s, no further.`
+              : `Lyapunov exponent ${r.double.lyapunov_per_s.toFixed(2)}/s: small differences stay small, so the motion stays predictable.`}
+          </p>
+          <p className="muted small">
+            Fitted on short predictions restarted from the measured state, because whole-clip simulations of a chaotic system always drift.
+            The yellow ghost is one prediction from the start, to show that drift.
+          </p>
+        </div>
+      )}
 
       {r.bounces && (
         <div className="card">

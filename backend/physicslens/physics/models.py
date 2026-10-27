@@ -102,5 +102,19 @@ MODELS: dict[str, ModelSpec] = {
 }
 
 
+def _double_rhs(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
+    from .double import (
+        rhs,  # local import: double.py imports coords, which must not import models at load time
+    )
+    return rhs(s, p, ctx["L1"], ctx["L2"])
+
+
+# Fitted by its own short-horizon method (physics/double.py), not the whole-clip fit used for the others.
+MODELS["double_pendulum"] = ModelSpec(
+    "double_pendulum", "double_pendulum", "Double pendulum (point masses)",
+    r"\ddot\theta_{1,2} = f(\theta_1, \theta_2, \dot\theta_1, \dot\theta_2;\ g, \mu, \gamma)",
+    (G, Param("mu", r"\mu", "", 0.05, 20.0), Param("gamma", r"\gamma", "1/s", 0.0, 5.0)), _double_rhs)
+
+
 def models_for(family: str) -> list[ModelSpec]:
     return [m for m in MODELS.values() if m.family == family]

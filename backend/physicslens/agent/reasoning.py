@@ -14,7 +14,8 @@ SCENE_SYSTEM = """You look at up to four frames from a short phone video of some
 Identify the single object whose motion should be measured and a reference object of known size in the same plane.
 - moving_object: a short concrete noun phrase (1-4 words) naming only the object, e.g. "metal ball", "red weight". It is sent to a segmentation model, so no commands, lists, colors of other things, or positions.
 - Boxes are on a 0-1000 grid relative to the FIRST image (x right, y down) and must tightly enclose the object in that first image.
-- motion_family: pendulum (swings on a string or rod), oscillator (bounces on a spring or elastic, back and forth along a line), projectile (thrown, dropped or falling), other.
+- motion_family: pendulum (swings on a string or rod), oscillator (bounces on a spring or elastic, back and forth along a line), projectile (thrown, dropped or falling), double_pendulum (a second arm hinged to the end of the first), other.
+- For a double_pendulum, moving_object/moving_object_box is the INNER bob (nearest the pivot) and second_object/second_object_box the OUTER bob; otherwise both are null.
 - reference_kind: only an object from the allowed list that is clearly visible and roughly flat facing the camera; otherwise "none". Never guess a size."""
 
 HYPOTHESES_SYSTEM = """You propose candidate equations of motion for a measured trajectory. You do not decide which is correct:

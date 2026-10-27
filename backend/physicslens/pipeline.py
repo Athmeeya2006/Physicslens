@@ -26,13 +26,17 @@ from .perception.calibration import (
 from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
 from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
+from .physics.double import HORIZON_S as DOUBLE_HORIZON_S
+from .physics.double import DoublePendulumError, fit_double, to_double_coords
+from .physics.double import simulate as double_simulate
+from .physics.double import summary as double_summary
 from .physics.fit import FitResult, fit_model
 from .physics.models import MODELS, models_for
 from .physics.regime import RegimeChange, detect_change
 from .physics.sindy import discover
 from .physics.uncertainty import bootstrap
 from .physics.verify import Verdict, assess, judge_candidates
-from .sigproc.cleanup import detect_impacts, fill_short_gaps, split_at
+from .sigproc.cleanup import detect_impacts, differentiate, fill_short_gaps, split_at
 from .sigproc.summary import summarize
 from .sigproc.trajectory import Trajectory, from_pixels
 
@@ -40,7 +44,7 @@ log = logging.getLogger("physicslens.pipeline")
 
 BOUNCE_LATEX = r"\ddot y = -g \ \text{between impacts},\qquad v_y^{+} = -e\, v_y^{-}"
 
-MOVING_ID, REFERENCE_ID = "1", "2"
+MOVING_ID, REFERENCE_ID, SECOND_ID = "1", "2", "3"
 SAM_METADATA = {"mask_encoding": "one_bit", "include_confidence": "true", "propagation_direction": "forward"}
 MAX_CLIP_SECONDS = {"dev": 20.0, "judge": 30.0, "public": 10.0}
 
@@ -106,6 +110,31 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     progress("Proposing hypotheses")
     hyp, call = propose_hypotheses(client, summary, scene, run_id, options.audience)
     record("hypotheses", call, f"Proposes {len(hyp.candidates)} {hyp.family} models to test.", items=_hypothesis_items(hyp))
+
+    if hyp.family == "double_pendulum":
+        second = tracks.get(SECOND_ID)
+        if second is None:
+            raise AnalysisError("A double pendulum needs both bobs tracked, and SAM did not find the outer one.")
+        progress("Fitting the double pendulum with short-horizon predictions")
+        dbl, ghosts, steps = double_analysis(moving, second, info.fps, calibration.px_per_m)
+        trail.extend(steps)
+        status = "accepted" if dbl["accepted"] else ("ambiguous" if not dbl["length_reliable"] else "no_fit")
+        progress("Agent reviewing the verdict")
+        context = {"verdict": status, "verdict_reason": dbl["reason"], "family": "double_pendulum",
+                   "object": scene.moving_object, "trajectory_summary": summary,
+                   "double_pendulum": {k: dbl[k] for k in ("params", "L1", "L2", "chaotic", "lyapunov_per_s", "predictability_s")}}
+        turn, call = agent_turn(client, context, run_id, options.audience)
+        record("agent", call, turn.message, action=turn.action, reasoning_summary=turn.reasoning_summary)
+        progress("Done")
+        return {
+            "status": status, "reason": dbl["reason"], "family": "double_pendulum", "families_tried": ["double_pendulum"],
+            "scene": scene.model_dump(),
+            "clip": {"width": info.width, "height": info.height, "fps": info.fps, "frames": info.frames},
+            "calibration": {"px_per_m": calibration.px_per_m, "rel_std": calibration.rel_std, "source": calibration.source},
+            "agent": {"action": turn.action, "message": turn.message, "reasoning_summary": turn.reasoning_summary},
+            "ranking": [], "real_track_px": dbl.pop("inner_track_px"), "object_size_px": float(np.median(moving.long_px)),
+            "llm_calls": llm_calls, "trail": trail, "summary": summary, "ghosts": ghosts, "double": dbl,
+        }
 
     tried: list[str] = []
     family, candidate_ids = hyp.family, _with_control(hyp.family, [h.model_id for h in hyp.candidates])
@@ -215,6 +244,83 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     return result
 
 
+def _common_frames(a: ObjectTrack, b: ObjectTrack) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Longest run of consecutive frames where both objects are tracked (short gaps filled)."""
+    fa, ca = max(fill_short_gaps(a.frames, a.centers_px, max_gap=3), key=lambda s: len(s[0]))
+    fb, cb = max(fill_short_gaps(b.frames, b.centers_px, max_gap=3), key=lambda s: len(s[0]))
+    common = np.intersect1d(fa, fb)
+    if len(common) < 2:
+        raise AnalysisError("The two bobs were never tracked at the same time.")
+    breaks = np.nonzero(np.diff(common) > 1)[0] + 1
+    run = max(np.split(common, breaks), key=len)
+    return run, ca[np.searchsorted(fa, run)], cb[np.searchsorted(fb, run)]
+
+
+def double_analysis(inner: ObjectTrack, outer: ObjectTrack, fps: float, ppm: float) -> tuple[dict[str, Any], list[dict], list[dict]]:
+    frames, ci, co = _common_frames(inner, outer)
+    origin = ci[0]
+
+    def meters(c: np.ndarray) -> np.ndarray:  # both bobs in ONE frame: relative geometry is the whole point
+        return np.column_stack([(c[:, 0] - origin[0]) / ppm, -(c[:, 1] - origin[1]) / ppm])
+
+    t = (frames - frames[0]) / fps
+    tr_i, tr_o = Trajectory(t, meters(ci), frames, fps), Trajectory(t, meters(co), frames, fps)
+    try:
+        c = to_double_coords(tr_i, tr_o)
+        fit = fit_double(c)
+    except DoublePendulumError as e:
+        raise AnalysisError(str(e)) from e
+    out = double_summary(fit, c)
+
+    def px(xy: np.ndarray) -> list[list[float]]:
+        return [[int(f), round(float(origin[0] + x * ppm), 2), round(float(origin[1] - y * ppm), 2)]
+                for f, (x, y) in zip(frames, xy, strict=True)]
+
+    kin = differentiate(c.q, fps)
+    states = np.column_stack([kin.pos, kin.vel])
+    anchored = reanchored_prediction(fit.params, c, states, every_s=DOUBLE_HORIZON_S)
+    free = double_simulate(fit.params, c.L1, c.L2, states[0], t)
+    a_inner, a_outer = c.to_xy(anchored)
+    every = f"restarted every {DOUBLE_HORIZON_S:.1f} s"
+    ghosts = [{"model_id": f"inner bob (model, {every})", "points": px(a_inner)},
+              {"model_id": f"outer bob (model, {every})", "points": px(a_outer)}]
+    if free is not None:
+        ghosts.append({"model_id": "outer bob (one prediction from t = 0)", "points": px(c.to_xy(free[:, :2])[1])})
+    out["inner_track_px"] = px(tr_i.xy)
+    out["outer_track_px"] = px(tr_o.xy)
+
+    status = "accepted" if fit.accepted else "rejected"
+    lam = fit.lyapunov_per_s
+    chaos_text = (f"Chaotic: two almost identical starts separate e-fold every {1 / lam:.2f} s (lambda = {lam:.1f}/s). "
+                  f"With this tracking noise the motion can be forecast for about {fit.predictability_s:.1f} s; beyond that "
+                  f"no model can, so the single long prediction drifts away while the restarted one stays on."
+                  if fit.chaotic else
+                  f"Not chaotic at this energy (lambda = {lam:.2f}/s): small differences in the start stay small, "
+                  f"so the motion stays predictable.")
+    steps = [
+        {"step": "verification", "provider": None, "model": "simulate-and-compare", "status": "accepted" if fit.accepted else "no_fit",
+         "text": fit.reason, "items": [{"model_id": "double_pendulum", "title": "Double pendulum (point masses)",
+                                        "status": status, "why": (f"g = {fit.params['g']:.3f} m/s^2, mass ratio {fit.params['mu']:.2f}, "
+                                                                  f"L1 = {c.L1:.3f} m, L2 = {c.L2:.3f} m")}]},
+        {"step": "chaos", "provider": None, "model": "simulate-and-compare", "text": chaos_text},
+    ]
+    return out, ghosts, steps
+
+
+def reanchored_prediction(params: dict[str, float], c, states: np.ndarray, every_s: float) -> np.ndarray:
+    """Model prediction restarted from the measured state every few tenths of a second (shows short-term skill)."""
+    n, step = len(c.t), max(1, int(every_s * c.fps))
+    out = np.array(c.q, dtype=float)
+    for i in range(0, n, step):
+        j = min(n, i + step)
+        if j - i < 2:
+            break  # a single trailing sample keeps its measured value
+        sim = double_simulate(params, c.L1, c.L2, states[i], c.t[i:j])
+        if sim is not None:
+            out[i:j] = sim[:, :2]
+    return out
+
+
 def analyze_bounces(full: Trajectory, origin_px: np.ndarray, ppm: float) -> dict[str, Any] | None:
     """Hybrid bounce model on the whole track; None when there aren't two clean flights to compare."""
     try:
@@ -302,6 +408,8 @@ def track_objects(client: CostGuardClient, clip: Path, info: media.VideoInfo, sc
     objects = [msp.PromptObject(id=int(MOVING_ID), prompts=[msp.FramePrompt(frame=0, box=_box(scene.moving_object_box, info))])]
     if scene.reference_box is not None:
         objects.append(msp.PromptObject(id=int(REFERENCE_ID), prompts=[msp.FramePrompt(frame=0, box=_box(scene.reference_box, info))]))
+    if scene.second_object_box is not None:
+        objects.append(msp.PromptObject(id=int(SECOND_ID), prompts=[msp.FramePrompt(frame=0, box=_box(scene.second_object_box, info))]))
     prompt = msp.build_object_prompt(size=(info.width, info.height), objects=objects)
     r = client.sam_video(prompt=prompt, video_path=clip, video_hash=file_digest(clip), est_frames=info.frames,
                          metadata=SAM_METADATA, run_id=run_id, audience=audience)

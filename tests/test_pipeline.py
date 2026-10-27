@@ -17,7 +17,7 @@ FIXTURE = ROOT / "tests" / "fixtures" / "sam_smoke_response.json"
 SCENE = {
     "moving_object": "red ball", "moving_object_box": {"x1": 650, "y1": 650, "x2": 725, "y2": 785},
     "motion_family": "pendulum", "reference_kind": "none", "reference_box": None,
-    "observations": "A red ball swings on a string.",
+    "observations": "A red ball swings on a string.", "second_object": None, "second_object_box": None,
 }
 HYPOTHESES = {"family": "pendulum", "candidates": [
     {"model_id": "pendulum", "rationale": "Arc-shaped path with a steady period."},

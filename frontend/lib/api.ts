@@ -22,7 +22,7 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "scene" | "tracking" | "hypotheses" | "verification" | "collision" | "regime" | "agent";
+  step: "scene" | "tracking" | "hypotheses" | "verification" | "collision" | "regime" | "chaos" | "agent";
   provider: string | null;
   model: string;
   text: string;
@@ -53,6 +53,11 @@ export interface AnalysisResult {
   regime_change?: { t_estimate: number; t_safe: number; error_ratio: number };
   fit_state?: Record<string, unknown>;
   mujoco?: { rms_vs_fit_m: number | null; notes: string[]; points: TrackPoint[] };
+  double?: {
+    params: { g: number; mu: number; gamma: number }; L1: number; L2: number; accepted: boolean; reason: string;
+    lyapunov_per_s: number; chaotic: boolean; predictability_s: number | null; latex: string;
+    outer_track_px: TrackPoint[];
+  };
   bounces?: {
     count: number; g: number; g_std: number; e_mean: number; e_std: number; accepted: boolean;
     forecast_nrmse: number; settled_at: number | null; latex: string;

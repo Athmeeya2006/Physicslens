@@ -11,7 +11,7 @@ from ..physics.models import MODELS
 
 ReferenceKind = Literal[tuple(REFERENCE_SIZES) + ("none",)]  # type: ignore[valid-type]
 ModelId = Literal[tuple(MODELS)]  # type: ignore[valid-type]
-Family = Literal["pendulum", "oscillator", "projectile"]
+Family = Literal["pendulum", "oscillator", "projectile", "double_pendulum"]
 
 _BANNED_PHRASE_WORDS = {"segment", "track", "find", "the", "not", "and", "or", "left", "right", "above", "below", "near"}
 
@@ -47,7 +47,9 @@ class Box1000(Strict):
 class Scene(Strict):
     moving_object: str = Field(description="Short concrete noun phrase for the moving object, e.g. 'metal ball'.")
     moving_object_box: Box1000 = Field(description="Box around the moving object in the FIRST image.")
-    motion_family: Literal["pendulum", "oscillator", "projectile", "other"]
+    motion_family: Literal["pendulum", "oscillator", "projectile", "double_pendulum", "other"]
+    second_object: str | None = Field(description="For a double pendulum only: the outer bob (the moving_object is the inner one). Otherwise null.")
+    second_object_box: Box1000 | None = Field(description="Box around the second object in the FIRST image, or null.")
     reference_kind: ReferenceKind = Field(description="Known-size object visible in the plane of motion, or 'none'.")  # type: ignore[valid-type]
     reference_box: Box1000 | None = Field(description="Box around the reference object in the FIRST image, or null.")
     observations: str = Field(description="One or two sentences on what is happening.")
@@ -59,6 +61,14 @@ class Scene(Strict):
         if not 1 <= len(words) <= 4 or set(words) & _BANNED_PHRASE_WORDS or any(c in v for c in ",;:?!"):
             raise ValueError("moving_object must be a 1-4 word noun phrase, no commands, lists or spatial words")
         return v.strip()
+
+    @model_validator(mode="after")
+    def second_consistent(self) -> Scene:
+        if (self.second_object is None) != (self.second_object_box is None):
+            raise ValueError("second_object and second_object_box must both be set or both be null")
+        if self.motion_family == "double_pendulum" and self.second_object is None:
+            raise ValueError("a double pendulum needs second_object (the outer bob) and its box")
+        return self
 
     @model_validator(mode="after")
     def reference_consistent(self) -> Scene:
