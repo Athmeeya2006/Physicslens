@@ -11,7 +11,7 @@ from ..physics.models import MODELS
 
 ReferenceKind = Literal[tuple(REFERENCE_SIZES) + ("none",)]  # type: ignore[valid-type]
 ModelId = Literal[tuple(MODELS)]  # type: ignore[valid-type]
-Family = Literal["pendulum", "oscillator", "projectile", "double_pendulum"]
+Family = Literal["pendulum", "oscillator", "projectile", "double_pendulum", "rotation"]
 
 _BANNED_PHRASE_WORDS = {"segment", "track", "find", "the", "not", "and", "or", "left", "right", "above", "below", "near"}
 
@@ -47,7 +47,7 @@ class Box1000(Strict):
 class Scene(Strict):
     moving_object: str = Field(description="Short concrete noun phrase for the moving object, e.g. 'metal ball'.")
     moving_object_box: Box1000 = Field(description="Box around the moving object in the FIRST image.")
-    motion_family: Literal["pendulum", "oscillator", "projectile", "double_pendulum", "other"]
+    motion_family: Literal["pendulum", "oscillator", "projectile", "double_pendulum", "rotation", "other"]
     second_object: str | None = Field(description="For a double pendulum only: the outer bob (the moving_object is the inner one). Otherwise null.")
     second_object_box: Box1000 | None = Field(description="Box around the second object in the FIRST image, or null.")
     reference_kind: ReferenceKind = Field(description="Known-size object visible in the plane of motion, or 'none'.")  # type: ignore[valid-type]

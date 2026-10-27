@@ -72,6 +72,19 @@ def build_mjcf(fit_state: dict[str, Any]) -> tuple[str, list[str]]:
                + f'      <inertial pos="0 0 0" mass="{NOMINAL_MASS}" diaginertia="1e-6 1e-6 1e-6"/>\n'
                + '      <geom type="sphere" size="0.02" rgba="0.13 0.83 0.93 1" mass="0"/>\n'
                + "    </body>\n  </worldbody>\n</mujoco>\n")
+    elif spec.family == "rotation":
+        c, k, q = p.get("c", 0.0), p.get("k", 0.0), p.get("q", 0.0)
+        if q:
+            notes.append("Air drag on the spin (q w|w|) has no MuJoCo joint equivalent; exported without it. "
+                         "Use the Python script for the exact model.")
+        arm = ctx["arm_m"]
+        # Unit moment of inertia, so joint damping equals k and dry-friction torque (frictionloss) equals c.
+        xml = (_header("physicslens_spin", 0.0, f"Spin-down: dry friction c = {c:.4g} rad/s^2, viscous k = {k:.4g} 1/s.")
+               + '    <body name="spinner" pos="0 0 0">\n'
+               + f'      <joint name="spin" type="hinge" axis="0 -1 0" damping="{k:.6g}" frictionloss="{c:.6g}"/>\n'
+               + f'      <inertial pos="0 0 0" mass="{NOMINAL_MASS}" diaginertia="1 1 1"/>\n'
+               + f'      <geom type="capsule" fromto="{-arm:.6g} 0 0 {arm:.6g} 0 0" size="{max(0.005, arm / 8):.4g}" rgba="0.13 0.83 0.93 1" mass="0"/>\n'
+               + "    </body>\n  </worldbody>\n</mujoco>\n")
     elif spec.family == "projectile":
         if spec.id != "free_fall":
             notes.append("Drag is not representable without object geometry for MuJoCo's fluid model; exported "

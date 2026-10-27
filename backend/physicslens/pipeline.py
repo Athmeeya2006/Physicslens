@@ -33,6 +33,7 @@ from .physics.double import summary as double_summary
 from .physics.fit import FitResult, fit_model
 from .physics.models import MODELS, models_for
 from .physics.regime import RegimeChange, detect_change
+from .physics.rotation import RotationError, rotation_coordinates
 from .physics.sindy import discover
 from .physics.uncertainty import bootstrap
 from .physics.verify import Verdict, assess, judge_candidates
@@ -105,8 +106,12 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     calibration = calibrate(scene, tracks.get(REFERENCE_ID), moving, options)
     full, full_origin = full_track(moving, info.fps, calibration.px_per_m)
     traj, origin_px = longest_flight(full, full_origin, calibration.px_per_m)
+    rotation: Coordinates | None = None
+    if scene.motion_family == "rotation":
+        progress("Measuring the spin from the mask orientation")
+        rotation, traj, origin_px = rotation_track(moving, info.fps, calibration.px_per_m)
 
-    summary = summarize(traj)
+    summary = rotation_summary(rotation) if rotation is not None else summarize(traj)
     progress("Proposing hypotheses")
     hyp, call = propose_hypotheses(client, summary, scene, run_id, options.audience)
     record("hypotheses", call, f"Proposes {len(hyp.candidates)} {hyp.family} models to test.", items=_hypothesis_items(hyp))
@@ -148,7 +153,7 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     for _ in range(max_turns):
         tried.append(family)
         progress(f"Fitting and simulating {len(candidate_ids)} {family} models")
-        coords, verdict = fit_and_verify(traj, family, candidate_ids)
+        coords, verdict = fit_and_verify(traj, family, candidate_ids, rotation if family == "rotation" else None)
         judged = judge_candidates(verdict)
         trail.append({"step": "verification", "provider": None, "model": "simulate-and-compare", "text": verdict.reason,
                       "status": verdict.status,
@@ -159,7 +164,7 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             if bounces is not None:
                 trail.append(bounce_trail_step(bounces))
         progress("Checking whether the dynamics change during the clip")
-        change, regimes = find_regimes(traj, family, candidate_ids, origin_px, calibration.px_per_m)
+        change, regimes = (None, []) if family == "rotation" else find_regimes(traj, family, candidate_ids, origin_px, calibration.px_per_m)
         if change is not None:
             trail.append(regime_trail_step(change, regimes))
         progress("Agent reviewing the verdict")
@@ -192,7 +197,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         "agent": {"action": turn.action, "message": turn.message, "reasoning_summary": turn.reasoning_summary},
         "ranking": [fit_summary(f, rationales.get(f.model_id)) for f in verdict.ranked],
         "real_track_px": _track_points(traj.frames, traj.xy, origin_px, calibration.px_per_m),
-        "object_size_px": float(np.median(moving.long_px)),
+        # For a spin the ghost is a small marker on the rim, not the whole object.
+        "object_size_px": float(np.median(moving.long_px)) * (0.25 if rotation is not None else 1.0),
         "llm_calls": llm_calls,
         "trail": trail,
         "summary": summary,
@@ -319,6 +325,29 @@ def reanchored_prediction(params: dict[str, float], c, states: np.ndarray, every
         if sim is not None:
             out[i:j] = sim[:, :2]
     return out
+
+
+def rotation_track(moving: ObjectTrack, fps: float, ppm: float) -> tuple[Coordinates, Trajectory, np.ndarray]:
+    """Spin angle from mask orientation, plus the rim marker's path as the 'track' (absolute meters, image origin)."""
+    try:
+        coords, frames = rotation_coordinates(moving.frames, moving.angles, moving.centers_px, moving.long_px,
+                                              moving.short_px, fps, ppm)
+    except RotationError as e:
+        raise AnalysisError(str(e)) from e
+    return coords, Trajectory(coords.t, coords.to_xy(coords.q), frames, fps), np.array([0.0, 0.0])
+
+
+def rotation_summary(c: Coordinates) -> dict[str, Any]:
+    """What the reasoning model sees for a spin: angular speed over time, not positions."""
+    kin = differentiate(c.q, 1.0 / (c.t[1] - c.t[0]))
+    w = kin.vel[:, 0]
+    q = [int(len(w) * f) for f in (0.0, 0.25, 0.5, 0.75)] + [len(w) - 1]
+    return {
+        "kind": "rotation", "duration_s": round(float(c.t[-1]), 3), "turns": round(float(abs(c.q[-1, 0] - c.q[0, 0]) / (2 * np.pi)), 2),
+        "angular_speed_rad_s_at_0_25_50_75_100_percent": [round(float(w[i]), 3) for i in q],
+        "elongation": round(c.ctx["elongation"], 2),
+        "note": "Constant deceleration suggests dry friction; deceleration proportional to speed suggests viscous; to speed squared, air drag.",
+    }
 
 
 def analyze_bounces(full: Trajectory, origin_px: np.ndarray, ppm: float) -> dict[str, Any] | None:
@@ -465,9 +494,12 @@ def longest_flight(traj: Trajectory, origin: np.ndarray, px_per_m: float) -> tup
     return traj, centers[0]
 
 
-def fit_and_verify(traj: Trajectory, family: str, candidate_ids: list[str]) -> tuple[Coordinates | None, Verdict]:
+def fit_and_verify(traj: Trajectory, family: str, candidate_ids: list[str],
+                   coords: Coordinates | None = None) -> tuple[Coordinates | None, Verdict]:
+    if family == "rotation" and coords is None:
+        return None, Verdict("no_fit", None, (), (), "The spin was not measured (the scene was not read as a rotation).")
     try:
-        coords = to_coordinates(traj, family)
+        coords = coords if coords is not None else to_coordinates(traj, family)
     except ValueError as e:
         return None, Verdict("no_fit", None, (), (), f"The motion does not look like a {family}: {e}")
     fits = [fit_model(MODELS[m], coords) for m in candidate_ids]

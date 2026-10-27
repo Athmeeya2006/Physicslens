@@ -102,6 +102,40 @@ MODELS: dict[str, ModelSpec] = {
 }
 
 
+SPIN_EPS = 0.05  # rad/s: smooths sign(w) so Coulomb friction stops the spin without solver chatter
+
+
+def _spin(coulomb: bool, viscous: bool, air: bool) -> Rhs:
+    def rhs(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
+        _, w = s
+        a = 0.0
+        if coulomb:
+            a -= p["c"] * np.tanh(w / SPIN_EPS)
+        if viscous:
+            a -= p["k"] * w
+        if air:
+            a -= p["q"] * w * abs(w)
+        return np.array([w, a])
+    return rhs
+
+
+C_DRY = Param("c", "c", "rad/s^2", 0.0, 200.0)
+K_VISC = Param("k", "k", "1/s", 0.0, 50.0)
+Q_AIR = Param("q", "q", "1/rad", 0.0, 50.0)
+for _m in [
+    ModelSpec("spin_free", "rotation", "Free spin (no friction)", r"\ddot\varphi = 0", (), _spin(False, False, False)),
+    ModelSpec("spin_dry", "rotation", "Spin-down, dry friction", r"\ddot\varphi = -c\,\mathrm{sgn}(\dot\varphi)", (C_DRY,),
+              _spin(True, False, False)),
+    ModelSpec("spin_viscous", "rotation", "Spin-down, viscous friction", r"\ddot\varphi = -k\dot\varphi", (K_VISC,),
+              _spin(False, True, False)),
+    ModelSpec("spin_air", "rotation", "Spin-down, air drag", r"\ddot\varphi = -q\dot\varphi|\dot\varphi|", (Q_AIR,),
+              _spin(False, False, True)),
+    ModelSpec("spin_dry_viscous", "rotation", "Spin-down, dry and viscous friction",
+              r"\ddot\varphi = -c\,\mathrm{sgn}(\dot\varphi) - k\dot\varphi", (C_DRY, K_VISC), _spin(True, True, False)),
+]:
+    MODELS[_m.id] = _m
+
+
 def _double_rhs(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
     from .double import (
         rhs,  # local import: double.py imports coords, which must not import models at load time

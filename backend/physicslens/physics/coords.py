@@ -27,6 +27,11 @@ class Coordinates:
             th = q[:, 0]
             L = self.ctx["length_m"]
             return np.column_stack([self.ctx["pivot_x"] + L * np.sin(th), self.ctx["pivot_y"] - L * np.cos(th)])
+        if self.family == "rotation":
+            # A marker on the object's rim, turning with the angle (centre in absolute meters, y up).
+            ph = q[:, 0]
+            arm = self.ctx["arm_m"]
+            return np.column_stack([self.ctx["center_x"] + arm * np.cos(ph), self.ctx["center_y"] + arm * np.sin(ph)])
         if self.family == "oscillator":
             s = q[:, 0]
             return np.column_stack([self.ctx["origin_x"] + s * self.ctx["axis_x"], self.ctx["origin_y"] + s * self.ctx["axis_y"]])

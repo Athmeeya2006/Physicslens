@@ -17,6 +17,11 @@ _RHS = {
     "harmonic": "dv = -p['omega'] ** 2 * (s - p['s0'])",
     "damped_harmonic": "dv = -p['omega'] ** 2 * (s - p['s0']) - 2 * p['zeta'] * p['omega'] * v",
     "free_fall": "ax, ay = 0.0, -p['g']",
+    "spin_free": "dw = 0.0",
+    "spin_dry": "dw = -p['c'] * np.tanh(w / 0.05)",
+    "spin_viscous": "dw = -p['k'] * w",
+    "spin_air": "dw = -p['q'] * w * abs(w)",
+    "spin_dry_viscous": "dw = -p['c'] * np.tanh(w / 0.05) - p['k'] * w",
     "linear_drag": "ax, ay = -p['k'] * vx, -p['g'] - p['k'] * vy",
     "quadratic_drag": "speed = np.hypot(vx, vy)\n    ax, ay = -p['c'] * speed * vx, -p['g'] - p['c'] * speed * vy",
 }
@@ -24,6 +29,7 @@ _STATE = {
     "pendulum": ("th, w = state", "return [w, dw]", "theta_rad"),
     "oscillator": ("s, v = state", "return [v, dv]", "s_m"),
     "projectile": ("x, y, vx, vy = state", "return [vx, vy, ax, ay]", "x_m,y_m"),
+    "rotation": ("ph, w = state", "return [w, dw]", "phi_rad"),
 }
 
 
