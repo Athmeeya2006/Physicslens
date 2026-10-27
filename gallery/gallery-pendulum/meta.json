@@ -1,0 +1,6 @@
+{
+  "title": "Pendulum: the agent asks for a better experiment",
+  "description": "A 0.5 m pendulum swinging for 6.5 s. Four candidate equations fit about equally well, so instead of guessing, the agent asks for a longer swing from a larger angle.",
+  "credit": "Video: Rhetos / Mathe-AC Lernwerkstatt, Wikimedia Commons, CC BY-SA 4.0 (trimmed and downscaled)",
+  "order": 1
+}
