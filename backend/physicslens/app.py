@@ -23,11 +23,13 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from .agent.whatif import run_whatif
 from .costguard import CostGuardClient, CostGuardError
+from .export.mjcf import build_mjcf
 from .export.mp4 import ExportError, render_share_video
+from .export.script import parameters_json, python_script
 from .live import LiveConfig, LiveSession
 from .pipeline import RunOptions
 from .runs import RunManager
@@ -291,3 +293,30 @@ async def voice(ws: WebSocket) -> None:
         pass
     finally:
         read_task.cancel()
+
+
+EXPORTS = {
+    "json": ("application/json", "json"),
+    "py": ("text/x-python", "py"),
+    "mjcf": ("application/xml", "xml"),
+}
+
+
+@app.get("/api/runs/{run_id}/export/{kind}")
+def export(run_id: str, kind: str) -> Response:
+    """Parameters (JSON), a standalone Python simulation, or a MuJoCo model of the fitted system."""
+    if kind not in EXPORTS:
+        raise HTTPException(status_code=404)
+    result = _finished_result(run_id)
+    if "fit_state" not in result:
+        raise HTTPException(status_code=409, detail="No fitted model to export for this clip.")
+    if kind == "json":
+        body = parameters_json(result)
+    elif kind == "py":
+        body = python_script(result)
+    else:
+        xml, notes = build_mjcf(result["fit_state"])
+        body = xml if not notes else xml.replace("<worldbody>", "<!-- " + " ".join(notes).replace("--", "-") + " -->\n  <worldbody>", 1)
+    media, ext = EXPORTS[kind]
+    return Response(body, media_type=media,
+                    headers={"Content-Disposition": f'attachment; filename="physicslens-{run_id}.{ext}"'})

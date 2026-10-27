@@ -15,6 +15,7 @@ from .agent.reasoning import agent_turn, propose_hypotheses, understand_scene
 from .agent.schemas import Scene
 from .costguard import CostGuardClient
 from .costguard.cache import file_digest
+from .export.mjcf import MjcfError, check_against_fit
 from .perception import media
 from .perception.calibration import (
     Calibration,
@@ -179,6 +180,12 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             "origin_px": [float(origin_px[0]), float(origin_px[1])], "px_per_m": calibration.px_per_m,
             "first_frame": int(traj.frames[0]),
         }
+    if "fit_state" in result:
+        # Run the MuJoCo export from the measured state: proof the exported model is the fitted one.
+        try:
+            result["mujoco"] = check_against_fit(result["fit_state"], len(traj) / traj.fps)
+        except MjcfError as e:
+            log.warning("MuJoCo check skipped: %s", e)
     if verdict.status == "accepted" and verdict.winner and coords is not None:
         progress("Estimating uncertainty")
         spec = MODELS[verdict.winner.model_id]

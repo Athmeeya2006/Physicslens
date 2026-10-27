@@ -6,6 +6,7 @@ import type { TrackPoint } from "@/lib/api";
 const GHOST_COLORS = ["#22d3ee", "#f472b6", "#facc15"];
 const TRAIL_FRAMES = 20;
 const WHATIF_COLOR = "#e879f9";
+const MUJOCO_COLOR = "#4ade80";
 
 interface Props {
   src: string;
@@ -15,6 +16,7 @@ interface Props {
   real: TrackPoint[];
   objectSizePx?: number;
   whatIf?: { label: string; points: TrackPoint[] } | null;
+  mujoco?: TrackPoint[];
   ghosts: { model_id: string; points: TrackPoint[] }[];
 }
 
@@ -22,7 +24,7 @@ function byFrame(points: TrackPoint[]): Map<number, [number, number]> {
   return new Map(points.map(([f, x, y]) => [f, [x, y]]));
 }
 
-export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghosts, whatIf }: Props) {
+export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghosts, whatIf, mujoco }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [showReal, setShowReal] = useState(true);
@@ -36,6 +38,7 @@ export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghost
     const realMap = byFrame(real);
     const ghostMaps = ghosts.map((g) => byFrame(g.points));
     const whatIfMap = whatIf ? byFrame(whatIf.points) : null;
+    const mujocoMap = mujoco?.length ? byFrame(mujoco) : null;
     // Canvas works in clip pixels (the same space as the track), CSS scales it with the video.
     // Ghost drawn at the tracked object's own size, so it visibly covers (or misses) the real thing.
     const radius = objectSizePx ? objectSizePx / 2 : Math.max(6, Math.min(width, height) / 40);
@@ -68,6 +71,14 @@ export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghost
         ctx.stroke();
         ctx.setLineDash([]);
       });
+      const mp = mujocoMap?.get(frame);
+      if (mp) {
+        // MuJoCo's replay of the exported model: a solid dot that should sit at the ghost's centre.
+        ctx.fillStyle = MUJOCO_COLOR;
+        ctx.beginPath();
+        ctx.arc(mp[0], mp[1], Math.max(4, radius / 4), 0, Math.PI * 2);
+        ctx.fill();
+      }
       const wp = whatIfMap?.get(frame);
       if (wp) {
         ctx.strokeStyle = WHATIF_COLOR;
@@ -82,7 +93,7 @@ export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghost
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [real, ghosts, fps, width, height, showReal, objectSizePx, whatIf]);
+  }, [real, ghosts, fps, width, height, showReal, objectSizePx, whatIf, mujoco]);
 
   return (
     <div className="player">
@@ -96,6 +107,11 @@ export function GhostPlayer({ src, width, height, fps, real, objectSizePx, ghost
             <i style={{ borderColor: GHOST_COLORS[i % GHOST_COLORS.length] }} /> ghost: {g.model_id}
           </span>
         ))}
+        {mujoco?.length ? (
+          <span>
+            <i style={{ borderColor: MUJOCO_COLOR, background: MUJOCO_COLOR }} /> MuJoCo replay of the export
+          </span>
+        ) : null}
         {whatIf && (
           <span>
             <i style={{ borderColor: WHATIF_COLOR, borderStyle: "solid" }} /> what if: {whatIf.label}

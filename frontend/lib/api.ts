@@ -52,6 +52,7 @@ export interface AnalysisResult {
   trail: TrailStep[];
   regime_change?: { t_estimate: number; t_safe: number; error_ratio: number };
   fit_state?: Record<string, unknown>;
+  mujoco?: { rms_vs_fit_m: number | null; notes: string[]; points: TrackPoint[] };
 }
 
 export interface RunView {
@@ -88,6 +89,7 @@ export const getHealth = () => fetch(`${API_BASE}/api/health`).then((r) => json<
 export const getBudget = () => fetch(`${API_BASE}/api/budget`).then((r) => json<Budget>(r));
 export const getRun = (id: string) => fetch(`${API_BASE}/api/runs/${id}`).then((r) => json<RunView>(r));
 export const clipUrl = (id: string) => `${API_BASE}/api/runs/${id}/clip.mp4`;
+export const exportUrl = (id: string, kind: "json" | "py" | "mjcf") => `${API_BASE}/api/runs/${id}/export/${kind}`;
 
 export function askWhatIf(id: string, question: string) {
   const code = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("code");

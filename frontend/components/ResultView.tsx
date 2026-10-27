@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { AnalysisResult } from "@/lib/api";
-import { clipUrl, makeShareVideo } from "@/lib/api";
+import { clipUrl, exportUrl, makeShareVideo } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
 import { Tex } from "./Equation";
 import { GhostPlayer } from "./GhostPlayer";
@@ -47,6 +47,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           real={r.real_track_px}
           objectSizePx={r.object_size_px}
           whatIf={whatIfGhost}
+          mujoco={r.mujoco?.points}
           ghosts={r.ghosts ?? []}
         />
         <div className="card trail-card">
@@ -56,6 +57,24 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
       </div>
 
       {r.fit_state && <WhatIf runId={runId} onGhost={setWhatIfGhost} />}
+
+      {r.fit_state && (
+        <div className="card exports">
+          <h3>Export for simulation</h3>
+          <p className="muted small">
+            Use the identified dynamics in a robot simulator or your own code.
+            {r.mujoco?.rms_vs_fit_m != null && (
+              <> MuJoCo replays the exported model within {(r.mujoco.rms_vs_fit_m * 1000).toFixed(r.mujoco.rms_vs_fit_m < 0.001 ? 3 : 1)} mm of the fitted motion (green dot on the video).</>
+            )}
+          </p>
+          <div className="export-links">
+            <a href={exportUrl(runId, "mjcf")} download>MuJoCo model (MJCF)</a>
+            <a href={exportUrl(runId, "py")} download>Python simulation</a>
+            <a href={exportUrl(runId, "json")} download>Parameters (JSON)</a>
+          </div>
+          {r.mujoco?.notes.map((n, i) => <p key={i} className="muted small">Note: {n}</p>)}
+        </div>
+      )}
 
       <div className="card share">
         <button onClick={onShare} disabled={share.state === "busy"}>

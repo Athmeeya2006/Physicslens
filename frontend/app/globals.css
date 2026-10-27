@@ -107,3 +107,4 @@ button.listening { background: #e879f9; }
 .transcript { font-style: italic; }
 .whatif-answer { border-left: 3px solid #e879f9; padding-left: 10px; margin-top: 8px; }
 .whatif-answer p { margin: 4px 0; }
+.export-links { display: flex; flex-wrap: wrap; gap: 16px; }

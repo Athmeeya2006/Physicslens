@@ -55,6 +55,8 @@ def test_pendulum_clip_end_to_end(harness, tmp_path):
     worst = max(abs(x - real[f][0]) + abs(y - real[f][1]) for f, x, y in result["ghosts"][0]["points"])
     assert worst < 6
     assert [c["step"] for c in result["llm_calls"]] == ["scene", "hypotheses", "agent"]
+    assert len(result["mujoco"]["points"]) == 60
+    assert result["mujoco"]["rms_vs_fit_m"] is not None
     trail = result["trail"]
     assert [t["step"] for t in trail] == ["scene", "tracking", "hypotheses", "verification", "agent"]
     assert all(t["model"] for t in trail)
