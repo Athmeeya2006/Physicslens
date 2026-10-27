@@ -1,90 +1,113 @@
 # PhysicsLens
 
-**Point a phone at anything moving. Get the equations that govern it, verified, in seconds.**
+**Point a phone at anything moving. Get the equations that govern it, verified.**
 
-PhysicsLens turns a phone video (recorded or live) into a verified physics model. It tracks the moving object with SAM 3.1, lets an agent built on Muse Spark Open propose candidate equations, fits and simulates every candidate, and accepts only the one that actually predicts the motion. When the data can't tell two models apart, the agent asks you to run the experiment that will. The result is a calibrated simulation you can export straight into a robotics simulator.
+PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks the moving object, an agent built on Meta's reasoning models proposes candidate equations, and plain numerical simulation tests every candidate against the real motion. Only an equation that predicts held-out data is accepted. When the data can't tell two models apart, the agent asks you for the experiment that will. The result is a calibrated model you can export straight into a robot simulator, or use to watch a machine wear.
 
 > Built for the **Meta Global AI Developer Hackathon** (Indie track, *Push the Frontier*), Oct 27 to Nov 4, 2026.
 
 | | |
 |---|---|
 | 🎥 **Demo video (3 min)** | _link coming_ |
-| 🌐 **Try it** | _link coming_ |
-| 🧵 **Post on X** | _link coming_ |
-
-**Status:** in active development during the hackathon. See [What we built during the hackathon](#what-we-built-during-the-hackathon) for what works today.
+| 🌐 **Try it** | _link coming_ (judges: the access code is in the submission notes) |
 
 ---
 
 ## Why this matters
 
-Robots are trained in simulators, and they fail in the real world when the simulator's physics is wrong: the friction, mass, damping or stiffness doesn't match reality (the "sim-to-real gap"). Measuring those parameters today means lab rigs, sensors and an expert's afternoon of modeling.
+Robots are trained in simulators, and they fail in the real world when the simulator's physics is wrong: the friction, damping or stiffness doesn't match reality (the "sim-to-real gap"). Measuring those parameters today takes lab rigs, sensors and an expert's afternoon of modeling. PhysicsLens does it from a phone video:
 
-PhysicsLens replaces that with a phone video:
-
-- **Robotics engineers** get calibrated dynamics parameters, with uncertainty, exported as a MuJoCo model.
-- **Maintenance engineers** record a machine part today and again next month; PhysicsLens flags when its damping or natural frequency drifts, an early sign of wear.
-- **Hardware prototypers** get a working dynamics model of a mechanism in seconds instead of hours.
+- **Robotics engineers** get dynamics parameters with uncertainty, exported as a MuJoCo model that is replayed in MuJoCo and checked against the measured motion.
+- **Maintenance engineers** film a machine part today and again next month. PhysicsLens compares natural frequency and damping across recordings and flags drift, an early sign of wear.
+- **Anyone building a mechanism** gets a working dynamics model in seconds instead of hours.
 
 It is system identification, normally a specialist task, made as easy as filming something.
 
 ## What it does
 
-1. **Record or go live.** Upload a clip or point your phone's camera at the motion.
-2. **It understands the scene.** Muse Spark Open identifies what is moving and finds a reference object (a ruler, an A4 sheet) for real-world scale.
-3. **It tracks precisely.** SAM 3.1 segments and tracks the object through every frame.
-4. **It hypothesizes, then proves.** The agent proposes candidate equations; regular math fits and simulates each one; only an equation that predicts the real motion is accepted.
-5. **It asks for better data.** If two models fit equally well, the agent tells you which experiment would separate them ("swing it with a larger angle").
-6. **You see the proof.** A simulated "ghost" of the object moves on top of the real video. If the ghost and the real object move together, the equation is right.
-7. **Ask "what if?" out loud.** "What if the string were twice as long?" The model re-simulates and shows the new motion.
-8. **Export.** Parameters (JSON), a standalone Python simulation, a MuJoCo MJCF model, or a shareable video with the equation overlaid.
+1. **Record, upload, or go live.** Live mode streams the phone camera; tap the object to lock on.
+2. **It reads the scene.** The reasoning model looks at four keyframes, names the moving object, guesses the kind of motion, and finds a reference of known size (A4 or letter sheet, credit card, coin).
+3. **It tracks precisely.** SAM 3.1 follows the object, and the reference, through every frame in a single request.
+4. **It hypothesizes, then proves.** The agent proposes candidate equations; regular math fits and simulates each one and keeps only what forecasts held-out data. The simplest adequate model wins (BIC).
+5. **It asks for better data.** If candidates tie, the agent says which experiment would separate them ("release it from a larger angle and film 20 seconds").
+6. **You see the proof.** A simulated "ghost" moves over the real video. Every decision appears in an on-screen decision trail: what was proposed, what was rejected and why, and what the agent decided next.
+7. **Ask "what if?" out loud.** "What if the string were twice as long?" The fitted equation is re-simulated from the same starting state and drawn as a second ghost.
+8. **Export.** A MuJoCo model, a standalone Python simulation, parameters as JSON, or a shareable MP4 with the equation burned in.
 
-When nothing fits (water, cloth, crowds), it says so: *"no clean governing equation found."* It never invents an equation.
+When nothing fits, it says so: *"no clean governing equation found."* It never invents an equation, and it refuses clips it can't measure (a flat pendulum arc, a round spinning object, a spin too fast for the frame rate) instead of guessing.
+
+## Systems it identifies
+
+| System | Models compared | What you get |
+|---|---|---|
+| Pendulum | simple, small-angle, linear damping, air drag | g, damping, string length (all with intervals) |
+| Spring or elastic oscillator | harmonic, damped harmonic | natural frequency, damping ratio |
+| Thrown or dropped object | no drag, linear drag, quadratic drag | g, drag coefficient |
+| Bouncing ball | free flight plus restitution (hybrid) | g shared by every flight, coefficient of restitution at each bounce |
+| Double pendulum | point-mass double pendulum, fitted on short restarted predictions | g, mass ratio, and how chaotic it is: Lyapunov exponent and how many seconds the motion can be forecast |
+| Spinning object slowing down | free spin, dry friction, viscous, air drag, dry plus viscous | the friction law and its coefficients |
+
+Changes during a clip (say, the string is shortened mid-recording) are detected; each regime is fitted separately, and live mode refits on the new motion.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    A[Phone video<br/>recorded or live] --> B[Scene understanding<br/>Muse Spark Open]
+    A[Phone video<br/>recorded or live] --> B[Scene understanding<br/>reasoning model]
     B --> C[Tracking<br/>SAM 3.1]
     C --> D[Calibration<br/>pixels to meters]
-    D --> E[Signal cleanup<br/>smoothing, derivatives, events]
-    E --> F[Hypotheses<br/>Muse Spark Open]
+    D --> E[Signal cleanup<br/>smoothing, impacts, regimes]
+    E --> F[Hypotheses<br/>reasoning model]
     F --> G[Fitting<br/>SciPy + PySINDy]
-    G --> H{Verification agent<br/>simulate and compare}
-    H -- clear winner --> I[Equation + parameters<br/>+ ghost overlay]
-    H -- ambiguous --> J[Experiment request<br/>to the user]
+    G --> H{Verification<br/>forecast held-out data}
+    H -- clear winner --> I[Equation + intervals<br/>+ ghost overlay]
+    H -- tie --> J[Agent requests<br/>a new experiment]
     J --> A
     H -- nothing fits --> K[Honest 'no clean equation']
     I --> L[What-ifs by voice<br/>Muse Voice Transcribe]
-    I --> M[Export: JSON, Python,<br/>MuJoCo, MP4]
+    I --> M[Export: MuJoCo, Python,<br/>JSON, MP4]
 ```
 
-**The key design principle: Meta's models perceive and reason; math decides.** The language model proposes hypotheses and chooses experiments, but an equation is only accepted when numerical simulation reproduces the measured trajectory on held-out data. Model selection uses a complexity penalty (BIC), so the simplest equation that explains the data wins.
+**The design principle: Meta's models perceive and reason; math decides.** The language model reads the scene, proposes hypotheses, plans experiments and explains results. It never accepts an equation: only numerical verification on held-out data does, and the simplest model of each family is always tested as a control, so the agent can't hide the baseline.
 
 ## Meta models used
 
 | Model | Where it runs | What it does in PhysicsLens |
 |---|---|---|
-| **Muse Spark Open** (open weights) | Baseten | The agent's brain: scene understanding from keyframes, proposing candidate physics models, deciding which experiment to request, explaining results |
-| **SAM 3.1** | Meta Model API | Text- and box-prompted segmentation and tracking of the moving object and the reference object across every frame, with stable object identity |
-| **Muse Voice Transcribe** | Meta Model API | Hands-free "what-if" questions with automatic speech-turn detection |
-| **Muse Spark 1.3** | Meta Model API | Writes custom simulation code for unusual systems (run in a sandbox), and serves as fallback reasoning |
-| **Muse Glimmer** (stretch goal) | Self-hosted | Offline mode on local hardware |
+| **Muse Spark Open** (open weights) | Baseten | The agent's reasoning: scene understanding from keyframes, candidate equations, experiment requests, explanations, turning what-if questions into parameter changes |
+| **SAM 3.1** | Meta Model API | Box-prompted segmentation and tracking of the moving object(s) and the reference object in one request; in live mode, refinement of an on-device tracker in parallel chunks |
+| **Muse Voice Transcribe** | Meta Model API | Hands-free what-if questions over the realtime endpoint, with automatic end-of-speech detection |
+| **Muse Spark 1.3** | Meta Model API | Development-only fallback with the same prompts and schemas; the submitted build never falls back from the open-weight model |
 
-SAM 3.1 is used here as a **scientific measurement instrument**: its masks become position and orientation time series that feed differential-equation fitting.
+**Open-weight status, stated plainly:** the submitted build runs every reasoning step on Muse Spark Open via Baseten, and in the demo/production configuration it refuses to switch to any other model (it shows a "busy" message instead). Each result shows which model produced each step. During development, before Baseten access was granted, the same prompts ran on Muse Spark 1.3; this section will be updated once the Muse Spark Open runs are verified.
+
+SAM 3.1 is used as a **scientific measurement instrument**: its masks become position and orientation time series that feed differential-equation fitting.
+
+## Validation
+
+**On real footage** (a 0.5 m pendulum, CC BY-SA clip, see `gallery/README.md`): SAM 3.1 tracked the bob in 164 of 164 frames from a box placed by the reasoning model; every pendulum model gives g between 9.81 and 9.83 m/s²; the ghost stays within about 8 px of a bob about 80 px across. With only 6.5 s of a small swing the candidates tie, and the agent asks for a longer, larger swing.
+
+**Exports:** for every exactly representable model, the MuJoCo export replayed in MuJoCo matches the fitted motion to under 0.1 mm; the generated Python script matches to 1e-9.
+
+**On synthetic data with known answers** (so far; real clips for these are being recorded):
+
+- damped pendulum: g within 0.3%, damping within 2%; tiny swings are refused because the length can't be measured
+- bouncing ball: coefficient of restitution within 0.01 and g within about 1% with up to 8 mm tracking noise
+- double pendulum: g within 0.4%, mass ratio within 1%, chaos detected (predictable for about 1.6 s at 2 mm noise); random motion is rejected
+- spin-down: all four friction laws identified, coefficients within 3%, orientation from masks to 0.004 rad
+- machine health: no false alarm when the same system is re-recorded; a 50% rise in damping and a 2% frequency shift are flagged
 
 ## Engineering highlights
 
-- **Verified, not generated.** Every accepted equation passes a simulate-and-compare check against real data.
-- **Active experimentation.** The agent detects when the data is ambiguous and requests the experiment that resolves it.
-- **Live mode.** Equations converge on screen in real time; if the dynamics change mid-recording (say, the string is shortened), PhysicsLens detects the regime change and refits.
-- **Uncertainty, not just numbers.** Parameters come with bootstrap confidence intervals.
-- **Cost-safe by construction.** Every paid API call goes through a cost guard with hard budget caps, a model allowlist, rate limiting, caching, and a kill switch. Identical clips hit a response cache, so re-processing costs nothing.
+- **Verified, not generated.** Every accepted equation forecasts held-out data; ties lead to experiment requests, not guesses.
+- **Chaos handled honestly.** Chaotic systems are fitted on short predictions restarted from the measured state, and the app shows a single long prediction drifting away.
+- **Live mode that keeps up.** SAM 3.1 answers a 2 s chunk in several seconds, so an on-device template tracker drives the overlay instantly; SAM refines every second frame in parallel chunks and re-anchors the tracker when it drifts.
+- **Uncertainty everywhere.** Parameters come with bootstrap intervals; machine-health drift is flagged only past 3 standard errors and a practical threshold, with a repeatability allowance.
+- **Cost-safe by construction.** Every paid call goes through one guard: hard budget caps, a model allowlist, rate limits, retries in our own code only, a response cache (re-processing a clip is free) and a kill switch.
 
 ## Tech stack
 
-Python 3.11 · FastAPI · NumPy / SciPy · PySINDy · OpenCV · MuJoCo · SQLite · ffmpeg · Modal (sandboxes) · Next.js + TypeScript · KaTeX · Canvas
+Python 3.11+ · FastAPI · NumPy / SciPy · PySINDy · OpenCV · MuJoCo · matplotlib (equation rendering) · SQLite · ffmpeg · Next.js + TypeScript · KaTeX · Canvas
 
 ## Getting started (Linux)
 
@@ -92,85 +115,100 @@ Python 3.11 · FastAPI · NumPy / SciPy · PySINDy · OpenCV · MuJoCo · SQLite
 
 - Python 3.11+, Node.js 20.17+ (or 22.9+), ffmpeg (`sudo apt install ffmpeg`)
 - A Meta Model API key ([dev.meta.ai](https://dev.meta.ai)); a Baseten API key for Muse Spark Open
-- Optional: a Modal account (`pip install modal && modal token new`)
 
 ### Setup
 
 ```bash
 git clone <this-repo-url> physicslens
 cd physicslens
-cp .env.example .env        # then fill in your keys; never commit .env
-make setup                  # creates .venv and installs backend dependencies
-(cd frontend && npm install) # frontend dependencies
-make test                   # unit tests with mocked models (no API spend)
+cp .env.example .env          # fill in your keys; never commit .env
+make setup                    # creates .venv and installs backend dependencies
+(cd frontend && npm install)  # frontend dependencies
+make test                     # unit tests with mocked models (no API spend)
 ```
 
 ### Run
 
 ```bash
-make dev-backend            # FastAPI on http://localhost:8000
-make dev-frontend           # Next.js on http://localhost:3000
+make dev-backend              # FastAPI on http://localhost:8000
+make dev-frontend             # Next.js on http://localhost:3000
 ```
+
+Open `http://localhost:3000` for the gallery and uploads, `/live` for the camera, `/health` for machine-health comparisons.
 
 ### Cost controls
 
 ```bash
-make report                 # spend so far per provider/model/day, remaining budget
-make kill                   # instantly block every paid API call
-make unkill                 # re-enable
-make smoke                  # one cheap real call per model (asks before spending)
+make report                   # spend so far per provider/model/day and per audience, remaining budget
+make kill                     # instantly block every paid API call
+make unkill                   # re-enable
+make smoke                    # one cheap real call per model (asks before spending)
 ```
 
 Budget caps live in `config/budget.yaml` (created from `config/budget.example.yaml` by `make setup`); prices in `config/prices.yaml`.
 
+### Public deployment settings
+
+| Variable | Effect |
+|---|---|
+| `APP_ENV=demo` or `prod` | No development fallback; mocks refused at startup |
+| `DEMO_ACCESS_CODE` | Judges append `?code=...` to the URL for uploads, live mode and voice |
+| `PUBLIC_TRY_ENABLED=1` | Visitors without a code may analyze a few short clips per day; otherwise gallery only |
+| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Optional Cloudflare Turnstile check on public uploads |
+| `NEXT_PUBLIC_API_BASE` | Backend URL for the frontend; `npm run build:static` writes a static site to `frontend/out/` |
+
 ## Project structure
 
 ```
-config/        model allowlist, prices, budgets, rate limits
-backend/       FastAPI app: costguard, perception, sigproc, physics, agent, voice, export
-frontend/      Next.js web app (works in a mobile browser)
+config/        model allowlist, prices, budget example, rate limits
+backend/       FastAPI app: costguard, perception, sigproc, physics, agent, voice, export, live mode
+frontend/      Next.js web app (works in a mobile browser): analyze, live, machine health
+gallery/       curated real analyses shown to visitors (clip licenses in gallery/README.md)
 samples/       short public test clips
-tests/         unit tests (run with mocked models)
+scripts/       smoke-clip generator, gallery promotion
+tests/         unit tests (run with mocked models; recorded real responses as fixtures)
 ```
 
 ## What we built during the hackathon
 
-All code in this repository was written during the hackathon building period (Oct 27 to Nov 4, 2026). This list is updated as features land.
+All code in this repository was written during the hackathon building period (Oct 27 to Nov 4, 2026).
 
-- [x] Cost guard: budgets, allowlist, rate limiting, caching, kill switch, persistent spend ledger (tested with mocked models)
+- [x] Cost guard: budgets, allowlist, rate limiting, caching, kill switch, persistent spend ledger
 - [x] Recorded mode: video → SAM 3.1 tracking → calibrated trajectory
-- [ ] Hypothesis generation with Muse Spark Open
+- [x] Hypothesis generation and agent decisions with structured outputs (running on Muse Spark Open once Baseten access is active; Muse Spark 1.3 in development until then)
 - [x] Fitting (SciPy + PySINDy) with BIC model selection and bootstrap uncertainty
-- [x] Verification agent with simulate-and-compare on held-out data
-- [x] Ghost overlay on the real video (web UI)
+- [x] Verification with simulate-and-compare on held-out data
+- [x] Ghost overlay on the real video, and an on-screen decision trail showing who decided what
 - [x] Live camera mode with converging equations (instant on-server tracking, refined by SAM 3.1 in parallel chunks; tap the object to lock on)
-- [x] Experiment requests for ambiguous data, with the agent's full decision trail on screen
-- [x] Regime-change detection (live and recorded: refits on the new motion, reports each regime separately)
+- [x] Experiment requests for ambiguous data
+- [x] Regime-change detection (live and recorded)
 - [x] Voice what-ifs with Muse Voice Transcribe (spoken question, parameter change, re-simulated ghost; typing works too)
 - [x] Shareable MP4 with the measured trail, the simulated ghost and the typeset equation burned in
 - [x] Exports: MuJoCo MJCF (replayed in MuJoCo and checked against the fitted motion), standalone Python simulation, parameters as JSON
-- [x] Machine-health drift comparison: natural frequency and damping of two recordings, with uncertainty and conservative flagging
-- [x] Machine-health trend view: frequency and damping across up to 12 recordings, with a test for steady drift
-- [x] Bouncing objects: hybrid model (free flight plus restitution), per-impact coefficient of restitution with uncertainty, later bounces predicted from earlier ones
-- [x] Double pendulum: both bobs tracked in one SAM request, fitted on short restarted predictions, chaos measured (Lyapunov exponent and how many seconds the motion can be forecast)
-- [x] Spin-down of rotating objects: orientation from SAM masks, friction law identified (dry, viscous, air drag or combined), exported to MuJoCo with native dry friction
+- [x] Machine-health drift comparison and trend view across up to 12 recordings
+- [x] Bouncing objects: hybrid model with per-impact coefficient of restitution
+- [x] Double pendulum: two tracked bobs, short-horizon fitting, chaos measured
+- [x] Spin-down of rotating objects: friction law identified, exported to MuJoCo with native dry friction
+- [x] Public access: free gallery of real analyses, judge access code, per-visitor limits, optional bot check
 
 ## Limitations
 
 - 2D motion in the camera plane; best results with the camera side-on and held still.
-- Single objects, plus double pendulums (two tracked bobs). Bouncing (floor impacts) and spin-down of elongated objects are supported; other coupled systems are stretch goals. Live mode follows one object.
-- Deformable and fluid motion (cloth, water, smoke) is detected as "no clean equation," not modeled.
-- Accuracy depends on frame rate, lighting and a visible reference object for scale.
+- One object, or two for a double pendulum. Live mode follows one object.
+- Deformable and fluid motion (cloth, water, smoke) is reported as "no clean equation," not modeled.
+- Accuracy depends on frame rate, lighting and a visible reference of known size (or a known pendulum length).
+- The double pendulum assumes point masses on light rods; solid-bar pendulums may fit worse.
 
 ## Roadmap
 
-3D reconstruction from two phones, coupled multi-body systems, direct export to more simulators (Isaac Sim, Gazebo), and on-device inference with Muse Glimmer.
+3D reconstruction from two phones, more coupled multi-body systems, export to more simulators (Isaac Sim, Gazebo), and on-device inference with Muse Glimmer.
 
 ## Acknowledgements
 
 - Meta's Muse Spark Open, SAM 3.1, Muse Voice Transcribe and Muse Spark models, and the `meta-sam-parser` library.
-- Baseten and Modal for inference and sandbox infrastructure.
+- Baseten for open-weight model inference.
+- Pendulum footage in the gallery: Rhetos / Mathe-AC Lernwerkstatt (CC BY-SA 4.0), via Wikimedia Commons.
 
 ## License
 
-[MIT](LICENSE)
+Code: [MIT](LICENSE). Gallery clips keep their own licenses, listed in `gallery/README.md`.
