@@ -1,0 +1,253 @@
+"""Recorded mode end to end: video -> scene -> SAM tracks -> calibrated trajectory -> hypotheses -> verified equation."""
+
+from __future__ import annotations
+
+import logging
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import meta_sam_parser as msp
+import numpy as np
+
+from .agent.reasoning import agent_turn, propose_hypotheses, understand_scene
+from .agent.schemas import Scene
+from .costguard import CostGuardClient
+from .perception import media
+from .perception.calibration import (
+    Calibration,
+    CalibrationError,
+    from_known_length,
+    from_reference,
+)
+from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
+from .physics.coords import Coordinates, fit_circle, to_coordinates
+from .physics.fit import FitResult, fit_model
+from .physics.models import MODELS, models_for
+from .physics.sindy import discover
+from .physics.uncertainty import bootstrap
+from .physics.verify import Verdict, assess
+from .sigproc.cleanup import detect_impacts, fill_short_gaps, split_at
+from .sigproc.summary import summarize
+from .sigproc.trajectory import Trajectory, from_pixels
+
+log = logging.getLogger("physicslens.pipeline")
+
+MOVING_ID, REFERENCE_ID = "1", "2"
+SAM_METADATA = {"mask_encoding": "one_bit", "include_confidence": "true", "propagation_direction": "forward"}
+MAX_CLIP_SECONDS = {"dev": 20.0, "judge": 30.0, "public": 10.0}
+
+
+class AnalysisError(RuntimeError):
+    """A problem with the input the user can fix (message is shown as-is)."""
+
+
+@dataclass(frozen=True)
+class RunOptions:
+    audience: str = "dev"
+    pendulum_length_m: float | None = None  # alternative scale source when no reference object is visible
+
+
+Progress = Callable[[str], None]
+
+
+def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, options: RunOptions | None = None,
+            progress: Progress = lambda _msg: None) -> dict[str, Any]:
+    options = options or RunOptions()
+    run_dir.mkdir(parents=True, exist_ok=True)
+    limits = client.limits
+    media_cfg = limits.get("media") or {}
+    max_turns = int((limits.get("agent") or {}).get("max_turns", 4))
+    llm_calls: list[dict[str, Any]] = []
+
+    def record(step: str, call) -> None:
+        llm_calls.append({"step": step, "provider": call.provider, "model": call.model, "cached": call.cached,
+                          "reasoning": call.reasoning})
+
+    progress("Preparing video")
+    clip = run_dir / "clip.mp4"
+    info = media.prepare_sam_clip(video, clip, max_fps=float(media_cfg.get("sam_max_fps_recorded", 30)),
+                                  max_seconds=MAX_CLIP_SECONDS[options.audience],
+                                  max_long_side=int(media_cfg.get("dev_max_resolution", 1080)))
+    min_frames = int(media_cfg.get("sam_min_frames_per_request", 50))
+    if info.frames < min_frames:
+        raise AnalysisError(f"The clip is too short: at least {min_frames} frames (about 2 seconds) are needed.")
+
+    progress("Understanding the scene")
+    frames_jpeg = media.keyframes(clip, int(media_cfg.get("llm_keyframes_max", 4)), int(media_cfg.get("llm_image_long_side_px", 768)))
+    scene, call = understand_scene(client, frames_jpeg, run_id, options.audience)
+    record("scene", call)
+
+    progress(f"Tracking the {scene.moving_object} with SAM 3.1")
+    tracks = track_objects(client, clip, info, scene, run_id, options.audience)
+    moving = tracks.get(MOVING_ID)
+    if moving is None or len(moving.frames) < min_frames // 2:
+        raise AnalysisError(f"SAM could not follow the {scene.moving_object} through the clip.")
+
+    progress("Calibrating scale")
+    calibration = calibrate(scene, tracks.get(REFERENCE_ID), moving, options)
+    traj, origin_px = build_trajectory(moving, info.fps, calibration.px_per_m)
+
+    summary = summarize(traj)
+    progress("Proposing hypotheses")
+    hyp, call = propose_hypotheses(client, summary, scene, run_id, options.audience)
+    record("hypotheses", call)
+
+    tried: list[str] = []
+    family, candidate_ids = hyp.family, _with_control(hyp.family, [h.model_id for h in hyp.candidates])
+    rationales = {h.model_id: h.rationale for h in hyp.candidates}
+    verdict: Verdict | None = None
+    coords: Coordinates | None = None
+    turn = None
+    for _ in range(max_turns):
+        tried.append(family)
+        progress(f"Fitting and simulating {len(candidate_ids)} {family} models")
+        coords, verdict = fit_and_verify(traj, family, candidate_ids)
+        progress("Agent reviewing the verdict")
+        turn, call = agent_turn(client, agent_context(verdict, family, summary, scene, tried), run_id, options.audience)
+        record("agent", call)
+        if verdict.status != "no_fit" or turn.action != "try_family" or not turn.next_family or turn.next_family in tried:
+            break
+        hyp, call = propose_hypotheses(client, summary, scene, run_id, options.audience, exclude_families=tried)
+        record("hypotheses", call)
+        if hyp.family in tried:
+            break
+        family, candidate_ids = hyp.family, _with_control(hyp.family, [h.model_id for h in hyp.candidates])
+        rationales.update({h.model_id: h.rationale for h in hyp.candidates})
+
+    assert verdict is not None and turn is not None
+    result: dict[str, Any] = {
+        "status": verdict.status,
+        "reason": verdict.reason,
+        "family": family,
+        "families_tried": tried,
+        "scene": scene.model_dump(),
+        "clip": {"width": info.width, "height": info.height, "fps": info.fps, "frames": info.frames},
+        "calibration": {"px_per_m": calibration.px_per_m, "rel_std": calibration.rel_std, "source": calibration.source},
+        "agent": {"action": turn.action, "message": turn.message, "reasoning_summary": turn.reasoning_summary},
+        "ranking": [fit_summary(f, rationales.get(f.model_id)) for f in verdict.ranked],
+        "real_track_px": _track_points(traj.frames, traj.xy, origin_px, calibration.px_per_m),
+        "llm_calls": llm_calls,
+        "summary": summary,
+    }
+    if coords is not None:
+        try:
+            result["sindy"] = discover(coords).equations
+        except (ValueError, np.linalg.LinAlgError) as e:  # supporting evidence only; must not sink the result
+            log.warning("SINDy failed: %s", e)
+            result["sindy"] = None
+        result["geometry"] = coords.ctx
+        result["ghosts"] = [ghost(coords, f, traj, origin_px, calibration.px_per_m) for f in verdict.contenders]
+    if verdict.status == "accepted" and verdict.winner and coords is not None:
+        progress("Estimating uncertainty")
+        spec = MODELS[verdict.winner.model_id]
+        est = bootstrap(spec, coords, verdict.winner)
+        result["equation"] = {"model_id": spec.id, "title": spec.title, "latex": spec.latex}
+        result["parameters"] = [
+            {"name": p.name, "latex": p.latex, "unit": p.unit, "value": est[p.name].value, "std": est[p.name].std,
+             "ci95": [est[p.name].ci_low, est[p.name].ci_high]}
+            for p in spec.params
+        ] + derived_parameters(coords)
+    progress("Done")
+    return result
+
+
+def track_objects(client: CostGuardClient, clip: Path, info: media.VideoInfo, scene: Scene, run_id: str,
+                  audience: str) -> dict[str, ObjectTrack]:
+    """Moving object (id 1) and reference (id 2) in ONE box-prompt request: half the SAM cost of two concept prompts."""
+    objects = [msp.PromptObject(id=int(MOVING_ID), prompts=[msp.FramePrompt(frame=0, box=_box(scene.moving_object_box, info))])]
+    if scene.reference_box is not None:
+        objects.append(msp.PromptObject(id=int(REFERENCE_ID), prompts=[msp.FramePrompt(frame=0, box=_box(scene.reference_box, info))]))
+    prompt = msp.build_object_prompt(size=(info.width, info.height), objects=objects)
+    file_id, video_hash = client.upload_video(clip)
+    try:
+        r = client.sam_video(prompt=prompt, file_id=file_id, video_hash=video_hash, est_frames=info.frames,
+                             metadata=SAM_METADATA, run_id=run_id, audience=audience)
+    finally:
+        client.delete_file(file_id, video_hash)
+    try:
+        return tracks_from_text(r.text, completed=r.finish_reason in (None, "completed"))
+    except TrackingError as e:
+        raise AnalysisError(str(e)) from e
+
+
+def _box(box, info: media.VideoInfo) -> msp.PromptBox:
+    x1, y1, x2, y2 = box.to_pixels(info.width, info.height)
+    return msp.PromptBox(x1, y1, max(x2, x1 + 1), max(y2, y1 + 1))
+
+
+def calibrate(scene: Scene, reference: ObjectTrack | None, moving: ObjectTrack, options: RunOptions) -> Calibration:
+    if reference is not None and scene.reference_kind != "none":
+        try:
+            return from_reference(reference, scene.reference_kind)
+        except CalibrationError as e:
+            if options.pendulum_length_m is None:
+                raise AnalysisError(str(e)) from e
+            log.warning("Reference calibration failed (%s); using the given pendulum length.", e)
+    if options.pendulum_length_m is not None:
+        radius_px = fit_circle(moving.centers_px * np.array([1.0, -1.0]))[2]
+        return from_known_length(radius_px, options.pendulum_length_m)
+    raise AnalysisError("No reference object for scale. Put an A4 or letter sheet flat in the plane of motion, "
+                        "or enter the pendulum length.")
+
+
+def build_trajectory(moving: ObjectTrack, fps: float, px_per_m: float) -> tuple[Trajectory, np.ndarray]:
+    """Longest gap-free, collision-free stretch of the track (Tier 1: one segment)."""
+    segments = fill_short_gaps(moving.frames, moving.centers_px, max_gap=3)
+    frames, centers = max(segments, key=lambda s: len(s[0]))
+    traj = from_pixels(frames, centers, fps, px_per_m)
+    pieces = split_at(traj, detect_impacts(traj))
+    if pieces:
+        best = max(pieces, key=len)
+        start = int(np.searchsorted(frames, best.frames[0]))
+        return from_pixels(best.frames, centers[start:start + len(best)], fps, px_per_m), centers[start]
+    return traj, centers[0]
+
+
+def fit_and_verify(traj: Trajectory, family: str, candidate_ids: list[str]) -> tuple[Coordinates | None, Verdict]:
+    try:
+        coords = to_coordinates(traj, family)
+    except ValueError as e:
+        return None, Verdict("no_fit", None, (), (), f"The motion does not look like a {family}: {e}")
+    fits = [fit_model(MODELS[m], coords) for m in candidate_ids]
+    return coords, assess(coords, fits)
+
+
+def _with_control(family: str, ids: list[str]) -> list[str]:
+    """Always include the family's simplest model, so a hypothesis list can't hide the baseline."""
+    simplest = min(models_for(family), key=lambda m: len(m.params)).id
+    return list(dict.fromkeys([simplest, *ids]))
+
+
+def agent_context(v: Verdict, family: str, summary: dict[str, Any], scene: Scene, tried: list[str]) -> dict[str, Any]:
+    return {
+        "verdict": v.status, "verdict_reason": v.reason, "family": family, "families_tried": tried,
+        "object": scene.moving_object,
+        "candidates": [fit_summary(f) for f in v.ranked],
+        "remaining_contenders": [f.model_id for f in v.contenders],
+        "trajectory_summary": summary,
+    }
+
+
+def fit_summary(f: FitResult, rationale: str | None = None) -> dict[str, Any]:
+    return {"model_id": f.model_id, "title": MODELS[f.model_id].title, "params": f.params, "bic": f.bic,
+            "heldout_nrmse": f.heldout_nrmse, "rmse": f.rmse, "rationale": rationale}
+
+
+def derived_parameters(c: Coordinates) -> list[dict[str, Any]]:
+    if c.family == "pendulum":
+        L, s = c.ctx["length_m"], c.ctx["length_std"]
+        return [{"name": "L", "latex": "L", "unit": "m", "value": L, "std": s, "ci95": [L - 1.96 * s, L + 1.96 * s],
+                 "derived": "radius of the fitted swing arc"}]
+    return []
+
+
+def _track_points(frames: np.ndarray, xy: np.ndarray, origin_px: np.ndarray, ppm: float) -> list[list[float]]:
+    px = origin_px[0] + xy[:, 0] * ppm
+    py = origin_px[1] - xy[:, 1] * ppm
+    return [[int(f), round(float(x), 2), round(float(y), 2)] for f, x, y in zip(frames, px, py, strict=True)]
+
+
+def ghost(c: Coordinates, f: FitResult, traj: Trajectory, origin_px: np.ndarray, ppm: float) -> dict[str, Any]:
+    return {"model_id": f.model_id, "points": _track_points(traj.frames, c.to_xy(f.sim), origin_px, ppm)}
