@@ -3,7 +3,7 @@
 import { Download, Film, FileCode2, FileJson, Boxes } from "lucide-react";
 import { useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
-import { clipUrl, exportUrl, HAS_BACKEND, isGallery, makeShareVideo } from "@/lib/api";
+import { clipUrl, exportUrl, HAS_BACKEND, isGallery, isOpenWeight, makeShareVideo } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
 import { Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
@@ -20,6 +20,23 @@ function fmt(v: number): string {
   if (v === 0) return "0";
   const a = Math.abs(v);
   return a >= 1000 || a < 0.01 ? v.toExponential(2) : v.toPrecision(4);
+}
+
+// Two significant figures of the uncertainty decide how many decimals the value deserves.
+function decimalsFor(std: number): number | null {
+  if (!(std > 0) || !Number.isFinite(std)) return null;
+  return Math.min(8, Math.max(0, 1 - Math.floor(Math.log10(std))));
+}
+
+function fmtAt(v: number, d: number | null): string {
+  const a = Math.abs(v);
+  if (d === null || (a !== 0 && a >= 1e5)) return fmt(v);
+  return v.toFixed(d);
+}
+
+function mujocoGap(m: number): string {
+  const mm = m * 1000;
+  return mm < 0.001 ? "less than 0.001 mm" : `${mm.toFixed(mm < 1 ? 3 : 1)} mm`;
 }
 
 function prettyModel(id: string, titles: Record<string, string>): string {
@@ -49,7 +66,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         <div className="provenance">
           <span>Models used:</span>
           {models.map((m) => (
-            <span key={m} className={`model-tag ${m.startsWith("meta-models/muse-spark-open") ? "open" : ""}`}>{m}</span>
+            <span key={m} className={`model-tag ${isOpenWeight(m) ? "open" : ""}`}>{m}</span>
           ))}
           <span className="model-tag">numerical verification</span>
         </div>
@@ -88,16 +105,20 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <div className="equation"><Tex tex={r.equation.latex} display /></div>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Parameter</th><th>Value</th><th>95% interval</th></tr></thead>
+              <thead><tr><th>Parameter</th><th>Value</th><th className="ci-col">95% interval</th></tr></thead>
               <tbody>
-                {r.parameters?.map((p) => (
-                  <tr key={p.name}>
-                    <td><Tex tex={p.latex} /> {p.derived && <span className="muted small">{p.derived}</span>}</td>
-                    <td className="num"><span className="param-value">{fmt(p.value)}</span> ± {fmt(p.std)} {p.unit}{" "}
-                      {p.uncalibrated && <span className="uncal">uncalibrated</span>}</td>
-                    <td className="num">{fmt(p.ci95[0])} to {fmt(p.ci95[1])}</td>
-                  </tr>
-                ))}
+                {r.parameters?.map((p) => {
+                  const d = decimalsFor(p.std);
+                  return (
+                    <tr key={p.name}>
+                      <td><Tex tex={p.latex} /> {p.derived && <span className="muted small">{p.derived}</span>}</td>
+                      <td className="num"><span className="param-value">{fmtAt(p.value, d)}</span> ± {fmtAt(p.std, d)} {p.unit}{" "}
+                        {p.uncalibrated && <span className="uncal">uncalibrated</span>}
+                        <div className="ci-inline muted small">95%: {fmtAt(p.ci95[0], d)} to {fmtAt(p.ci95[1], d)}</div></td>
+                      <td className="num ci-col">{fmtAt(p.ci95[0], d)} to {fmtAt(p.ci95[1], d)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -160,7 +181,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <p className="muted small">
             Take the identified dynamics into a robot simulator or your own code.
             {r.mujoco?.rms_vs_fit_m != null && (
-              <> MuJoCo replays the exported model within {(r.mujoco.rms_vs_fit_m * 1000).toFixed(r.mujoco.rms_vs_fit_m < 0.001 ? 3 : 1)} mm of the fitted motion (the green dot on the video).</>
+              <> MuJoCo replays the exported model within {mujocoGap(r.mujoco.rms_vs_fit_m)} of the fitted motion (the green dot on the video).</>
             )}
           </p>
           <div className="export-links">
@@ -189,14 +210,13 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         <h3>Every candidate tested</h3>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Model</th><th>BIC</th><th>Held-out forecast error</th><th>Why it was proposed</th></tr></thead>
+            <thead><tr><th>Model, and why it was tested</th><th>BIC</th><th>Held-out error</th></tr></thead>
             <tbody>
               {r.ranking.map((f) => (
                 <tr key={f.model_id}>
-                  <td>{f.title}</td>
+                  <td>{f.title}<div className="muted small">{f.rationale ?? "Baseline, always tested as a control."}</div></td>
                   <td className="num">{f.bic.toFixed(0)}</td>
                   <td className="num">{(f.heldout_nrmse * 100).toFixed(1)}%</td>
-                  <td className="muted">{f.rationale ?? "baseline, always tested as a control"}</td>
                 </tr>
               ))}
             </tbody>

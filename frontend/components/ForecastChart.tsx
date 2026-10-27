@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AnalysisResult } from "@/lib/api";
 
 // The verification as a picture: measured motion (neutral reference dots) against the forecast of the model
@@ -10,9 +10,7 @@ import type { AnalysisResult } from "@/lib/api";
 
 type Forecast = NonNullable<AnalysisResult["forecast"]>;
 
-const W = 760;
-const H = 260;
-const PAD = { left: 56, right: 16, top: 26, bottom: 34 };
+const PAD = { left: 52, right: 12, top: 26, bottom: 34 };
 
 function ticks(lo: number, hi: number, n: number): number[] {
   const raw = (hi - lo) / n;
@@ -30,6 +28,17 @@ function fmt(v: number): string {
 
 export function ForecastChart({ f, uncalibrated = false }: { f: Forecast; uncalibrated?: boolean }) {
   const [hover, setHover] = useState<number | null>(null);
+  // Laid out at the container's real width, so text stays 11px on a phone instead of shrinking with a viewBox.
+  const box = useRef<HTMLElement>(null);
+  const [W, setW] = useState(760);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e.contentRect.width))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const H = Math.round(Math.min(Math.max(W * 0.34, 200), 280));
   const { x, y, yTicks, xTicks, path } = useMemo(() => {
     const all = [...f.measured, ...f.forecast];
     let lo = Math.min(...all);
@@ -42,10 +51,10 @@ export function ForecastChart({ f, uncalibrated = false }: { f: Forecast; uncali
     const x = (t: number) => PAD.left + ((t - t0) / (t1 - t0 || 1)) * (W - PAD.left - PAD.right);
     const y = (v: number) => PAD.top + (1 - (v - lo) / (hi - lo)) * (H - PAD.top - PAD.bottom);
     const path = f.forecast.map((v, i) => `${i ? "L" : "M"}${x(f.t[i]).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    return { x, y, yTicks: ticks(lo, hi, 4), xTicks: ticks(t0, t1, 6), path };
-  }, [f]);
+    return { x, y, yTicks: ticks(lo, hi, 4), xTicks: ticks(t0, t1, Math.max(3, Math.floor(W / 130))), path };
+  }, [f, W, H]);
 
-  const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
+  const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
     const box = e.currentTarget.getBoundingClientRect();
     const px = ((e.clientX - box.left) / box.width) * W;
     let best = 0;
@@ -59,14 +68,16 @@ export function ForecastChart({ f, uncalibrated = false }: { f: Forecast; uncali
   const unitText = uncalibrated && f.unit === "m" ? "uncalibrated units" : f.unit;
   const unit = unitText ? ` (${unitText})` : "";
   const narrowBand = W - PAD.right - bandX < 250;
+  const bandLabel = W < 520 ? "Held out" : "Held out: the model never saw this";
+  const tipW = 180;
 
   return (
-    <figure>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" onMouseMove={onMove} onMouseLeave={() => setHover(null)}
+    <figure ref={box}>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" onPointerMove={onMove} onPointerLeave={() => setHover(null)}
            aria-label={`${f.label} over time: measured motion and the forecast of the ${f.title} fitted without the held-out part`}>
         <rect className="heldout-band" x={bandX} y={PAD.top} width={W - PAD.right - bandX} height={H - PAD.top - PAD.bottom} />
         <text className="heldout-label" x={narrowBand ? W - PAD.right : bandX + 8} y={PAD.top - 9}
-              textAnchor={narrowBand ? "end" : "start"}>Held out: the model never saw this</text>
+              textAnchor={narrowBand ? "end" : "start"}>{bandLabel}</text>
         {yTicks.map((v) => (
           <g key={`y${v}`}>
             <line className="axis" x1={PAD.left} x2={W - PAD.right} y1={y(v)} y2={y(v)} opacity={0.5} />
@@ -83,8 +94,8 @@ export function ForecastChart({ f, uncalibrated = false }: { f: Forecast; uncali
         {h !== null && (
           <g>
             <line className="cursor" x1={x(f.t[h])} x2={x(f.t[h])} y1={PAD.top} y2={H - PAD.bottom} />
-            <g className="tip" transform={`translate(${Math.min(x(f.t[h]) + 10, W - 190)},${PAD.top + 6})`}>
-              <rect width={180} height={52} rx={3} />
+            <g className="tip" transform={`translate(${x(f.t[h]) + 10 + tipW > W ? x(f.t[h]) - 10 - tipW : x(f.t[h]) + 10},${PAD.top + 6})`}>
+              <rect width={tipW} height={52} rx={3} />
               <text x={10} y={18}>t = {fmt(f.t[h])} s{f.t[h] >= f.heldout_start ? ", held out" : ""}</text>
               <text x={10} y={34}>measured {fmt(f.measured[h])}{unitText ? ` ${unitText}` : ""}</text>
               <text x={10} y={48}>forecast {fmt(f.forecast[h])}{unitText ? ` ${unitText}` : ""}</text>

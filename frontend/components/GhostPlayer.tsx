@@ -41,56 +41,78 @@ export function GhostPlayer({ src, width, height, fps, real, secondReal, objectS
     const ghostMaps = ghosts.map((g) => byFrame(g.points));
     const whatIfMap = whatIf ? byFrame(whatIf.points) : null;
     const mujocoMap = mujoco?.length ? byFrame(mujoco) : null;
-    // Canvas works in clip pixels (the same space as the track), CSS scales it with the video.
-    // Ghost drawn at the tracked object's own size, so it visibly covers (or misses) the real thing.
-    const radius = objectSizePx ? objectSizePx / 2 : Math.max(6, Math.min(width, height) / 40);
+    // Canvas works in clip pixels (the same space as the track) and CSS scales it with the video, so marks
+    // are sized in screen pixels here: legible on a phone, and never big enough to hide the object.
     let raf = 0;
 
     const draw = () => {
       const frame = Math.round(v.currentTime * fps);
+      const k = width / Math.max(c.clientWidth, 1); // clip pixels per screen pixel
+      const ringR = Math.min(Math.max((objectSizePx ?? 0) / 2 / k, 9), 22) * k;
       ctx.clearRect(0, 0, width, height);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      // Every mark gets a dark halo underneath so it reads on bright scenes as well as dark ones.
+      const path = (m: Map<number, [number, number]>, from: number, to: number) => {
+        ctx.beginPath();
+        let started = false;
+        for (let f = from; f <= to; f++) {
+          const p = m.get(f);
+          if (!p) continue;
+          if (started) ctx.lineTo(p[0], p[1]);
+          else ctx.moveTo(p[0], p[1]);
+          started = true;
+        }
+      };
+      const haloStroke = (color: string, w: number) => {
+        ctx.strokeStyle = "rgba(0,0,0,0.55)";
+        ctx.lineWidth = (w + 2.5) * k;
+        ctx.stroke();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = w * k;
+        ctx.stroke();
+      };
+      const ring = (p: [number, number], color: string, dashed: boolean) => {
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], ringR, 0, Math.PI * 2);
+        ctx.setLineDash(dashed ? [5 * k, 4 * k] : []);
+        haloStroke(color, 2.5);
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], 2.5 * k, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      };
+
       if (showReal) {
-        ctx.strokeStyle = "rgba(255,255,255,0.7)";
-        ctx.lineWidth = 2;
         for (const realMap of realMaps) {
-          ctx.beginPath();
-          for (let f = frame - TRAIL_FRAMES; f <= frame; f++) {
-            const p = realMap.get(f);
-            if (p) ctx.lineTo(p[0], p[1]);
-          }
-          ctx.stroke();
+          path(realMap, frame - TRAIL_FRAMES, frame);
+          haloStroke("rgba(255,255,255,0.9)", 2);
         }
       }
       ghostMaps.forEach((m, i) => {
+        const color = GHOST_COLORS[i % GHOST_COLORS.length];
+        path(m, frame - TRAIL_FRAMES, frame);
+        haloStroke(color, 2);
         const p = m.get(frame);
-        if (!p) return;
-        ctx.strokeStyle = GHOST_COLORS[i % GHOST_COLORS.length];
-        ctx.fillStyle = GHOST_COLORS[i % GHOST_COLORS.length] + "55";
-        const stroke = Math.max(3, width / 300);
-        ctx.lineWidth = stroke;
-        ctx.setLineDash([stroke * 2, stroke * 1.5]);
-        ctx.beginPath();
-        ctx.arc(p[0], p[1], radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.setLineDash([]);
+        if (p) ring(p, color, i > 0);
       });
+      const wp = whatIfMap?.get(frame);
+      if (whatIfMap) {
+        path(whatIfMap, frame - TRAIL_FRAMES, frame);
+        haloStroke(WHATIF_COLOR, 2);
+      }
+      if (wp) ring(wp, WHATIF_COLOR, false);
       const mp = mujocoMap?.get(frame);
       if (mp) {
-        // MuJoCo's replay of the exported model: a solid dot that should sit at the ghost's centre.
+        // MuJoCo's replay of the exported model: a small solid dot that should sit inside the model's ring.
+        ctx.beginPath();
+        ctx.arc(mp[0], mp[1], 4 * k, 0, Math.PI * 2);
         ctx.fillStyle = MUJOCO_COLOR;
-        ctx.beginPath();
-        ctx.arc(mp[0], mp[1], Math.max(4, radius / 4), 0, Math.PI * 2);
         ctx.fill();
-      }
-      const wp = whatIfMap?.get(frame);
-      if (wp) {
-        ctx.strokeStyle = WHATIF_COLOR;
-        ctx.fillStyle = WHATIF_COLOR + "44";
-        ctx.lineWidth = Math.max(3, width / 300);
-        ctx.beginPath();
-        ctx.arc(wp[0], wp[1], radius, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0,0.6)";
+        ctx.lineWidth = 1.5 * k;
         ctx.stroke();
       }
       raf = requestAnimationFrame(draw);
@@ -108,15 +130,15 @@ export function GhostPlayer({ src, width, height, fps, real, secondReal, objectS
       <div className="legend">
         {ghosts.map((g, i) => (
           <span key={g.model_id} className="key">
-            <span className="swatch" style={{ boxShadow: `inset 0 0 0 3px ${GHOST_COLORS[i % GHOST_COLORS.length]}`, background: "var(--stage)" }} />
+            <span className="swatch ring" style={{ borderColor: GHOST_COLORS[i % GHOST_COLORS.length], borderStyle: i > 0 ? "dashed" : "solid" }} />
             {i === 0 ? "Model ghost" : "Alternative"}: {g.model_id}
           </span>
         ))}
         {mujoco?.length ? (
-          <span className="key"><span className="swatch" style={{ background: MUJOCO_COLOR }} />MuJoCo replay of the export</span>
+          <span className="key"><span className="swatch dot" style={{ background: MUJOCO_COLOR }} />MuJoCo replay of the export</span>
         ) : null}
         {whatIf && (
-          <span className="key"><span className="swatch" style={{ background: WHATIF_COLOR }} />What if: {whatIf.label}</span>
+          <span className="key"><span className="swatch ring" style={{ borderColor: WHATIF_COLOR }} />What if: {whatIf.label}</span>
         )}
         <label>
           <input type="checkbox" checked={showReal} onChange={(e) => setShowReal(e.target.checked)} /> Measured trail
