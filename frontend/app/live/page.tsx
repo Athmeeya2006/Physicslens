@@ -44,6 +44,7 @@ export default function LivePage() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [lengthCm, setLengthCm] = useState("");
   const [live, setLive] = useState(false);
+  const [regime, setRegime] = useState<string | null>(null);
 
   useEffect(() => () => stop(), []);
 
@@ -66,6 +67,12 @@ export default function LivePage() {
     if (msg.type === "fit") {
       setFit(msg as FitMsg);
       if (msg.ghost) ghost.current = new Map((msg.ghost as Point[]).map(([f, x, y]) => [f, [x, y]]));
+    }
+    if (msg.type === "regime_change") {
+      // Old-regime predictions no longer apply; the next fit uses only the new motion.
+      ghost.current.clear();
+      setFit(null);
+      setRegime(msg.message);
     }
     if (msg.type === "selected") setStatus("Locked on. Keep the camera still while it moves.");
     if (msg.type === "notice") setNotices((n) => [{ level: msg.level, message: msg.message }, ...n].slice(0, 4));
@@ -208,6 +215,7 @@ export default function LivePage() {
           )}
           {live && <button onClick={stop}>Stop</button>}
           {scene && <p className="muted small">Object: {scene}</p>}
+          {regime && <div className="regime-banner">{regime}</div>}
           {fit && (
             <>
               <h3 className={`status ${fit.status}`}>

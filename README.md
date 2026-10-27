@@ -145,7 +145,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Ghost overlay on the real video (web UI)
 - [x] Live camera mode with converging equations (instant on-server tracking, refined by SAM 3.1 in parallel chunks; tap the object to lock on)
 - [x] Experiment requests for ambiguous data, with the agent's full decision trail on screen
-- [ ] Regime-change detection
+- [x] Regime-change detection (live and recorded: refits on the new motion, reports each regime separately)
 - [ ] Voice what-ifs with Muse Voice Transcribe
 - [ ] Exports: JSON, Python simulation, MuJoCo MJCF, shareable MP4
 - [ ] Machine-health drift comparison

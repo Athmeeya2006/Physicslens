@@ -22,7 +22,7 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "scene" | "tracking" | "hypotheses" | "verification" | "agent";
+  step: "scene" | "tracking" | "hypotheses" | "verification" | "regime" | "agent";
   provider: string | null;
   model: string;
   text: string;
@@ -50,6 +50,7 @@ export interface AnalysisResult {
   parameters?: Parameter[];
   llm_calls: { step: string; provider: string; model: string; cached: boolean }[];
   trail: TrailStep[];
+  regime_change?: { t_estimate: number; t_safe: number; error_ratio: number };
 }
 
 export interface RunView {

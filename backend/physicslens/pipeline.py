@@ -28,6 +28,7 @@ from .physics.fit import FitResult, fit_model
 from .physics.models import MODELS, models_for
 from .physics.sindy import discover
 from .physics.uncertainty import bootstrap
+from .physics.regime import RegimeChange, detect_change
 from .physics.verify import Verdict, assess, judge_candidates
 from .sigproc.cleanup import detect_impacts, fill_short_gaps, split_at
 from .sigproc.summary import summarize
@@ -107,6 +108,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     verdict: Verdict | None = None
     coords: Coordinates | None = None
     turn = None
+    change: RegimeChange | None = None
+    regimes: list[dict[str, Any]] = []
     for _ in range(max_turns):
         tried.append(family)
         progress(f"Fitting and simulating {len(candidate_ids)} {family} models")
@@ -115,8 +118,16 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         trail.append({"step": "verification", "provider": None, "model": "simulate-and-compare", "text": verdict.reason,
                       "status": verdict.status,
                       "items": [{"model_id": m, "title": MODELS[m].title, "status": st, "why": why} for m, (st, why) in judged.items()]})
+        progress("Checking whether the dynamics change during the clip")
+        change, regimes = find_regimes(traj, family, candidate_ids, origin_px, calibration.px_per_m)
+        if change is not None:
+            trail.append(regime_trail_step(change, regimes))
         progress("Agent reviewing the verdict")
-        turn, call = agent_turn(client, agent_context(verdict, family, summary, scene, tried), run_id, options.audience)
+        context = agent_context(verdict, family, summary, scene, tried)
+        if change is not None:
+            context["regime_change"] = {"at_s": round(change.t_estimate, 2), "regimes": [
+                {k: r[k] for k in ("start_s", "end_s", "status", "title", "params")} for r in regimes]}
+        turn, call = agent_turn(client, context, run_id, options.audience)
         record("agent", call, turn.message, action=turn.action, reasoning_summary=turn.reasoning_summary)
         if verdict.status != "no_fit" or turn.action != "try_family" or not turn.next_family or turn.next_family in tried:
             break
@@ -152,6 +163,13 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             result["sindy"] = None
         result["geometry"] = coords.ctx
         result["ghosts"] = [ghost(coords, f, traj, origin_px, calibration.px_per_m) for f in verdict.contenders]
+    if change is not None:
+        result["regime_change"] = {"t_estimate": change.t_estimate, "t_safe": change.t, "error_ratio": change.error_ratio}
+        result["regimes"] = [{k: v for k, v in r.items() if k != "ghost"} for r in regimes]
+        points = [p for r in regimes for p in r["ghost"]]
+        if points:
+            # One ghost made of each regime's own fit: it should hug the object on both sides of the change.
+            result.setdefault("ghosts", []).insert(0, {"model_id": "fit per regime", "points": points})
     if verdict.status == "accepted" and verdict.winner and coords is not None:
         progress("Estimating uncertainty")
         spec = MODELS[verdict.winner.model_id]
@@ -164,6 +182,52 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         ] + derived_parameters(coords)
     progress("Done")
     return result
+
+
+def find_regimes(traj: Trajectory, family: str, candidate_ids: list[str], origin_px: np.ndarray,
+                 ppm: float) -> tuple[RegimeChange | None, list[dict[str, Any]]]:
+    """Detect a change in dynamics and fit each side separately (e.g. a string shortened mid-clip)."""
+    # The richest candidate, so ordinary damping or drag isn't mistaken for a change.
+    detector = max(candidate_ids, key=lambda m: len(MODELS[m].params))
+    change = detect_change(traj, family, detector)
+    if change is None:
+        return None, []
+    # A few samples from the wrong side would bend a circle fit badly, so each side keeps only certain data.
+    regimes = []
+    for part in (traj.slice(0, change.pre_end), traj.slice(change.index, len(traj))):
+        if len(part) < 2 * traj.fps:
+            continue
+        coords, v = fit_and_verify(part, family, candidate_ids)
+        lead = v.winner or (v.contenders[0] if v.contenders else None)
+        if coords is None or lead is None:
+            regimes.append({"start_s": float(part.t[0]), "end_s": float(part.t[-1]), "status": v.status,
+                            "reason": v.reason, "model_id": None, "title": None, "params": {}, "geometry": {}, "ghost": []})
+            continue
+        regimes.append({
+            "start_s": round(float(part.t[0]), 2), "end_s": round(float(part.t[-1]), 2), "status": v.status,
+            "reason": v.reason, "model_id": lead.model_id, "title": MODELS[lead.model_id].title,
+            "params": {k: round(x, 4) for k, x in lead.params.items()},
+            "geometry": {k: round(x, 4) for k, x in coords.ctx.items() if k in ("length_m", "length_std")},
+            "ghost": ghost(coords, lead, part, origin_px, ppm)["points"],
+        })
+    return change, regimes
+
+
+def regime_trail_step(change: RegimeChange, regimes: list[dict[str, Any]]) -> dict[str, Any]:
+    def describe(r: dict[str, Any]) -> str:
+        bits = [f"{k} = {v:.3g}" for k, v in r["params"].items()]
+        if "length_m" in r["geometry"]:
+            bits.append(f"L = {r['geometry']['length_m']:.3g} m")
+        return f"{r['start_s']:.1f} to {r['end_s']:.1f} s: " + (", ".join(bits) if bits else r["reason"])
+
+    return {
+        "step": "regime", "provider": None, "model": "simulate-and-compare",
+        "text": (f"The dynamics changed at about t = {change.t_estimate:.1f} s: the model fitted before then stops "
+                 f"predicting the motion (error {change.error_ratio:.0f}x the normal level). Each part was fitted separately."),
+        "items": [{"model_id": r["model_id"] or f"regime{i}", "title": r["title"] or f"Regime {i + 1}",
+                   "status": {"accepted": "accepted", "ambiguous": "tied"}.get(r["status"], "rejected"), "why": describe(r)}
+                  for i, r in enumerate(regimes)],
+    }
 
 
 def track_objects(client: CostGuardClient, clip: Path, info: media.VideoInfo, scene: Scene, run_id: str,

@@ -12,6 +12,7 @@ import base64
 import logging
 import subprocess
 import threading
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -22,6 +23,7 @@ import cv2
 import meta_sam_parser as msp
 import numpy as np
 
+from .agent.llm import LLMError
 from .agent.reasoning import propose_hypotheses, understand_scene
 from .agent.schemas import Scene
 from .costguard import CostGuardClient, CostGuardError, ProviderCallFailed
@@ -37,6 +39,7 @@ from .perception.sam_track import ObjectTrack, tracks_from_text
 from .physics.coords import fit_circle, to_coordinates
 from .physics.fit import FitResult, fit_model, simulate
 from .physics.models import MODELS, models_for
+from .physics.regime import detect_change
 from .physics.verify import assess
 from .pipeline import MOVING_ID, REFERENCE_ID, SAM_METADATA
 from .sigproc.cleanup import fill_short_gaps
@@ -55,6 +58,7 @@ LOCAL_BATCH = 5  # local points are sent in small batches
 BUFFER_S = 40.0  # frames kept for chunk encoding and tracker re-anchoring
 DRIFT_FRACTION = 0.5  # re-anchor when local and SAM disagree by more than this share of the object size
 SAM_WORKERS = 4
+LLM_MIN_INTERVAL_S = 5.0  # live mode never calls the language model more often than this
 
 Send = Callable[[dict[str, Any]], None]
 SamFn = Callable[[Path, str, list[int]], str]  # (chunk mp4, prompt, global frame indices) -> SAM output text
@@ -102,6 +106,8 @@ class LiveSession:
         self.warm: dict[str, dict[str, float]] = {}
         self.history: list[dict[str, float]] = []
         self.paused_reason: str | None = None
+        self.regime_start = 0  # frames before this belong to an earlier regime and are not fitted
+        self._last_llm = 0.0
         self._scene_started = False
         self.selected_by_tap = False
         self._since_refit = 0
@@ -394,7 +400,7 @@ class LiveSession:
         frames, centers = self._merged()
         if len(frames) < MIN_FIT_S * fps:
             return None
-        recent = frames >= frames[-1] - WINDOW_S * fps
+        recent = (frames >= frames[-1] - WINDOW_S * fps) & (frames >= self.regime_start)
         seg_frames, seg_centers = max(fill_short_gaps(frames[recent], centers[recent], max_gap=3), key=lambda s: len(s[0]))
         if len(seg_frames) < MIN_FIT_S * fps:
             return None
@@ -419,6 +425,10 @@ class LiveSession:
             if f.success:
                 self.warm[f.model_id] = f.params
         verdict = assess(coords, fits)
+        change = detect_change(traj, self.family, max(self.candidates, key=lambda m: len(MODELS[m].params)))  # type: ignore[arg-type]
+        if change is not None:
+            self._new_regime(int(seg_frames[change.index]), change.t_estimate + float(seg_frames[0]) / fps, change.error_ratio)
+            return None
         lead: FitResult | None = verdict.winner or (verdict.contenders[0] if verdict.contenders else None)
         with self.lock:
             sam_share = sum(1 for f in seg_frames if int(f) in self.sam) / len(seg_frames)
@@ -438,6 +448,17 @@ class LiveSession:
         self.send(msg)
         return msg
 
+    def _new_regime(self, start_frame: int, at_s: float, ratio: float) -> None:
+        """The fitted model stopped predicting the motion: fit only what comes after, from scratch."""
+        with self.lock:
+            self.regime_start = start_frame
+            self.warm.clear()
+            self.history.clear()
+        if time.monotonic() - self._last_llm >= LLM_MIN_INTERVAL_S:
+            self.family = None  # one fresh hypotheses call once the new regime has enough data
+        self.send({"type": "regime_change", "frame": start_frame, "at_s": round(at_s, 2), "error_ratio": round(ratio, 1),
+                   "message": f"Dynamics changed at about {at_s:.1f} s (prediction error {ratio:.0f}x normal). Refitting on the new motion."})
+
     def _scale(self, centers: np.ndarray) -> float | None:
         if self.calibration is not None:
             return self.calibration.px_per_m
@@ -453,6 +474,7 @@ class LiveSession:
         """One LLM call per session; afterwards refits are local math only."""
         assert self.scene is not None
         ids: list[str] = []
+        self._last_llm = time.monotonic()
         try:
             hyp, call = propose_hypotheses(self.client, summarize(traj), self.scene, self.run_id, self.cfg.audience,
                                            run_cap_usd=self.cfg.run_cap_usd)
@@ -461,7 +483,8 @@ class LiveSession:
             self.send({"type": "hypotheses", "family": hyp.family, "model": call.model, "provider": call.provider,
                        "items": [{"model_id": h.model_id, "title": MODELS[h.model_id].title, "why": h.rationale}
                                  for h in hyp.candidates]})
-        except CostGuardError as e:
+        except (CostGuardError, LLMError) as e:
+            # No usable hypotheses (budget, or invalid output twice): test the whole library of the scene's family.
             self.family = self.scene.motion_family if self.scene.motion_family != "other" else "pendulum"
             self.send({"type": "notice", "level": "warning", "message": f"Hypotheses unavailable ({e}); testing every {self.family} model."})
         simplest = min(models_for(self.family), key=lambda m: len(m.params)).id
