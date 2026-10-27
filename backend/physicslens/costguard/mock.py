@@ -144,7 +144,7 @@ class _MockVoiceSocket:
         if self.text is None:
             raise StopAsyncIteration
         text, self.text = self.text, None
-        return json.dumps({"type": "speechComplete", "turnId": "mock-1", "text": text})
+        return json.dumps({"type": "speechComplete", "turnId": 0, "transcript": text})  # real event shape
 
 
 MOCK_VOICE_TEXT = "what if the string were twice as long"

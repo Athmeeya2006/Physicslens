@@ -3,6 +3,7 @@
 import asyncio
 import json
 import math
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -61,11 +62,13 @@ def test_rejects_unknown_or_unphysical_changes(fit_state, change):
         simulate_whatif(fit_state, [change], 2)
 
 
-def test_voice_event_parsing():
-    assert final_turn({"type": "speechComplete", "turnId": "t1", "text": " what if "}) == ("t1", "what if")
-    assert final_turn({"type": "partial", "text": "what"}) is None
-    assert partial_text({"type": "partial", "text": "what"}) == "what"
-    assert partial_text({"type": "speechComplete", "turnId": "t1", "text": "x"}) is None
+def test_voice_event_parsing_on_a_real_stream():
+    """Events recorded from a real Muse Voice Transcribe session (the word "pendulum")."""
+    events = [e["event"] for e in json.loads((Path(__file__).parent / "fixtures" / "voice_events.json").read_text())]
+    finals = [final_turn(e) for e in events if final_turn(e)]
+    partials = [partial_text(e) for e in events if partial_text(e)]
+    assert finals == [("0", "Pendulum")]
+    assert partials == ["Pendulum"]  # the closing empty final:true event is not a partial
 
 
 def pcm_chunks(seconds: float, chunk_s: float = 0.1):
