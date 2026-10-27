@@ -180,6 +180,14 @@ def make_share_video(run_id: str) -> dict[str, str]:
     return {"url": f"/api/runs/{run_id}/share.mp4"}
 
 
+@app.get("/api/runs/{run_id}/poster.jpg")
+def get_poster(run_id: str) -> FileResponse:
+    path = _run_file(run_id, "poster.jpg")
+    if not path.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(path, media_type="image/jpeg")
+
+
 @app.get("/api/runs/{run_id}/share.mp4")
 def get_share_video(run_id: str) -> FileResponse:
     path = _run_file(run_id, "share.mp4")

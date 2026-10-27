@@ -63,6 +63,8 @@ def test_pendulum_clip_end_to_end(harness, tmp_path):
         expected.insert(4, "design")
         assert result["experiment_design"]["recommended"]["label"]
     assert [t["step"] for t in trail] == expected
+    fc = result["forecast"]  # the verification, as plottable data
+    assert len(fc["t"]) == len(fc["measured"]) == len(fc["forecast"]) and fc["t"][0] < fc["heldout_start"] < fc["t"][-1]
     assert all(t["model"] for t in trail)
     verification = trail[3]
     assert {i["model_id"] for i in verification["items"]} == {f["model_id"] for f in result["ranking"]}

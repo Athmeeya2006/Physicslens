@@ -253,6 +253,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             # One ghost made of each regime's own fit: it should hug the object on both sides of the change.
             result.setdefault("ghosts", []).insert(0, {"model_id": "fit per regime", "points": points})
     lead = verdict.winner or (verdict.contenders[0] if verdict.contenders else None)
+    if lead is not None and coords is not None and lead.sim_train.size:
+        result["forecast"] = forecast_series(coords, lead)
     if lead is not None and coords is not None:
         # Everything a what-if needs to re-simulate from the measured starting state and draw it on the clip.
         result["fit_state"] = {
@@ -382,6 +384,28 @@ def rotation_summary(c: Coordinates) -> dict[str, Any]:
         "angular_speed_rad_s_at_0_25_50_75_100_percent": [round(float(w[i]), 3) for i in q],
         "elongation": round(c.ctx["elongation"], 2),
         "note": "Constant deceleration suggests dry friction; deceleration proportional to speed suggests viscous; to speed squared, air drag.",
+    }
+
+
+FORECAST_POINTS = 400
+
+
+def forecast_series(c: Coordinates, fit: FitResult) -> dict[str, Any]:
+    """Measured motion against the model fitted on the first part only: the verification, as data to plot."""
+    spec = MODELS[fit.model_id]
+    # One plotted coordinate: the angle for swings and spins, the main axis for springs, height for projectiles.
+    k = 1 if c.family == "projectile" else 0
+    label = {"pendulum": ("Swing angle", "rad"), "oscillator": ("Displacement", "m"), "projectile": ("Height", "m"),
+             "rotation": ("Spin angle", "rad")}.get(c.family, (c.names[k], ""))
+    step = max(1, len(c.t) // FORECAST_POINTS)
+    idx = np.arange(0, len(c.t), step)
+    return {
+        "model_id": fit.model_id, "title": spec.title, "label": label[0], "unit": label[1],
+        "t": [round(float(v), 4) for v in c.t[idx]],
+        "measured": [round(float(v), 5) for v in c.q[idx, k]],
+        "forecast": [round(float(v), 5) for v in fit.sim_train[idx, k]],
+        "heldout_start": round(float(c.t[min(fit.n_train, len(c.t) - 1)]), 4),
+        "heldout_nrmse": fit.heldout_nrmse,
     }
 
 

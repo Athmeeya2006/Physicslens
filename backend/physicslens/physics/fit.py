@@ -35,6 +35,9 @@ class FitResult:
     success: bool
     message: str = ""
     sim: np.ndarray = field(default_factory=lambda: np.empty((0, 0)), repr=False)
+    # Fitted on the first TRAIN_FRACTION only and run over the whole clip: the honest forecast of the rest.
+    sim_train: np.ndarray = field(default_factory=lambda: np.empty((0, 0)), repr=False)
+    n_train: int = 0
 
 
 def simulate(spec: ModelSpec, params: dict[str, float], y0: np.ndarray, t: np.ndarray, ctx: dict[str, float]) -> np.ndarray | None:
@@ -139,4 +142,5 @@ def fit_model(spec: ModelSpec, c: Coordinates, warm: dict[str, float] | None = N
         bic=float(n * math.log(max(rss, 1e-300) / n) + len(theta) * math.log(n)),
         rmse=float(np.sqrt(rss / n)), heldout_rmse=heldout_rmse,
         heldout_nrmse=heldout_rmse / float(np.std(c.q) + 1e-12), noise_sigma=noise, success=True, sim=sim,
+        sim_train=sim_train, n_train=n_train,
     )
