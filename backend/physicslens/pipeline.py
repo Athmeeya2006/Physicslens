@@ -26,6 +26,7 @@ from .perception.calibration import (
 from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
 from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
+from .physics.design import design_experiment
 from .physics.double import HORIZON_S as DOUBLE_HORIZON_S
 from .physics.double import DoublePendulumError, fit_double, to_double_coords
 from .physics.double import simulate as double_simulate
@@ -163,12 +164,20 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             bounces = analyze_bounces(full, full_origin, calibration.px_per_m)
             if bounces is not None:
                 trail.append(bounce_trail_step(bounces))
+        design = None
+        if verdict.status == "ambiguous" and coords is not None and len(verdict.contenders) >= 2:
+            progress("Designing the experiment that would separate the tied models")
+            design = design_experiment(coords, list(verdict.contenders))
+            if design is not None:
+                trail.append(design_trail_step(design))
         progress("Checking whether the dynamics change during the clip")
         change, regimes = (None, []) if family == "rotation" else find_regimes(traj, family, candidate_ids, origin_px, calibration.px_per_m)
         if change is not None:
             trail.append(regime_trail_step(change, regimes))
         progress("Agent reviewing the verdict")
         context = agent_context(verdict, family, summary, scene, tried)
+        if design is not None:
+            context["experiment_design"] = {k: design[k] for k in ("recommended", "decisive", "noise_mm", "models")}
         if bounces is not None:
             context["bounces"] = {k: bounces[k] for k in ("g", "g_std", "e_mean", "e_std", "count", "accepted", "forecast_nrmse")}
         if change is not None:
@@ -211,6 +220,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             result["sindy"] = None
         result["geometry"] = coords.ctx
         result["ghosts"] = [ghost(coords, f, traj, origin_px, calibration.px_per_m) for f in verdict.contenders]
+    if design is not None:
+        result["experiment_design"] = design
     if bounces is not None:
         result["bounces"] = {k: v for k, v in bounces.items() if k != "ghost"}
         result.setdefault("ghosts", []).insert(0, {"model_id": "bounce model", "points": bounces["ghost"]})
@@ -347,6 +358,23 @@ def rotation_summary(c: Coordinates) -> dict[str, Any]:
         "angular_speed_rad_s_at_0_25_50_75_100_percent": [round(float(w[i]), 3) for i in q],
         "elongation": round(c.ctx["elongation"], 2),
         "note": "Constant deceleration suggests dry friction; deceleration proportional to speed suggests viscous; to speed squared, air drag.",
+    }
+
+
+def design_trail_step(d: dict[str, Any]) -> dict[str, Any]:
+    rec = d["recommended"]
+    verdict = (f"The cheapest decisive one: {rec['label']}. The tied equations would then differ by "
+               f"{rec['separation_mm']:.0f} mm, {rec['separation_vs_noise']:.1f} times this clip's tracking noise "
+               f"({d['noise_mm']:.1f} mm)." if d["decisive"] else
+               f"None of them separates the equations clearly; the best is {rec['label']} "
+               f"({rec['separation_vs_noise']:.1f} times the tracking noise).")
+    return {
+        "step": "design", "provider": None, "model": "simulate-and-compare", "status": "accepted" if d["decisive"] else "tied",
+        "text": f"Simulated {d['options_tested']} possible experiments with each tied equation. {verdict}",
+        "items": [{"model_id": f"option{i}", "title": o["label"][0].upper() + o["label"][1:],
+                   "status": "accepted" if o["separation_vs_noise"] >= d["target_ratio"] else "tied",
+                   "why": f"predictions differ by {o['separation_mm']:.0f} mm ({o['separation_vs_noise']:.1f} times the noise)"}
+                  for i, o in enumerate(d["top"])],
     }
 
 

@@ -113,3 +113,19 @@ def test_trail_explains_each_rejection(damped_pendulum):
     assert judged["pendulum_linear_damping"][0] == "accepted"
     assert judged["pendulum"][0] == "rejected" and "forecast error" in judged["pendulum"][1]
     assert sum(st == "accepted" for st, _ in judged.values()) == 1
+
+
+def test_tie_leads_to_a_designed_experiment():
+    from physicslens.physics.design import design_experiment
+    c, v = run(track(pendulum_xy(0.12, 0.02, 6.5, length=0.5)), "pendulum")
+    assert v.status == "ambiguous" and len(v.contenders) >= 2
+    d = design_experiment(c, list(v.contenders))
+    assert d["decisive"] and d["recommended"]["separation_vs_noise"] >= 5
+    # A larger swing is what separates damping laws; the current tiny swing alone would not.
+    assert "degrees" in d["recommended"]["label"] and "7 degrees" not in d["recommended"]["label"]
+
+
+def test_no_design_without_a_tie(damped_pendulum):
+    from physicslens.physics.design import design_experiment
+    c, v = damped_pendulum
+    assert design_experiment(c, list(v.contenders)) is None  # accepted: a single contender

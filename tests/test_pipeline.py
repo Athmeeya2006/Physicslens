@@ -58,7 +58,11 @@ def test_pendulum_clip_end_to_end(harness, tmp_path):
     assert len(result["mujoco"]["points"]) == 60
     assert result["mujoco"]["rms_vs_fit_m"] is not None
     trail = result["trail"]
-    assert [t["step"] for t in trail] == ["scene", "tracking", "hypotheses", "verification", "agent"]
+    expected = ["scene", "tracking", "hypotheses", "verification", "agent"]
+    if result["status"] == "ambiguous":  # a tie always comes with a simulated experiment design
+        expected.insert(4, "design")
+        assert result["experiment_design"]["recommended"]["label"]
+    assert [t["step"] for t in trail] == expected
     assert all(t["model"] for t in trail)
     verification = trail[3]
     assert {i["model_id"] for i in verification["items"]} == {f["model_id"] for f in result["ranking"]}

@@ -22,7 +22,7 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "scene" | "tracking" | "hypotheses" | "verification" | "collision" | "regime" | "chaos" | "agent";
+  step: "scene" | "tracking" | "hypotheses" | "verification" | "design" | "collision" | "regime" | "chaos" | "agent";
   provider: string | null;
   model: string;
   text: string;
