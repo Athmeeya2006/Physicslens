@@ -150,11 +150,12 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Shareable MP4 with the measured trail, the simulated ghost and the typeset equation burned in
 - [x] Exports: MuJoCo MJCF (replayed in MuJoCo and checked against the fitted motion), standalone Python simulation, parameters as JSON
 - [x] Machine-health drift comparison: natural frequency and damping of two recordings, with uncertainty and conservative flagging
+- [x] Bouncing objects: hybrid model (free flight plus restitution), per-impact coefficient of restitution with uncertainty, later bounces predicted from earlier ones
 
 ## Limitations
 
 - 2D motion in the camera plane; best results with the camera side-on and held still.
-- Single rigid objects first; collisions, rotation and coupled systems are stretch goals.
+- Single rigid objects. Bouncing is supported (floor impacts); rotation and coupled systems are stretch goals.
 - Deformable and fluid motion (cloth, water, smoke) is detected as "no clean equation," not modeled.
 - Accuracy depends on frame rate, lighting and a visible reference object for scale.
 

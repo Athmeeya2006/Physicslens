@@ -92,6 +92,32 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         )}
       </div>
 
+      {r.bounces && (
+        <div className="card">
+          <h3>Bounces: {r.bounces.accepted ? "hybrid model verified" : "hybrid model not confirmed"}</h3>
+          <div className="equation"><Tex tex={r.bounces.latex} display /></div>
+          <p>
+            <Tex tex="g" /> = {r.bounces.g.toFixed(3)} ± {r.bounces.g_std.toFixed(3)} m/s², coefficient of restitution{" "}
+            <Tex tex="e" /> = {r.bounces.e_mean.toFixed(3)} ± {r.bounces.e_std.toFixed(3)}
+          </p>
+          <table>
+            <thead><tr><th>Impact</th><th>Time</th><th>e</th><th>Horizontal speed kept</th></tr></thead>
+            <tbody>
+              {r.bounces.impacts.map((imp, i) => (
+                <tr key={i}>
+                  <td>{i + 1}</td><td>{imp.t.toFixed(2)} s</td>
+                  <td>{imp.e.toFixed(3)} ± {imp.e_std.toFixed(3)}</td><td>{(imp.tangential * 100).toFixed(0)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="muted small">
+            One g is shared by every flight. Later bounces predicted from the first ones within {(r.bounces.forecast_nrmse * 100).toFixed(1)}%.
+            {r.bounces.settled_at ? ` After ${r.bounces.settled_at.toFixed(1)} s the hops were too small to resolve.` : ""}
+          </p>
+        </div>
+      )}
+
       {r.equation && (
         <div className="card">
           <h3>{r.equation.title}</h3>

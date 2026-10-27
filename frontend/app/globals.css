@@ -81,7 +81,7 @@ details summary { cursor: pointer; }
 .trail { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .trail-step { border-left: 3px solid var(--line); padding: 2px 0 2px 12px; }
 .trail-step p { margin: 4px 0; font-size: 0.92rem; }
-.trail-step.verification, .trail-step.regime { border-color: var(--accent); }
+.trail-step.verification, .trail-step.regime, .trail-step.collision { border-color: var(--accent); }
 .regime-banner { background: rgba(34, 211, 238, 0.12); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
 .trail-step.highlight { border-color: var(--warn); background: rgba(251, 191, 36, 0.08); border-radius: 0 8px 8px 0; padding: 8px 8px 8px 12px; }
 .trail-step.highlight p:first-of-type { font-weight: 600; }

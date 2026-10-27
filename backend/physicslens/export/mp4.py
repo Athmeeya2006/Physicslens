@@ -96,6 +96,11 @@ def build_panel(result: dict[str, Any], frame_width: int) -> Image.Image:
             length = r.get("geometry", {}).get("length_m")
             text = f"{r['start_s']:.1f} to {r['end_s']:.1f} s: {bits}" + (f", L = {length:.3g} m" if length else "")
             rows.append(_text_row(text, int(24 * s), int(900 * s)))
+    bounces = result.get("bounces")
+    if bounces and bounces.get("accepted"):
+        rows.append(_math(bounces["latex"], int(26 * s)))
+        rows.append(_math(rf"g = {_sig(bounces['g'])} \pm {_sig(bounces['g_std'], 2)}\ \mathrm{{m/s^2}},\quad "
+                          rf"e = {_sig(bounces['e_mean'], 3)} \pm {_sig(bounces['e_std'], 1)}", int(22 * s)))
     tied = [i["title"] for t in result.get("trail") or [] if t.get("step") == "verification"
             for i in t.get("items") or [] if i.get("status") == "tied"]
     if status == "ambiguous" and tied:

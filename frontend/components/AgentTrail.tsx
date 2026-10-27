@@ -8,6 +8,7 @@ const STEP_LABEL: Record<TrailStep["step"], string> = {
   hypotheses: "Proposes equations",
   verification: "Tests them against the data",
   regime: "Notices the dynamics changed",
+  collision: "Analyzes the bounces",
   agent: "Decides what to do next",
 };
 

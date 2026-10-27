@@ -24,6 +24,7 @@ from .perception.calibration import (
     from_reference,
 )
 from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
+from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
 from .physics.fit import FitResult, fit_model
 from .physics.models import MODELS, models_for
@@ -36,6 +37,8 @@ from .sigproc.summary import summarize
 from .sigproc.trajectory import Trajectory, from_pixels
 
 log = logging.getLogger("physicslens.pipeline")
+
+BOUNCE_LATEX = r"\ddot y = -g \ \text{between impacts},\qquad v_y^{+} = -e\, v_y^{-}"
 
 MOVING_ID, REFERENCE_ID = "1", "2"
 SAM_METADATA = {"mask_encoding": "one_bit", "include_confidence": "true", "propagation_direction": "forward"}
@@ -96,7 +99,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
 
     progress("Calibrating scale")
     calibration = calibrate(scene, tracks.get(REFERENCE_ID), moving, options)
-    traj, origin_px = build_trajectory(moving, info.fps, calibration.px_per_m)
+    full, full_origin = full_track(moving, info.fps, calibration.px_per_m)
+    traj, origin_px = longest_flight(full, full_origin, calibration.px_per_m)
 
     summary = summarize(traj)
     progress("Proposing hypotheses")
@@ -111,6 +115,7 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     turn = None
     change: RegimeChange | None = None
     regimes: list[dict[str, Any]] = []
+    bounces: dict[str, Any] | None = None
     for _ in range(max_turns):
         tried.append(family)
         progress(f"Fitting and simulating {len(candidate_ids)} {family} models")
@@ -119,12 +124,19 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         trail.append({"step": "verification", "provider": None, "model": "simulate-and-compare", "text": verdict.reason,
                       "status": verdict.status,
                       "items": [{"model_id": m, "title": MODELS[m].title, "status": st, "why": why} for m, (st, why) in judged.items()]})
+        if family == "projectile" and bounces is None:
+            progress("Analyzing bounces")
+            bounces = analyze_bounces(full, full_origin, calibration.px_per_m)
+            if bounces is not None:
+                trail.append(bounce_trail_step(bounces))
         progress("Checking whether the dynamics change during the clip")
         change, regimes = find_regimes(traj, family, candidate_ids, origin_px, calibration.px_per_m)
         if change is not None:
             trail.append(regime_trail_step(change, regimes))
         progress("Agent reviewing the verdict")
         context = agent_context(verdict, family, summary, scene, tried)
+        if bounces is not None:
+            context["bounces"] = {k: bounces[k] for k in ("g", "g_std", "e_mean", "e_std", "count", "accepted", "forecast_nrmse")}
         if change is not None:
             context["regime_change"] = {"at_s": round(change.t_estimate, 2), "regimes": [
                 {k: r[k] for k in ("start_s", "end_s", "status", "title", "params")} for r in regimes]}
@@ -164,6 +176,9 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
             result["sindy"] = None
         result["geometry"] = coords.ctx
         result["ghosts"] = [ghost(coords, f, traj, origin_px, calibration.px_per_m) for f in verdict.contenders]
+    if bounces is not None:
+        result["bounces"] = {k: v for k, v in bounces.items() if k != "ghost"}
+        result.setdefault("ghosts", []).insert(0, {"model_id": "bounce model", "points": bounces["ghost"]})
     if change is not None:
         result["regime_change"] = {"t_estimate": change.t_estimate, "t_safe": change.t, "error_ratio": change.error_ratio}
         result["regimes"] = [{k: v for k, v in r.items() if k != "ghost"} for r in regimes]
@@ -198,6 +213,41 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
         ] + derived_parameters(coords)
     progress("Done")
     return result
+
+
+def analyze_bounces(full: Trajectory, origin_px: np.ndarray, ppm: float) -> dict[str, Any] | None:
+    """Hybrid bounce model on the whole track; None when there aren't two clean flights to compare."""
+    try:
+        b = fit_bounces(full)
+    except BounceError as e:
+        log.info("No bounce analysis: %s", e)
+        return None
+    pts = b.predicted_xy
+    ghost_points = [[int(f), round(float(origin_px[0] + x * ppm), 2), round(float(origin_px[1] - y * ppm), 2)]
+                    for f, (x, y) in zip(full.frames, pts, strict=True)]
+    return {
+        "count": len(b.restitution), "g": b.g, "g_std": b.g_std, "e_mean": b.e_mean, "e_std": b.e_std,
+        "impacts": [{"t": t, "e": e, "e_std": es, "tangential": tg}
+                    for t, e, es, tg in zip(b.impact_times, b.restitution, b.restitution_std, b.tangential, strict=True)],
+        "floor_y_m": b.floor_y, "settled_at": b.settled_at, "rms_m": b.rms_m, "forecast_nrmse": b.forecast_nrmse,
+        "accepted": b.accepted, "latex": BOUNCE_LATEX, "ghost": ghost_points,
+    }
+
+
+def bounce_trail_step(b: dict[str, Any]) -> dict[str, Any]:
+    settled = f" After {b['settled_at']:.1f} s the hops were too small to resolve." if b["settled_at"] else ""
+    verdict = (f"Using e from the first bounces, the model predicts the later ones within {b['forecast_nrmse']:.1%}."
+               if b["accepted"] else f"It does not predict the later bounces well ({b['forecast_nrmse']:.0%} error).")
+    return {
+        "step": "collision", "provider": None, "model": "simulate-and-compare", "status": "accepted" if b["accepted"] else "ambiguous",
+        "text": (f"Found {b['count']} bounces. Between impacts the ball is in free fall with g = {b['g']:.3f} ± {b['g_std']:.3f} m/s² "
+                 f"(one g shared by every flight); each impact keeps e = {b['e_mean']:.3f} ± {b['e_std']:.3f} of the vertical speed. "
+                 f"{verdict}{settled}"),
+        "items": [{"model_id": f"impact{i}", "title": f"Bounce {i + 1} at {imp['t']:.2f} s",
+                   "status": "accepted" if b["accepted"] else "tied",
+                   "why": f"e = {imp['e']:.3f} ± {imp['e_std']:.3f}, horizontal speed kept {imp['tangential']:.0%}"}
+                  for i, imp in enumerate(b["impacts"])],
+    }
 
 
 def find_regimes(traj: Trajectory, family: str, candidate_ids: list[str], origin_px: np.ndarray,
@@ -282,15 +332,28 @@ def calibrate(scene: Scene, reference: ObjectTrack | None, moving: ObjectTrack, 
 
 
 def build_trajectory(moving: ObjectTrack, fps: float, px_per_m: float) -> tuple[Trajectory, np.ndarray]:
-    """Longest gap-free, collision-free stretch of the track (Tier 1: one segment)."""
+    """The collision-free stretch of the track with the most motion."""
+    traj, origin = full_track(moving, fps, px_per_m)
+    return longest_flight(traj, origin, px_per_m)
+
+
+def full_track(moving: ObjectTrack, fps: float, px_per_m: float) -> tuple[Trajectory, np.ndarray]:
     segments = fill_short_gaps(moving.frames, moving.centers_px, max_gap=3)
     frames, centers = max(segments, key=lambda s: len(s[0]))
-    traj = from_pixels(frames, centers, fps, px_per_m)
-    pieces = split_at(traj, detect_impacts(traj))
+    return from_pixels(frames, centers, fps, px_per_m), centers[0]
+
+
+def longest_flight(traj: Trajectory, origin: np.ndarray, px_per_m: float) -> tuple[Trajectory, np.ndarray]:
+    frames = traj.frames
+    centers = origin + np.column_stack([traj.xy[:, 0], -traj.xy[:, 1]]) * px_per_m
+    # Generic jumps plus floor bounces: a missed small bounce would merge two flights into one "free fall".
+    impacts = np.union1d(detect_impacts(traj), detect_bounces(traj))
+    pieces = split_at(traj, impacts)
     if pieces:
-        best = max(pieces, key=len)
+        # Most motion, not most samples: after the last bounce a resting ball makes a long, flat, useless piece.
+        best = max(pieces, key=lambda p: float(np.ptp(p.xy, axis=0).max()))
         start = int(np.searchsorted(frames, best.frames[0]))
-        return from_pixels(best.frames, centers[start:start + len(best)], fps, px_per_m), centers[start]
+        return from_pixels(best.frames, centers[start:start + len(best)], traj.fps, px_per_m), centers[start]
     return traj, centers[0]
 
 
