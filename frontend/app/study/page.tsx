@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { AgentTrail } from "@/components/AgentTrail";
 import { VoiceNotes } from "@/components/VoiceNotes";
 import { Tex } from "@/components/Equation";
-import type { RunView, Study } from "@/lib/api";
-import { addStudyRun, createStudy, formatUnit, getRun, getStudy, reviewStudy, studyFileUrl, useBackend } from "@/lib/api";
+import type { GalleryItem, RunView, Study } from "@/lib/api";
+import { addStudyRun, createStudy, formatUnit, getGallery, getRun, getStudy, posterUrl, reviewStudy, studyFileUrl, useBackend } from "@/lib/api";
 
 const EXAMPLES = [
   "Are the front shock absorbers on my car worn out?",
@@ -35,10 +35,12 @@ export default function StudyPage() {
   const [lengthCm, setLengthCm] = useState("");
   const [sizeCm, setSizeCm] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [published, setPublished] = useState<GalleryItem[]>([]);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("study");
     if (id) getStudy(id).then(setStudy).catch((e: Error) => setError(e.message));
+    else getGallery().then((g) => setPublished(g.filter((x) => x.kind === "study"))).catch(() => undefined);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
@@ -144,6 +146,26 @@ export default function StudyPage() {
               </button>
             </form>
           )}
+        </section>
+      )}
+
+      {!study && published.length > 0 && (
+        <section className="stack">
+          <h2>Finished studies</h2>
+          <ul className="gallery-list">
+            {published.map((it) => (
+              <li key={it.id}>
+                <a className="gallery-item" href={`/study?study=${it.id}`}>
+                  <img src={posterUrl(it.id)} alt="" loading="lazy" />
+                  <span>
+                    <span className="g-title">{it.title}</span>
+                    <span className="g-desc" style={{ display: "block" }}>{it.description}</span>
+                    <span className="g-meta"><span>{it.credit}</span></span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

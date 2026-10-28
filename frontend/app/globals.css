@@ -309,3 +309,4 @@ textarea { font: inherit; padding: 10px; border-radius: var(--radius); border: 1
 
 .how { margin: 0; padding-left: 1.2em; display: grid; gap: 10px; }
 .how li::marker { color: var(--model); font-weight: 700; }
+a.gallery-item { text-decoration: none; }
