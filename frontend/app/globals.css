@@ -200,7 +200,7 @@ td { padding: 8px 12px 8px 0; vertical-align: top; border-top: 1px solid var(--s
 .trail-step:first-child { border-top: 0; padding-top: 0; }
 .trail-icon { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--sunk); color: var(--ink-2); margin-top: 1px; }
 .trail-step.verification .trail-icon, .trail-step.design .trail-icon, .trail-step.regime .trail-icon,
-.trail-step.collision .trail-icon, .trail-step.chaos .trail-icon { background: var(--model-soft); color: var(--model); }
+.trail-step.collision .trail-icon, .trail-step.chaos .trail-icon, .trail-step.audio .trail-icon { background: var(--model-soft); color: var(--model); }
 .trail-step.highlight .trail-icon { background: var(--tie); color: #fff; }
 .trail-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; align-items: baseline; }
 .trail-head strong { font-size: 0.95rem; }

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  ClipboardList, Compass, Crosshair, Eye, Flag, FlaskConical, GitBranch, Lightbulb, MessageSquareText, Orbit, Ruler, ScanEye, Split,
+  ClipboardList, Compass, Crosshair, Eye, Flag, FlaskConical, GitBranch, Lightbulb, MessageSquareText, Mic, Orbit, Ruler, ScanEye, Split,
   type LucideIcon,
 } from "lucide-react";
 import type { TrailStep } from "@/lib/api";
@@ -19,6 +19,7 @@ const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
   regime: { label: "Notices the dynamics changed", icon: Split },
   collision: { label: "Analyzes the bounces", icon: GitBranch },
   chaos: { label: "Measures chaos", icon: Orbit },
+  audio: { label: "Listens to the soundtrack", icon: Mic },
   agent: { label: "Decides what to do next", icon: MessageSquareText },
 };
 
@@ -35,6 +36,7 @@ const DESIGN_STATUS: Record<string, string> = { accepted: "Decisive", tied: "Too
 
 function actor(step: TrailStep): { name: string; tone: "open" | "meta" | "math" } {
   if (step.model === "simulate-and-compare") return { name: "Numerical simulation, not the language model", tone: "math" };
+  if (step.model === "acoustic analysis") return { name: "Signal processing on the microphone, not the language model", tone: "math" };
   if (step.model?.startsWith("muse-glimmer")) return { name: "Muse Glimmer 30B (open weights, self-hosted)", tone: "open" };
   if (step.model === "sam-3.1") return { name: "SAM 3.1", tone: "meta" };
   // Only reachable in dev: demo and prod refuse to fall back from the open-weight model.

@@ -122,6 +122,7 @@ def create_run(
     turnstile_token: Annotated[str | None, Form()] = None,
     x_access_code: Annotated[str | None, Header()] = None,
     x_forwarded_for: Annotated[str | None, Header()] = None,
+    blade_count: Annotated[int | None, Form(ge=1, le=64)] = None,
 ) -> dict[str, object]:
     audience = audience_for(x_access_code)
     for name, value in (("pendulum length", pendulum_length_m), ("object size", object_size_m)):
@@ -154,7 +155,7 @@ def create_run(
         shutil.rmtree(run_dir)
         raise HTTPException(status_code=413, detail="That video is too large; trim it to under 30 seconds.")
     state = runs.start(dest, RunOptions(audience=audience, pendulum_length_m=pendulum_length_m, object_size_m=object_size_m,
-                                         slow_motion=slow_motion, object_hint=object_hint))
+                                         slow_motion=slow_motion, object_hint=object_hint, blade_count=blade_count))
     return runs.public_view(state)
 
 

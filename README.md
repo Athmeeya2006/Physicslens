@@ -86,6 +86,15 @@ flowchart LR
 
 **The design principle: Meta's models perceive and reason; math decides.** The language model reads the scene, proposes hypotheses, plans experiments and explains results. It never accepts an equation: only numerical verification on held-out data does, and the simplest model of each family is always tested as a control, so the agent can't hide the baseline.
 
+### Sound as a second sensor
+
+The phone's microphone is an independent instrument, analyzed with local signal processing only (no model calls):
+
+- **Impacts.** Clicks are found by high-pass filtering, an envelope and a threshold that follows the background, and each is timed where it reaches a fixed fraction of its own peak, so loud and quiet clicks are timed alike. For a ball bouncing straight up and down each flight lasts T = 2v/g, so the ratio of consecutive flight times is the coefficient of restitution: **e = T(n+1)/T(n), with no scale and no value of g needed**. Its uncertainty comes from the onset timing resolution.
+- **Tones.** The strongest steady tone, from a windowed FFT with peak interpolation, stated with an interval of one over the clip's duration.
+- **Spin-down by ear.** A fan's whine falls as it slows. The tone is followed through a spectrogram, its frequency integrated into a phase, and the same five spin-down laws the camera uses are fitted and verified on it. Each law keeps its form when the rate is multiplied by a constant, so the law is identified without knowing how many blades the fan has; given a blade count (`blade_count` on upload), the coefficients are converted to the rotor's own rates.
+- **Agreement.** When the camera and the microphone both measure a restitution (or, with a blade count, a spin rate), the two are combined by inverse variance only if they agree within 3 standard deviations; otherwise both are shown and the disagreement is flagged. Slow-motion clips and clips without a sound track get a short note instead, and a problem with the sound never affects the camera's result.
+
 ## Meta models used
 
 | Model | Where it runs | What it does in PhysicsLens |
@@ -129,6 +138,7 @@ SAM 3.1 is used as a **scientific measurement instrument**: its masks become pos
 - spin-down: all four friction laws identified, coefficients within 3%, orientation from masks to 0.004 rad
 - free-form laws: an air-drag law written as text recovers its coefficient within 5%; a 2D drag law recovers g within 3%; a wrong law loses to the controls
 - machine health: no false alarm when the same system is re-recorded; a 50% rise in damping and a 2% frequency shift are flagged
+- sound: restitution from the timing of synthetic impact clicks (under hum and noise) within 0.005 per bounce, with a clap before the drop left out; a hum's frequency within its stated interval; dry, viscous and air-drag spin-down laws identified from a falling tone, with the tone's coefficients within 3%. Not yet tested on real recordings
 
 ## Engineering highlights
 
@@ -251,6 +261,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Double pendulum: two tracked bobs, short-horizon fitting, chaos measured
 - [x] Spin-down of rotating objects: friction law identified, exported to MuJoCo with native dry friction
 - [x] Public access: free gallery of real analyses, judge access code, per-visitor limits, optional bot check
+- [x] The microphone as a second sensor: impact onsets, restitution from flight times, dominant tone, spin-down law from a falling tone, and an agreement check with the camera
 
 ## Limitations
 

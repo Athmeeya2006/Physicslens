@@ -54,6 +54,7 @@ from .physics.verify import Verdict, assess, judge_candidates
 from .sigproc.cleanup import detect_impacts, differentiate, fill_short_gaps, split_at
 from .sigproc.summary import summarize
 from .sigproc.trajectory import Trajectory, from_pixels
+from .sound import audio_trail_step, listen
 
 log = logging.getLogger("physicslens.pipeline")
 
@@ -83,6 +84,7 @@ class RunOptions:
     object_hint: str | None = None  # the user's words for what to measure, e.g. "the astronaut"
     slow_motion: float = 1.0  # capture rate / playback rate, e.g. 8 for a phone's 240 fps slow motion saved at 30 fps
     prepared: Path | None = None  # a media.save_prepared bundle: analyze exactly these bytes (see save_prepared)
+    blade_count: int | None = None  # fan blades (or other sound sources per turn): turns a blade-pass tone into a spin rate
 
 
 Progress = Callable[[str], None]
@@ -354,6 +356,11 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         result["scale_note"] = SCALE_NOTE
         for p in result.get("parameters", []):
             p["uncalibrated"] = needs_scale(p["unit"])
+    progress("Listening to the soundtrack")
+    result["audio"] = listen(video, run_dir, info.frames / info.fps, options.slow_motion, family, result, options.blade_count,
+                             rotation, traj.frames if rotation is not None else None, info.fps)
+    if (step := audio_trail_step(result["audio"])) is not None:
+        trail.append(step)
     progress("Done")
     return result
 
