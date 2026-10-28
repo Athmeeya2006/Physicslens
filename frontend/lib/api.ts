@@ -227,6 +227,11 @@ export function askWhatIf(id: string, question: string) {
   }).then((r) => json<import("@/components/WhatIf").WhatIfAnswer>(r));
 }
 
+// Computed on request from the stored result (local math and MuJoCo, no model calls); the static site ships it.
+export const getSimToReal = (id: string): Promise<import("@/components/SimToReal").SimToRealData> =>
+  fetch(STATIC_SITE && isGallery(id) ? `${staticBase(id)}/sim2real.json` : `${API_BASE}/api/runs/${id}/sim2real`)
+    .then((r) => json<import("@/components/SimToReal").SimToRealData>(r));
+
 export function makeShareVideo(id: string): Promise<string> {
   if (isGallery(id)) return Promise.resolve(`${staticBase(id)}/share.mp4`);
   return fetch(`${API_BASE}/api/runs/${id}/share`, { method: "POST" })

@@ -35,6 +35,7 @@ from .export.mjcf import bounce_mjcf, build_mjcf
 from .export.mp4 import ExportError, render_share_video
 from .export.report import report_markdown
 from .export.script import parameters_json, python_script
+from .export.sim2real import Sim2RealError, sim2real
 from .live import LiveConfig, LiveSession
 from .physics.health import (
     HealthError,
@@ -398,6 +399,33 @@ def export(run_id: str, kind: str) -> Response:
     media, ext = EXPORTS[kind]
     return Response(body, media_type=media,
                     headers={"Content-Disposition": f'attachment; filename="physicslens-{run_id}.{ext}"'})
+
+
+SIM2REAL_VERSION = 1  # bump when the computation changes, so cached copies are recomputed
+
+
+@app.get("/api/runs/{run_id}/sim2real")
+def sim_to_real(run_id: str) -> dict:
+    """Textbook physics against the identified model on the real video, plus a simulated control study.
+
+    Local math and MuJoCo only (no model calls); computed on first request and cached next to the result.
+    """
+    result = _finished_result(run_id)
+    result_file = _run_file(run_id, "result.json")
+    # Gallery entries live in the tracked repo; their cache goes to the runtime directory instead.
+    cache_dir = runs.root / run_id if result_file.parent.parent == runs.gallery_root else result_file.parent
+    cache = cache_dir / "sim2real.json"
+    if cache.is_file() and not (result_file.is_file() and result_file.stat().st_mtime > cache.stat().st_mtime):
+        cached = json.loads(cache.read_text())
+        if cached.get("version") == SIM2REAL_VERSION:
+            return cached
+    try:
+        out = {"version": SIM2REAL_VERSION, **sim2real(result)}
+    except Sim2RealError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps(out))
+    return out
 
 
 @app.post("/api/compare")
