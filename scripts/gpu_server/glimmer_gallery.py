@@ -49,8 +49,9 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 from huggingface_hub import hf_hub_download
 
 REPO = "meta-models/Muse-Glimmer-30B-GGUF"
-model = hf_hub_download(REPO, "Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf", local_dir="/tmp/glimmer")
-mmproj = hf_hub_download(REPO, "mmproj-Muse-Glimmer-30B-Q4_K_M.gguf", local_dir="/tmp/glimmer")
+REVISION = "b44f1072cf75e918a1b82a3a17b45c4389b076e7"  # pinned: the exact files listed in OPEN_WEIGHTS.md
+model = hf_hub_download(REPO, "Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf", local_dir="/tmp/glimmer", revision=REVISION)
+mmproj = hf_hub_download(REPO, "mmproj-Muse-Glimmer-30B-Q4_K_M.gguf", local_dir="/tmp/glimmer", revision=REVISION)
 key = secrets.token_hex(16)
 os.makedirs("/kaggle/working/out", exist_ok=True)
 log = open("/kaggle/working/out/llama-server.log", "w")

@@ -84,7 +84,8 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 from huggingface_hub import hf_hub_download
 
 REPO = "meta-models/Muse-Glimmer-30B-GGUF"
-weights = {f: hf_hub_download(REPO, f, local_dir="/tmp/glimmer") for f in (
+REVISION = "b44f1072cf75e918a1b82a3a17b45c4389b076e7"  # pinned: the exact files listed in OPEN_WEIGHTS.md
+weights = {f: hf_hub_download(REPO, f, local_dir="/tmp/glimmer", revision=REVISION) for f in (
     "Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf", "mmproj-Muse-Glimmer-30B-Q4_K_M.gguf", "dflash-Muse-Glimmer-30B-Q4_K_M.gguf")}
 glimmer_key = secrets.token_hex(16)
 llama = subprocess.Popen(
