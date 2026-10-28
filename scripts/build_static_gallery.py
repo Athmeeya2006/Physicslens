@@ -32,8 +32,17 @@ def main() -> None:
         for name in ("result.json", "clip.mp4", "share.mp4", "poster.jpg"):
             if (src / name).is_file():
                 shutil.copy(src / name, dst / name)
-        result = json.loads((src / "result.json").read_text())
         meta = json.loads(meta_file.read_text())
+        if meta.get("kind") == "study":
+            # A study: its plan, recordings and decisions, the report and the combined model, all static.
+            shutil.copy(src / "study.json", dst / "study.json")
+            shutil.copy(src / "report.md", dst / f"physicslens-{gid}.md")
+            if (src / "model.xml").is_file():
+                shutil.copy(src / "model.xml", dst / f"physicslens-{gid}.xml")
+            study = json.loads((src / "study.json").read_text())
+            index.append({"id": gid, **meta, "status": study.get("status")})
+            continue
+        result = json.loads((src / "result.json").read_text())
         (dst / f"physicslens-{gid}-report.md").write_text(report_markdown(result, meta.get("title")))
         if "fit_state" in result:
             (dst / f"physicslens-{gid}.json").write_text(parameters_json(result))
@@ -45,6 +54,8 @@ def main() -> None:
                 xml = xml.replace("<worldbody>", "<!-- " + " ".join(notes).replace("--", "-") + " -->\n  <worldbody>", 1)
             (dst / f"physicslens-{gid}.xml").write_text(xml)
         eq = result.get("equation") or {}
+        if meta.get("hidden"):
+            continue  # a study's recording: reachable from its study, not listed on its own
         index.append({"id": gid, **meta, "status": result.get("status"), "family": result.get("family"),
                       "equation_title": eq.get("title"), "object": (result.get("scene") or {}).get("moving_object")})
     index.sort(key=lambda i: i.get("order", 99))

@@ -10,7 +10,23 @@ from .cleanup import detect_impacts, differentiate
 from .trajectory import Trajectory
 
 
-def summarize(traj: Trajectory) -> dict[str, Any]:
+def summarize(traj: Trajectory, uncalibrated: bool = False) -> dict[str, Any]:
+    """Numbers the reasoning model sees instead of the video. Without a scale, lengths are labelled as arbitrary units
+    so the model is never told it is looking at meters."""
+    out = _summary(traj)
+    if not uncalibrated:
+        return out
+    return {"length_unit": "arbitrary units: no scale reference in the clip",
+            **{k[:-2] + "_units" if k.endswith("_m") else k: _relabel(v) for k, v in out.items()}}
+
+
+def _relabel(v: Any) -> Any:
+    if isinstance(v, dict):
+        return {k[:-2] + "_units" if k.endswith("_m") else k: _relabel(x) for k, x in v.items()}
+    return v
+
+
+def _summary(traj: Trajectory) -> dict[str, Any]:
     kin = differentiate(traj.xy, traj.fps)
     xy = kin.pos
     centered = xy - xy.mean(axis=0)

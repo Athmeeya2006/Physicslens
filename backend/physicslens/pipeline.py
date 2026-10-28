@@ -169,7 +169,7 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         progress("Measuring the spin from the mask orientation")
         rotation, traj, origin_px = rotation_track(moving, fps, calibration.px_per_m)
 
-    summary = rotation_summary(rotation) if rotation is not None else summarize(traj)
+    summary = rotation_summary(rotation) if rotation is not None else summarize(traj, calibration.source == "none")
     progress("Proposing hypotheses")
     hyp, call = propose_hypotheses(client, summary, scene, run_id, options.audience)
     record("hypotheses", call, f"Proposes {len(hyp.candidates)} {hyp.family} models to test.", items=_hypothesis_items(hyp))

@@ -22,13 +22,15 @@ export function Gallery({ items, onOpen, activeId }: { items: GalleryItem[]; onO
           const status = it.status ? STATUS[it.status] : undefined;
           return (
             <li key={it.id}>
-              <button className="gallery-item" onClick={() => onOpen(it.id)} aria-current={activeId === it.id ? "true" : undefined}>
+              <button className="gallery-item" onClick={() => (it.kind === "study" ? window.location.assign(`/study?study=${it.id}`) : onOpen(it.id))}
+                      aria-current={activeId === it.id ? "true" : undefined}>
                 <img src={posterUrl(it.id)} alt={`Frame from the ${it.object ?? "analyzed"} clip with the model ghost overlaid`} loading="lazy" />
                 <span>
                   <span className="g-title">{it.title}</span>
                   <span className="g-desc" style={{ display: "block" }}>{it.description}</span>
                   <span className="g-meta">
-                    {status && <span className={`verdict ${status.cls}`}>{status.text}</span>}
+                    {it.kind === "study" ? <span className="verdict accepted">{it.status === "finished" ? "Study: complete" : "Study"}</span>
+                      : status && <span className={`verdict ${status.cls}`}>{status.text}</span>}
                     <span>{it.credit}</span>
                   </span>
                 </span>

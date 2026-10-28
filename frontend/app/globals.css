@@ -306,3 +306,6 @@ textarea { font: inherit; padding: 10px; border-radius: var(--radius); border: 1
 
 .voice-notes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .voice-notes button.listening { box-shadow: inset 0 0 0 2px var(--whatif); }
+
+.how { margin: 0; padding-left: 1.2em; display: grid; gap: 10px; }
+.how li::marker { color: var(--model); font-weight: 700; }

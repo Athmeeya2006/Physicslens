@@ -523,7 +523,7 @@ class LiveSession:
         ids: list[str] = []
         self._last_llm = time.monotonic()
         try:
-            hyp, call = propose_hypotheses(self.client, summarize(traj), self.scene, self.run_id, self.cfg.audience,
+            hyp, call = propose_hypotheses(self.client, summarize(traj, self.calibration is None and not self.cfg.pendulum_length_m), self.scene, self.run_id, self.cfg.audience,
                                            run_cap_usd=self.cfg.run_cap_usd)
             self.family = hyp.family
             ids, _ = _candidates(hyp)

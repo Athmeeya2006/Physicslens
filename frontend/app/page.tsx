@@ -151,10 +151,20 @@ export default function Home() {
             {online === null ? (
               <p className="muted"><Loader2 size={14} className="spin" aria-hidden="true" /> Looking for the analysis server...</p>
             ) : offline ? (
-              <p className="muted">
-                The analysis server isn&apos;t running right now (it runs on a GPU notebook during judging sessions), so new
-                clips can&apos;t be analyzed at the moment. Every recording in the list is a complete, real analysis you can open.
-              </p>
+              <div className="stack" style={{ gap: 14 }}>
+                <ol className="how">
+                  <li><strong>Film it.</strong> Anything that moves, from a phone held still: a swing, a bounce, a spin-down.</li>
+                  <li><strong>Meta&apos;s models measure and propose.</strong> SAM 3.1 tracks the object; Muse Glimmer, an open-weight
+                    model, reads the scene and proposes equations, even ones it writes itself.</li>
+                  <li><strong>Math decides.</strong> Each equation must forecast motion it never saw; the winner comes with
+                    uncertainties, a ghost on the video and a MuJoCo model.</li>
+                </ol>
+                <p className="muted small">
+                  The analysis server runs on a free GPU notebook during judging sessions and isn&apos;t running right now.
+                  Every recording on this page is a complete, real analysis; a <a href="/study">study</a> shows the agent
+                  planning several recordings toward one goal.
+                </p>
+              </div>
             ) : health && !health.can_upload ? (
               <p className="muted">Analyzing your own clip is closed right now. Every recording in the list is a complete, real analysis.</p>
             ) : (

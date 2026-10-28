@@ -147,6 +147,7 @@ export interface Health {
 
 export interface GalleryItem {
   id: string;
+  kind?: "study";
   title: string;
   description: string;
   credit: string;
