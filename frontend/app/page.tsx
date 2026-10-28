@@ -189,6 +189,10 @@ export default function Home() {
                   <li>Frequency, damping and friction are exact even without a scale reference.</li>
                   <li>Anything that moves works: swinging, bouncing, thrown, rolling, sliding or braking.</li>
                 </ul>
+                <p className="small muted">
+                  Your clip is sent to Meta&apos;s Model API for tracking, and kept with its result so the result link keeps
+                  working. Don&apos;t upload anything private.
+                </p>
               </form>
             )}
             {error && <p className="error">{error}</p>}

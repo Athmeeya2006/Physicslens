@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Tex } from "@/components/Equation";
-import { API_BASE, HAS_BACKEND } from "@/lib/api";
+import { accessCode, API_BASE, HAS_BACKEND } from "@/lib/api";
 
 const FPS = 25;
 const MAX_WIDTH = 640; // SAM bills per frame, not per pixel; smaller frames just keep the upload light
@@ -105,8 +105,7 @@ export default function LivePage() {
     ws.onmessage = onMessage;
     ws.onclose = () => { running.current = false; setLive(false); setStatus("Session ended."); };
     ws.onopen = () => {
-      const code = new URLSearchParams(window.location.search).get("code");
-      ws.send(JSON.stringify({ fps: FPS, pendulum_length_m: lengthCm ? Number(lengthCm) / 100 : null, access_code: code }));
+      ws.send(JSON.stringify({ fps: FPS, pendulum_length_m: lengthCm ? Number(lengthCm) / 100 : null, access_code: accessCode() }));
       running.current = true;
       setLive(true);
       setStatus("Streaming. Tap the moving object to lock on (or wait a moment for it to be found).");

@@ -48,10 +48,15 @@ def bootstrap_samples(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int
     return np.array(samples), np.array(lengths)
 
 
-def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 24, seed: int = 0) -> dict[str, ParamEstimate]:
+def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 40, seed: int = 0) -> dict[str, ParamEstimate]:
+    """95% interval as value +- 1.96 standard deviations of the refits.
+
+    Percentiles of a few dozen refits would just be their second-smallest and second-largest values; the spread
+    is a far steadier estimate at this size, and hundreds of refits would make every analysis minutes slower.
+    """
     arr, _ = bootstrap_samples(spec, c, fit, reps, seed)
     out = {}
     for i, name in enumerate(spec.param_names):
-        lo, hi = np.percentile(arr[:, i], [2.5, 97.5])
-        out[name] = ParamEstimate(fit.params[name], float(arr[:, i].std(ddof=1)), float(lo), float(hi))
+        v, sd = fit.params[name], float(arr[:, i].std(ddof=1))
+        out[name] = ParamEstimate(v, sd, v - 1.96 * sd, v + 1.96 * sd)
     return out

@@ -2,7 +2,8 @@
 
 import { Activity, Camera, ScanSearch } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { accessCode } from "@/lib/api";
 
 // The mark: a lens with a swing arc and a bob, drawn once in the shell's stroke weight.
 function Mark() {
@@ -24,21 +25,20 @@ const NAV = [
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
-  const [code, setCode] = useState<string | null>(null);
-  useEffect(() => setCode(new URLSearchParams(window.location.search).get("code")), []);
-  const withCode = (href: string) => (code ? `${href}?code=${encodeURIComponent(code)}` : href);
+  // Reading the code moves it from the URL into session storage, so plain links keep it.
+  useEffect(() => void accessCode(), []);
 
   return (
     <>
       <header className="shell-bar">
         <div className="shell-inner">
-          <a className="wordmark" href={withCode("/")}>
+          <a className="wordmark" href="/">
             <Mark />
             PhysicsLens
           </a>
           <nav className="shell-nav" aria-label="Main">
             {NAV.map(({ href, label, icon: Icon }) => (
-              <a key={href} href={withCode(href)} aria-current={path === href ? "page" : undefined}>
+              <a key={href} href={href} aria-current={path === href ? "page" : undefined}>
                 <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
                 <span>{label}</span>
               </a>

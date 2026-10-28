@@ -113,8 +113,24 @@ export interface GalleryItem {
   object?: string;
 }
 
+const CODE_KEY = "physicslens-access-code";
+
+// The judges' code arrives once as ?code=...; it then lives in this tab's session storage and leaves the URL,
+// so it survives navigation without ending up in history, shared links or screenshots.
 export function accessCode(): string | null {
-  return typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("code");
+  if (typeof window === "undefined") return null;
+  const url = new URL(window.location.href);
+  const fromUrl = url.searchParams.get("code");
+  try {
+    if (fromUrl) {
+      sessionStorage.setItem(CODE_KEY, fromUrl);
+      url.searchParams.delete("code");
+      window.history.replaceState(null, "", url);
+    }
+    return fromUrl ?? sessionStorage.getItem(CODE_KEY);
+  } catch {
+    return fromUrl; // storage blocked (private mode): the code still works for this page
+  }
 }
 
 function codeHeaders(): HeadersInit {
@@ -157,10 +173,9 @@ export const exportUrl = (id: string, kind: "json" | "py" | "mjcf") =>
   isGallery(id) ? `${staticBase(id)}/physicslens-${id}.${EXPORT_EXT[kind]}` : `${API_BASE}/api/runs/${id}/export/${kind}`;
 
 export function askWhatIf(id: string, question: string) {
-  const code = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("code");
   return fetch(`${API_BASE}/api/runs/${id}/whatif`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(code ? { "X-Access-Code": code } : {}) },
+    headers: { "Content-Type": "application/json", ...codeHeaders() },
     body: JSON.stringify({ question }),
   }).then((r) => json<import("@/components/WhatIf").WhatIfAnswer>(r));
 }

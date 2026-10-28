@@ -138,6 +138,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <p className="num">
             <Tex tex="g" /> = {r.double.params.g.toFixed(3)} m/s², mass ratio <Tex tex="\mu" /> = {r.double.params.mu.toFixed(2)},{" "}
             <Tex tex="L_1" /> = {r.double.L1.toFixed(3)} m, <Tex tex="L_2" /> = {r.double.L2.toFixed(3)} m
+            {r.scale_note && <span className="uncal">uncalibrated</span>}
           </p>
           <p style={{ marginTop: 8 }}>
             {r.double.chaotic && r.double.predictability_s
@@ -156,7 +157,8 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <h3>Bounces: {r.bounces.accepted ? "hybrid model verified" : "hybrid model not confirmed"}</h3>
           <div className="equation"><Tex tex={r.bounces.latex} display /></div>
           <p className="num">
-            <Tex tex="g" /> = {r.bounces.g.toFixed(3)} ± {r.bounces.g_std.toFixed(3)} m/s², coefficient of restitution{" "}
+            <Tex tex="g" /> = {r.bounces.g.toFixed(3)} ± {r.bounces.g_std.toFixed(3)} m/s²
+            {r.scale_note && <span className="uncal">uncalibrated</span>}, coefficient of restitution{" "}
             <Tex tex="e" /> = {r.bounces.e_mean.toFixed(3)} ± {r.bounces.e_std.toFixed(3)}
           </p>
           <div className="table-wrap" style={{ marginTop: 10 }}>
@@ -246,12 +248,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           ΔBIC is how much worse a model scores than the best one after a penalty for every extra parameter; above 10 is very
           strong evidence against it. Held-out error is how far its forecast of the last quarter, fitted without it, misses.
         </p>
-        {r.sindy && (
-          <div className="sindy" style={{ marginTop: 12 }}>
-            <p className="small muted">Model-free discovery with PySINDy, shown as independent evidence:</p>
-            {Object.entries(r.sindy).map(([lhs, rhs]) => <code key={lhs}>{lhs} = {rhs}</code>)}
-          </div>
-        )}
+
       </div>
 
       <details className="panel">
@@ -261,6 +258,13 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <li>Scale: {r.calibration.source === "none" ? "no reference in view (nominal scale)" : `${r.calibration.px_per_m.toFixed(1)} px/m from ${r.calibration.source.replaceAll("_", " ")}`}</li>
           <li>Clip: {r.clip.width} by {r.clip.height} px at {r.clip.fps.toFixed(1)} fps, {r.clip.frames} frames
             {r.clip.slow_motion && r.clip.slow_motion > 1 ? `, slow motion ${r.clip.slow_motion} times (times are real time)` : ""}</li>
+          {r.sindy && (
+            <li>
+              Model-free regression (PySINDy), not verified and not used to decide: a sparse fit to noisy derivatives,
+              which often disagrees with the verified equation in its small terms.
+              <div className="sindy">{Object.entries(r.sindy).map(([lhs, rhs]) => <code key={lhs}>{lhs} = {rhs}</code>)}</div>
+            </li>
+          )}
           <li>Model calls: {r.llm_calls.map((c) => `${c.step}: ${c.model}${c.cached ? " (cached)" : ""}`).join(", ")}; tracking: sam-3.1</li>
         </ul>
       </details>

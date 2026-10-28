@@ -160,6 +160,14 @@ def lyapunov(p: dict[str, float], L1: float, L2: float, y0: np.ndarray, seconds:
     return total / (steps * tau)
 
 
+EDGE_S = 0.12  # one smoothing window: velocities from the filter's edge are its least reliable
+
+
+def interior_start(fps: float) -> int:
+    """First sample whose velocity estimate isn't an edge estimate; long predictions start here."""
+    return max(1, round(EDGE_S * fps))
+
+
 def fit_double(c: DoubleCoords) -> DoubleFit:
     n = len(c.t)
     if n < 3 * int(HORIZON_S * c.fps):
@@ -179,7 +187,8 @@ def fit_double(c: DoubleCoords) -> DoubleFit:
     accepted = bool(held and c.length_reliable and held_rmse <= MAX_HELDOUT_VS_TRAIN * train_rmse
                     and held_rmse <= MAX_VS_NAIVE * naive)
 
-    lam = lyapunov(params, c.L1, c.L2, states[0], seconds=float(c.t[-1] - c.t[0]))
+    k = interior_start(c.fps)
+    lam = lyapunov(params, c.L1, c.L2, states[k], seconds=float(c.t[-1] - c.t[k]))
     chaotic = lam > CHAOS_LAMBDA
     horizon = float(np.log(TOLERANCE_RAD / max(c.noise_rad, 1e-6)) / lam) if chaotic else None
     if not c.length_reliable:
@@ -188,7 +197,7 @@ def fit_double(c: DoubleCoords) -> DoubleFit:
         reason = (f"Held-out {HORIZON_S:.1f} s predictions are off by {held_rmse:.3f} rad (training {train_rmse:.3f}, "
                   f"naive constant-velocity guess {naive:.3f}).")
     return DoubleFit(params, train_rmse, held_rmse, naive, c.noise_rad, accepted, lam, chaotic, horizon,
-                     [float(v) for v in states[0]], reason)
+                     [float(v) for v in states[k]], reason)
 
 
 def summary(fit: DoubleFit, c: DoubleCoords) -> dict[str, Any]:

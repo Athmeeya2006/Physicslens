@@ -34,7 +34,7 @@ It is system identification, normally a specialist task, made as easy as filming
 7. **Ask "what if?" out loud.** "What if the string were twice as long?" The fitted equation is re-simulated from the same starting state and drawn as a second ghost.
 8. **Export.** A MuJoCo model, a standalone Python simulation, parameters as JSON, or a shareable MP4 with the equation burned in.
 
-When nothing fits, it says so: *"no clean governing equation found."* It never invents an equation, and it refuses clips it can't measure (a flat pendulum arc, a round spinning object, a spin too fast for the frame rate) instead of guessing.
+When nothing fits, it says so: *"no clean governing equation found."* It never invents an equation, and it refuses clips it can't measure (a flat pendulum arc, a round spinning object, a spin close to the frame-rate limit, a tracked object that never moves) instead of guessing. One limit it cannot see: a spin faster than a quarter turn per frame aliases into a slower one, so film spins with slow motion.
 
 ## Systems it identifies
 
@@ -195,7 +195,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Hypothesis generation and agent decisions with validated structured outputs, running on Muse Glimmer (open weights, self-hosted)
 - [x] Equations the agent writes itself, parsed by a closed math grammar (no eval) and verified like any built-in model
 - [x] Scale from a known object size, slow-motion clips in real time, and a hint for what to track
-- [x] Fitting (SciPy + PySINDy) with BIC model selection and bootstrap uncertainty
+- [x] Fitting (SciPy) with BIC model selection, held-out forecasts and bootstrap uncertainty that includes the scale's own error; PySINDy shown separately as unverified model-free regression
 - [x] Verification with simulate-and-compare on held-out data
 - [x] Ghost overlay on the real video, and an on-screen decision trail showing who decided what
 - [x] Live camera mode with converging equations (instant on-server tracking, refined by SAM 3.1 in parallel chunks; tap the object to lock on)

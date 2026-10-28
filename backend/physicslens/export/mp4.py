@@ -83,11 +83,13 @@ def build_panel(result: dict[str, Any], frame_width: int) -> Image.Image:
     rows.append(title)
 
     eq = result.get("equation")
+    # Without a scale, anything in meters is in arbitrary units: never burn a bare "m" into a shared video.
+    uncal = r"\ (\mathrm{uncalibrated})" if result.get("scale_note") else ""
     if eq:
         rows.append(_math(eq["latex"], int(30 * s)))
         for p in result.get("parameters") or []:
             tex = rf"{p['latex']} = {_sig(p['value'])} \pm {_sig(p['std'], 2)}{_unit_tex(p['unit'])}"
-            rows.append(_math(tex, int(22 * s)))
+            rows.append(_math(tex + (uncal if p.get("uncalibrated") else ""), int(22 * s)))
     elif result.get("regimes"):
         for r in result["regimes"]:
             if not r.get("params"):
@@ -99,7 +101,7 @@ def build_panel(result: dict[str, Any], frame_width: int) -> Image.Image:
     bounces = result.get("bounces")
     if bounces and bounces.get("accepted"):
         rows.append(_math(bounces["latex"], int(26 * s)))
-        rows.append(_math(rf"g = {_sig(bounces['g'])} \pm {_sig(bounces['g_std'], 2)}\ \mathrm{{m/s^2}},\quad "
+        rows.append(_math(rf"g = {_sig(bounces['g'])} \pm {_sig(bounces['g_std'], 2)}\ \mathrm{{m/s^2}}{uncal},\quad "
                           rf"e = {_sig(bounces['e_mean'], 3)} \pm {_sig(bounces['e_std'], 1)}", int(22 * s)))
     tied = [i["title"] for t in result.get("trail") or [] if t.get("step") == "verification"
             for i in t.get("items") or [] if i.get("status") == "tied"]

@@ -29,7 +29,12 @@ from .physics.coords import Coordinates, fit_circle, to_coordinates
 from .physics.custom import FREE_MODELS, FreeParam, build, register
 from .physics.design import design_experiment
 from .physics.double import HORIZON_S as DOUBLE_HORIZON_S
-from .physics.double import DoublePendulumError, fit_double, to_double_coords
+from .physics.double import (
+    DoublePendulumError,
+    fit_double,
+    interior_start,
+    to_double_coords,
+)
 from .physics.double import simulate as double_simulate
 from .physics.double import summary as double_summary
 from .physics.fit import FitResult, fit_model
@@ -212,6 +217,8 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         if family == "projectile" and bounces is None:
             progress("Analyzing bounces")
             bounces = analyze_bounces(full, full_origin, calibration.px_per_m)
+            if bounces is not None and calibration.rel_std > 0:
+                bounces["g_std"] = float(np.hypot(bounces["g_std"], bounces["g"] * calibration.rel_std))
             if bounces is not None:
                 trail.append(bounce_trail_step(bounces))
         design = None
@@ -219,7 +226,7 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
             progress("Designing the experiment that would separate the tied models")
             design = design_experiment(coords, list(verdict.contenders))
             if design is not None:
-                trail.append(design_trail_step(design))
+                trail.append(design_trail_step(design, calibration.source == "none"))
         progress("Checking whether the dynamics change during the clip")
         change, regimes = (None, []) if family == "rotation" else find_regimes(traj, family, candidate_ids, origin_px, calibration.px_per_m)
         if change is not None:
@@ -315,6 +322,7 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
              "ci95": [est[p.name].ci_low, est[p.name].ci_high]}
             for p in spec.params
         ] + derived_parameters(coords)
+    add_scale_error(result.get("parameters", []), calibration.rel_std)
     if calibration.source == "none":
         result["scale_note"] = SCALE_NOTE
         for p in result.get("parameters", []):
@@ -364,20 +372,21 @@ def double_analysis(inner: ObjectTrack, outer: ObjectTrack, fps: float, ppm: flo
         raise AnalysisError(str(e)) from e
     out = double_summary(fit, c)
 
-    def px(xy: np.ndarray) -> list[list[float]]:
+    def px(xy: np.ndarray, start: int = 0) -> list[list[float]]:
         return [[int(f), round(float(origin[0] + x * ppm), 2), round(float(origin[1] - y * ppm), 2)]
-                for f, (x, y) in zip(frames, xy, strict=True)]
+                for f, (x, y) in zip(frames[start:], xy, strict=True)]
 
     kin = differentiate(c.q, fps)
     states = np.column_stack([kin.pos, kin.vel])
     anchored = reanchored_prediction(fit.params, c, states, every_s=DOUBLE_HORIZON_S)
-    free = double_simulate(fit.params, c.L1, c.L2, states[0], t)
+    k = interior_start(fps)  # not the very first sample: its smoothed velocity is an edge estimate
+    free = double_simulate(fit.params, c.L1, c.L2, states[k], t[k:])
     a_inner, a_outer = c.to_xy(anchored)
     every = f"restarted every {DOUBLE_HORIZON_S:.1f} s"
     ghosts = [{"model_id": f"inner bob (model, {every})", "points": px(a_inner)},
               {"model_id": f"outer bob (model, {every})", "points": px(a_outer)}]
     if free is not None:
-        ghosts.append({"model_id": "outer bob (one prediction from t = 0)", "points": px(c.to_xy(free[:, :2])[1])})
+        ghosts.append({"model_id": "outer bob (one prediction from the start)", "points": px(c.to_xy(free[:, :2])[1], k)})
     out["inner_track_px"] = px(tr_i.xy)
     out["outer_track_px"] = px(tr_o.xy)
 
@@ -464,11 +473,13 @@ def forecast_series(c: Coordinates, fit: FitResult) -> dict[str, Any]:
     }
 
 
-def design_trail_step(d: dict[str, Any]) -> dict[str, Any]:
+def design_trail_step(d: dict[str, Any], uncalibrated: bool = False) -> dict[str, Any]:
+    # With no scale the nominal 1000 px/m makes a "mm" a pixel, so say pixels rather than invent millimetres.
+    mm = "px" if uncalibrated else "mm"
     rec = d["recommended"]
     verdict = (f"The cheapest decisive one: {rec['label']}. The tied equations would then differ by "
-               f"{rec['separation_mm']:.0f} mm, {rec['separation_vs_noise']:.1f} times this clip's tracking noise "
-               f"({d['noise_mm']:.1f} mm)." if d["decisive"] else
+               f"{rec['separation_mm']:.0f} {mm}, {rec['separation_vs_noise']:.1f} times this clip's tracking noise "
+               f"({d['noise_mm']:.1f} {mm})." if d["decisive"] else
                f"None of them separates the equations clearly; the best is {rec['label']} "
                f"({rec['separation_vs_noise']:.1f} times the tracking noise).")
     return {
@@ -476,7 +487,7 @@ def design_trail_step(d: dict[str, Any]) -> dict[str, Any]:
         "text": f"Simulated {d['options_tested']} possible experiments with each tied equation. {verdict}",
         "items": [{"model_id": f"option{i}", "title": o["label"][0].upper() + o["label"][1:],
                    "status": "accepted" if o["separation_vs_noise"] >= d["target_ratio"] else "tied",
-                   "why": f"predictions differ by {o['separation_mm']:.0f} mm ({o['separation_vs_noise']:.1f} times the noise)"}
+                   "why": f"predictions differ by {o['separation_mm']:.0f} {mm} ({o['separation_vs_noise']:.1f} times the noise)"}
                   for i, o in enumerate(d["top"])],
     }
 
@@ -695,6 +706,20 @@ def fit_summary(f: FitResult, rationale: str | None = None) -> dict[str, Any]:
     return {"model_id": f.model_id, "title": spec.title, "params": f.params, "bic": f.bic,
             "heldout_nrmse": f.heldout_nrmse, "rmse": f.rmse, "rationale": rationale,
             "param_meta": [{"name": p.name, "latex": p.latex, "unit": p.unit} for p in spec.params]}
+
+
+def add_scale_error(parameters: list[dict[str, Any]], rel_std: float) -> None:
+    """The scale's own spread (measured frame to frame on the reference) is part of every length's error."""
+    if rel_std <= 0:
+        return
+    for p in parameters:
+        if needs_scale(p["unit"]) and not p.get("derived"):
+            extra = abs(p["value"]) * rel_std
+            lo, hi = p["ci95"]
+            p["std"] = float(np.hypot(p["std"], extra))
+            p["ci95"] = [p["value"] - float(np.hypot(p["value"] - lo, 1.96 * extra)),
+                         p["value"] + float(np.hypot(hi - p["value"], 1.96 * extra))]
+            p["includes_scale_error"] = True
 
 
 def known_length_geometry(moving: ObjectTrack, origin_px: np.ndarray, calibration: Calibration,

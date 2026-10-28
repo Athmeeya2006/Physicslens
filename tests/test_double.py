@@ -66,11 +66,12 @@ def test_pipeline_double_analysis():
     out, ghosts, steps = double_analysis(as_track("1", inner), as_track("3", outer), FPS, 1000.0)
     assert out["accepted"] and out["chaotic"] and len(ghosts) == 3
     assert [s["step"] for s in steps] == ["verification", "chaos"] and "Chaotic" in steps[1]["text"]
-    real = np.array([p[1:] for p in out["outer_track_px"]])
-    anchored = np.array([p[1:] for p in ghosts[1]["points"]])
-    free = np.array([p[1:] for p in ghosts[2]["points"]])
-    err_anchored = np.linalg.norm(anchored - real, axis=1)
-    err_free = np.linalg.norm(free - real, axis=1)
+    real = {p[0]: np.array(p[1:]) for p in out["outer_track_px"]}
+    anchored = {p[0]: np.array(p[1:]) for p in ghosts[1]["points"]}
+    free = {p[0]: np.array(p[1:]) for p in ghosts[2]["points"]}
+    err_anchored = np.array([np.linalg.norm(anchored[f] - real[f]) for f in sorted(anchored)])
+    err_free = np.array([np.linalg.norm(free[f] - real[f]) for f in sorted(free)])
+    real = np.array(list(real.values()))
     sweep = float(np.ptp(real, axis=0).max())
     assert np.median(err_anchored) < 0.03 * sweep  # restarted predictions stay on the bob
     assert err_free[-FPS:].mean() > 5 * err_free[:FPS].mean()  # one long prediction drifts away: chaos on screen

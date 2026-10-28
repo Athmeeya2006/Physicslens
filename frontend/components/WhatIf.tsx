@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { TrackPoint } from "@/lib/api";
-import { API_BASE, askWhatIf } from "@/lib/api";
+import { accessCode, API_BASE, askWhatIf } from "@/lib/api";
 import { startMic, type Mic } from "@/lib/voice";
 
 export interface WhatIfAnswer {
@@ -71,8 +71,7 @@ export function WhatIf({ runId, onGhost }: Props) {
     };
     ws.onclose = () => stopListening();
     ws.onopen = async () => {
-      const code = new URLSearchParams(window.location.search).get("code");
-      ws.send(JSON.stringify({ run_id: runId, access_code: code }));
+      ws.send(JSON.stringify({ run_id: runId, access_code: accessCode() }));
       try {
         mic.current = await startMic((pcm) => ws.readyState === WebSocket.OPEN && ws.send(pcm));
         setListening(true);

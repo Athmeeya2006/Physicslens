@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 from physicslens.agent.llm import LLMError, ask_json, strict_schema
 from physicslens.agent.schemas import Hypotheses, Scene
@@ -209,3 +210,17 @@ def test_slow_motion_factor_puts_the_physics_in_real_time(harness, tmp_path):
     assert g2["params"]["g"] == pytest.approx(1.44 * g1["params"]["g"], rel=0.02)
     assert out[1.2]["clip"]["fps"] == out[1.0]["clip"]["fps"]  # drawing on the video keeps the file's rate
     assert out[1.2]["forecast"]["t"][-1] == pytest.approx(out[1.0]["forecast"]["t"][-1] / 1.2, rel=0.02)
+
+
+def test_scale_error_widens_only_length_parameters():
+    from physicslens.pipeline import add_scale_error
+
+    params = [{"name": "g", "unit": "m/s^2", "value": 9.8, "std": 0.05, "ci95": [9.7, 9.9]},
+              {"name": "zeta", "unit": "", "value": 0.02, "std": 0.001, "ci95": [0.018, 0.022]},
+              {"name": "L", "unit": "m", "value": 0.5, "std": 0.0, "ci95": [0.5, 0.5], "derived": "given by you"}]
+    add_scale_error(params, 0.02)
+    g, zeta, L = params
+    assert g["std"] == pytest.approx(np.hypot(0.05, 9.8 * 0.02)) and g["includes_scale_error"]
+    assert g["ci95"][0] < 9.7 and g["ci95"][1] > 9.9
+    assert zeta["std"] == 0.001 and "includes_scale_error" not in zeta
+    assert L["std"] == 0.0  # a length the user gave is not re-measured
