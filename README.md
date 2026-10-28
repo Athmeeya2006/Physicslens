@@ -412,6 +412,10 @@ Budget caps live in `config/budget.yaml` (created from `config/budget.example.ya
 
 During judging the full app (uploads, live mode, voice, studies) runs on our GPU server: `scripts/gpu_server/serve.py` starts Muse Glimmer on llama.cpp (bound to localhost, never exposed) and the backend in demo mode next to it, then exposes only the backend through a Cloudflare tunnel. `scripts/judging_session.py` deploys the committed code, waits for the tunnel and points the site's `/backend.json` at it; `stop` points the site back to gallery only. The site switches its analysis features on only when that server answers its health check. Each session has its own spending cap, and keys stay on the server. `judging_session.py connect --url <address>` points the site at a server whose address you read from its log, and `schedule <UTC time>` shows the next session's start on the home page while no server is running.
 
+### Always-on server (Modal plus hosted Glimmer)
+
+`scripts/modal_app.py` runs the same backend on Modal: CPU only (fitting, MuJoCo and signal processing need no GPU), one container at most, scaled to zero when idle, with runs, the spend ledger and the response cache on a Modal volume. Reasoning goes to the same open Muse Glimmer weights on a hosted provider listed in Meta's deploy guide (`REASONING_PROVIDER=together`), so an analysis takes a minute or two instead of the 5 to 15 minutes on two T4s. Keys live in a Modal secret; `modal deploy scripts/modal_app.py` prints the address to point the site at.
+
 ### Static gallery site
 
 The public gallery is a static export that needs no server: `python scripts/build_static_gallery.py` copies each gallery result, clip, poster, report and export into `frontend/public/gallery/` (gitignored), then `cd frontend && STATIC_EXPORT=1 NEXT_PUBLIC_API_BASE="" npx next build` writes the site to `frontend/out/`. New results are promoted with `scripts/add_to_gallery.py` (single runs) and `scripts/study_to_gallery.py` (studies).
