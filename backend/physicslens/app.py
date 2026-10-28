@@ -29,8 +29,8 @@ from fastapi.responses import FileResponse, Response
 
 from .agent.llm import LLMError as StudyLLMError
 from .agent.notes import interpret_notes
-from .agent.setup_guide import GUIDE_FRAME, GUIDE_JPG, SetupGuideError, make_setup_guide
 from .agent.schemas import ControlTask
+from .agent.setup_guide import GUIDE_FRAME, GUIDE_JPG, SetupGuideError, make_setup_guide
 from .agent.whatif import run_whatif
 from .control.manager import ControlManager
 from .control.system import ControlUnsupported
