@@ -32,18 +32,19 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 14. [Sound as a second sensor](#sound-as-a-second-sensor)
 15. [Exports](#exports)
 16. [Sim-to-real gap, made visible](#sim-to-real-gap-made-visible)
-17. [Validation](#validation)
-18. [Cost and safety controls](#cost-and-safety-controls)
-19. [Getting started (Linux)](#getting-started-linux)
-20. [Configuration reference](#configuration-reference)
-21. [HTTP and WebSocket API](#http-and-websocket-api)
-22. [Project structure](#project-structure)
-23. [Testing](#testing)
-24. [What we built during the hackathon](#what-we-built-during-the-hackathon)
-25. [Limitations](#limitations)
-26. [Roadmap](#roadmap)
-27. [Acknowledgements](#acknowledgements)
-28. [License](#license)
+17. [PhysicsLens as an MCP server](#physicslens-as-an-mcp-server)
+18. [Validation](#validation)
+19. [Cost and safety controls](#cost-and-safety-controls)
+20. [Getting started (Linux)](#getting-started-linux)
+21. [Configuration reference](#configuration-reference)
+22. [HTTP and WebSocket API](#http-and-websocket-api)
+23. [Project structure](#project-structure)
+24. [Testing](#testing)
+25. [What we built during the hackathon](#what-we-built-during-the-hackathon)
+26. [Limitations](#limitations)
+27. [Roadmap](#roadmap)
+28. [Acknowledgements](#acknowledgements)
+29. [License](#license)
 
 ---
 
@@ -259,6 +260,32 @@ Every accepted result gets a "Sim-to-real" panel (computed on request with local
 
 1. **Against the real video.** The textbook version of the system (no damping, drag or friction; g = 9.81 m/s² when the clip has a scale; the same length or stiffness) and the PhysicsLens model are both fitted on the first three quarters of the clip only, the textbook one getting just its best starting state, and both are compared with the measured motion. The panel overlays measured, textbook and PhysicsLens curves and gives the RMS error of each on the held-out quarter and the whole clip (in millimetres when the clip is calibrated) and their ratio. When the textbook does as well, the panel says so.
 2. **Control, in simulation only.** For pendulums, the exported MuJoCo model gets a torque-limited motor at the pivot (30% of the torque that holds the pendulum horizontal), and an energy-shaping controller pumps the swing to 60° and holds it. One controller is tuned on the textbook model, one on the PhysicsLens model; both run on 20 pendulums drawn from the bootstrap refits of the PhysicsLens model, and the panel reports overshoot, settling time and final amplitude error (mean and spread). The panel is labeled: the "real system" there is the verified model, and part 1 is the evidence against real video.
+
+## PhysicsLens as an MCP server
+
+Any MCP client (an AI coding assistant, an agent framework) can call PhysicsLens as a tool, so an agent can measure the physics in a video instead of guessing it. `backend/physicslens/mcp_server.py` uses the official MCP Python SDK and talks to a PhysicsLens server over its HTTP API, so every paid model call still happens on that server behind its cost guard. It only reads video files on the machine it runs on and only talks to the configured server: there is no way to make it fetch an arbitrary URL.
+
+| Tool | What it does |
+|---|---|
+| `measure_physics(video_path, pendulum_length_m?, object_size_m?, slow_motion?, object_hint?)` | uploads the clip, waits for the analysis, returns the verdict, the equation, parameters with intervals, why each rival law lost, and the decision trail |
+| `audit_physics(video_path, object_size_m?)` | the physics audit: consistent, violates physics (each violation in numbers) or can't judge |
+| `get_result(run_id)` | an earlier result |
+| `export(run_id, kind)` | `json`, `py`, `mjcf`, `contact` or `report` |
+| `what_if(run_id, question)` | re-simulates a verified result with a changed parameter |
+
+Client configuration (stdio):
+
+```json
+{
+  "mcpServers": {
+    "physicslens": {
+      "command": "/path/to/physicslens/.venv/bin/python",
+      "args": ["-m", "physicslens.mcp_server"],
+      "env": {"PYTHONPATH": "/path/to/physicslens/backend", "PHYSICSLENS_URL": "https://<analysis server>", "PHYSICSLENS_ACCESS_CODE": "<code>"}
+    }
+  }
+}
+```
 
 ## Validation
 
@@ -482,6 +509,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Live camera mode with converging equations (instant on-server tracking, refined by SAM 3.1 in parallel chunks; tap the object to lock on)
 - [x] Experiment requests for ambiguous data
 - [x] Joint fitting across recordings: the experiment the agent asked for is fitted together with the clip that tied, so the new data settle the question
+- [x] An MCP server, so AI agents can measure physics from video as a tool (measure, audit, export, what-if)
 - [x] Regime-change detection (live and recorded)
 - [x] Voice what-ifs with Muse Voice Transcribe (spoken question, parameter change, re-simulated ghost; typing works too)
 - [x] Shareable MP4 with the measured trail, the simulated ghost and the typeset equation burned in
