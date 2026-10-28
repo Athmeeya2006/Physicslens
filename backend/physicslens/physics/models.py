@@ -227,3 +227,35 @@ MODELS["double_pendulum"] = ModelSpec(
 
 def models_for(family: str) -> list[ModelSpec]:
     return [m for m in MODELS.values() if m.family == family]
+
+
+def _projectile3d(drag: str | None) -> Rhs:
+    # State [x, y, zs, vx, vy, vzs] with zs = z_scale * depth: the fit compares zs, so depth residuals count with
+    # the weight of their noise (depth from apparent size is many times noisier than position across the image).
+    def rhs(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
+        w = ctx.get("z_scale", 1.0)
+        vx, vy, vzs = s[3:]
+        v = np.array([vx, vy, vzs / w])
+        a = np.array([0.0, -p["g"], 0.0])
+        if drag == "linear":
+            a = a - p["k"] * v
+        elif drag == "quadratic":
+            a = a - p["c"] * float(np.linalg.norm(v)) * v
+        return np.array([vx, vy, vzs, a[0], a[1], a[2] * w])
+    return rhs
+
+
+# Kept out of MODELS on purpose: MODELS is the menu the reasoning model chooses from, and these are only ever
+# fitted by the 3D depth mode (physics/depth3d.py), always all three, with gravity along the image's down axis.
+MODELS_3D: dict[str, ModelSpec] = {
+    m.id: m
+    for m in [
+        ModelSpec("free_fall_3d", "projectile3d", "Projectile in 3D, no drag",
+                  r"\ddot x = 0,\quad \ddot y = -g,\quad \ddot z = 0", (G,), _projectile3d(None)),
+        ModelSpec("linear_drag_3d", "projectile3d", "Projectile in 3D with linear drag",
+                  r"\dot{\mathbf{v}} = -g\hat{y} - k\mathbf{v}", (G, Param("k", "k", "1/s", 0.0, 50.0)), _projectile3d("linear")),
+        ModelSpec("quadratic_drag_3d", "projectile3d", "Projectile in 3D with quadratic drag",
+                  r"\dot{\mathbf{v}} = -g\hat{y} - c|\mathbf{v}|\mathbf{v}", (G, Param("c", "c", "1/m", 0.0, 50.0)),
+                  _projectile3d("quadratic")),
+    ]
+}

@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
 import { clipUrl, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
+import { DepthPanel } from "./DepthPanel";
 import { Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
 import { GhostPlayer } from "./GhostPlayer";
@@ -205,6 +206,8 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           )}
         </div>
       )}
+
+      {r.depth3d && <DepthPanel d={r.depth3d} />}
 
       {r.fit_state && canAsk && <WhatIf runId={runId} onGhost={setWhatIfGhost} />}
 

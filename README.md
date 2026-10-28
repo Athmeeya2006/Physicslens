@@ -56,6 +56,7 @@ When nothing fits, it says so: *"no clean governing equation found."* It never i
 | Pendulum | simple, small-angle, linear damping, air drag | g, damping, string length (all with intervals) |
 | Spring or elastic oscillator | harmonic, damped harmonic | natural frequency, damping ratio |
 | Thrown or dropped object | no drag, linear drag, quadratic drag | g, drag coefficient |
+| Ball thrown toward or away from the camera (opt-in 3D mode, one phone) | no drag, linear drag, quadratic drag in three dimensions | the 3D path with a depth error for every frame, g with an interval |
 | Bouncing ball | free flight plus restitution (hybrid) | g shared by every flight, coefficient of restitution at each bounce |
 | Double pendulum | point-mass double pendulum, fitted on short restarted predictions | g, mass ratio, and how chaotic it is: Lyapunov exponent and how many seconds the motion can be forecast |
 | Spinning object slowing down | free spin, dry friction, viscous, air drag, dry plus viscous | the friction law and its coefficients |
@@ -64,6 +65,8 @@ When nothing fits, it says so: *"no clean governing equation found."* It never i
 **Equations the agent writes itself.** For motion outside the named families the agent proposes the acceleration law as text, for example `-mu*9.81*sign(v) - c*v*abs(v)` for a cart slowed by rolling friction and air drag. A small recursive-descent parser over a closed grammar (numbers, declared parameters, the state variables, `+ - * / ^` and a whitelist of functions) turns it into a model; nothing is ever passed to `eval`. The parsed tree drives the ODE solver, the LaTeX shown in the app and the exported Python script, so what you see is exactly what was fitted. Each law must beat "nothing acts on it" and "a constant force" on held-out motion, and a malformed proposal goes back to the agent with the parser's error. On synthetic data an agent-written air-drag law recovers its coefficient within 5% and a wrong spring law is rejected.
 
 Changes during a clip (say, the string is shortened mid-recording) are detected; each regime is fitted separately, and live mode refits on the new motion.
+
+**3D from one phone, balls only.** A ball looks the same from every side, so its apparent size gives its distance: Z = f·D/d, with D the diameter you enter, d the diameter of the disc with the mask's area, and f the camera's focal length in pixels. Its image position then gives X and Y. Frames where the mask is stretched by motion blur (aspect ratio over 1.3), loses over 30% of its area against its neighbours, or touches the frame edge are rejected. One pixel of diameter error on a 40 px ball is 2.5% of the distance, so depth is far noisier than position across the image; the fit weights it accordingly, and every frame's depth error is reported. The three 3D projectile laws then go through the same held-out forecast and BIC rules as the 2D ones. The mode is opt-in (`depth_3d` and `focal_px` on `POST /api/runs`, with the object's size) and runs only for a ball fitted as a projectile; otherwise the 2D result stands and a note says why 3D was skipped. Phone videos record no focal length that ffprobe can read (none of our clips have one), so you measure it once: film an A4 sheet flat at a known distance and use f = d·Z/D (`physics/depth3d.py`, `focal_from_reference`).
 
 ## How it works
 
@@ -129,6 +132,7 @@ SAM 3.1 is used as a **scientific measurement instrument**: its masks become pos
 - spin-down: all four friction laws identified, coefficients within 3%, orientation from masks to 0.004 rad
 - free-form laws: an air-drag law written as text recovers its coefficient within 5%; a 2D drag law recovers g within 3%; a wrong law loses to the controls
 - machine health: no false alarm when the same system is re-recorded; a 50% rise in damping and a 2% frequency shift are flagged
+- 3D from one phone: a ball thrown away from a pinhole camera (2 m to 3.3 m, 1 px noise on its centre and diameter) gives g within 1% over five noise draws; a throw across the image plane gives the same g as the 2D analysis within 1%; blurred and partly hidden frames are rejected. Not yet validated on a real throw.
 
 ## Engineering highlights
 
@@ -250,11 +254,13 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Bouncing objects: hybrid model with per-impact coefficient of restitution
 - [x] Double pendulum: two tracked bobs, short-horizon fitting, chaos measured
 - [x] Spin-down of rotating objects: friction law identified, exported to MuJoCo with native dry friction
+- [x] 3D from one phone for balls: depth from apparent size, blur and occlusion filters, per-frame depth error, 3D projectile laws verified like the 2D ones
 - [x] Public access: free gallery of real analyses, judge access code, per-visitor limits, optional bot check
 
 ## Limitations
 
 - 2D motion in the camera plane; best results with the camera side-on and held still.
+- The 3D mode works only for balls, needs a focal length you measure yourself, assumes the principal point at the image centre and gravity straight down the image (phone upright and level), and scales every length and g with the diameter you enter. It has been checked on synthetic throws only.
 - One object, or two for a double pendulum. Live mode follows one object.
 - Deformable and fluid motion (cloth, water, smoke) is reported as "no clean equation," not modeled.
 - Accuracy depends on frame rate, lighting and a visible reference of known size (or a known pendulum length).

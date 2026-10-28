@@ -26,6 +26,7 @@ class ObjectTrack:
     short_px: np.ndarray
     confidence: np.ndarray
     boxes: np.ndarray | None = None  # (N, 4) SAM's own box per frame (left, top, right, bottom), for drawing checks
+    area_px: np.ndarray | None = None  # (N,) mask pixel count: a ball's apparent diameter for the 3D depth mode
 
 
 def parse_sam_text(text: str, completed: bool = True) -> list[msp.SegmentationMaskRecord]:
@@ -63,19 +64,21 @@ def _shape(raster: np.ndarray, left: int, top: int) -> tuple[float, float, float
 def tracks_from_records(records: list[msp.SegmentationMaskRecord]) -> dict[str, ObjectTrack]:
     per_object: dict[str, dict[int, tuple]] = {}
     for r in records:
-        shape = _shape(mask_raster(r), r.bounds.left, r.bounds.top)
+        raster = mask_raster(r)
+        shape = _shape(raster, r.bounds.left, r.bounds.top)
         if shape is None:
             continue
         # Keyed by frame index and object id, never by line order: frames can arrive out of order.
         b = r.bounds
         per_object.setdefault(r.object_id, {})[r.frame.frame_index] = (
-            *shape, r.confidence or 0.0, b.left, b.top, b.right, b.bottom)
+            *shape, r.confidence or 0.0, b.left, b.top, b.right, b.bottom, float(np.count_nonzero(raster)))
 
     tracks = {}
     for oid, by_frame in per_object.items():
         frames = np.array(sorted(by_frame))
         rows = np.array([by_frame[f] for f in frames])
-        tracks[oid] = ObjectTrack(oid, frames, rows[:, 0:2], rows[:, 4], rows[:, 2], rows[:, 3], rows[:, 5], rows[:, 6:10])
+        tracks[oid] = ObjectTrack(oid, frames, rows[:, 0:2], rows[:, 4], rows[:, 2], rows[:, 3], rows[:, 5], rows[:, 6:10],
+                                  rows[:, 10])
     return tracks
 
 
