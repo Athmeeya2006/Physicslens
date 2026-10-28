@@ -27,6 +27,8 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 
+from .agent.llm import LLMError as StudyLLMError
+from .agent.notes import interpret_notes
 from .agent.whatif import run_whatif
 from .costguard import CostGuardClient, CostGuardError
 from .export.mjcf import build_mjcf
@@ -47,14 +49,17 @@ from .pipeline import AnalysisError, RunOptions, trajectory_from_result
 from .public import PublicQuota, client_address, turnstile_ok
 from .runs import RunManager
 from .settings import load_settings
+from .studies import Studies, StudyError
 from .voice.events import final_turn, partial_text
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 # Raises before the server accepts a request if MOCK_MODELS=1 in demo/prod or budget.yaml is missing.
+log = logging.getLogger("physicslens.app")
 settings = load_settings()
 client = CostGuardClient(settings)
 runs = RunManager(settings, client)
+studies = Studies(settings.data_dir / "studies", client)
 public_quota = PublicQuota(settings.data_dir / "public.db", int(client.guard.budget.get("public_per_ip_daily_analyses", 3)))
 
 MAX_UPLOAD_BYTES = 200 * 1024 * 1024
@@ -253,6 +258,8 @@ async def live(ws: WebSocket) -> None:
                 cmd = json.loads(message["text"])
                 if cmd.get("type") == "select":
                     session.select(float(cmd["x"]), float(cmd["y"]))
+                elif cmd.get("type") == "length" and 0.005 <= float(cmd.get("meters", 0)) <= 100:
+                    session.set_length(float(cmd["meters"]))
         else:
             await ws.send_json({"type": "notice", "level": "info", "message": "Session length limit reached."})
     except WebSocketDisconnect:
@@ -435,3 +442,151 @@ def health_trend(runs: Annotated[list[str], Body(embed=True)]) -> dict:
             "flagged": flags,
         })
     return out
+
+
+# ---------- goal-driven studies: several recordings toward one deliverable ----------
+
+def _study_audience(x_access_code: str | None) -> str:
+    audience = audience_for(x_access_code)
+    if audience == "public":
+        raise HTTPException(status_code=403, detail="Studies need the access code.")
+    return audience
+
+
+def _result_or_none(run_id: str) -> dict | None:
+    state = runs.get(run_id)
+    if state is None or state.status in ("queued", "running"):
+        return None
+    if state.status == "error":
+        return {"status": "error", "reason": state.error or "The analysis failed."}
+    return state.result
+
+
+def _health_series(run_ids: list[str]) -> dict | None:
+    """Wear verdict across a study's recordings: two are compared directly, three or more get a trend."""
+    try:
+        series = [_health(r) for r in run_ids]
+        if len(series) == 2:
+            return compare(series[0], series[1])
+        return trend(series[:12])
+    except (HTTPException, HealthError) as e:
+        log.warning("Study health check skipped: %s", e)
+        return None
+
+
+def _study_call(fn, *args):
+    try:
+        return fn(*args)
+    except StudyError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except CostGuardError as e:
+        detail = str(e) if settings.app_env == "dev" else "Temporarily busy, please retry later."
+        raise HTTPException(status_code=503, detail=detail) from e
+    except StudyLLMError as e:
+        raise HTTPException(status_code=502, detail="The reasoning model gave no usable answer; please try again.") from e
+
+
+@app.post("/api/studies")
+def create_study(goal: Annotated[str, Body(embed=True)], x_access_code: Annotated[str | None, Header()] = None) -> dict:
+    return _study_call(studies.create, goal, _study_audience(x_access_code))
+
+
+@app.get("/api/studies/{study_id}")
+def get_study(study_id: str) -> dict:
+    return _study_call(studies.get, study_id)
+
+
+@app.post("/api/studies/{study_id}/runs")
+def add_study_run(
+    study_id: str,
+    request: Request,
+    video: Annotated[UploadFile, File()],
+    label: Annotated[str, Form(max_length=60)] = "",
+    pendulum_length_m: Annotated[float | None, Form()] = None,
+    object_size_m: Annotated[float | None, Form()] = None,
+    slow_motion: Annotated[float, Form()] = 1.0,
+    object_hint: Annotated[str | None, Form(max_length=60)] = None,
+    x_access_code: Annotated[str | None, Header()] = None,
+) -> dict:
+    _study_audience(x_access_code)
+    _study_call(studies.get, study_id)  # fail before accepting the upload
+    run = create_run(request, video, pendulum_length_m, object_size_m, slow_motion, object_hint, None, x_access_code, None)
+    study = _study_call(studies.attach, study_id, run["run_id"], label)
+    return {"study": study, "run": run}
+
+
+@app.post("/api/studies/{study_id}/review")
+def review_study(study_id: str, x_access_code: Annotated[str | None, Header()] = None) -> dict:
+    return _study_call(studies.review, study_id, _result_or_none, _health_series, _study_audience(x_access_code))
+
+
+@app.get("/api/studies/{study_id}/report")
+def study_report(study_id: str) -> Response:
+    body = _study_call(studies.report, study_id, _result_or_none)
+    return Response(body, media_type="text/markdown",
+                    headers={"Content-Disposition": f'attachment; filename="physicslens-study-{study_id}.md"'})
+
+
+@app.get("/api/studies/{study_id}/mjcf")
+def study_mjcf(study_id: str) -> Response:
+    body = _study_call(studies.mjcf, study_id, _result_or_none)
+    return Response(body, media_type="application/xml",
+                    headers={"Content-Disposition": f'attachment; filename="physicslens-study-{study_id}.xml"'})
+
+
+NOTES_KEYWORDS = ["string", "length", "centimeters", "meters", "inches", "feet", "slow motion", "front", "left", "right"]
+
+
+@app.websocket("/ws/voice/notes")
+async def voice_notes(ws: WebSocket) -> None:
+    """Spoken settings while filming. First message: JSON {access_code?}; then 24 kHz s16le mono PCM; {"type": "stop"}."""
+    await ws.accept()
+    init = await ws.receive_json()
+    audience = audience_for(init.get("access_code"))
+    if audience == "public":
+        await ws.send_json({"type": "notice", "level": "error", "message": "Voice needs the access code."})
+        await ws.close()
+        return
+    chunks: asyncio.Queue[bytes | None] = asyncio.Queue()
+
+    async def audio():
+        while (chunk := await chunks.get()) is not None:
+            yield chunk
+
+    async def on_event(event: dict) -> None:
+        turn = final_turn(event)
+        if turn is not None:
+            _, text = turn
+            await ws.send_json({"type": "transcript", "text": text, "final": True})
+            notes = await asyncio.to_thread(interpret_notes, client, text, f"notes-{uuid.uuid4().hex[:8]}", audience)
+            await ws.send_json({"type": "notes", **notes})
+            return
+        partial = partial_text(event)
+        if partial:
+            await ws.send_json({"type": "transcript", "text": partial, "final": False})
+
+    async def reader() -> None:
+        try:
+            while True:
+                message = await ws.receive()
+                if message["type"] == "websocket.disconnect":
+                    break
+                if message.get("bytes") is not None:
+                    await chunks.put(message["bytes"])
+                elif message.get("text") and json.loads(message["text"]).get("type") == "stop":
+                    break
+        finally:
+            await chunks.put(None)
+
+    read_task = asyncio.create_task(reader())
+    try:
+        await client.voice_transcribe(audio=audio(), on_event=on_event, run_id=f"notes-{uuid.uuid4().hex[:8]}",
+                                      max_seconds=VOICE_MAX_SECONDS, audience=audience, keywords=NOTES_KEYWORDS)
+        await ws.send_json({"type": "voice_done"})
+    except CostGuardError as e:
+        await ws.send_json({"type": "notice", "level": "warning",
+                            "message": str(e) if audience == "dev" else "Voice is temporarily busy; please type the values."})
+    except WebSocketDisconnect:
+        pass
+    finally:
+        read_task.cancel()

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Tex } from "@/components/Equation";
+import { VoiceNotes } from "@/components/VoiceNotes";
 import { accessCode, API_BASE, useBackend, formatUnit } from "@/lib/api";
 
 const FPS = 25;
@@ -220,6 +221,14 @@ export default function LivePage() {
             </div>
           )}
           {live && <button onClick={stop}>Stop</button>}
+          {live && (
+            <VoiceNotes onNotes={(n) => {
+              // A length said while filming goes straight into the running session.
+              if (n.pendulum_length_m && socket.current?.readyState === WebSocket.OPEN) {
+                socket.current.send(JSON.stringify({ type: "length", meters: n.pendulum_length_m }));
+              }
+            }} />
+          )}
           {scene && <p className="muted small">Object: {scene}</p>}
           {regime && <div className="regime-banner">{regime}</div>}
           {fit && (

@@ -8,7 +8,7 @@ from typing import Any
 from ..costguard import CostGuardClient
 from ..physics.models import MODELS
 from .llm import LLMCall, ask_json
-from .schemas import AgentTurn, Hypotheses, Scene, TrackCheck
+from .schemas import AgentTurn, Hypotheses, Scene, StudyPlan, StudyTurn, TrackCheck
 
 SCENE_SYSTEM = """You look at up to four frames from a short phone video of something moving, for a physics measurement tool.
 Identify the single object whose motion should be measured and a reference object of known size in the same plane.
@@ -91,3 +91,30 @@ def check_track(client: CostGuardClient, overlay_jpeg: bytes, object_name: str, 
     return ask_json(client, task="track_check", system=TRACK_CHECK_SYSTEM, text=json.dumps(payload),
                     schema_model=TrackCheck, run_id=run_id, images=[overlay_jpeg], audience=audience,
                     meta_effort="minimal", max_output_tokens=800)
+
+
+STUDY_PLAN_SYSTEM = """You plan a measurement study for an engineer who films things with a phone. The tool can identify:
+swinging (pendulums, hanging loads, doors on hinges), springs and bouncing suspensions, thrown or falling objects
+with drag, bouncing balls, spin-down of wheels, fans and bearings, double pendulums, and anything sliding or rolling
+to a stop (the agent can write its own law for that). Each recording is analyzed separately and verified on
+held-out motion; you then combine them. Given the user's goal, choose the deliverable, the quantities to measure,
+and 1 to 4 recordings with concrete filming instructions (camera still and side-on, the whole motion in view, an
+A4 sheet or an object of known size in the plane of motion when lengths matter, slow motion for fast things).
+Ask for repeat recordings when the goal needs a trustworthy number, and for recordings spread over time for wear."""
+
+STUDY_TURN_SYSTEM = """You run a measurement study toward the user's goal. You see the plan, every recording's verified
+result, and the combined numbers (a weighted mean per quantity and whether the recordings agree within their error
+bars; that test is final). Decide: "finish" when the goal is answered, or "record_more" with exactly one concrete
+recording that would answer what is still open (a failed recording, recordings that disagree, a quantity not yet
+measured). Never invent numbers; quote only what is given. For a health_check, write a maintenance_note on what the
+change (or no change) means for the machine and suggest next_check; otherwise leave both null."""
+
+
+def plan_study(client: CostGuardClient, goal: str, run_id: str, audience: str = "dev") -> tuple[StudyPlan, LLMCall]:
+    return ask_json(client, task="study_plan", system=STUDY_PLAN_SYSTEM, text=json.dumps({"goal": goal}),
+                    schema_model=StudyPlan, run_id=run_id, audience=audience, meta_effort="low", max_output_tokens=1500)
+
+
+def study_turn(client: CostGuardClient, context: dict[str, Any], run_id: str, audience: str = "dev") -> tuple[StudyTurn, LLMCall]:
+    return ask_json(client, task="study_turn", system=STUDY_TURN_SYSTEM, text=json.dumps(context, default=str),
+                    schema_model=StudyTurn, run_id=run_id, audience=audience, meta_effort="low", max_output_tokens=1500)

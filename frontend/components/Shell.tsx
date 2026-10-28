@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Camera, ScanSearch } from "lucide-react";
+import { Activity, Camera, ClipboardList, ScanSearch } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { accessCode } from "@/lib/api";
@@ -19,6 +19,7 @@ function Mark() {
 
 const NAV = [
   { href: "/", label: "Analyze", icon: ScanSearch },
+  { href: "/study", label: "Studies", icon: ClipboardList },
   { href: "/live", label: "Live", icon: Camera },
   { href: "/health", label: "Machine health", icon: Activity },
 ];

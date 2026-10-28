@@ -1,12 +1,14 @@
 "use client";
 
 import {
-  Compass, Crosshair, Eye, FlaskConical, GitBranch, Lightbulb, MessageSquareText, Orbit, Ruler, ScanEye, Split,
+  ClipboardList, Compass, Crosshair, Eye, Flag, FlaskConical, GitBranch, Lightbulb, MessageSquareText, Orbit, Ruler, ScanEye, Split,
   type LucideIcon,
 } from "lucide-react";
 import type { TrailStep } from "@/lib/api";
 
 const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
+  plan: { label: "Plans the study", icon: ClipboardList },
+  study_turn: { label: "Reviews the study", icon: Flag },
   scene: { label: "Looks at the scene", icon: Eye },
   tracking: { label: "Tracks the object", icon: Crosshair },
   track_check: { label: "Checks what it tracked", icon: ScanEye },

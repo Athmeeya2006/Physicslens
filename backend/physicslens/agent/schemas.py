@@ -166,3 +166,51 @@ class TrackCheck(Strict):
     @classmethod
     def no_dashes(cls, v: str) -> str:
         return _plain_dashes(v)
+
+
+class PlannedRecording(Strict):
+    label: str = Field(description="Short name, e.g. 'Front left corner' or 'Week 1'.")
+    how_to_film: str = Field(description="One or two sentences the user can follow while filming.")
+
+
+class StudyPlan(Strict):
+    deliverable: Literal["simulation_model", "health_check", "parameter_sheet"] = Field(description=(
+        "simulation_model: fitted dynamics exported to MuJoCo; health_check: compare recordings of one machine over "
+        "time for wear; parameter_sheet: measured values with uncertainties."))
+    quantities: list[str] = Field(min_length=1, max_length=4, description="What will be measured, in plain words.")
+    recordings: list[PlannedRecording] = Field(min_length=1, max_length=4)
+    done_when: str = Field(description="One sentence: what result ends the study.")
+    reasoning_summary: str
+
+    @field_validator("done_when", "reasoning_summary")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)
+
+
+class StudyTurn(Strict):
+    action: Literal["record_more", "finish"]
+    next_recording: PlannedRecording | None = Field(description="Only for record_more; otherwise null.")
+    message: str = Field(description="Two or three plain sentences to the user.")
+    maintenance_note: str | None = Field(description="Only for a health_check: what the change means and what to do.")
+    next_check: str | None = Field(description="Only for a health_check: when to record again, e.g. 'in two weeks'.")
+    reasoning_summary: str
+
+    @field_validator("message", "reasoning_summary")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)
+
+
+class VoiceNotes(Strict):
+    pendulum_length_m: float | None = Field(description="String or rod length if the user said one, in meters; else null.")
+    object_size_m: float | None = Field(description="Longest size of the moving object if said, in meters; else null.")
+    object_hint: str | None = Field(description="What to measure, as a short noun phrase, if said; else null.")
+    slow_motion: float | None = Field(description="How many times slower the clip plays (e.g. 8 for 240 fps), if said.")
+    label: str | None = Field(description="A name for this recording if given, e.g. 'left front shock'; else null.")
+    reply: str = Field(description="One short sentence confirming what was set, or saying nothing usable was heard.")
+
+    @field_validator("reply")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)

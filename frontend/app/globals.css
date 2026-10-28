@@ -291,3 +291,18 @@ tr.flagged td { color: var(--bad); font-weight: 650; }
 
 td.fitted { font-size: 0.86rem; white-space: nowrap; }
 td.fitted .uncal { margin-left: 6px; }
+
+/* ---------- studies ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { background: var(--surface-2); color: var(--ink-2); font-weight: 500; font-size: 0.86rem; padding: 6px 10px; }
+.chip:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--model); }
+textarea { font: inherit; padding: 10px; border-radius: var(--radius); border: 1px solid #c4cbc3; background: var(--surface-2); color: var(--ink); resize: vertical; }
+.checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.checklist li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; align-items: baseline; }
+.checklist li.done { color: var(--ink-3); }
+.checklist .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--model); margin: 4px; }
+.recordings { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.recordings li { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+
+.voice-notes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.voice-notes button.listening { box-shadow: inset 0 0 0 2px var(--whatif); }

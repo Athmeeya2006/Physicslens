@@ -74,7 +74,7 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "agent";
+  step: "plan" | "study_turn" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "agent";
   provider: string | null;
   model: string;
   text: string;
@@ -263,3 +263,47 @@ export function formatUnit(unit: string | undefined | null): string {
     .replace(/^1\/([a-z]+)$/i, "$1^-1")
     .replace(/\^(-?\d)/g, (_, e: string) => [...e].map((c) => SUP[c] ?? c).join(""));
 }
+
+// ---------- goal-driven studies ----------
+
+export interface PlannedRecording { label: string; how_to_film: string }
+export interface StudyTurn {
+  action: "record_more" | "finish"; next_recording: PlannedRecording | null; message: string;
+  maintenance_note: string | null; next_check: string | null; model: string; overruled?: string;
+}
+export interface Combined {
+  name: string; latex: string; unit: string; value: number; std: number; n: number; consistent: boolean;
+  p_value: number | null; uncalibrated: boolean;
+}
+export interface Study {
+  id: string; goal: string; status: "recording" | "finished";
+  plan: { deliverable: "simulation_model" | "health_check" | "parameter_sheet"; quantities: string[];
+          recordings: PlannedRecording[]; done_when: string; reasoning_summary: string };
+  recordings: { run_id: string; label: string }[];
+  combined: Combined[];
+  health: { drift: boolean; summary: string } | null;
+  turns: StudyTurn[];
+  trail: TrailStep[];
+}
+
+export const createStudy = (goal: string) =>
+  fetch(`${API_BASE}/api/studies`, { method: "POST", headers: { "Content-Type": "application/json", ...codeHeaders() },
+    body: JSON.stringify({ goal }) }).then((r) => json<Study>(r));
+export const getStudy = (id: string) =>
+  STATIC_SITE && id.startsWith("gallery-") ? fetch(`/gallery/${id}/study.json`).then((r) => json<Study>(r))
+    : fetch(`${API_BASE}/api/studies/${id}`).then((r) => json<Study>(r));
+export const reviewStudy = (id: string) =>
+  fetch(`${API_BASE}/api/studies/${id}/review`, { method: "POST", headers: codeHeaders() }).then((r) => json<Study>(r));
+export function addStudyRun(id: string, file: File, label: string, inputs: RunInputs): Promise<{ study: Study; run: RunView }> {
+  const form = new FormData();
+  form.append("video", file);
+  form.append("label", label.slice(0, 60));
+  if (inputs.pendulumLengthM) form.append("pendulum_length_m", String(inputs.pendulumLengthM));
+  if (inputs.objectSizeM) form.append("object_size_m", String(inputs.objectSizeM));
+  if (inputs.slowMotion && inputs.slowMotion > 1) form.append("slow_motion", String(inputs.slowMotion));
+  if (inputs.objectHint?.trim()) form.append("object_hint", inputs.objectHint.trim().slice(0, 60));
+  return fetch(`${API_BASE}/api/studies/${id}/runs`, { method: "POST", body: form, headers: codeHeaders() })
+    .then((r) => json<{ study: Study; run: RunView }>(r));
+}
+export const studyFileUrl = (id: string, kind: "report" | "mjcf") =>
+  id.startsWith("gallery-") ? `/gallery/${id}/physicslens-${id}.${kind === "report" ? "md" : "xml"}` : `${API_BASE}/api/studies/${id}/${kind}`;

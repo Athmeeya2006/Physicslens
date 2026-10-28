@@ -3,6 +3,7 @@
 import { ArrowLeft, Check, Loader2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Gallery } from "@/components/Gallery";
+import { VoiceNotes } from "@/components/VoiceNotes";
 import { ResultView } from "@/components/ResultView";
 import type { Budget, GalleryItem, Health, RunView } from "@/lib/api";
 import { getBudget, getGallery, getHealth, getRun, startRun, useBackend } from "@/lib/api";
@@ -164,6 +165,12 @@ export default function Home() {
                   <strong>{file ? file.name : "Choose or record a video"}</strong>
                   <span className="small muted">2 to 20 seconds, MP4 or MOV; longer clips are trimmed</span>
                 </label>
+                <VoiceNotes onNotes={(n) => {
+                  if (n.pendulum_length_m) setLengthCm(String(Math.round(n.pendulum_length_m * 1000) / 10));
+                  if (n.object_size_m) setSizeCm(String(Math.round(n.object_size_m * 1000) / 10));
+                  if (n.object_hint) setHint(n.object_hint);
+                  if (n.slow_motion) setSlowMo(String(n.slow_motion));
+                }} />
                 <label className="field">
                   What should it measure? Optional, for busy scenes
                   <input type="text" maxLength={60} placeholder="e.g. the red ball" value={hint} onChange={(e) => setHint(e.target.value)} />

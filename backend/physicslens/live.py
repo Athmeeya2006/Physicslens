@@ -162,6 +162,14 @@ class LiveSession:
             self._wake.set()
         return idx
 
+    def set_length(self, meters: float) -> None:
+        """A length said out loud mid-session. It replaces an earlier given length, never a reference object's scale."""
+        with self.lock:
+            self.cfg.pendulum_length_m = meters
+            if self.calibration is not None and self.calibration.source == "user":
+                self.calibration = None
+        self.send({"type": "notice", "level": "info", "message": f"Length set to {meters * 100:.0f} cm."})
+
     def select(self, x: float, y: float) -> None:
         """The user tapped the object: start tracking at the newest frame now, without waiting for the scene model."""
         with self.lock:
