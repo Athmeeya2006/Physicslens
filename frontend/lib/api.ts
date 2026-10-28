@@ -74,7 +74,7 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "plan" | "study_turn" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "audio" | "agent";
+  step: "plan" | "study_turn" | "joint_fit" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "audio" | "agent";
   provider: string | null;
   model: string;
   text: string;

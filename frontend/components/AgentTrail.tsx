@@ -1,13 +1,14 @@
 "use client";
 
 import {
-  ClipboardList, Compass, Crosshair, Eye, Flag, FlaskConical, GitBranch, Lightbulb, MessageSquareText, Mic, Orbit, Ruler, ScanEye, Split,
+  ClipboardList, Compass, Crosshair, Eye, Flag, FlaskConical, GitBranch, Layers, Lightbulb, MessageSquareText, Mic, Orbit, Ruler, ScanEye, Split,
   type LucideIcon,
 } from "lucide-react";
 import type { TrailStep } from "@/lib/api";
 
 const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
   plan: { label: "Plans the study", icon: ClipboardList },
+  joint_fit: { label: "Fits the recordings together", icon: Layers },
   study_turn: { label: "Reviews the study", icon: Flag },
   scene: { label: "Looks at the scene", icon: Eye },
   tracking: { label: "Tracks the object", icon: Crosshair },
@@ -36,8 +37,10 @@ const DESIGN_STATUS: Record<string, string> = { accepted: "Decisive", tied: "Too
 
 function actor(step: TrailStep): { name: string; tone: "open" | "meta" | "math" } {
   if (step.model === "simulate-and-compare") return { name: "Numerical simulation, not the language model", tone: "math" };
+  if (step.model === "joint fit across recordings") return { name: "Numerical fitting across recordings, not the language model", tone: "math" };
   if (step.model === "acoustic analysis") return { name: "Signal processing on the microphone, not the language model", tone: "math" };
   if (step.model?.startsWith("muse-glimmer")) return { name: "Muse Glimmer 30B (open weights, self-hosted)", tone: "open" };
+  if (step.model === "meta-models/Muse-Glimmer-30B") return { name: "Muse Glimmer 30B (open weights, hosted by Together AI)", tone: "open" };
   if (step.model === "sam-3.1") return { name: "SAM 3.1", tone: "meta" };
   // Only reachable in dev: demo and prod refuse to fall back from the open-weight model.
   return { name: `${step.model} (development fallback)`, tone: "meta" };

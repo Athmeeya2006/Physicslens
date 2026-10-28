@@ -194,6 +194,8 @@ A study turns a goal into a measurement campaign (`studies.py`, `physics/combine
 4. For wear and drift goals the machine-health comparison runs across the recordings, and the agent writes a maintenance note and when to check again.
 5. Deliverables: a study report (Markdown) and a MuJoCo model with the combined parameters.
 
+**The closed experiment loop.** When a recording leaves two laws tied and the agent asks for a different experiment (a wider swing, a harder push), the new recording does not just get its own verdict: all recordings of that system are fitted together, sharing the physical parameters while each keeps its own starting state, and every recording must forecast its own held-out last quarter. The joint BIC then decides, by the same rules as one clip, and the trail says which law the new experiment ruled out and by how much.
+
 ## Live mode
 
 - The phone streams JPEG frames over a WebSocket. Each frame carries a small binary header with its capture time (`PLT1` plus a float64 timestamp), so fitting uses real capture times instead of an assumed frame rate.
@@ -260,6 +262,7 @@ Every accepted result gets a "Sim-to-real" panel (computed on request with local
 - machine health: no false alarm when the same system is re-recorded; a 50% rise in damping and a 2% frequency shift are flagged
 - sim-to-real gap: on a damped pendulum (0.6 m, damping 0.3/s, 2 mm noise) the textbook pendulum misses the held-out quarter by about 13 cm RMS, more than 20 times the PhysicsLens model's 2 mm. In simulation, the swing-up tuned on the textbook model settles about 2° short of 60° and never within 2% of it; tuned on the PhysicsLens model it settles within 2% in about 2 s with under 0.3° error
 - predict the future: on 10 noisy damped pendulums, predictions made from the first 7 s for the rest-point crossing 5 s later land inside their stated 95% window at least 9 times out of 10, with windows under 0.3 s; a system whose period is 3% off misses
+- closed experiment loop: a 0.12 rad swing of an air-drag pendulum ties linear and air damping; fitted together with a 1 rad swing, air drag wins by more than 10 BIC and its coefficient is recovered within 15%
 - sound: restitution from the timing of synthetic impact clicks (under hum and noise) within 0.005 per bounce, with a clap before the drop left out; a hum's frequency within its stated interval; dry, viscous and air-drag spin-down laws identified from a falling tone, with the tone's coefficients within 3%. Not yet tested on real recordings
 
 ## Cost and safety controls
@@ -455,6 +458,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Ghost overlay on the real video, and an on-screen decision trail showing who decided what
 - [x] Live camera mode with converging equations (instant on-server tracking, refined by SAM 3.1 in parallel chunks; tap the object to lock on)
 - [x] Experiment requests for ambiguous data
+- [x] Joint fitting across recordings: the experiment the agent asked for is fitted together with the clip that tied, so the new data settle the question
 - [x] Regime-change detection (live and recorded)
 - [x] Voice what-ifs with Muse Voice Transcribe (spoken question, parameter change, re-simulated ghost; typing works too)
 - [x] Shareable MP4 with the measured trail, the simulated ghost and the typeset equation burned in
