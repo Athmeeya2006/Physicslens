@@ -7,6 +7,7 @@ import { clipUrl, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend
 import { AgentTrail } from "./AgentTrail";
 import { AudioPanel } from "./AudioPanel";
 import { ControlPanel } from "./ControlPanel";
+import { DepthPanel } from "./DepthPanel";
 import { Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
 import { GhostPlayer } from "./GhostPlayer";
@@ -217,6 +218,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
       )}
 
       {r.audio && <AudioPanel audio={r.audio} cameraLawTitle={r.equation?.title} />}
+      {r.depth3d && <DepthPanel d={r.depth3d} />}
 
       {r.fit_state && canAsk && <WhatIf runId={runId} onGhost={setWhatIfGhost} />}
 

@@ -9,7 +9,7 @@ import numpy as np
 
 from .coords import Coordinates, length_is_reliable
 from .fit import FitResult
-from .models import MODELS
+from .models import MODELS, MODELS_3D
 
 # A model must forecast the held-out final quarter within this fraction of the signal's spread,
 # or within a few times the tracking noise (a correct model can't beat the noise floor), but never
@@ -37,7 +37,7 @@ class Verdict:
 
 
 def title(f: FitResult) -> str:
-    return MODELS[f.model_id].title
+    return (MODELS.get(f.model_id) or MODELS_3D[f.model_id]).title
 
 
 def forecasts_well(f: FitResult) -> bool:

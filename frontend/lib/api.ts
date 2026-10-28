@@ -135,6 +135,7 @@ export interface AnalysisResult {
   };
   audio?: AudioResult;
   audit?: PhysicsAudit;
+  depth3d?: Depth3d;
 }
 
 export interface AudioValue { value: number; std: number }
@@ -184,6 +185,29 @@ export interface PhysicsAudit {
   checks: AuditCheck[];
   violations: AuditCheck[];
   thresholds?: Record<string, number>;
+}
+
+
+// 3D from one phone (balls only): depth from the ball's apparent size. "skipped" carries only the reason.
+export interface Depth3d {
+  status: "accepted" | "ambiguous" | "no_fit" | "skipped";
+  reason: string;
+  focal_px?: number;
+  diameter_m?: number;
+  diameter_noise_px?: number;
+  frames_used?: number;
+  frames_interpolated?: number;
+  frames_rejected?: { blurred: number; occluded: number };
+  depth_range_m?: [number, number];
+  depth_travel_vs_error?: number;
+  // [frame, t_s, x_m, y_m, z_m, z_err_m, xy_err_m, interpolated]
+  track?: [number, number, number, number, number, number, number, boolean][];
+  fit_track?: [number, number, number][];
+  equation?: { model_id: string; title: string; latex: string };
+  parameters?: Parameter[];
+  g?: Parameter;
+  ranking?: { model_id: string; title: string; params: Record<string, number>; bic: number; heldout_nrmse: number;
+              status: string; why: string }[];
 }
 
 export interface RunView {
@@ -343,6 +367,8 @@ export interface RunInputs {
   objectSizeM: number | null;
   slowMotion: number | null;
   objectHint: string | null;
+  depth3d?: boolean;
+  focalPx?: number | null;
 }
 
 // path: "/api/audit" runs the same analysis as an audit (every result carries its physics audit).
@@ -355,6 +381,8 @@ export function startRun(file: File, inputs: RunInputs, turnstileToken: string |
   if (objectSizeM) form.append("object_size_m", String(objectSizeM));
   if (slowMotion && slowMotion > 1) form.append("slow_motion", String(slowMotion));
   if (turnstileToken) form.append("turnstile_token", turnstileToken);
+  if (inputs.depth3d) form.append("depth_3d", "true");
+  if (inputs.focalPx) form.append("focal_px", String(inputs.focalPx));
   return fetch(`${API_BASE}${path}`, { method: "POST", body: form, headers: codeHeaders() }).then((r) => json<RunView>(r));
 }
 

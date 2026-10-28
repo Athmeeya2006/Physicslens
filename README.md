@@ -94,6 +94,7 @@ When nothing fits, it says so: *"no clean governing equation found."* It never i
 | Spring or elastic oscillator | harmonic, damped harmonic, spring with dry friction (`oscillator_dry`), stiffening spring (`duffing`) | natural frequency, damping ratio, friction or stiffening coefficient |
 | Torsional spring (door closer, hinge) | damped torsional spring (`spin_spring`) | stiffness and damping per unit inertia |
 | Thrown or dropped object | no drag, linear drag, quadratic drag | g, drag coefficient |
+| Ball thrown toward or away from the camera (opt-in 3D mode, one phone) | no drag, linear drag, quadratic drag in three dimensions | the 3D path with a depth error for every frame, g with an interval |
 | Bouncing ball | free flight plus restitution (hybrid) | g shared by every flight, coefficient of restitution at each bounce |
 | Double pendulum | point-mass double pendulum, fitted on short restarted predictions | g, mass ratio, and how chaotic it is: Lyapunov exponent and how many seconds the motion can be forecast |
 | Spinning object slowing down | free spin, dry friction, viscous, air drag, dry plus viscous | the friction law and its coefficients |
@@ -102,6 +103,8 @@ When nothing fits, it says so: *"no clean governing equation found."* It never i
 **Equations the agent writes itself.** For motion outside the named families the agent proposes the acceleration law as text, for example `-mu*9.81*sign(v) - c*v*abs(v)` for a cart slowed by rolling friction and air drag. A small recursive-descent parser over a closed grammar (numbers, declared parameters, the state variables, `+ - * / ^` and a whitelist of functions) turns it into a model; nothing is ever passed to `eval`. The parsed tree drives the ODE solver, the LaTeX shown in the app and the exported Python script, so what you see is exactly what was fitted. Each law must beat "nothing acts on it" and "a constant force" on held-out motion, and a malformed proposal goes back to the agent with the parser's error. On synthetic data an agent-written air-drag law recovers its coefficient within 5% and a wrong spring law is rejected.
 
 Changes during a clip (say, the string is shortened mid-recording) are detected; each regime is fitted separately, and live mode refits on the new motion.
+
+**3D from one phone, balls only.** A ball looks the same from every side, so its apparent size gives its distance: Z = f·D/d, with D the diameter you enter, d the diameter of the disc with the mask's area, and f the camera's focal length in pixels. Its image position then gives X and Y. Frames where the mask is stretched by motion blur (aspect ratio over 1.3), loses over 30% of its area against its neighbours, or touches the frame edge are rejected. One pixel of diameter error on a 40 px ball is 2.5% of the distance, so depth is far noisier than position across the image; the fit weights it accordingly, and every frame's depth error is reported. The three 3D projectile laws then go through the same held-out forecast and BIC rules as the 2D ones. The mode is opt-in (`depth_3d` and `focal_px` on `POST /api/runs`, with the object's size) and runs only for a ball fitted as a projectile; otherwise the 2D result stands and a note says why 3D was skipped. Phone videos record no focal length that ffprobe can read (none of our clips have one), so you measure it once: film an A4 sheet flat at a known distance and use f = d·Z/D (`physics/depth3d.py`, `focal_from_reference`).
 
 ## Physics audit
 
@@ -336,6 +339,7 @@ Every verified measurement in the gallery also becomes a row of an open dataset 
 - control by hand: a simulated person who pushes 0.22 s late (sd 0.05 s) with varying strength pumps a 5° swing to 30° within 10 pushes and stops a 34° swing within 10; the app recovers the person's lag from the track within 0.08 s; without learning the lag, stopping stalls
 - sound: restitution from the timing of synthetic impact clicks (under hum and noise) within 0.005 per bounce, with a clap before the drop left out; a hum's frequency within its stated interval; dry, viscous and air-drag spin-down laws identified from a falling tone, with the tone's coefficients within 3%. Not yet tested on real recordings
 - physics audit: g = 14.2 with a real scale, a bounce with e = 1.1, a 15% period drift, a swing growing threefold over 10 s, a 15 cm teleport, a mask that more than doubles in size and a g that changes between flights (no scale) are each caught; of 40 seeded clean clips (bounces, pendulums, springs, 1 to 4 mm noise) none is accused, 39 are judged consistent and 1 can't be judged. **Accuracy on real AI-generated video has not been measured yet**: that needs a licensed set of generated clips, which is still to be decided.
+- 3D from one phone: a ball thrown away from a pinhole camera (2 m to 3.3 m, 1 px noise on its centre and diameter) gives g within 1% over five noise draws; a throw across the image plane gives the same g as the 2D analysis within 1%; blurred and partly hidden frames are rejected. Not yet validated on a real throw.
 
 ## Cost and safety controls
 
@@ -561,10 +565,12 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Public access: gallery of real analyses, judge access code, per-visitor limits, optional bot check
 - [x] A static gallery site that finds the analysis server at runtime, and `llms.txt` for AI assistants
 - [x] Physics audit, a lie detector for AI-generated video and world models: gravity, energy, period drift, a forecasting law and frame-to-frame continuity, each violation reported with its size and significance, and "can't judge" when the clip can't support a verdict
+- [x] 3D from one phone for balls: depth from apparent size, blur and occlusion filters, per-frame depth error, 3D projectile laws verified like the 2D ones
 
 ## Limitations
 
 - 2D motion in the camera plane; best results with the camera side-on and held still.
+- The 3D mode works only for balls, needs a focal length you measure yourself, assumes the principal point at the image centre and gravity straight down the image (phone upright and level), and scales every length and g with the diameter you enter. It has been checked on synthetic throws only.
 - One object, or two for a double pendulum. Live mode follows one object.
 - Deformable and fluid motion (cloth, water, smoke) is reported as "no clean equation," not modeled.
 - Accuracy depends on frame rate, lighting and a visible reference of known size (or a known pendulum length).

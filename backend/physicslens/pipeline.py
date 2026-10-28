@@ -33,6 +33,7 @@ from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
 from .perception.track_quality import assess_track, overlay_frames
 from .physics.audit import AuditInput, LawEvidence, audit
 from .physics.audit import cant_judge as audit_cant_judge
+from .physics import depth3d
 from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
 from .physics.custom import FREE_MODELS, FreeParam, build, register, spec_for
@@ -87,6 +88,8 @@ class RunOptions:
     slow_motion: float = 1.0  # capture rate / playback rate, e.g. 8 for a phone's 240 fps slow motion saved at 30 fps
     prepared: Path | None = None  # a media.save_prepared bundle: analyze exactly these bytes (see save_prepared)
     blade_count: int | None = None  # fan blades (or other sound sources per turn): turns a blade-pass tone into a spin rate
+    depth_3d: bool = False  # also measure a ball's depth from its apparent size (needs object_size_m and focal_px)
+    focal_px: float | None = None  # camera focal length in pixels at the uploaded video's resolution
 
 
 Progress = Callable[[str], None]
@@ -388,6 +391,9 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         trail.append(step)
     progress("Auditing the motion for physics violations")
     result["audit"] = audit_clip(full, family, calibration, verdict, moving, tracks.get(REFERENCE_ID), info, change, result, video)
+    if options.depth_3d:
+        progress("Measuring the ball's depth from its apparent size")
+        result["depth3d"] = depth_for_run(moving, traj, fps, info, video, options, scene.moving_object, family)
     progress("Done")
     return result
 
@@ -424,6 +430,18 @@ def audit_clip(full: Trajectory, family: str, calibration: Calibration, verdict:
     except (ValueError, np.linalg.LinAlgError) as e:  # the audit is a second opinion; it must not sink the result
         log.warning("Physics audit failed: %s", e)
         return audit_cant_judge(f"the audit's own measurement failed on this track ({e}).")
+
+
+def depth_for_run(moving: ObjectTrack, traj: Trajectory, fps: float, info: media.VideoInfo, video: Path,
+                  options: RunOptions, moving_object: str, family: str) -> dict[str, Any]:
+    focal = options.focal_px
+    if focal is not None and options.prepared is None:
+        # The focal length is measured on the phone's own frames; the clip SAM tracked may be downscaled. A prepared
+        # bundle has no original beside it, so there the focal length is taken as given for the stored clip.
+        source = media.probe(video)
+        focal *= max(info.width, info.height) / max(source.width, source.height)
+    return depth3d.for_run(moving, traj.frames, fps=fps, width=info.width, height=info.height, focal_px=focal,
+                           size_m=options.object_size_m, moving_object=moving_object, family=family)
 
 
 def prepare(video: Path, run_dir: Path, options: RunOptions, media_cfg: dict[str, Any], start_s: float = 0.0,

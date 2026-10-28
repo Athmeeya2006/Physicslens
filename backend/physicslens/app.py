@@ -132,8 +132,12 @@ def create_run(
     x_access_code: Annotated[str | None, Header()] = None,
     x_forwarded_for: Annotated[str | None, Header()] = None,
     blade_count: Annotated[int | None, Form(ge=1, le=64)] = None,
+    depth_3d: Annotated[bool, Form()] = False,
+    focal_px: Annotated[float | None, Form()] = None,
 ) -> dict[str, object]:
     audience = audience_for(x_access_code)
+    if focal_px is not None and not 50 <= focal_px <= 50000:
+        raise HTTPException(status_code=400, detail="The focal length should be between 50 and 50000 pixels.")
     for name, value in (("pendulum length", pendulum_length_m), ("object size", object_size_m)):
         if value is not None and not 0.005 <= value <= 100:
             raise HTTPException(status_code=400, detail=f"The {name} should be between 0.5 cm and 100 m.")
@@ -164,7 +168,8 @@ def create_run(
         shutil.rmtree(run_dir)
         raise HTTPException(status_code=413, detail="That video is too large; trim it to under 30 seconds.")
     state = runs.start(dest, RunOptions(audience=audience, pendulum_length_m=pendulum_length_m, object_size_m=object_size_m,
-                                         slow_motion=slow_motion, object_hint=object_hint, blade_count=blade_count))
+                                         slow_motion=slow_motion, object_hint=object_hint, blade_count=blade_count,
+                                         depth_3d=depth_3d, focal_px=focal_px))
     return runs.public_view(state)
 
 
