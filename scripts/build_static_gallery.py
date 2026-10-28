@@ -2,7 +2,7 @@
 
 Writes frontend/public/gallery/<id>/ (result, clip, share video, poster, the three exports, the sim-to-real comparison and any
 stored setup guide) plus
-frontend/public/gallery/index.json. Run before building the static site.
+frontend/public/gallery/index.json and the open dataset (dataset.json, dataset.csv). Run before building the static site.
 """
 
 import json
@@ -13,6 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
+from physicslens.export.dataset import entries as dataset_entries
+from physicslens.export.dataset import to_csv
 from physicslens.export.mjcf import bounce_mjcf, build_mjcf
 from physicslens.export.report import report_markdown
 from physicslens.export.script import parameters_json, python_script
@@ -25,7 +27,7 @@ DST = ROOT / "frontend" / "public" / "gallery"
 def main() -> None:
     shutil.rmtree(DST, ignore_errors=True)
     DST.mkdir(parents=True)
-    index = []
+    index, dataset = [], []
     for meta_file in sorted(SRC.glob("*/meta.json")):
         src = meta_file.parent
         gid = src.name
@@ -66,6 +68,7 @@ def main() -> None:
                     (dst / "sim2real.json").write_text(json.dumps(sim2real(result)))
                 except Sim2RealError as e:
                     print(f"{gid}: no sim-to-real comparison ({e})")
+        dataset += dataset_entries(gid, result, meta)
         eq = result.get("equation") or {}
         if meta.get("hidden"):
             continue  # a study's recording: reachable from its study, not listed on its own
@@ -73,6 +76,8 @@ def main() -> None:
                       "equation_title": eq.get("title"), "object": (result.get("scene") or {}).get("moving_object")})
     index.sort(key=lambda i: i.get("order", 99))
     (DST / "index.json").write_text(json.dumps(index, indent=1))
+    (DST / "dataset.json").write_text(json.dumps(dataset, indent=1))
+    (DST / "dataset.csv").write_text(to_csv(dataset))
     print(f"Bundled {len(index)} gallery entries into {DST.relative_to(ROOT)}")
 
 
