@@ -316,3 +316,12 @@ textarea { font: inherit; padding: 10px; border-radius: var(--radius); border: 1
 .how { margin: 0; padding-left: 1.2em; display: grid; gap: 10px; }
 .how li::marker { color: var(--model); font-weight: 700; }
 a.gallery-item { text-decoration: none; }
+
+/* Setup guide: the written instruction leads; the drawing sits beside the untouched frame (stacked on phones). */
+.setup-guide { margin-top: 10px; display: grid; gap: 8px; }
+.trail-step .setup-guide .setup-instruction { font-size: 1.15rem; font-weight: 700; color: var(--ink); line-height: 1.35; }
+.setup-guide figure { margin: 0; display: grid; gap: 6px; }
+.setup-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.setup-pair img { width: 100%; height: auto; border-radius: var(--radius); display: block; }
+.setup-guide button { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 560px) { .setup-pair { grid-template-columns: minmax(0, 1fr); } }

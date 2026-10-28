@@ -112,7 +112,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         />
         <div className="panel">
           <h3>Decision trail</h3>
-          <AgentTrail steps={r.trail ?? []} />
+          <AgentTrail steps={r.trail ?? []} runId={runId} />
         </div>
       </div>
 

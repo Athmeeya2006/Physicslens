@@ -15,4 +15,5 @@ smoke_cap_usd: 0.25
 judge_daily_cap_usd: 5.00
 public_daily_cap_usd: 1.00
 public_per_ip_daily_analyses: 3
+setup_guide_daily_cap_usd: 0.20
 warn_at_fraction: 0.75

@@ -76,10 +76,11 @@ class Ledger:
         day: str | None = None,
         run_id: str | None = None,
         audience: str | None = None,
+        model: str | None = None,
     ) -> float:
         where = [f"status IN ({','.join('?' * len(COUNTED_STATUSES))})"]
         args: list[Any] = list(COUNTED_STATUSES)
-        for column, value in (("provider", provider), ("substr(ts, 1, 10)", day), ("run_id", run_id), ("audience", audience)):
+        for column, value in (("provider", provider), ("substr(ts, 1, 10)", day), ("run_id", run_id), ("audience", audience), ("model", model)):
             if value is not None:
                 where.append(f"{column} = ?")
                 args.append(value)

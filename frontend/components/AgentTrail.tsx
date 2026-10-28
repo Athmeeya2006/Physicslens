@@ -1,10 +1,11 @@
 "use client";
 
 import {
-  ClipboardList, Compass, Crosshair, Eye, Flag, FlaskConical, GitBranch, Layers, Lightbulb, MessageSquareText, Mic, Orbit, Ruler, ScanEye, Split,
+  ClipboardList, Compass, Crosshair, Eye, Flag, FlaskConical, GitBranch, Layers, Lightbulb, MessageSquareText, Mic, Orbit, PencilRuler, Ruler, ScanEye, Split,
   type LucideIcon,
 } from "lucide-react";
 import type { TrailStep } from "@/lib/api";
+import { SetupGuide } from "./SetupGuide";
 
 const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
   plan: { label: "Plans the study", icon: ClipboardList },
@@ -22,6 +23,7 @@ const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
   chaos: { label: "Measures chaos", icon: Orbit },
   audio: { label: "Listens to the soundtrack", icon: Mic },
   agent: { label: "Decides what to do next", icon: MessageSquareText },
+  setup_guide: { label: "Draws the setup", icon: PencilRuler },
 };
 
 const ACTION_LABEL: Record<string, string> = {
@@ -42,11 +44,18 @@ function actor(step: TrailStep): { name: string; tone: "open" | "meta" | "math" 
   if (step.model?.startsWith("muse-glimmer")) return { name: "Muse Glimmer 30B (open weights, self-hosted)", tone: "open" };
   if (step.model === "meta-models/Muse-Glimmer-30B") return { name: "Muse Glimmer 30B (open weights, hosted by Together AI)", tone: "open" };
   if (step.model === "sam-3.1") return { name: "SAM 3.1", tone: "meta" };
+  if (step.model === "muse-image-1.0") return { name: "Muse Image (draws only, never measures)", tone: "meta" };
   // Only reachable in dev: demo and prod refuse to fall back from the open-weight model.
   return { name: `${step.model} (development fallback)`, tone: "meta" };
 }
 
-export function AgentTrail({ steps }: { steps: TrailStep[] }) {
+// The written instruction of a designed experiment; the picture guide illustrates exactly this.
+function designInstruction(step: TrailStep): string {
+  const first = step.items?.[0]?.title;
+  return first ? `${first}.` : step.text;
+}
+
+export function AgentTrail({ steps, runId }: { steps: TrailStep[]; runId?: string }) {
   return (
     <ol className="trail">
       {steps.map((s, i) => {
@@ -75,6 +84,7 @@ export function AgentTrail({ steps }: { steps: TrailStep[] }) {
                 </ul>
               )}
               {s.reasoning_summary && <p className="small muted">Reasoning: {s.reasoning_summary}</p>}
+              {runId && s.step === "design" && <SetupGuide runId={runId} stepRef={i} instruction={designInstruction(s)} />}
             </div>
           </li>
         );

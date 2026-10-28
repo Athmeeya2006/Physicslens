@@ -202,6 +202,31 @@ class StudyTurn(Strict):
         return _plain_dashes(v)
 
 
+class SetupMark(Strict):
+    kind: Literal["place_object", "camera_position", "release_point", "push_here", "keep_clear"]
+    label: str = Field(description="At most four plain words, no digits, e.g. 'release here'.")
+    box: Box1000 = Field(description="Where the mark goes, on the 0-1000 grid of the image.")
+
+    @field_validator("label")
+    @classmethod
+    def short_words(cls, v: str) -> str:
+        # Numbers are drawn by code from the verified instruction, never by the image model or this label.
+        v = " ".join(_plain_dashes(v).split())
+        if not 1 <= len(v.split()) <= 4 or any(c.isdigit() for c in v):
+            raise ValueError("label must be one to four words with no digits")
+        return v
+
+
+class SetupGuidePlan(Strict):
+    instruction: str = Field(description="The requested experiment restated in one plain sentence for the user.")
+    marks: list[SetupMark] = Field(min_length=1, max_length=4)
+
+    @field_validator("instruction")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)
+
+
 class VoiceNotes(Strict):
     pendulum_length_m: float | None = Field(description="String or rod length if the user said one, in meters; else null.")
     object_size_m: float | None = Field(description="Longest size of the moving object if said, in meters; else null.")

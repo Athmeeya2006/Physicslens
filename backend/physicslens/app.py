@@ -29,6 +29,7 @@ from fastapi.responses import FileResponse, Response
 
 from .agent.llm import LLMError as StudyLLMError
 from .agent.notes import interpret_notes
+from .agent.setup_guide import GUIDE_FRAME, GUIDE_JPG, SetupGuideError, make_setup_guide
 from .agent.whatif import run_whatif
 from .costguard import CostGuardClient, CostGuardError
 from .export.mjcf import bounce_mjcf, build_mjcf
@@ -305,6 +306,53 @@ def whatif(
     except CostGuardError as e:
         detail = str(e) if settings.app_env == "dev" else "Temporarily busy, please retry later."
         raise HTTPException(status_code=503, detail=detail) from e
+
+
+@app.post("/api/runs/{run_id}/setup-guide")
+def setup_guide(
+    run_id: str,
+    step_ref: Annotated[int, Body(embed=True)],
+    x_access_code: Annotated[str | None, Header()] = None,
+) -> dict:
+    """The requested experiment drawn on this clip's own frame. Paid (Muse Image): judges and development only."""
+    audience = audience_for(x_access_code)
+    if audience == "public":
+        raise HTTPException(status_code=403, detail="Picture guides need the access code.")
+    result = _finished_result(run_id)
+    run_dir = _run_file(run_id, "")
+    try:
+        # Its own budget run per request, like what-ifs; the image call also has its own daily cap.
+        guide = make_setup_guide(client, run_dir, result, step_ref, f"guide-{run_id}-{uuid.uuid4().hex[:8]}", audience)
+    except SetupGuideError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    item = guide["trail_item"]
+    trail = [s for s in result.get("trail", []) if s.get("step") != "setup_guide"]
+    result["trail"] = [*trail, item]
+    saved = run_dir / "result.json"
+    if saved.is_file() and guide["status"] == "picture":
+        saved.write_text(json.dumps(result, default=str))
+    out = {k: guide.get(k) for k in ("status", "instruction", "caption", "reason", "provider", "model", "planned_by",
+                                     "step_ref", "trail_item")}
+    if guide["status"] == "picture":
+        out["image_url"] = f"/api/runs/{run_id}/setup-guide.jpg"
+        out["frame_url"] = f"/api/runs/{run_id}/setup-guide-frame.jpg"
+    return out
+
+
+@app.get("/api/runs/{run_id}/setup-guide.jpg")
+def get_setup_guide(run_id: str) -> FileResponse:
+    path = _run_file(run_id, GUIDE_JPG)
+    if not path.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(path, media_type="image/jpeg")
+
+
+@app.get("/api/runs/{run_id}/setup-guide-frame.jpg")
+def get_setup_guide_frame(run_id: str) -> FileResponse:
+    path = _run_file(run_id, GUIDE_FRAME)
+    if not path.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(path, media_type="image/jpeg")
 
 
 @app.websocket("/ws/voice")

@@ -17,6 +17,7 @@ META_TEXT_MODEL = "muse-spark-1.3"
 META_CONTRIBUTOR_MODEL = "muse-spark-1.3-contributor"
 SAM_MODEL = "sam-3.1"
 VOICE_MODEL = "muse-voice-transcribe-1.0"
+IMAGE_MODEL = "muse-image-1.0"
 GLIMMER_MODEL = "muse-glimmer-30b"
 # The same open weights served by a hosted provider listed in Meta's Glimmer deploy guide (Together AI).
 TOGETHER_GLIMMER_MODEL = "meta-models/Muse-Glimmer-30B"
