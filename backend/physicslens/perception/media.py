@@ -118,3 +118,22 @@ def load_prepared(src_dir: Path, run_dir: Path) -> tuple[Path, VideoInfo, list[b
     info = VideoInfo(**json.loads((src_dir / "info.json").read_text()))
     frames = [p.read_bytes() for p in sorted(src_dir.glob("keyframe_*.jpg"), key=lambda p: int(p.stem.split("_")[1]))]
     return clip, info, frames
+
+
+def frame_rate_varies(path: Path, tolerance: float = 0.25, max_share: float = 0.05) -> bool:
+    """Whether the source video's frame intervals vary (phones often record a variable frame rate).
+
+    The analyzed clip is resampled to a constant rate, which can shift a frame's time by half a frame; that is
+    harmless for fitting a law but matters when judging whether motion is physical at all.
+    """
+    try:
+        out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time",
+                              "-of", "csv=p=0", str(path)], check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        raise MediaError(f"Could not read frame times: {e.stderr.strip()[:200]}") from e
+    times = np.sort([float(x) for x in out.stdout.split() if x.strip() not in ("", "N/A")])
+    steps = np.diff(times)
+    if len(steps) < 10:
+        return False
+    med = float(np.median(steps))
+    return med > 0 and float(np.mean(np.abs(steps - med) > tolerance * med)) > max_share

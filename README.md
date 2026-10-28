@@ -20,29 +20,30 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 2. [Applications](#applications)
 3. [What it does](#what-it-does)
 4. [Systems it identifies](#systems-it-identifies)
-5. [How it works](#how-it-works)
-6. [Meta models used](#meta-models-used)
-7. [The pipeline in detail](#the-pipeline-in-detail)
-8. [How an equation is accepted](#how-an-equation-is-accepted)
-9. [The agent](#the-agent)
-10. [Studies](#studies)
-11. [Live mode](#live-mode)
-12. [Machine health](#machine-health)
-13. [Sound as a second sensor](#sound-as-a-second-sensor)
-14. [Exports](#exports)
-15. [Sim-to-real gap, made visible](#sim-to-real-gap-made-visible)
-16. [Validation](#validation)
-17. [Cost and safety controls](#cost-and-safety-controls)
-18. [Getting started (Linux)](#getting-started-linux)
-19. [Configuration reference](#configuration-reference)
-20. [HTTP and WebSocket API](#http-and-websocket-api)
-21. [Project structure](#project-structure)
-22. [Testing](#testing)
-23. [What we built during the hackathon](#what-we-built-during-the-hackathon)
-24. [Limitations](#limitations)
-25. [Roadmap](#roadmap)
-26. [Acknowledgements](#acknowledgements)
-27. [License](#license)
+5. [Physics audit](#physics-audit)
+6. [How it works](#how-it-works)
+7. [Meta models used](#meta-models-used)
+8. [The pipeline in detail](#the-pipeline-in-detail)
+9. [How an equation is accepted](#how-an-equation-is-accepted)
+10. [The agent](#the-agent)
+11. [Studies](#studies)
+12. [Live mode](#live-mode)
+13. [Machine health](#machine-health)
+14. [Sound as a second sensor](#sound-as-a-second-sensor)
+15. [Exports](#exports)
+16. [Sim-to-real gap, made visible](#sim-to-real-gap-made-visible)
+17. [Validation](#validation)
+18. [Cost and safety controls](#cost-and-safety-controls)
+19. [Getting started (Linux)](#getting-started-linux)
+20. [Configuration reference](#configuration-reference)
+21. [HTTP and WebSocket API](#http-and-websocket-api)
+22. [Project structure](#project-structure)
+23. [Testing](#testing)
+24. [What we built during the hackathon](#what-we-built-during-the-hackathon)
+25. [Limitations](#limitations)
+26. [Roadmap](#roadmap)
+27. [Acknowledgements](#acknowledgements)
+28. [License](#license)
 
 ---
 
@@ -98,6 +99,24 @@ When nothing fits, it says so: *"no clean governing equation found."* It never i
 **Equations the agent writes itself.** For motion outside the named families the agent proposes the acceleration law as text, for example `-mu*9.81*sign(v) - c*v*abs(v)` for a cart slowed by rolling friction and air drag. A small recursive-descent parser over a closed grammar (numbers, declared parameters, the state variables, `+ - * / ^` and a whitelist of functions) turns it into a model; nothing is ever passed to `eval`. The parsed tree drives the ODE solver, the LaTeX shown in the app and the exported Python script, so what you see is exactly what was fitted. Each law must beat "nothing acts on it" and "a constant force" on held-out motion, and a malformed proposal goes back to the agent with the parser's error. On synthetic data an agent-written air-drag law recovers its coefficient within 5% and a wrong spring law is rejected.
 
 Changes during a clip (say, the string is shortened mid-recording) are detected; each regime is fitted separately, and live mode refits on the new motion.
+
+## Physics audit
+
+Every analysis also asks a sharper question: does this motion break a law that every real object obeys? That makes PhysicsLens a lie detector for AI-generated video and for world models: upload a clip on the **Physics audit** page (or `POST /api/audit`, the same upload as `POST /api/runs`; every result carries `result["audit"]`). The audit is local math on the tracked motion, with no extra model calls, and it reports one of three verdicts:
+
+- **violates physics**, listing each violation with its size and significance, for example "g = 14.2 ± 0.6 m/s² (scale from the A4 sheet in view), against 9.81 m/s²" or a bounce that gains 21% energy (e = 1.10);
+- **consistent**, when at least one dynamics check applies and none is violated;
+- **can't judge**, the default whenever a precondition fails: under 1.5 s of motion, the object tracked in under 70% of frames, low tracker confidence, a variable frame rate, a camera that moves (the scale reference drifts), or motion too small against the tracking noise.
+
+| Check | What counts as a violation |
+|---|---|
+| Gravity | with a real scale, g more than 25% from 9.81 m/s²; with none, one flight's g more than 25% from the others', or gravity pointing more than 10° differently |
+| Energy | a bounce returning more than 110% of its speed (e > 1.1); a free flight gaining more than 15% of its energy; a passive swing growing more than 20% over the clip |
+| Period drift | an oscillator's frequency drifting more than 4% over the clip, after correcting a pendulum for its amplitude, unless a regime change explains it |
+| Law | the object moves like a pendulum, spring or projectile, yet no law (the agent's own included) forecasts its held-out motion within 50% |
+| Kinematics | a one-frame position break larger than 5% of the motion and half the object's size (teleporting), or the mask's size stepping by 1.5 times (morphing) |
+
+Each violation also needs at least 5 standard errors (8 for the frame-to-frame checks, which test every frame against a heavy-tailed noise level). Both bars are deliberate: false accusations are worse than misses, and the practical sizes sit above real-world effects the noise model doesn't know about, such as a reference sheet 10 to 20 cm out of the plane of motion (10 to 20% in g). A one- or two-frame tracker glitch that comes straight back is not counted as a teleport.
 
 ## How it works
 
@@ -264,6 +283,7 @@ Every accepted result gets a "Sim-to-real" panel (computed on request with local
 - predict the future: on 10 noisy damped pendulums, predictions made from the first 7 s for the rest-point crossing 5 s later land inside their stated 95% window at least 9 times out of 10, with windows under 0.3 s; a system whose period is 3% off misses
 - closed experiment loop: a 0.12 rad swing of an air-drag pendulum ties linear and air damping; fitted together with a 1 rad swing, air drag wins by more than 10 BIC and its coefficient is recovered within 15%
 - sound: restitution from the timing of synthetic impact clicks (under hum and noise) within 0.005 per bounce, with a clap before the drop left out; a hum's frequency within its stated interval; dry, viscous and air-drag spin-down laws identified from a falling tone, with the tone's coefficients within 3%. Not yet tested on real recordings
+- physics audit: g = 14.2 with a real scale, a bounce with e = 1.1, a 15% period drift, a swing growing threefold over 10 s, a 15 cm teleport, a mask that more than doubles in size and a g that changes between flights (no scale) are each caught; of 40 seeded clean clips (bounces, pendulums, springs, 1 to 4 mm noise) none is accused, 39 are judged consistent and 1 can't be judged. **Accuracy on real AI-generated video has not been measured yet**: that needs a licensed set of generated clips, which is still to be decided.
 
 ## Cost and safety controls
 
@@ -384,6 +404,7 @@ All routes are in `backend/physicslens/app.py`. Routes that start paid work need
 | `GET /api/gallery` | the curated results |
 | `GET /api/budget` | spent and remaining per provider (development UI) |
 | `POST /api/runs` | upload a clip with optional settings (length, object size, hint, slow-motion factor, blade count for sound); returns a run id |
+| `POST /api/audit` | the same upload as `POST /api/runs`; the result's `audit` field holds the physics audit |
 | `GET /api/runs/{id}` | progress and, when done, the full result |
 | `GET /api/runs/{id}/clip.mp4`, `/poster.jpg`, `/share.mp4` | media for a run; `POST /api/runs/{id}/share` renders the shareable MP4 |
 | `GET /api/runs/{id}/sim2real` | the sim-to-real comparison, computed on first request and cached |
@@ -412,11 +433,13 @@ backend/physicslens/
   perception/            media preparation, SAM tracking, track check, local tracker, calibration
   sigproc/               trajectories, smoothing, derivatives, summaries
   physics/               models, fitting, verification, uncertainty, SINDy, collisions, double pendulum,
-                         rotation, regimes, free-form law parser, combining recordings, machine health, what-ifs
+                         rotation, regimes, free-form law parser, combining recordings, joint fits,
+                         machine health, forecasts, physics audit, what-ifs
   agent/                 model calls, prompts, JSON schemas, spoken notes, what-ifs
   voice/                 realtime transcription events
-  export/                MuJoCo, Python script, report, MP4
-frontend/                Next.js app (works in a mobile browser): analyze, live, studies, machine health
+  sound.py               the microphone as a second sensor
+  export/                MuJoCo, Python script, report, MP4, sim-to-real comparison
+frontend/                Next.js app (works in a mobile browser): analyze, live, studies, machine health, physics audit
 gallery/                 curated real analyses shown to visitors (clip licenses in gallery/README.md)
 samples/                 short public test clips
 scripts/                 gallery promotion, static site build, Glimmer batch runs, hosted server setup
@@ -472,6 +495,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Spin-down of rotating objects: friction law identified, exported to MuJoCo with native dry friction
 - [x] Public access: gallery of real analyses, judge access code, per-visitor limits, optional bot check
 - [x] A static gallery site that finds the analysis server at runtime, and `llms.txt` for AI assistants
+- [x] Physics audit, a lie detector for AI-generated video and world models: gravity, energy, period drift, a forecasting law and frame-to-frame continuity, each violation reported with its size and significance, and "can't judge" when the clip can't support a verdict
 
 ## Limitations
 
