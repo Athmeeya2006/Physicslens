@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
 import { clipUrl, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
+import { AudioPanel } from "./AudioPanel";
 import { Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
 import { GhostPlayer } from "./GhostPlayer";
@@ -208,6 +209,8 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           )}
         </div>
       )}
+
+      {r.audio && <AudioPanel audio={r.audio} cameraLawTitle={r.equation?.title} />}
 
       {r.fit_state && canAsk && <WhatIf runId={runId} onGhost={setWhatIfGhost} />}
 

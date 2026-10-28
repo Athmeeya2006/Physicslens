@@ -74,7 +74,7 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "plan" | "study_turn" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "agent";
+  step: "plan" | "study_turn" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "audio" | "agent";
   provider: string | null;
   model: string;
   text: string;
@@ -127,6 +127,34 @@ export interface AnalysisResult {
     mujoco_contact?: { dampratio: number; timeconst: number; e_mujoco: number; radius_m: number };
     impacts: { t: number; e: number; e_std: number; tangential: number }[];
   };
+  audio?: AudioResult;
+}
+
+export interface AudioValue { value: number; std: number }
+
+export interface AudioComparison {
+  quantity: string; label: string; unit: string; camera: AudioValue; microphone: AudioValue;
+  z: number; agree: boolean; fused: AudioValue | null;
+}
+
+export interface AudioResult {
+  available: boolean;
+  note?: string;
+  duration_s?: number;
+  onsets?: number[];
+  onset_count?: number;
+  onset_sigma_s?: number;
+  restitution?: { e_mean: number; e_std: number; impacts: { t: number; e: number; e_std: number }[] } | null;
+  tone?: { freq_hz: number; halfwidth_hz: number; snr_db: number; rotor_rate_hz?: number } | null;
+  spin_down?: {
+    f_start_hz: number; f_end_hz: number; t_start: number; t_end: number; status: string; reason: string;
+    law: { model_id: string; title: string; latex: string } | null; blade_count: number | null;
+    acoustic_params: { name: string; value: number; std: number; unit: string; meaning: string }[];
+    rotor_params: { name: string; latex: string; value: number; std: number; unit: string }[];
+    camera_law?: string; laws_agree?: boolean;
+  } | null;
+  comparisons?: AudioComparison[];
+  notes?: string[];
 }
 
 export interface RunView {

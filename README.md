@@ -28,6 +28,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 10. [Studies](#studies)
 11. [Live mode](#live-mode)
 12. [Machine health](#machine-health)
+13. [Sound as a second sensor](#sound-as-a-second-sensor)
 13. [Exports](#exports)
 14. [Sim-to-real gap, made visible](#sim-to-real-gap-made-visible)
 14. [Validation](#validation)
@@ -210,6 +211,15 @@ A study turns a goal into a measurement campaign (`studies.py`, `physics/combine
 - A change is flagged only when it is beyond 3 standard errors **and** practically meaningful (0.5% for frequency, 10% for decay rate), with repeatability floors that account for re-recording variation (release, temperature, mounting).
 - The trend view takes up to 12 recordings and shows each metric with its interval over time.
 
+## Sound as a second sensor
+
+The phone's microphone is an independent instrument, analyzed with local signal processing only (no model calls):
+
+- **Impacts.** Clicks are found by high-pass filtering, an envelope and a threshold that follows the background, and each is timed where it reaches a fixed fraction of its own peak, so loud and quiet clicks are timed alike. For a ball bouncing straight up and down each flight lasts T = 2v/g, so the ratio of consecutive flight times is the coefficient of restitution: **e = T(n+1)/T(n), with no scale and no value of g needed**. Its uncertainty comes from the onset timing resolution.
+- **Tones.** The strongest steady tone, from a windowed FFT with peak interpolation, stated with an interval of one over the clip's duration.
+- **Spin-down by ear.** A fan's whine falls as it slows. The tone is followed through a spectrogram, its frequency integrated into a phase, and the same five spin-down laws the camera uses are fitted and verified on it. Each law keeps its form when the rate is multiplied by a constant, so the law is identified without knowing how many blades the fan has; given a blade count (`blade_count` on upload), the coefficients are converted to the rotor's own rates.
+- **Agreement.** When the camera and the microphone both measure a restitution (or, with a blade count, a spin rate), the two are combined by inverse variance only if they agree within 3 standard deviations; otherwise both are shown and the disagreement is flagged. Slow-motion clips and clips without a sound track get a short note instead, and a problem with the sound never affects the camera's result.
+
 ## Exports
 
 | Export | What it contains | How it is checked |
@@ -248,6 +258,7 @@ Every accepted result gets a "Sim-to-real" panel (computed on request with local
 - free-form laws: an air-drag law written as text recovers its coefficient within 5%; a 2D drag law recovers g within 3%; a wrong law loses to the controls
 - machine health: no false alarm when the same system is re-recorded; a 50% rise in damping and a 2% frequency shift are flagged
 - sim-to-real gap: on a damped pendulum (0.6 m, damping 0.3/s, 2 mm noise) the textbook pendulum misses the held-out quarter by about 13 cm RMS, more than 20 times the PhysicsLens model's 2 mm. In simulation, the swing-up tuned on the textbook model settles about 2° short of 60° and never within 2% of it; tuned on the PhysicsLens model it settles within 2% in about 2 s with under 0.3° error
+- sound: restitution from the timing of synthetic impact clicks (under hum and noise) within 0.005 per bounce, with a clap before the drop left out; a hum's frequency within its stated interval; dry, viscous and air-drag spin-down laws identified from a falling tone, with the tone's coefficients within 3%. Not yet tested on real recordings
 
 ## Cost and safety controls
 
@@ -446,6 +457,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Shareable MP4 with the measured trail, the simulated ghost and the typeset equation burned in
 - [x] Exports: MuJoCo MJCF (replayed in MuJoCo and checked against the fitted motion), standalone Python simulation, parameters as JSON
 - [x] Machine-health drift comparison and trend view across up to 12 recordings
+- [x] The microphone as a second sensor: impact onsets, restitution from flight times, dominant tone, spin-down law from a falling tone, and an agreement check with the camera
 - [x] Sim-to-real gap panel: textbook physics against the identified model on held-out real motion, and a simulated torque-limited swing-up tuned on each, tested on bootstrap-sampled pendulums in MuJoCo
 - [x] Bouncing objects: hybrid model with per-impact coefficient of restitution
 - [x] Double pendulum: two tracked bobs, short-horizon fitting, chaos measured
