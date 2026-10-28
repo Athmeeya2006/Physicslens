@@ -410,7 +410,7 @@ Budget caps live in `config/budget.yaml` (created from `config/budget.example.ya
 
 ### Hosted judging server
 
-During judging the full app (uploads, live mode, voice, studies) runs on our GPU server: `scripts/gpu_server/serve.py` starts Muse Glimmer on llama.cpp (bound to localhost, never exposed) and the backend in demo mode next to it, then exposes only the backend through a Cloudflare tunnel. `scripts/judging_session.py` deploys the committed code, waits for the tunnel and points the site's `/backend.json` at it; `stop` points the site back to gallery only. The site switches its analysis features on only when that server answers its health check. Each session has its own spending cap, and keys stay on the server.
+During judging the full app (uploads, live mode, voice, studies) runs on our GPU server: `scripts/gpu_server/serve.py` starts Muse Glimmer on llama.cpp (bound to localhost, never exposed) and the backend in demo mode next to it, then exposes only the backend through a Cloudflare tunnel. `scripts/judging_session.py` deploys the committed code, waits for the tunnel and points the site's `/backend.json` at it; `stop` points the site back to gallery only. The site switches its analysis features on only when that server answers its health check. Each session has its own spending cap, and keys stay on the server. `judging_session.py connect --url <address>` points the site at a server whose address you read from its log, and `schedule <UTC time>` shows the next session's start on the home page while no server is running.
 
 ### Static gallery site
 

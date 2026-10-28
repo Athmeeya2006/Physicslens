@@ -10,12 +10,16 @@ export let API_BASE = BUILD_BASE;
 export let HAS_BACKEND = !STATIC_SITE;
 
 let connecting: Promise<boolean> | null = null;
+// When the next judging session starts (ISO time in UTC), if one is scheduled: shown while no server is running.
+export let NEXT_SESSION_UTC: string | null = null;
 
 export function connectBackend(): Promise<boolean> {
   if (!STATIC_SITE) return Promise.resolve(true);
   connecting ??= (async () => {
     try {
-      const cfg = await fetch("/backend.json", { cache: "no-store" }).then((r) => r.json() as Promise<{ api_base?: string }>);
+      const cfg = await fetch("/backend.json", { cache: "no-store" })
+        .then((r) => r.json() as Promise<{ api_base?: string; next_session_utc?: string }>);
+      NEXT_SESSION_UTC = cfg.next_session_utc && !Number.isNaN(Date.parse(cfg.next_session_utc)) ? cfg.next_session_utc : null;
       const base = (cfg.api_base ?? "").replace(/\/$/, "");
       if (!base) return false;
       // Only switch the analysis features on if the server really answers; a stale tunnel means gallery only.

@@ -5,8 +5,13 @@
   python scripts/judging_session.py connect              after starting the server from Kaggle's editor (Save
                                                        Version > Save & Run All), wait for its tunnel and point
                                                        the site at it
+  python scripts/judging_session.py connect --url URL    point the site at a server address read from its log
+                                                       page (an editor run's log is only readable from the
+                                                       CLI after the run ends)
   python scripts/judging_session.py stop                 point the site back to gallery only (the server ends
                                                        itself after --hours)
+  python scripts/judging_session.py schedule 2026-11-05T14:00Z
+                                                       show the next session's start on the site meanwhile
 
 Kaggle attaches Secrets only to runs started from its own editor, not to versions pushed from the CLI,
 so a server that needs the keys is started there and connected with `connect`; `start` suits keyless tests.
@@ -27,6 +32,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,10 +101,19 @@ def wait_for_url(minutes: float = 30) -> str:
     sys.exit("No tunnel address yet; check the server's log on Kaggle.")
 
 
-def point_site(api_base: str) -> None:
+def point_site(api_base: str | None = None, next_session_utc: str | None = None) -> None:
+    """Change what the site's /backend.json says; None keeps the current value of that field."""
     if not (SITE_DIR / ".vercel").is_dir():
         sys.exit(f"{SITE_DIR} is not linked to the Vercel project.")
-    (SITE_DIR / "backend.json").write_text(json.dumps({"api_base": api_base}))
+    path = SITE_DIR / "backend.json"
+    cfg = json.loads(path.read_text()) if path.is_file() else {}
+    if api_base is not None:
+        cfg["api_base"] = api_base
+    if next_session_utc is not None:
+        cfg["next_session_utc"] = next_session_utc
+    cfg.setdefault("api_base", "")
+    path.write_text(json.dumps({k: v for k, v in cfg.items() if v != "" or k == "api_base"}))
+    api_base = cfg["api_base"]
     if shutil.which("vercel") is None:
         sys.exit("The Vercel CLI is not installed.")
     subprocess.run(["vercel", "deploy", "--prod", "--yes"], cwd=SITE_DIR, check=True, capture_output=True, timeout=600)
@@ -112,13 +127,23 @@ def main() -> None:
     s.add_argument("--hours", type=float, default=6.0)
     s.add_argument("--skip-upload", action="store_true", help="reuse the code already uploaded")
     sub.add_parser("stop")
-    sub.add_parser("connect")
+    cn = sub.add_parser("connect")
+    cn.add_argument("--url", help="the server's https://...trycloudflare.com address, if already known")
+    sc = sub.add_parser("schedule", help="show the next session's start time on the site while no server runs")
+    sc.add_argument("when", help='ISO time in UTC, e.g. 2026-11-05T14:00Z, or "none" to clear it')
     a = ap.parse_args()
     if a.cmd == "stop":
         point_site("")
         return
+    if a.cmd == "schedule":
+        when = "" if a.when == "none" else datetime.fromisoformat(a.when).astimezone(UTC).strftime("%Y-%m-%dT%H:%MZ")
+        point_site(next_session_utc=when)
+        print(f"next session shown on the site: {when or 'none'}")
+        return
     if a.cmd == "connect":
-        url = wait_for_url()
+        if a.url and not re.fullmatch(r"https://[a-z0-9-]+\.trycloudflare\.com", a.url.rstrip("/")):
+            sys.exit("Expected an address like https://some-words.trycloudflare.com")
+        url = a.url.rstrip("/") if a.url else wait_for_url()
         print(f"server: {url}")
         point_site(url)
         return

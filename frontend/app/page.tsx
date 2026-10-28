@@ -6,7 +6,7 @@ import { Gallery } from "@/components/Gallery";
 import { VoiceNotes } from "@/components/VoiceNotes";
 import { ResultView } from "@/components/ResultView";
 import type { Budget, GalleryItem, Health, RunView } from "@/lib/api";
-import { getBudget, getGallery, getHealth, getRun, startRun, useBackend } from "@/lib/api";
+import { getBudget, getGallery, getHealth, getRun, NEXT_SESSION_UTC, startRun, useBackend } from "@/lib/api";
 
 declare global {
   interface Window {
@@ -159,6 +159,10 @@ export default function Home() {
                   <li><strong>Math decides.</strong> Each equation must forecast motion it never saw; the winner comes with
                     uncertainties, a ghost on the video and a MuJoCo model.</li>
                 </ol>
+                {NEXT_SESSION_UTC && Date.parse(NEXT_SESSION_UTC) > Date.now() && (
+                  <p className="small"><strong>Next live session:</strong> {new Date(NEXT_SESSION_UTC).toUTCString().replace(":00 GMT", " UTC")}
+                    {" "}({new Date(NEXT_SESSION_UTC).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} your time).</p>
+                )}
                 <p className="muted small">
                   The analysis server runs during judging sessions and isn&apos;t running right now.
                   Every recording on this page is a complete, real analysis; a <a href="/study">study</a> shows the agent
