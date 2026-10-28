@@ -17,6 +17,10 @@ meta_api:
     audio_hour: 0.18      # billed in whole seconds
   muse-image-1.0:
     image: 0.01           # per generated image returned; failed or safety-filtered images are not billed
+  muse-wonder-1.0:        # Standard mode (Meta's Pricing and rate limits page, Oct 28 2026); no contributor mode
+    input: 4.00
+    cached_input: 0.20
+    output: 20.00         # reasoning tokens are billed as output
 
 glimmer:
   muse-glimmer-30b:       # self-hosted on our own GPU server: no per-token charge

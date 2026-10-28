@@ -85,6 +85,10 @@ class Guard:
             if model_daily_cap_usd is not None:
                 # A feature with its own small allowance (picture guides) must not eat the provider's daily budget.
                 checks.append((Ledger.spent(conn, day=today, model=model), model_daily_cap_usd, f"{model} daily budget"))
+            model_cap = (self.budget.get("model_daily_caps_usd") or {}).get(model)
+            if model_cap is not None and model_daily_cap_usd is None:
+                # Some models are approved for one narrow use with their own daily cap inside the provider's.
+                checks.append((Ledger.spent(conn, day=today, model=model), float(model_cap), f"{model} daily budget"))
 
             for spent, cap, label in checks:
                 if spent + est_cost > cap:

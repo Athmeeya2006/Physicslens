@@ -6,6 +6,7 @@ import type { AnalysisResult, TrackPoint } from "@/lib/api";
 import { clipUrl, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
 import { AudioPanel } from "./AudioPanel";
+import { ControlPanel } from "./ControlPanel";
 import { Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
 import { GhostPlayer } from "./GhostPlayer";
@@ -124,6 +125,11 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
       )}
 
       {r.status === "accepted" && r.fit_state && <SimToReal runId={runId} />}
+
+      {r.status === "accepted" && r.fit_state && online === true && (
+        <ControlPanel runId={runId} family={r.family} params={(r.fit_state.params ?? {}) as Record<string, number>}
+          length={(r.fit_state.ctx as Record<string, number> | undefined)?.length_m} />
+      )}
 
       {r.equation && (
         <div className="panel">

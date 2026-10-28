@@ -74,13 +74,14 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "plan" | "study_turn" | "joint_fit" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "audio" | "agent" | "setup_guide";
+  step: "plan" | "study_turn" | "joint_fit" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "audio" | "agent" | "setup_guide" | "controller" | "control_test";
   provider: string | null;
   model: string;
   text: string;
   status?: string;
   action?: string;
   reasoning_summary?: string;
+  label?: string;
   items?: { model_id: string; title: string; why: string; status?: "accepted" | "tied" | "rejected" }[];
 }
 
@@ -312,6 +313,18 @@ export function requestSetupGuide(id: string, stepRef: number): Promise<SetupGui
     frame_url: g.frame_url && `${API_BASE}${g.frame_url}`,
   }));
 }
+
+// Muse Wonder writes a controller in the background; MuJoCo simulation decides whether it is used. Access code only.
+export function startControl(id: string, task: import("@/components/ControlPanel").ControlTask) {
+  return fetch(`${API_BASE}/api/runs/${id}/control`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...codeHeaders() },
+    body: JSON.stringify(task),
+  }).then((r) => json<import("@/components/ControlPanel").ControlView>(r));
+}
+export const getControl = (id: string, taskId: string) =>
+  fetch(`${API_BASE}/api/runs/${id}/control/${taskId}`, { headers: codeHeaders() })
+    .then((r) => json<import("@/components/ControlPanel").ControlView>(r));
 
 export function makeShareVideo(id: string): Promise<string> {
   if (isGallery(id)) return Promise.resolve(`${staticBase(id)}/share.mp4`);

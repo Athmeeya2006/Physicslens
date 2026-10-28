@@ -30,7 +30,10 @@ from fastapi.responses import FileResponse, Response
 from .agent.llm import LLMError as StudyLLMError
 from .agent.notes import interpret_notes
 from .agent.setup_guide import GUIDE_FRAME, GUIDE_JPG, SetupGuideError, make_setup_guide
+from .agent.schemas import ControlTask
 from .agent.whatif import run_whatif
+from .control.manager import ControlManager
+from .control.system import ControlUnsupported
 from .costguard import CostGuardClient, CostGuardError
 from .export.mjcf import bounce_mjcf, build_mjcf
 from .export.mp4 import ExportError, render_share_video
@@ -61,6 +64,7 @@ log = logging.getLogger("physicslens.app")
 settings = load_settings()
 client = CostGuardClient(settings)
 runs = RunManager(settings, client)
+controls = ControlManager(client, runs.root)
 studies = Studies(settings.data_dir / "studies", client)
 public_quota = PublicQuota(settings.data_dir / "public.db", int(client.guard.budget.get("public_per_ip_daily_analyses", 3)))
 
@@ -480,6 +484,31 @@ def sim_to_real(run_id: str) -> dict:
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache.write_text(json.dumps(out))
     return out
+
+
+@app.post("/api/runs/{run_id}/control")
+def start_control(run_id: str, task: ControlTask, x_access_code: Annotated[str | None, Header()] = None) -> dict:
+    """Muse Wonder writes a controller for the identified system; MuJoCo decides whether it works. Judges and dev only."""
+    audience = audience_for(x_access_code)
+    if audience == "public":
+        raise HTTPException(status_code=403, detail="Controller design needs the access code.")
+    _run_file(run_id, "result.json")  # rejects malformed ids
+    result = _finished_result(run_id)
+    try:
+        return controls.start(run_id, result, task, audience).view()
+    except ControlUnsupported as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+
+
+@app.get("/api/runs/{run_id}/control/{task_id}")
+def get_control(run_id: str, task_id: str, x_access_code: Annotated[str | None, Header()] = None) -> dict:
+    if audience_for(x_access_code) == "public":
+        raise HTTPException(status_code=403, detail="Controller design needs the access code.")
+    _run_file(run_id, "result.json")
+    state = controls.get(run_id, task_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Unknown controller task.")
+    return state.view()
 
 
 @app.post("/api/compare")

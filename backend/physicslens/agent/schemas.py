@@ -239,3 +239,33 @@ class VoiceNotes(Strict):
     @classmethod
     def no_dashes(cls, v: str) -> str:
         return _plain_dashes(v)
+
+
+ControlFamily = Literal["pendulum", "oscillator", "rotation"]
+ControlGoal = Literal["reach_and_hold", "swing_up", "stop", "track_sine"]
+
+
+class ControlTask(Strict):
+    """A control goal for an identified system. Whether a controller meets it is computed by simulation, never asked."""
+
+    family: ControlFamily
+    goal: ControlGoal
+    target: float = Field(default=0.0, ge=-10.0, le=10.0, description=(
+        "reach_and_hold: the angle to hold (rad from hanging) or displacement from rest (m). track_sine: the "
+        "amplitude. Ignored for swing_up (upright) and stop (at rest)."))
+    tolerance: float = Field(gt=0.0, le=5.0, description=(
+        "Allowed error once settled: rad or m, or rad/s or m/s for stop."))
+    actuator_limit: float = Field(gt=0.0, le=1000.0, description=(
+        "Largest motor command per kilogram of moving mass: N m/kg at a pivot, N/kg on a slider."))
+    time_limit_s: float = Field(gt=0.0, le=30.0, description="The error must be inside the tolerance by this time.")
+    frequency_hz: float = Field(default=0.5, gt=0.0, le=5.0, description="track_sine only: the sine's frequency.")
+
+
+class ControllerProposal(Strict):
+    code: str = Field(description="Python source defining exactly one function `control`.")
+    approach: str = Field(description="One or two sentences: the control law and why it should meet the goal.")
+
+    @field_validator("approach")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)

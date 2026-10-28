@@ -32,19 +32,20 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 14. [Sound as a second sensor](#sound-as-a-second-sensor)
 15. [Exports](#exports)
 16. [Sim-to-real gap, made visible](#sim-to-real-gap-made-visible)
-17. [PhysicsLens as an MCP server](#physicslens-as-an-mcp-server)
-18. [Validation](#validation)
-19. [Cost and safety controls](#cost-and-safety-controls)
-20. [Getting started (Linux)](#getting-started-linux)
-21. [Configuration reference](#configuration-reference)
-22. [HTTP and WebSocket API](#http-and-websocket-api)
-23. [Project structure](#project-structure)
-24. [Testing](#testing)
-25. [What we built during the hackathon](#what-we-built-during-the-hackathon)
-26. [Limitations](#limitations)
-27. [Roadmap](#roadmap)
-28. [Acknowledgements](#acknowledgements)
-29. [License](#license)
+17. [Controllers written by Muse Wonder, verified in MuJoCo](#controllers-written-by-muse-wonder-verified-in-mujoco)
+18. [PhysicsLens as an MCP server](#physicslens-as-an-mcp-server)
+19. [Validation](#validation)
+20. [Cost and safety controls](#cost-and-safety-controls)
+21. [Getting started (Linux)](#getting-started-linux)
+22. [Configuration reference](#configuration-reference)
+23. [HTTP and WebSocket API](#http-and-websocket-api)
+24. [Project structure](#project-structure)
+25. [Testing](#testing)
+26. [What we built during the hackathon](#what-we-built-during-the-hackathon)
+27. [Limitations](#limitations)
+28. [Roadmap](#roadmap)
+29. [Acknowledgements](#acknowledgements)
+30. [License](#license)
 
 ---
 
@@ -150,9 +151,10 @@ flowchart LR
 | **SAM 3.1** | Meta Model API | Box-prompted segmentation and tracking of the moving object(s) and the reference object in one request; re-tracking by name when the first track is off target; in live mode, refinement of an on-server tracker in parallel chunks |
 | **Muse Voice Transcribe** | Meta Model API | Hands-free what-if questions and settings spoken while filming ("the string is 50 centimeters"), over the realtime endpoint with automatic end-of-speech detection |
 | **Muse Image** | Meta Model API | Draws the requested experiment setup onto the user's own frame; never measures anything. Judges and development only, on request ("Show me"), with its own small daily cap |
+| **Muse Wonder** | Meta Model API | Writes controller code for an identified system; the code is used only after it passes simulation on the identified model and its uncertainty range. Judges and development only |
 | **Muse Spark 1.3** | Meta Model API | Development convenience only, with the same prompts and schemas; demo and production refuse to reason on anything but the open-weight model |
 
-**Open-weight status, stated plainly:** every reasoning step behind the published gallery results ran on **Muse Glimmer 30B**, Meta's open-weight model, using the official `meta-models/Muse-Glimmer-30B-GGUF` weights (Q4_K_M plus the vision encoder) on llama.cpp, on hardware we control, with no per-call charge. Each result shows the model behind every step. In demo and production the app refuses to reason on any other model: if the open-weight server is down it shows a "busy" message instead of switching. During early development the same prompts ran on Muse Spark 1.3; those results are not in the gallery. Exact files, hashes and runtime: [OPEN_WEIGHTS.md](OPEN_WEIGHTS.md).
+**Open-weight status, stated plainly:** all reasoning about the physics runs on Muse Glimmer; Muse Wonder only writes controller code for a model that is already verified, and simulation, not the model, decides whether that code is used. Every reasoning step behind the published gallery results ran on **Muse Glimmer 30B**, Meta's open-weight model, using the official `meta-models/Muse-Glimmer-30B-GGUF` weights (Q4_K_M plus the vision encoder) on llama.cpp, on hardware we control, with no per-call charge. Each result shows the model behind every step. In demo and production the app refuses to reason on any other model: if the open-weight server is down it shows a "busy" message instead of switching. During early development the same prompts ran on Muse Spark 1.3; those results are not in the gallery. Exact files, hashes and runtime: [OPEN_WEIGHTS.md](OPEN_WEIGHTS.md).
 
 All reasoning about physics runs on Muse Glimmer. Muse Image does no reasoning: Muse Glimmer plans where the marks of a setup guide go, code turns that plan into a fixed edit prompt containing no numbers, and Muse Image only draws. The drawing is shown only if math confirms the scene is unchanged outside the marks (structural similarity) and that something was drawn inside them; the labels and numbers on it are written by code from the simulated experiment design, and the written instruction always comes first.
 
@@ -291,6 +293,19 @@ Client configuration (stdio):
 }
 ```
 
+## Controllers written by Muse Wonder, verified in MuJoCo
+
+On an accepted pendulum or spring result, a judge (or a developer) can set a control goal: move to an angle or position and hold it, swing a pendulum up and balance it upright, stop the motion seen in the clip, or follow a sine. Each goal has a tolerance, a motor limit and a time limit; success means the error is inside the tolerance by the time limit and stays there for at least one more second. Everything in this section is **simulation**: the "plant" is the identified model in MuJoCo, never the real object.
+
+1. **Muse Wonder writes the code** (Meta Model API, Responses API, structured output `{code, approach}`, low reasoning effort). The contract is one function, `control(t, q, qdot, params) -> list[float]`, with only `math` and `numpy`.
+2. **A static check** (`control/codecheck.py`) parses the code and rejects anything outside a small subset of Python: other imports, `eval`/`exec`/`open`/`getattr` and friends, names or attributes starting with an underscore, attribute assignment, classes, `try`, more than 300 lines.
+3. **An isolated process** (`control/harness.py`, `control/worker.py`) runs it: `python -I` with an empty environment and working directory, CPU, memory, file-size and process limits set before the code is compiled, a wall-clock timeout, restricted builtins, and a result channel the code cannot write to. Generated code is never imported into the server. The harness clamps every command to the motor limit and reports how often it saturates.
+4. **Robustness set:** the nominal identified parameters plus 50 bootstrap refits (fixed seed, stored with the run), the same spread the result's uncertainty intervals come from. The controller is accepted only if at least 90% of these 51 variants succeed, the nominal one included.
+5. **Repair loop** (`control/loop.py`): a failed attempt goes back to the model as a short report (success rate, the three worst variants with their parameters and metrics, truncated error text). At most three attempts; after that the result is the honest "No controller met the goal within the actuator limit", with the best attempt's numbers. When a simple torque or force bound already shows the goal is impossible (holding a pendulum at an angle needs m g L sin(target), more than the motor gives), no model call is made and the bound is shown instead.
+6. **Baseline:** a textbook controller (computed-torque PD, or energy pumping then PD for a swing-up) tuned on the textbook model is scored on the same 51 variants, so the panel can say, for example, "Muse Wonder's controller: 49 of 51 succeed; textbook controller: 12 of 51".
+
+The accepted code is saved as `controller.py` in the run directory with a header naming the system, its parameters, the goal, the robustness result and the model that wrote it; every attempt and its metrics are stored beside it. A solved task is cached by the task, the identified parameters and the prompt version, so opening it again is free. Muse Wonder has its own daily cap in the cost guard, at most three calls per task, and is refused for public visitors.
+
 ## Validation
 
 **On real footage**, with every reasoning step on Muse Glimmer (open weights) and tracking by SAM 3.1 (clips and licenses in `gallery/README.md`):
@@ -423,7 +438,7 @@ The public gallery is a static export that needs no server: `python scripts/buil
 |---|---|
 | `config/models.yaml` | the model allowlist, per provider |
 | `config/prices.yaml` | price per unit for every allowed model (a model without a price is refused) |
-| `config/limits.yaml` | our rate limits, timeouts, token limits and the agent turn cap |
+| `config/limits.yaml` | our rate limits, timeouts, token limits, the agent turn cap, and the controller loop's attempt cap, success threshold and sandbox limits |
 | `config/budget.example.yaml` | example budget caps; `make setup` copies it to the untracked `config/budget.yaml`, which the app requires |
 
 ## HTTP and WebSocket API
@@ -440,6 +455,7 @@ All routes are in `backend/physicslens/app.py`. Routes that start paid work need
 | `GET /api/runs/{id}` | progress and, when done, the full result |
 | `GET /api/runs/{id}/clip.mp4`, `/poster.jpg`, `/share.mp4` | media for a run; `POST /api/runs/{id}/share` renders the shareable MP4 |
 | `GET /api/runs/{id}/sim2real` | the sim-to-real comparison, computed on first request and cached |
+| `POST /api/runs/{id}/control`, `GET /api/runs/{id}/control/{task_id}` | a control goal for an accepted result: Muse Wonder writes a controller, MuJoCo tests it in the background (access code required) |
 | `GET /api/runs/{id}/export/{kind}` | `json`, `py` (Python script), `mjcf`, `contact`, `report` |
 | `POST /api/runs/{id}/whatif` | a typed what-if question |
 | `POST /api/compare`, `POST /api/health/trend` | machine-health comparison and trend |
@@ -471,6 +487,7 @@ backend/physicslens/
   voice/                 realtime transcription events
   sound.py               the microphone as a second sensor
   export/                MuJoCo, Python script, report, MP4, sim-to-real comparison
+  control/               controllers written by Muse Wonder: static check, sandboxed MuJoCo harness, repair loop
 frontend/                Next.js app (works in a mobile browser): analyze, live, studies, machine health, physics audit
 gallery/                 curated real analyses shown to visitors (clip licenses in gallery/README.md)
 samples/                 short public test clips
@@ -492,6 +509,7 @@ The suite (230+ tests) covers:
 - **Agent:** schema validation, retries on malformed output, echoed schema keywords, refusal to fall back in demo mode.
 - **Free-form laws:** the grammar parser, LaTeX and Python generation, rejection of anything outside the grammar.
 - **Exports, studies, live mode, voice notes and what-ifs.**
+- **Generated controllers:** unsafe code rejected before it runs, an endless loop and a huge allocation stopped by the sandbox limits, a wrong-sign controller fixed through the failure report, the honest result after three failures, infeasible goals reported without a call, no call once the budget cap is reached, and identical metrics from the same seed.
 
 ## What we built during the hackathon
 
@@ -525,6 +543,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Control by hand: rhythm cues from the verified law to pump a swing to a target or stop it, with the person's own lag learned from the track
 - [x] The microphone as a second sensor: impact onsets, restitution from flight times, dominant tone, spin-down law from a falling tone, and an agreement check with the camera
 - [x] Sim-to-real gap panel: textbook physics against the identified model on held-out real motion, and a simulated torque-limited swing-up tuned on each, tested on bootstrap-sampled pendulums in MuJoCo
+- [x] Controllers written by Muse Wonder and verified in MuJoCo: static checks, a sandboxed process, 51 bootstrap variants, a repair loop of at most three attempts, and a textbook baseline on the same variants (simulation only)
 - [x] Bouncing objects: hybrid model with per-impact coefficient of restitution
 - [x] Double pendulum: two tracked bobs, short-horizon fitting, chaos measured
 - [x] Spin-down of rotating objects: friction law identified, exported to MuJoCo with native dry friction
@@ -544,6 +563,7 @@ All code in this repository was written during the hackathon building period (Oc
 - Driven motion (a car under throttle, a person walking) has no single governing law; at most its kinematics can be fitted.
 - A full analysis on the open-weight model takes minutes, not seconds; the live mode's one-tap family choice is the fast path.
 - Stopping a live session doesn't save it as a result yet; record a clip for something you can keep and export.
+- Generated controllers are tested only in simulation, on pendulums and springs (rotation is not supported yet). The sandbox has no network namespace; network access is blocked by the static check and the restricted imports, not by the operating system.
 
 ## Roadmap
 

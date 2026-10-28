@@ -54,10 +54,31 @@ def test_kill_env_blocks(harness, monkeypatch):
     assert harness.sdk().calls == []
 
 
-def test_allowlist_blocks_wonder(harness):
+def test_allowlist_blocks_unlisted_models(harness):
     with pytest.raises(ModelNotAllowed):
+        text_call(harness.client, model="muse-image-1.0")
+    assert harness.sdk().calls == []
+
+
+def test_wonder_needs_its_own_daily_cap(harness):
+    # Approved for controller code only, and only with a model cap of its own in budget.yaml.
+    with pytest.raises(ModelNotAllowed, match="model_daily_caps_usd"):
         text_call(harness.client, model="muse-wonder-1.0")
     assert harness.sdk().calls == []
+
+
+def test_wonder_cap_and_audience(settings):
+    path = settings.config_dir / "budget.yaml"
+    budget = yaml.safe_load(path.read_text())
+    path.write_text(yaml.safe_dump({**budget, "model_daily_caps_usd": {"muse-wonder-1.0": 0.05}}))
+    h = Harness(settings)
+    with pytest.raises(ModelNotAllowed, match="public"):
+        text_call(h.client, model="muse-wonder-1.0", audience="public")
+    # 16 output tokens at the Wonder output price fit; 8000 do not fit a 0.05 daily cap for this one model.
+    text_call(h.client, model="muse-wonder-1.0", max_output_tokens=16)
+    with pytest.raises(BudgetExceeded, match="muse-wonder-1.0 daily budget"):
+        text_call(h.client, model="muse-wonder-1.0", max_output_tokens=8000, run_id="run-2")
+    assert len(h.sdk().calls) == 1
 
 
 def test_model_must_match_provider(harness):

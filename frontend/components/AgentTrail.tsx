@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  ClipboardList, Compass, Crosshair, Eye, Flag, FlaskConical, GitBranch, Layers, Lightbulb, MessageSquareText, Mic, Orbit, PencilRuler, Ruler, ScanEye, Split,
-  type LucideIcon,
+  ClipboardList, Code2, Compass, Cpu, Crosshair, Eye, Flag, FlaskConical, GitBranch, Layers, Lightbulb, MessageSquareText, Mic, Orbit,
+  PencilRuler, Ruler, ScanEye, Split, type LucideIcon,
 } from "lucide-react";
 import type { TrailStep } from "@/lib/api";
 import { SetupGuide } from "./SetupGuide";
@@ -24,6 +24,8 @@ const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
   audio: { label: "Listens to the soundtrack", icon: Mic },
   agent: { label: "Decides what to do next", icon: MessageSquareText },
   setup_guide: { label: "Draws the setup", icon: PencilRuler },
+  controller: { label: "Writes the controller", icon: Code2 },
+  control_test: { label: "Tests it in simulation", icon: Cpu },
 };
 
 const ACTION_LABEL: Record<string, string> = {
@@ -40,6 +42,8 @@ const DESIGN_STATUS: Record<string, string> = { accepted: "Decisive", tied: "Too
 function actor(step: TrailStep): { name: string; tone: "open" | "meta" | "math" } {
   if (step.model === "simulate-and-compare") return { name: "Numerical simulation, not the language model", tone: "math" };
   if (step.model === "joint fit across recordings") return { name: "Numerical fitting across recordings, not the language model", tone: "math" };
+  if (step.model === "MuJoCo simulation") return { name: "MuJoCo simulation, not the language model", tone: "math" };
+  if (step.model === "muse-wonder-1.0") return { name: "Muse Wonder (Meta Model API)", tone: "meta" };
   if (step.model === "acoustic analysis") return { name: "Signal processing on the microphone, not the language model", tone: "math" };
   if (step.model?.startsWith("muse-glimmer")) return { name: "Muse Glimmer 30B (open weights, self-hosted)", tone: "open" };
   if (step.model === "meta-models/Muse-Glimmer-30B") return { name: "Muse Glimmer 30B (open weights, hosted by Together AI)", tone: "open" };
@@ -67,7 +71,7 @@ export function AgentTrail({ steps, runId }: { steps: TrailStep[]; runId?: strin
             <span className="trail-icon" aria-hidden="true"><Icon size={13} strokeWidth={2.2} /></span>
             <div>
               <div className="trail-head">
-                <strong>{s.step === "agent" && s.action ? ACTION_LABEL[s.action] ?? label : label}</strong>
+                <strong>{s.label ?? (s.step === "agent" && s.action ? ACTION_LABEL[s.action] ?? label : label)}</strong>
                 <span className={`who ${who.tone}`}>{who.name}</span>
               </div>
               <p className={highlight ? "lead" : undefined}>{s.text}</p>

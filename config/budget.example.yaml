@@ -16,4 +16,7 @@ judge_daily_cap_usd: 5.00
 public_daily_cap_usd: 1.00
 public_per_ip_daily_analyses: 3
 setup_guide_daily_cap_usd: 0.20
+model_daily_caps_usd:          # models that need their own cap on top of the provider's
+  muse-wonder-1.0: 1.00
+control_task_cap_usd: 0.60     # all attempts at one controller task together
 warn_at_fraction: 0.75
