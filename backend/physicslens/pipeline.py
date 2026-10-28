@@ -31,9 +31,9 @@ from .perception.calibration import (
 )
 from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
 from .perception.track_quality import assess_track, overlay_frames
+from .physics import depth3d
 from .physics.audit import AuditInput, LawEvidence, audit
 from .physics.audit import cant_judge as audit_cant_judge
-from .physics import depth3d
 from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
 from .physics.custom import FREE_MODELS, FreeParam, build, register, spec_for
