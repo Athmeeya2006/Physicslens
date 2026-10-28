@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from collections import deque
 from types import SimpleNamespace
 from typing import Any, Self
@@ -28,6 +29,17 @@ class _Raw:
 
     def parse(self) -> Any:
         return self._parsed
+
+
+class _HttpResponse:
+    """What the SDK's post returns with cast_to=httpx.Response: a JSON body and headers."""
+
+    def __init__(self, payload: dict[str, Any], headers: dict[str, str]):
+        self._payload = payload
+        self.headers = headers
+
+    def json(self) -> dict[str, Any]:
+        return self._payload
 
 
 class _Stream:
@@ -61,6 +73,13 @@ class MockSDK:
         self.chat = SimpleNamespace(completions=SimpleNamespace(with_raw_response=SimpleNamespace(create=self._chat_create)))
         self.files = SimpleNamespace(create=self._files_create, delete=lambda file_id: None)
         self.models = SimpleNamespace(list=lambda: [SimpleNamespace(id="mock-model")])
+
+    def post(self, path: str, *, body: dict[str, Any], cast_to: Any = None, options: dict[str, Any] | None = None) -> _HttpResponse:
+        """The SDK's low-level post, used for POST /images/edits with its JSON body."""
+        item = self._next("post", {"path": path, **body}, None)
+        if item is None:
+            item = image_result(_mark_center(_data_url_bytes(body["images"][0]["image_url"])))
+        return _HttpResponse(item, self.headers)
 
     def _next(self, kind: str, kwargs: dict[str, Any], default: Any) -> Any:
         self.calls.append({"kind": kind, **kwargs})
@@ -107,6 +126,28 @@ def chat_result(text: str = MOCK_TEXT, prompt_tokens: int = 100, completion_toke
 def sam_result(frames: int | None = 60, text: str = "") -> Any:
     usage = SimpleNamespace(video_frames_processed=frames) if frames is not None else None
     return SimpleNamespace(output_text=text, usage=usage, status="completed")
+
+
+def image_result(*images: bytes) -> dict[str, Any]:
+    """Images endpoint JSON: one data entry per returned image, base64 in b64_json."""
+    return {"created": 0, "data": [{"b64_json": base64.b64encode(i).decode()} for i in images],
+            "output_format": "jpeg", "background": "opaque",
+            "usage": {"input_tokens": 1000, "output_tokens": 100, "total_tokens": 1100}}
+
+
+def _data_url_bytes(url: str) -> bytes:
+    return base64.b64decode(url.split(",", 1)[1])
+
+
+def _mark_center(jpeg: bytes) -> bytes:
+    """Default fake edit: the same scene with one ring drawn in the middle, as a careful real edit would."""
+    import cv2
+    import numpy as np
+
+    img = cv2.imdecode(np.frombuffer(jpeg, np.uint8), cv2.IMREAD_COLOR)
+    h, w = img.shape[:2]
+    cv2.circle(img, (w // 2, h // 2), max(4, min(h, w) // 8), (0, 0, 255), max(2, min(h, w) // 60))
+    return cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 92])[1].tobytes()
 
 
 def mock_sdk_factory(provider: str, base_url: str, api_key_env: str, timeout: float) -> MockSDK:

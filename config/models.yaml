@@ -1,5 +1,6 @@
 # Model allowlist. costguard/client.py refuses any model ID not listed here.
-# NEVER add: muse-wonder-1.0, muse-image-1.0 (too expensive / not needed).
+# NEVER add: muse-wonder-1.0 (too expensive / not needed).
+# muse-image-1.0 was approved by the developer for setup guides only (judges and dev, never public visitors).
 
 meta_api:
   base_url: https://api.meta.ai/v1
@@ -18,6 +19,10 @@ meta_api:
     muse-voice-transcribe-1.0:
       use: voice what-if questions
       api: websocket wss://api.meta.ai/v1/asr/realtime
+    muse-image-1.0:
+      use: setup guides only; draws a requested experiment setup onto the user's own keyframe, never measures
+      api: images edits (POST /v1/images/edits, JSON body)
+      note: billed per image returned; daily cap setup_guide_daily_cap_usd in config/budget.yaml
 
 # Muse Glimmer: open weights, self-hosted with llama.cpp (llama-server, OpenAI Chat Completions).
 # Weights: meta-models/Muse-Glimmer-30B-GGUF, Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf + mmproj (vision).

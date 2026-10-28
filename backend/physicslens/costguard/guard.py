@@ -59,6 +59,7 @@ class Guard:
         run_id: str,
         audience: str = "dev",
         run_cap_usd: float | None = None,
+        model_daily_cap_usd: float | None = None,
     ) -> Reservation:
         if not math.isfinite(est_cost) or est_cost < 0:
             raise ValueError(f"est_cost must be a non-negative number, got {est_cost!r}")
@@ -81,6 +82,9 @@ class Guard:
             audience_cap = self.budget.get(f"{audience}_daily_cap_usd") if audience != "dev" else None
             if audience_cap is not None:
                 checks.append((Ledger.spent(conn, day=today, audience=audience), audience_cap, f"{audience} daily safety cap"))
+            if model_daily_cap_usd is not None:
+                # A feature with its own small allowance (picture guides) must not eat the provider's daily budget.
+                checks.append((Ledger.spent(conn, day=today, model=model), model_daily_cap_usd, f"{model} daily budget"))
 
             for spent, cap, label in checks:
                 if spent + est_cost > cap:

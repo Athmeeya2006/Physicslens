@@ -1,6 +1,7 @@
 """Bundle the gallery into the frontend as static files, so the site works without the backend.
 
-Writes frontend/public/gallery/<id>/ (result, clip, share video, poster and the three exports) plus
+Writes frontend/public/gallery/<id>/ (result, clip, share video, poster, any stored setup guide and the
+exports) plus
 frontend/public/gallery/index.json. Run before building the static site.
 """
 
@@ -29,7 +30,9 @@ def main() -> None:
         gid = src.name
         dst = DST / gid
         dst.mkdir()
-        for name in ("result.json", "clip.mp4", "share.mp4", "poster.jpg"):
+        # A stored picture guide (drawn once with the access code) is shown to everyone without a new call.
+        for name in ("result.json", "clip.mp4", "share.mp4", "poster.jpg",
+                     "setup_guide.jpg", "setup_guide_frame.jpg", "setup_guide.json"):
             if (src / name).is_file():
                 shutil.copy(src / name, dst / name)
         meta = json.loads(meta_file.read_text())

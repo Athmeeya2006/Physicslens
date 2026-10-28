@@ -93,9 +93,12 @@ flowchart LR
 | **Muse Glimmer 30B** (open weights) | Self-hosted with llama.cpp on a free Kaggle GPU notebook (two T4s) | The agent's reasoning: scene understanding from keyframes (vision); checking SAM's track on annotated frames (vision) and re-prompting SAM by name; candidate equations and its own free-form laws; planning and reviewing multi-recording studies, with maintenance notes; experiment requests; explanations; turning spoken settings and what-if questions into parameters |
 | **SAM 3.1** | Meta Model API | Box-prompted segmentation and tracking of the moving object(s) and the reference object in one request; in live mode, refinement of an on-device tracker in parallel chunks |
 | **Muse Voice Transcribe** | Meta Model API | Hands-free what-if questions and settings spoken while filming ("the string is 50 centimeters"), over the realtime endpoint with automatic end-of-speech detection |
+| **Muse Image** | Meta Model API | Draws the requested experiment setup onto the user's own frame; never measures anything. Judges and development only, on request ("Show me"), with its own small daily cap |
 | **Muse Spark 1.3** | Meta Model API | Development convenience only, with the same prompts and schemas; demo and production refuse to reason on anything but the open-weight model |
 
 **Open-weight status, stated plainly:** every reasoning step behind the published gallery results ran on **Muse Glimmer 30B**, Meta's open-weight model, using the official `meta-models/Muse-Glimmer-30B-GGUF` weights (Q4_K_M plus the vision encoder) on llama.cpp. It ran in a Kaggle GPU notebook, so it cost nothing per call. Each result shows the model behind every step. In demo and production the app refuses to reason on any other model: if the open-weight server is down it shows a "busy" message instead of switching. During early development the same prompts ran on Muse Spark 1.3; those results are not in the gallery.
+
+All reasoning about physics runs on Muse Glimmer. Muse Image does no reasoning: Muse Glimmer plans where the marks of a setup guide go, code turns that plan into a fixed edit prompt containing no numbers, and Muse Image only draws. The drawing is shown only if math confirms the scene is unchanged outside the marks (structural similarity) and that something was drawn inside them; the labels and numbers on it are written by code from the simulated experiment design, and the written instruction always comes first.
 
 How the split works: the notebook never holds a Meta key. SAM 3.1 tracking runs through the cost guard on the developer's machine, and its results reach the notebook as cached responses (`PHYSICSLENS_CACHE_ONLY=meta_api` makes the Meta provider answer only from cache). Both sides analyze the same frozen clip and keyframe bytes, so their caches agree. `scripts/glimmer_batch.py` runs the handoff:
 
@@ -242,6 +245,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Ghost overlay on the real video, and an on-screen decision trail showing who decided what
 - [x] Live camera mode with converging equations (instant on-server tracking, refined by SAM 3.1 in parallel chunks; tap the object to lock on)
 - [x] Experiment requests for ambiguous data
+- [x] Setup guides: the requested experiment drawn by Muse Image onto the user's own frame (planned by Muse Glimmer, checked by math, labeled by code), with a written-only fallback
 - [x] Regime-change detection (live and recorded)
 - [x] Voice what-ifs with Muse Voice Transcribe (spoken question, parameter change, re-simulated ghost; typing works too)
 - [x] Shareable MP4 with the measured trail, the simulated ghost and the typeset equation burned in

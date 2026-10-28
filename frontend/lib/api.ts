@@ -74,7 +74,7 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "plan" | "study_turn" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "agent";
+  step: "plan" | "study_turn" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "agent" | "setup_guide";
   provider: string | null;
   model: string;
   text: string;
@@ -225,6 +225,35 @@ export function askWhatIf(id: string, question: string) {
     headers: { "Content-Type": "application/json", ...codeHeaders() },
     body: JSON.stringify({ question }),
   }).then((r) => json<import("@/components/WhatIf").WhatIfAnswer>(r));
+}
+
+export interface SetupGuideView {
+  status: "picture" | "text_only";
+  instruction: string;
+  caption: string;
+  reason: string | null;
+  model: string;
+  planned_by?: { provider: string; model: string } | null;
+  image_url?: string;
+  frame_url?: string;
+}
+
+// Drawing a guide is a paid call, so it only ever starts from the "Show me" button; a stored one is free.
+export function requestSetupGuide(id: string, stepRef: number): Promise<SetupGuideView> {
+  if (isGallery(id)) {
+    return fetch(`${staticBase(id)}/setup_guide.json`).then((r) => json<SetupGuideView>(r)).then((g) => ({
+      ...g, image_url: `${staticBase(id)}/setup_guide.jpg`, frame_url: `${staticBase(id)}/setup_guide_frame.jpg`,
+    }));
+  }
+  return fetch(`${API_BASE}/api/runs/${id}/setup-guide`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...codeHeaders() },
+    body: JSON.stringify({ step_ref: stepRef }),
+  }).then((r) => json<SetupGuideView>(r)).then((g) => ({
+    ...g,
+    image_url: g.image_url && `${API_BASE}${g.image_url}`,
+    frame_url: g.frame_url && `${API_BASE}${g.frame_url}`,
+  }));
 }
 
 export function makeShareVideo(id: string): Promise<string> {

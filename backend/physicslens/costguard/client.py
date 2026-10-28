@@ -5,6 +5,7 @@ kill switch -> allowlist -> price exists -> budget reserve -> rate limiter -> ca
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import logging
 import math
@@ -17,6 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import httpx
 import openai
 import websockets
 from openai import OpenAI
@@ -24,6 +26,7 @@ from websockets.exceptions import ConnectionClosed
 
 from ..settings import (
     GLIMMER_MODEL,
+    IMAGE_MODEL,
     META_CONTRIBUTOR_MODEL,
     SAM_MODEL,
     VOICE_MODEL,
@@ -34,6 +37,7 @@ from ..settings import (
 from .allowlist import Allowlist
 from .cache import ResponseCache, file_digest, make_key
 from .errors import (
+    BudgetExceeded,
     CacheOnlyMiss,
     CostGuardError,
     InvalidRequest,
@@ -149,6 +153,7 @@ class CostGuardClient:
         self.llm_timeout = float(timeouts.get("llm", 60))
         self.sam_timeout = float(timeouts.get("sam_clip", 120))
         self.glimmer_timeout = float(timeouts.get("glimmer", 900))
+        self.image_timeout = float(timeouts.get("image_edit", 120))
         retries = self.limits.get("retries") or {}
         self._backoff_start = float(retries.get("backoff_start_ms", 500)) / 1000
         self._llm_policy = _RetryPolicy(int(retries.get("on_429_max", 3)), int(retries.get("on_transient_5xx_max", 2)))
@@ -200,10 +205,11 @@ class CostGuardClient:
         billed_on_failure: bool = False,
         video_requests: int = 0,
         run_cap_usd: float | None = None,
+        model_daily_cap_usd: float | None = None,
     ) -> CallResult:
         self.check_kill_switch()
         self._check_model(model, provider)
-        res = self.guard.check_and_reserve(provider, model, est_cost, run_id, audience, run_cap_usd)
+        res = self.guard.check_and_reserve(provider, model, est_cost, run_id, audience, run_cap_usd, model_daily_cap_usd)
         try:
             self.limiter.acquire(model, timeout=self.llm_timeout)
             if cache_key:
@@ -443,6 +449,64 @@ class CostGuardClient:
             billed_on_failure=True, video_requests=1, run_cap_usd=run_cap_usd,
         )
 
+    # ---------- Muse Image: setup guides drawn on the user's own frame ----------
+
+    def meta_image_edit(
+        self,
+        *,
+        image_jpeg: bytes,
+        prompt: str,
+        run_id: str,
+        audience: str = "dev",
+        attempt: int = 0,
+    ) -> CallResult:
+        """One edit of one JPEG; the edited image comes back base64 in result.raw["images_b64"].
+
+        Request shape, from https://dev.meta.ai/docs/api-reference/images/edit-image.md and
+        https://dev.meta.ai/docs/image-generation.md ("Edit an image" and "Control the tools and reasoning on the
+        images endpoints"): POST /v1/images/edits with Meta's JSON body
+        {"model", "prompt", "images": [{"image_url": <base64 data URL>}], "n": 1, "reasoning_strength", "tool_enablement"}.
+        The JSON body is used rather than the SDK's multipart images.edit because tool_enablement is a nested object,
+        and how one survives multipart encoding is not documented. It goes through the SDK's own low-level post, so
+        the client (max_retries=0, timeout) is the same one every other call uses.
+        Price: a flat rate per image returned (https://dev.meta.ai/docs/pricing-rate-limits.md); the token counts in
+        the response are for reference only and are not billed.
+        `attempt` is part of the cache key, so a retry after a rejected edit asks again instead of replaying it.
+        """
+        if audience == "public":
+            raise InvalidRequest("Picture guides are for judges and development only.")
+        if not prompt.strip():
+            raise InvalidRequest("The image edit prompt is empty.")
+        provider, model = "meta_api", IMAGE_MODEL
+        self.check_kill_switch()
+        self._check_model(model, provider)
+        cap = self.guard.budget.get("setup_guide_daily_cap_usd")
+        if cap is None:
+            raise BudgetExceeded("setup_guide_daily_cap_usd is missing from config/budget.yaml; picture guides stay off.")
+        body: dict[str, Any] = {
+            "model": model, "prompt": prompt,
+            "images": [{"image_url": "data:image/jpeg;base64," + base64.b64encode(image_jpeg).decode()}],
+            "n": 1,
+            # A single pass costs the same and returns sooner. Search stays off: the frame is the user's own scene,
+            # there is nothing to look up, and nothing about it should leave the edit request.
+            "reasoning_strength": "low",
+            "tool_enablement": {"enable_image_search": False, "enable_web_search": False, "enable_shell": False},
+        }
+        est_cost = self.pricing.cost(provider, model, Usage(images=1))
+
+        def request() -> tuple[Any, Any]:
+            sdk = self._sdk(provider, self.llm_timeout)
+            raw = sdk.post("/images/edits", body=body, cast_to=httpx.Response, options={"timeout": self.image_timeout})
+            return raw.json(), raw.headers
+
+        cache_key = make_key(model, {k: v for k, v in body.items() if k != "images"} | {"attempt": attempt},
+                             media=[image_jpeg])
+        return self._execute(
+            provider=provider, model=model, run_id=run_id, audience=audience, est_cost=est_cost,
+            cache_key=cache_key, request=request, parse=_parse_images, policy=self._llm_policy,
+            model_daily_cap_usd=float(cap),
+        )
+
     # ---------- Files API ----------
 
     def upload_video(self, path: Path) -> tuple[str, str]:
@@ -616,6 +680,13 @@ def _parse_sam(resp: Any) -> _Parsed:
     frames = _get(resp, "usage", "video_frames_processed")
     usage = None if frames is None else Usage(video_frames=_int(frames))
     return _Parsed(text=_get(resp, "output_text") or "", usage=usage, finish_reason=_get(resp, "status"), raw=_dump(resp))
+
+
+def _parse_images(resp: Any) -> _Parsed:
+    """Billed per image returned, so usage counts the images; the response's token counts are reference only."""
+    images = [b for b in (_get(d, "b64_json") for d in _get(resp, "data") or []) if b]
+    return _Parsed(text="", usage=Usage(images=len(images)), finish_reason="completed" if images else "no_image",
+                   raw={"images_b64": images, "output_format": _get(resp, "output_format")})
 
 
 def _estimate_input_tokens(obj: Any) -> int:
