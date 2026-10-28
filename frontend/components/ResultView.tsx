@@ -3,7 +3,7 @@
 import { Download, Film, FileCode2, FileJson, Boxes } from "lucide-react";
 import { useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
-import { clipUrl, exportUrl, HAS_BACKEND, isGallery, isOpenWeight, makeShareVideo } from "@/lib/api";
+import { clipUrl, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
 import { Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
@@ -56,7 +56,8 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
   const [share, setShare] = useState<{ state: "idle" | "busy" | "done" | "error"; url?: string; error?: string }>({ state: "idle" });
   const titles = Object.fromEntries(r.ranking.map((f) => [f.model_id, f.title]));
   const models = Array.from(new Set((r.trail ?? []).map((t) => t.model).filter((m) => m && m !== "simulate-and-compare")));
-  const canAsk = HAS_BACKEND || !isGallery(runId);
+  const online = useBackend();
+  const canAsk = online === true || !isGallery(runId);
   const bestBic = Math.min(...r.ranking.map((f) => f.bic));
 
   const onShare = () => {

@@ -1,7 +1,49 @@
-// Empty NEXT_PUBLIC_API_BASE builds a backend-free site: the gallery is served as static files and the
-// analysis features explain that the backend is offline. Unset means local development.
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
-export const HAS_BACKEND = API_BASE !== "";
+import { useEffect, useState } from "react";
+
+// Empty NEXT_PUBLIC_API_BASE builds the static site: the gallery is static files, and the analysis server is
+// found at runtime from /backend.json (its address changes whenever the GPU notebook restarts its tunnel).
+// Unset means local development against localhost.
+const BUILD_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+const STATIC_SITE = BUILD_BASE === "";
+// Live bindings: importers see the values once connectBackend() has found a server.
+export let API_BASE = BUILD_BASE;
+export let HAS_BACKEND = !STATIC_SITE;
+
+let connecting: Promise<boolean> | null = null;
+
+export function connectBackend(): Promise<boolean> {
+  if (!STATIC_SITE) return Promise.resolve(true);
+  connecting ??= (async () => {
+    try {
+      const cfg = await fetch("/backend.json", { cache: "no-store" }).then((r) => r.json() as Promise<{ api_base?: string }>);
+      const base = (cfg.api_base ?? "").replace(/\/$/, "");
+      if (!base) return false;
+      // Only switch the analysis features on if the server really answers; a stale tunnel means gallery only.
+      const ok = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(6000) }).then((r) => r.ok);
+      if (ok) {
+        API_BASE = base;
+        HAS_BACKEND = true;
+      }
+      return ok;
+    } catch {
+      return false;
+    }
+  })();
+  return connecting;
+}
+
+/** null while looking for the analysis server, then whether it is there. */
+export function useBackend(): boolean | null {
+  const [online, setOnline] = useState<boolean | null>(STATIC_SITE ? null : true);
+  useEffect(() => {
+    let live = true;
+    connectBackend().then((ok) => live && setOnline(ok));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return online;
+}
 
 // Gallery entries are precomputed real analyses, bundled as static files; they never need the backend.
 export const isGallery = (id: string) => id.startsWith("gallery-");
@@ -155,12 +197,12 @@ async function json<T>(res: Response): Promise<T> {
 }
 
 export const getHealth = (): Promise<Health> =>
-  HAS_BACKEND
-    ? fetch(`${API_BASE}/api/health`, { headers: codeHeaders() }).then((r) => json<Health>(r))
-    : Promise.reject(new Error("offline"));
+  connectBackend().then((ok) =>
+    ok ? fetch(`${API_BASE}/api/health`, { headers: codeHeaders() }).then((r) => json<Health>(r)) : Promise.reject(new Error("offline")));
 const staticGallery = () => fetch("/gallery/index.json").then((r) => json<GalleryItem[]>(r));
+// The static site always serves its own gallery copy: it loads fast and never depends on the tunnel.
 export const getGallery = (): Promise<GalleryItem[]> =>
-  HAS_BACKEND ? fetch(`${API_BASE}/api/gallery`).then((r) => json<GalleryItem[]>(r)).catch(staticGallery) : staticGallery();
+  STATIC_SITE ? staticGallery() : fetch(`${API_BASE}/api/gallery`).then((r) => json<GalleryItem[]>(r)).catch(staticGallery);
 export const getBudget = () => fetch(`${API_BASE}/api/budget`).then((r) => json<Budget>(r));
 export const getRun = (id: string): Promise<RunView> =>
   isGallery(id)

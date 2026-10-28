@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TrendChart } from "@/components/TrendChart";
-import { API_BASE, HAS_BACKEND } from "@/lib/api";
+import { API_BASE, useBackend } from "@/lib/api";
 
 interface MetricRow {
   metric: string;
@@ -114,6 +114,7 @@ function TrendSection() {
 }
 
 export default function HealthPage() {
+  const online = useBackend();
   const [baseline, setBaseline] = useState("");
   const [current, setCurrent] = useState("");
   const [busy, setBusy] = useState(false);
@@ -148,11 +149,12 @@ export default function HealthPage() {
         </p>
       </header>
 
-      {!HAS_BACKEND && (
+      {online === false && (
         <section className="panel">
           <h2>Needs the analysis server</h2>
           <p className="muted">
-            This preview has no analysis server connected, so recordings can&apos;t be compared here. With the server, you
+            The analysis server isn&apos;t running right now (it runs on a GPU notebook during judging sessions), so
+            recordings can&apos;t be compared at the moment. With the server, you
             paste two result links of the same machine part; PhysicsLens refits both and flags a change in natural frequency
             or damping only when it exceeds 3 standard errors and a practical threshold (0.5% in frequency, 10% in damping),
             with a repeatability allowance for re-recording. In tests it raises no false alarm when the same system is
@@ -161,7 +163,7 @@ export default function HealthPage() {
         </section>
       )}
 
-      {HAS_BACKEND && <form className="panel upload" onSubmit={run}>
+      {online && <form className="panel upload" onSubmit={run}>
         <label>
           Baseline recording (result link or id)
           <input value={baseline} onChange={(e) => setBaseline(e.target.value)} placeholder="e.g. the analysis from last month" />
@@ -175,7 +177,7 @@ export default function HealthPage() {
 
       {error && <p className="error">{error}</p>}
 
-      {HAS_BACKEND && <TrendSection />}
+      {online && <TrendSection />}
 
       {result && (
         <section className="panel">

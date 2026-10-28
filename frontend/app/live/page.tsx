@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Tex } from "@/components/Equation";
-import { accessCode, API_BASE, HAS_BACKEND } from "@/lib/api";
+import { accessCode, API_BASE, useBackend } from "@/lib/api";
 
 const FPS = 25;
 const MAX_WIDTH = 640; // SAM bills per frame, not per pixel; smaller frames just keep the upload light
@@ -28,6 +28,7 @@ function wsUrl(): string {
 }
 
 export default function LivePage() {
+  const online = useBackend();
   const video = useRef<HTMLVideoElement>(null);
   const overlay = useRef<HTMLCanvasElement>(null);
   const socket = useRef<WebSocket | null>(null);
@@ -79,7 +80,7 @@ export default function LivePage() {
   };
 
   const start = async () => {
-    if (!HAS_BACKEND) return;
+    if (!online) return;
     setNotices([]);
     setFit(null);
     track.current.clear();
@@ -193,7 +194,7 @@ export default function LivePage() {
     <main>
       <header className="page-head">
         <h1>Live analysis</h1>
-        <p className="tagline">{HAS_BACKEND ? status : "Live analysis needs the analysis server, which isn't connected to this preview. The recordings on the Analyze page are complete, real analyses."}</p>
+        <p className="tagline">{online ? status : online === null ? "Looking for the analysis server..." : "Live analysis needs the analysis server, which isn't running right now (it runs on a GPU notebook during judging sessions). The recordings on the Analyze page are complete, real analyses."}</p>
       </header>
 
       <div className="live-grid">
@@ -215,7 +216,7 @@ export default function LivePage() {
                 Pendulum length in cm (optional, if no A4 sheet is in view)
                 <input type="number" inputMode="decimal" min="1" step="0.1" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
               </label>
-              <button onClick={start} disabled={!HAS_BACKEND}>Start live analysis</button>
+              <button onClick={start} disabled={!online}>Start live analysis</button>
             </div>
           )}
           {live && <button onClick={stop}>Stop</button>}

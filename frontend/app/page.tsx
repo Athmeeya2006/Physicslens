@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Gallery } from "@/components/Gallery";
 import { ResultView } from "@/components/ResultView";
 import type { Budget, GalleryItem, Health, RunView } from "@/lib/api";
-import { getBudget, getGallery, getHealth, getRun, HAS_BACKEND, startRun } from "@/lib/api";
+import { getBudget, getGallery, getHealth, getRun, startRun, useBackend } from "@/lib/api";
 
 declare global {
   interface Window {
@@ -20,7 +20,9 @@ const POLL_MS = 1000;
 
 export default function Home() {
   const [health, setHealth] = useState<Health | null>(null);
-  const [offline, setOffline] = useState(!HAS_BACKEND);
+  const online = useBackend();
+  const [unreachable, setUnreachable] = useState(false);
+  const offline = online === false || unreachable;
   const [budget, setBudget] = useState<Budget | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [lengthCm, setLengthCm] = useState("");
@@ -40,7 +42,7 @@ export default function Home() {
         setHealth(h);
         if (h.app_env === "dev") getBudget().then(setBudget).catch(() => setBudget(null));
       })
-      .catch(() => setOffline(true));
+      .catch(() => setUnreachable(true));
     getGallery().then(setGallery).catch(() => setGallery([]));
     // ?run=<id> opens a finished run, so results can be reloaded and shared by link.
     const shared = new URLSearchParams(window.location.search).get("run");
@@ -145,10 +147,12 @@ export default function Home() {
         <div className="home-grid">
           <section className="panel stack" aria-labelledby="analyze-title">
             <h2 id="analyze-title">Analyze a recording</h2>
-            {offline ? (
+            {online === null ? (
+              <p className="muted"><Loader2 size={14} className="spin" aria-hidden="true" /> Looking for the analysis server...</p>
+            ) : offline ? (
               <p className="muted">
-                The analysis server isn&apos;t connected to this preview, so new clips can&apos;t be analyzed here. Every recording
-                in the list is a complete, real analysis you can open.
+                The analysis server isn&apos;t running right now (it runs on a GPU notebook during judging sessions), so new
+                clips can&apos;t be analyzed at the moment. Every recording in the list is a complete, real analysis you can open.
               </p>
             ) : health && !health.can_upload ? (
               <p className="muted">Analyzing your own clip is closed right now. Every recording in the list is a complete, real analysis.</p>
