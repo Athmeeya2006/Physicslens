@@ -25,14 +25,15 @@ It is system identification, normally a specialist task, made as easy as filming
 
 ## What it does
 
-1. **Record, upload, or go live.** Live mode streams the phone camera; tap the object to lock on.
-2. **It reads the scene.** The reasoning model looks at four keyframes, names the moving object, guesses the kind of motion, and finds a reference of known size (A4 or letter sheet, credit card, coin). No reference? Give the pendulum length or the moving object's size, or skip it: frequency, damping and friction need no scale.
-3. **It tracks precisely.** SAM 3.1 follows the object, and the reference, through every frame in a single request.
-4. **It hypothesizes, then proves.** The agent proposes candidate equations; regular math fits and simulates each one and keeps only what forecasts held-out data. The simplest adequate model wins (BIC).
-5. **It asks for better data.** If candidates tie, the agent says which experiment would separate them ("release it from a larger angle and film 20 seconds").
-6. **You see the proof.** A simulated "ghost" moves over the real video. Every decision appears in an on-screen decision trail: what was proposed, what was rejected and why, and what the agent decided next.
-7. **Ask "what if?" out loud.** "What if the string were twice as long?" The fitted equation is re-simulated from the same starting state and drawn as a second ghost.
-8. **Export.** A MuJoCo model, a standalone Python simulation, parameters as JSON, or a shareable MP4 with the equation burned in.
+1. **Start from a goal, or from a clip.** In a **study** you state what you need ("are this truck's front shocks worn?", "the damping of this cabinet hinge for my robot sim"). The agent plans the deliverable, what to measure and which recordings to make, with filming instructions. Or just upload a clip, or go live with the phone camera.
+2. **It reads the scene.** The reasoning model looks at four keyframes, names the moving object, guesses the kind of motion, and finds a reference of known size (A4 or letter sheet, credit card, coin). No reference? Give the pendulum length or the object's size, say it out loud while filming, or skip it: frequency, damping and friction need no scale.
+3. **It tracks, then checks what it tracked.** SAM 3.1 follows the object, and the reference, through every frame in one request. The reasoning model then looks at three frames with SAM's box drawn on them; if the box sits on the wrong thing (a clasp, a shadow, a digit drawn on the video), SAM is asked again by the object's name.
+4. **It hypothesizes, then proves.** The agent proposes candidate equations from a library or writes its own; regular math fits and simulates each one and keeps only what forecasts held-out data. The simplest adequate model wins (BIC).
+5. **It checks the answer is physical.** With no scale in view and a law containing g, Earth's gravity becomes the ruler: lengths follow from the fitted g, and the assumption is stated.
+6. **It asks for better data.** If genuinely different laws tie, the agent says which experiment would separate them; in a study it asks for the next recording until the goal is answered, and the recordings are combined (weighted means, and a test that they agree).
+7. **You see the proof.** A simulated "ghost" moves over the real video. Every decision appears in an on-screen decision trail, each tagged with the model or the math that made it.
+8. **Ask "what if?" out loud.** "What if the string were twice as long?" The fitted equation is re-simulated from the same starting state and drawn as a second ghost.
+9. **Export.** A MuJoCo model, a standalone Python simulation, parameters as JSON, a one-page report for a colleague, or a shareable MP4. A study adds its own report, a wear verdict with a maintenance note when that was the goal, and a MuJoCo model with the combined parameters.
 
 When nothing fits, it says so: *"no clean governing equation found."* It never invents an equation, and it refuses clips it can't measure (a flat pendulum arc, a round spinning object, a spin close to the frame-rate limit, a tracked object that never moves) instead of guessing. One limit it cannot see: a spin faster than a quarter turn per frame aliases into a slower one, so film spins with slow motion.
 
@@ -218,6 +219,10 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Hypothesis generation and agent decisions with validated structured outputs, running on Muse Glimmer (open weights, self-hosted)
 - [x] Equations the agent writes itself, parsed by a closed math grammar (no eval) and verified like any built-in model
 - [x] Scale from a known object size, slow-motion clips in real time, and a hint for what to track
+- [x] Goal-driven studies: agent-planned recordings, combined by weighted means with an agreement test, a wear verdict and maintenance note, a study report and a combined MuJoCo model
+- [x] Tracking that checks itself: the reasoning model inspects SAM's box and re-prompts SAM by name when it is off target
+- [x] Earth's gravity as the ruler when nothing else gives a scale; per-result engineer reports; settings spoken while filming
+- [x] Live mode fitted on each frame's capture time
 - [x] Fitting (SciPy) with BIC model selection, held-out forecasts and bootstrap uncertainty that includes the scale's own error; PySINDy shown separately as unverified model-free regression
 - [x] Verification with simulate-and-compare on held-out data
 - [x] Ghost overlay on the real video, and an on-screen decision trail showing who decided what
