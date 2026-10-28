@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from physicslens.export.mjcf import build_mjcf
-from physicslens.export.report import report_markdown  # noqa: E402
+from physicslens.export.report import report_markdown
 from physicslens.export.script import parameters_json, python_script
 
 SRC = ROOT / "gallery"
