@@ -56,7 +56,7 @@ def test_kill_env_blocks(harness, monkeypatch):
 
 def test_allowlist_blocks_unlisted_models(harness):
     with pytest.raises(ModelNotAllowed):
-        text_call(harness.client, model="muse-image-1.0")
+        text_call(harness.client, model="muse-spark-1.1")
     assert harness.sdk().calls == []
 
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Camera, ClipboardList, ScanSearch, ShieldCheck } from "lucide-react";
+import { Activity, Camera, ClipboardList, Database, ScanSearch, ShieldCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { accessCode } from "@/lib/api";
@@ -23,6 +23,7 @@ const NAV = [
   { href: "/live", label: "Live", icon: Camera },
   { href: "/health", label: "Machine health", icon: Activity },
   { href: "/audit", label: "Physics audit", icon: ShieldCheck },
+  { href: "/dataset", label: "Dataset", icon: Database },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {

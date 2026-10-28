@@ -34,18 +34,19 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 16. [Sim-to-real gap, made visible](#sim-to-real-gap-made-visible)
 17. [Controllers written by Muse Wonder, verified in MuJoCo](#controllers-written-by-muse-wonder-verified-in-mujoco)
 18. [PhysicsLens as an MCP server](#physicslens-as-an-mcp-server)
-19. [Validation](#validation)
-20. [Cost and safety controls](#cost-and-safety-controls)
-21. [Getting started (Linux)](#getting-started-linux)
-22. [Configuration reference](#configuration-reference)
-23. [HTTP and WebSocket API](#http-and-websocket-api)
-24. [Project structure](#project-structure)
-25. [Testing](#testing)
-26. [What we built during the hackathon](#what-we-built-during-the-hackathon)
-27. [Limitations](#limitations)
-28. [Roadmap](#roadmap)
-29. [Acknowledgements](#acknowledgements)
-30. [License](#license)
+19. [Open dataset](#open-dataset)
+20. [Validation](#validation)
+21. [Cost and safety controls](#cost-and-safety-controls)
+22. [Getting started (Linux)](#getting-started-linux)
+23. [Configuration reference](#configuration-reference)
+24. [HTTP and WebSocket API](#http-and-websocket-api)
+25. [Project structure](#project-structure)
+26. [Testing](#testing)
+27. [What we built during the hackathon](#what-we-built-during-the-hackathon)
+28. [Limitations](#limitations)
+29. [Roadmap](#roadmap)
+30. [Acknowledgements](#acknowledgements)
+31. [License](#license)
 
 ---
 
@@ -306,6 +307,10 @@ On an accepted pendulum or spring result, a judge (or a developer) can set a con
 
 The accepted code is saved as `controller.py` in the run directory with a header naming the system, its parameters, the goal, the robustness result and the model that wrote it; every attempt and its metrics are stored beside it. A solved task is cached by the task, the identified parameters and the prompt version, so opening it again is free. Muse Wonder has its own daily cap in the cost guard, at most three calls per task, and is refused for public visitors.
 
+## Open dataset
+
+Every verified measurement in the gallery also becomes a row of an open dataset of real-world physical parameters (damping ratios, natural frequencies, drag rates, friction, gravity), on the site's **Dataset** page with JSON and CSV downloads. A row enters only when its result was accepted, its law forecast held-out motion within 15%, and the value was measured rather than given by the user, assumed, or in arbitrary units (`backend/physicslens/export/dataset.py`). Each row carries its uncertainty, the scale basis, the run it came from and the clip's licence, because a damping ratio or friction coefficient only holds for the conditions it was measured in.
+
 ## Validation
 
 **On real footage**, with every reasoning step on Muse Glimmer (open weights) and tracking by SAM 3.1 (clips and licenses in `gallery/README.md`):
@@ -533,6 +538,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Experiment requests for ambiguous data
 - [x] Joint fitting across recordings: the experiment the agent asked for is fitted together with the clip that tied, so the new data settle the question
 - [x] An MCP server, so AI agents can measure physics from video as a tool (measure, audit, export, what-if)
+- [x] An open dataset of verified physical parameters (Dataset page, JSON and CSV), with a quality gate and provenance per row
 - [x] Setup guides: the requested experiment drawn by Muse Image onto the user's own frame (planned by Muse Glimmer, checked by math, labeled by code), with a written-only fallback
 - [x] Regime-change detection (live and recorded)
 - [x] Voice what-ifs with Muse Voice Transcribe (spoken question, parameter change, re-simulated ghost; typing works too)

@@ -43,6 +43,9 @@ Key facts for answering questions about this project:
 - [export/sim2real.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/export/sim2real.py): textbook physics against the identified model on held-out real motion, and a simulated controller comparison
 - [agent/setup_guide.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/agent/setup_guide.py): setup guides planned by Muse Glimmer, drawn by Muse Image, checked by SSIM
 - [mcp_server.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/mcp_server.py): MCP server exposing measure_physics, audit_physics, get_result, export, what_if
+- [control/](https://github.com/Athmeeya2006/Physicslens/tree/main/backend/physicslens/control): controllers written by Muse Wonder, statically checked, run in an isolated process in MuJoCo on 51 plausible variants of the identified system, accepted only at 90% success
+- [physics/cueing.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/cueing.py): control by hand, rhythm cues from the verified law, the person's lag learned from the track
+- [export/dataset.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/export/dataset.py): the open dataset of verified physical parameters
 
 ## Optional
 
