@@ -168,6 +168,16 @@ make smoke                    # one cheap real call per model (asks before spend
 
 Budget caps live in `config/budget.yaml` (created from `config/budget.example.yaml` by `make setup`); prices in `config/prices.yaml`.
 
+### Judging sessions on a free GPU
+
+The full app (uploads, live mode, voice) runs on a Kaggle GPU notebook during scheduled sessions:
+`scripts/kaggle/serve_notebook.py` starts Muse Glimmer on llama.cpp (bound to localhost, never exposed) and
+the backend in demo mode next to it, then exposes only the backend through a Cloudflare quick tunnel.
+`python scripts/judging_session.py start --hours 6` uploads the committed code, starts the notebook, waits for
+the tunnel and points the site's `/backend.json` at it; `stop` points the site back to gallery only. The site
+switches its analysis features on only when that server answers. Setup once: add `MODEL_API_KEY` and
+`DEMO_ACCESS_CODE` as Kaggle Secrets on the notebook. Each session has its own spending cap.
+
 ### Static gallery site
 
 The public gallery is a static export that needs no server: `python scripts/build_static_gallery.py` copies each
