@@ -18,7 +18,7 @@ interface FitMsg {
   reason: string;
   samples?: number;
   window_s?: number;
-  equation?: { title: string; latex: string };
+  equation?: { model_id: string; title: string; latex: string };
   parameters?: LiveParam[];
   ghost?: Point[];
 }
@@ -53,11 +53,52 @@ export default function LivePage() {
   const [live, setLive] = useState(false);
   const [regime, setRegime] = useState<string | null>(null);
   const [forecast, setForecast] = useState<Forecast | null>(null);
+  const [cue, setCue] = useState<CueMsg | null>(null);
+  const [targetDeg, setTargetDeg] = useState("30");
+  const audio = useRef<AudioContext | null>(null);
   const [now, setNow] = useState(0);
   // Session clock: seconds since the first frame's capture time, the same clock the server's predictions use.
   const firstCapture = useRef<number | null>(null);
 
   useEffect(() => () => stop(), []);
+  // Ticks one period apart, then a higher beep on each push: people anticipate a beat far better than they react to
+  // a beep. Times are on the session clock (the frames' capture times), corrected for the device's audio latency.
+  const scheduleCue = (c: CueMsg) => {
+    const ctx = audio.current;
+    if (!ctx || !c.pushes_s?.length || firstCapture.current === null) return;
+    const sessionNow = performance.now() / 1000 - firstCapture.current;
+    const latency = (ctx as AudioContext & { outputLatency?: number }).outputLatency || ctx.baseLatency || 0;
+    const at = (t: number) => ctx.currentTime + (t - sessionNow) - latency;
+    const beep = (t: number, hz: number, dur: number) => {
+      if (at(t) <= ctx.currentTime) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = hz;
+      gain.gain.setValueAtTime(0.0001, at(t));
+      gain.gain.exponentialRampToValueAtTime(0.4, at(t) + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at(t) + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(at(t));
+      osc.stop(at(t) + dur + 0.02);
+    };
+    const first = c.pushes_s[0];
+    for (let k = 3; k >= 1; k--) beep(first - k * c.period_s, 660, 0.06);
+    for (const p of c.pushes_s) beep(p, 1320, 0.12);
+  };
+
+  const control = (goal: "pump" | "stop" | "off") => {
+    if (goal !== "off" && !audio.current) audio.current = new AudioContext();  // must start on a tap
+    void audio.current?.resume();
+    socket.current?.send(JSON.stringify({ type: "control", goal, target_deg: Number(targetDeg) || 30 }));
+    if (goal === "off") setCue(null);
+  };
+
+  useEffect(() => {
+    if (cue?.action !== "push") return;
+    const id = setInterval(() => setNow(performance.now() / 1000 - (firstCapture.current ?? performance.now() / 1000)), 100);
+    return () => clearInterval(id);
+  }, [cue]);
+
   useEffect(() => {
     if (forecast?.status !== "pending") return;
     const id = setInterval(() => setNow(performance.now() / 1000 - (firstCapture.current ?? performance.now() / 1000)), 100);
@@ -91,6 +132,10 @@ export default function LivePage() {
       setRegime(msg.message);
     }
     if (msg.type === "prediction") setForecast(msg as Forecast);
+    if (msg.type === "cue") {
+      setCue(msg.action === "off" ? null : (msg as CueMsg));
+      if (msg.action === "push") scheduleCue(msg as CueMsg);
+    }
     if (msg.type === "selected") setStatus("Locked on. Keep the camera still while it moves.");
     if (msg.type === "notice") setNotices((n) => [{ level: msg.level, message: msg.message }, ...n].slice(0, 4));
   };
@@ -254,6 +299,21 @@ export default function LivePage() {
             </div>
           )}
           {live && picked && <p className="small muted">You picked: {picked}</p>}
+          {live && fit?.status === "accepted" && fit.equation?.model_id.startsWith("pendulum") && (
+            <div className="stack control-box" style={{ gap: 6 }}>
+              <span className="small muted">Control it by hand: the verified law says when to push, the phone beeps in rhythm.</span>
+              <div className="row" style={{ gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <label className="small">Target swing (degrees){" "}
+                  <input type="number" inputMode="numeric" min="3" max="80" value={targetDeg} style={{ width: 70 }}
+                    onChange={(e) => setTargetDeg(e.target.value)} />
+                </label>
+                <button type="button" onClick={() => control("pump")}>Pump it up</button>
+                <button type="button" onClick={() => control("stop")}>Stop it</button>
+                {cue && <button type="button" className="secondary" onClick={() => control("off")}>Control off</button>}
+              </div>
+            </div>
+          )}
+          {cue && <CueBanner c={cue} now={now} />}
           {live && (
             <VoiceNotes onNotes={(n) => {
               // A length said while filming goes straight into the running session.
@@ -316,6 +376,27 @@ function ForecastBanner({ f, now }: { f: Forecast; now: number }) {
     <div className={`forecast-banner ${f.status}`}>
       <strong>Prediction {f.id}: {f.status === "hit" ? "hit" : "missed"}.</strong> It happened {Math.abs(err).toFixed(2)} s{" "}
       {err > 0 ? "later" : "earlier"} than predicted {f.horizon_s.toFixed(0)} s in advance; the stated window was ± {f.window_s.toFixed(2)} s.
+    </div>
+  );
+}
+
+type CueMsg = {
+  action: "push" | "wait" | "done"; goal: "pump" | "stop"; period_s: number; direction: "left" | "right";
+  amplitude_deg: number; target_deg: number; lead_s: number; reason: string; pushes_s?: number[];
+};
+
+function CueBanner({ c, now }: { c: CueMsg; now: number }) {
+  const next = c.pushes_s?.find((p) => p > now);
+  return (
+    <div className={`forecast-banner cue ${c.action}`}>
+      {c.action === "push" && next !== undefined ? (
+        <strong>Push {c.direction.toUpperCase()} on the beep, in <span className="countdown">{(next - now).toFixed(1)} s</span></strong>
+      ) : c.action === "done" ? <strong>Stopped.</strong> : c.action === "wait" ? <strong>At the target: hold, don&apos;t push.</strong>
+        : <strong>Measuring the swing after your push...</strong>}
+      <div className="small">
+        Swing now {c.amplitude_deg.toFixed(0)}°, target {c.target_deg.toFixed(0)}°. {c.reason}
+        {c.lead_s > 0.02 ? ` Your pushes land about ${c.lead_s.toFixed(2)} s after the beat, so the beats come that much early.` : ""}
+      </div>
     </div>
   );
 }

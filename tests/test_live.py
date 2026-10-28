@@ -286,3 +286,28 @@ def test_live_prediction_is_stored_before_it_happens_and_then_judged(harness, tm
     session._forecast_step(spec, fit_model(spec, late), late, 26.0, accepted=True)
     judged = [m for m in sent if m["type"] == "prediction" and m["status"] != "pending"]
     assert judged and judged[0]["status"] == "hit", judged
+
+
+def test_control_cues_a_push_train_then_waits_for_it(harness, tmp_path):
+    from physicslens.physics.coords import Coordinates
+    from physicslens.physics.fit import fit_model
+    from physicslens.physics.models import MODELS
+
+    from .test_physics import pendulum_xy
+
+    session, sent = make_session(harness, tmp_path, lambda *a: "")
+    session.family, session.t0 = "pendulum", 0.0
+    session.set_control("pump", 30)
+    xy = pendulum_xy(0.1, 0.05, 8)
+    th = np.arctan2(xy[:, 0] - 0.1, 1.0 - xy[:, 1])
+    c = Coordinates("pendulum", np.arange(len(th)) / FPS, th[:, None], ("theta",),
+                    {"length_m": 0.6, "pivot_x": 0.1, "pivot_y": 1.0})
+    spec = MODELS["pendulum_linear_damping"]
+    session._control_step(spec, fit_model(spec, c), c, 0.0)
+    cues = [m for m in sent if m["type"] == "cue"]
+    assert cues and cues[0]["action"] == "push" and len(cues[0]["pushes_s"]) == 3
+    assert all(p > c.t[-1] for p in cues[0]["pushes_s"]) and cues[0]["direction"] in ("left", "right")
+    session._control_step(spec, fit_model(spec, c), c, 0.0)  # the train hasn't happened yet: nothing new
+    assert len([m for m in sent if m["type"] == "cue"]) == 1
+    session.set_control("off", 0)
+    assert session.control is None and sent[-1] == {"type": "cue", "action": "off"}

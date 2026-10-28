@@ -266,6 +266,8 @@ async def live(ws: WebSocket) -> None:
                     session.select(float(cmd["x"]), float(cmd["y"]))
                 elif cmd.get("type") == "family":
                     session.choose_family_now(str(cmd.get("family", "")))
+                elif cmd.get("type") == "control":
+                    session.set_control(str(cmd.get("goal", "off")), float(cmd.get("target_deg", 30)))
                 elif cmd.get("type") == "length" and 0.005 <= float(cmd.get("meters", 0)) <= 100:
                     session.set_length(float(cmd["meters"]))
         else:

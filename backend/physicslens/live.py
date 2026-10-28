@@ -38,7 +38,8 @@ from .perception.calibration import (
 )
 from .perception.local_track import TemplateTracker, box_around_tap, to_gray
 from .perception.sam_track import ObjectTrack, tracks_from_text
-from .physics.coords import fit_circle, to_coordinates
+from .physics.coords import Coordinates, fit_circle, to_coordinates
+from .physics.cueing import learned_lead, next_cue, push_delay
 from .physics.fit import FitResult, fit_model, simulate
 from .physics.forecast import FAMILIES as FORECAST_FAMILIES
 from .physics.forecast import Prediction, judge, observed_crossing, predict_crossing
@@ -138,6 +139,10 @@ class LiveSession:
         self.forecast: dict[str, Any] | None = None
         self.forecasts: list[dict[str, Any]] = []
         self._forecast_busy = False
+        # Control by hand: the user pushes, the law says when. Fits use only motion since the last push (a push is
+        # outside the law), and each push's real time, found on the track, teaches the app this person's lag.
+        self.control: dict[str, Any] | None = None
+        self.push_delays: list[float] = []
         self._last_llm = 0.0
         self._scene_started = False
         self.selected_by_tap = False
@@ -203,6 +208,17 @@ class LiveSession:
         else:
             self.send({"type": "notice", "level": "info",
                        "message": f"The agent reads this as {hyp.family} motion, not {self.family}. Restart and pick that if it agrees with what you see."})
+
+    def set_control(self, goal: str, target_deg: float) -> None:
+        if goal not in ("pump", "stop"):
+            self.control = None
+            self.send({"type": "cue", "action": "off"})
+            return
+        self.control = {"goal": goal, "target": float(np.radians(np.clip(target_deg, 3.0, 80.0))), "after_t": None,
+                        "pending": None}
+        self.send({"type": "notice", "level": "info", "message": (
+            "Control on: listen for the ticks and push on the beep." if self.family == "pendulum"
+            else "Control works on a swinging pendulum; it starts once the motion is identified as one.")})
 
     def set_length(self, meters: float) -> None:
         """A length said out loud mid-session. It replaces an earlier given length, never a reference object's scale."""
@@ -474,6 +490,9 @@ class LiveSession:
         if len(frames) < MIN_FIT_S * fps:
             return None
         recent = (frames >= frames[-1] - WINDOW_S * fps) & (frames >= self.regime_start)
+        if self.control is not None and self.control["after_t"] is not None:
+            with self.lock:
+                recent &= np.array([self.times.get(int(f), int(f) / fps) > self.control["after_t"] for f in frames])
         seg_frames, seg_centers = max(fill_short_gaps(frames[recent], centers[recent], max_gap=3), key=lambda s: len(s[0]))
         if len(seg_frames) < MIN_FIT_S * fps:
             return None
@@ -538,6 +557,8 @@ class LiveSession:
             ]
             msg["ghost"] = self._prediction(spec, lead, coords, seg_frames, ts, rate, seg_centers[0], ppm)
             self._forecast_step(spec, lead, coords, float(ts[0]), verdict.status == "accepted")
+            if self.control is not None and self.family == "pendulum" and verdict.status == "accepted":
+                self._control_step(spec, lead, coords, float(ts[0]))
         self.send(msg)
         return msg
 
@@ -560,7 +581,8 @@ class LiveSession:
                 self._save_forecasts()
                 self.send({"type": "prediction", **_public(f)})
             return
-        if (not accepted or self._forecast_busy or self.family not in FORECAST_FAMILIES
+        # While the user is pushing the swing, it is not a free system: no predictions about it.
+        if (not accepted or self._forecast_busy or self.control is not None or self.family not in FORECAST_FAMILIES
                 or len(self.history) < FORECAST_MIN_HISTORY):
             return
         self._forecast_busy = True
@@ -583,6 +605,39 @@ class LiveSession:
                     return
         finally:
             self._forecast_busy = False
+
+    def _control_step(self, spec, lead: FitResult, coords: Coordinates, t_abs0: float) -> None:
+        ctl = self.control
+        assert ctl is not None
+        now = float(coords.t[-1]) + t_abs0
+        pend = ctl["pending"]
+        if pend is not None:
+            if now < pend["pushes_abs"][-1] + 0.8:
+                return  # a push train is still under way: don't reschedule over it
+            # Find when the first push really landed, on the law that was fitted before it.
+            shift = t_abs0 - pend["t_abs0"]
+            d = push_delay(pend["spec"], pend["fit"], pend["coords"], coords.t + shift, coords.q[:, 0],
+                           pend["pushes_abs"][0] - pend["t_abs0"])
+            if d is not None:
+                self.push_delays.append(d + pend["lead"])
+            ctl["after_t"] = pend["pushes_abs"][-1] + 0.1
+            ctl["pending"] = None
+            return  # refit on the motion after the pushes first
+        lead_s = learned_lead(self.push_delays)
+        cue = next_cue(spec, lead, coords, ctl["goal"], ctl["target"], lead_s=lead_s)
+        if cue is None:
+            return
+        t0 = self.t0 or 0.0
+        msg = {"type": "cue", "action": cue.action, "goal": ctl["goal"], "period_s": round(cue.period_s, 3),
+               "direction": "right" if cue.direction > 0 else "left", "amplitude_deg": round(float(np.degrees(cue.amplitude)), 1),
+               "target_deg": round(float(np.degrees(ctl["target"])), 1), "lead_s": round(lead_s, 3),
+               "bottom_speed": round(cue.bottom_speed, 3), "reason": cue.reason}
+        if cue.action == "push":
+            pushes_abs = [p + t_abs0 for p in cue.pushes]
+            ctl["pending"] = {"pushes_abs": pushes_abs, "t_abs0": t_abs0, "spec": spec, "fit": lead, "coords": coords,
+                              "lead": lead_s}
+            msg["pushes_s"] = [round(p - t0, 3) for p in pushes_abs]
+        self.send(msg)
 
     def _save_forecasts(self) -> None:
         (self.run_dir / "predictions.json").write_text(json.dumps([_public(f) for f in self.forecasts], indent=1))
