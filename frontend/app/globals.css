@@ -253,6 +253,10 @@ details.panel ul { margin: 10px 0 0; padding-left: 18px; color: var(--ink-2); fo
 
 .live-grid { display: grid; gap: var(--gap); grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; }
 @media (max-width: 960px) { .live-grid { grid-template-columns: minmax(0, 1fr); } }
+.forecast-banner { background: var(--sunk); border-radius: var(--radius); padding: 10px 12px; font-size: 0.9rem; margin: 8px 0; }
+.forecast-banner.hit { border-left: 4px solid var(--ok); background: var(--ok-soft); }
+.forecast-banner.miss { border-left: 4px solid var(--bad); background: var(--bad-soft); }
+.forecast-banner .countdown { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1rem; }
 .regime-banner { background: var(--model-soft); color: var(--model); border-radius: var(--radius); padding: 10px 12px; font-weight: 600; font-size: 0.9rem; }
 
 /* ---------- machine health ---------- */

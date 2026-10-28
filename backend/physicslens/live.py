@@ -9,6 +9,7 @@ local ones as they arrive. If SAM shows the local tracker drifted, the tracker i
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import struct
 import subprocess
@@ -39,8 +40,11 @@ from .perception.local_track import TemplateTracker, box_around_tap, to_gray
 from .perception.sam_track import ObjectTrack, tracks_from_text
 from .physics.coords import fit_circle, to_coordinates
 from .physics.fit import FitResult, fit_model, simulate
+from .physics.forecast import FAMILIES as FORECAST_FAMILIES
+from .physics.forecast import Prediction, judge, observed_crossing, predict_crossing
 from .physics.models import MODELS, models_for
 from .physics.regime import detect_change
+from .physics.uncertainty import bootstrap_samples
 from .physics.verify import assess
 from .pipeline import (
     MOVING_ID,
@@ -69,6 +73,11 @@ BUFFER_S = 25.0  # frames kept for chunk encoding and tracker re-anchoring (fit 
 DRIFT_FRACTION = 0.5  # re-anchor when local and SAM disagree by more than this share of the object size
 SAM_WORKERS = 4
 LLM_MIN_INTERVAL_S = 5.0  # live mode never calls the language model more often than this
+# Predict-the-future: try this far ahead first (shorter if the swing will have died out), with a small bootstrap
+# for the timing window, once the law is accepted and its parameters have settled.
+FORECAST_HORIZONS_S = (20.0, 10.0, 5.0)
+FORECAST_REPS = 12
+FORECAST_MIN_HISTORY = 3
 
 Send = Callable[[dict[str, Any]], None]
 SamFn = Callable[[Path, str, list[int]], str]  # (chunk mp4, prompt, global frame indices) -> SAM output text
@@ -124,6 +133,11 @@ class LiveSession:
         self.history: list[dict[str, float]] = []
         self.paused_reason: str | None = None
         self.regime_start = 0  # frames before this belong to an earlier regime and are not fitted
+        # Each prediction is stored before its event happens, with wall-clock time, so "predicted before it
+        # happened" can be audited from predictions.json.
+        self.forecast: dict[str, Any] | None = None
+        self.forecasts: list[dict[str, Any]] = []
+        self._forecast_busy = False
         self._last_llm = 0.0
         self._scene_started = False
         self.selected_by_tap = False
@@ -523,8 +537,55 @@ class LiveSession:
                 for p in spec.params
             ]
             msg["ghost"] = self._prediction(spec, lead, coords, seg_frames, ts, rate, seg_centers[0], ppm)
+            self._forecast_step(spec, lead, coords, float(ts[0]), verdict.status == "accepted")
         self.send(msg)
         return msg
+
+    # ---------- predict the future, then prove it ----------
+
+    def _forecast_step(self, spec, lead: FitResult, coords, t_abs0: float, accepted: bool) -> None:
+        """Judge a pending prediction once its window has passed; start a new one when none is pending."""
+        f = self.forecast
+        if f is not None:
+            p = Prediction(f["t_abs"] - t_abs0, f["window_s"], float(np.median(coords.q[:, 0])), f["direction"], 0.0)
+            outcome = judge(p, observed_crossing(coords.t, coords.q[:, 0], p))
+            if outcome["status"] != "unmeasured":
+                f.update(outcome, judged_wall=time.time(), observed_s=round(outcome["observed"] + t_abs0 - (self.t0 or 0.0), 3))
+                self.forecast = None
+                self._save_forecasts()
+                self.send({"type": "prediction", **_public(f)})
+            elif coords.t[-1] + t_abs0 > f["t_abs"] + f["window_s"] + 2.0:
+                f.update(status="unmeasured", judged_wall=time.time())  # tracking lost it; say so rather than guess
+                self.forecast = None
+                self._save_forecasts()
+                self.send({"type": "prediction", **_public(f)})
+            return
+        if (not accepted or self._forecast_busy or self.family not in FORECAST_FAMILIES
+                or len(self.history) < FORECAST_MIN_HISTORY):
+            return
+        self._forecast_busy = True
+        self._run(lambda: self._make_forecast(spec, lead, coords, t_abs0))
+
+    def _make_forecast(self, spec, lead: FitResult, coords, t_abs0: float) -> None:
+        try:
+            samples, _ = bootstrap_samples(spec, coords, lead, reps=FORECAST_REPS)
+            for horizon in FORECAST_HORIZONS_S:
+                p = predict_crossing(spec, lead, coords, horizon, samples)
+                if p is not None:
+                    t_rel = (self.t0 or 0.0)
+                    self.forecast = {"id": len(self.forecasts) + 1, "status": "pending", "model_id": spec.id,
+                                     "made_wall": time.time(), "made_s": round(p.made_at + t_abs0 - t_rel, 3),
+                                     "target_s": round(p.t_pred + t_abs0 - t_rel, 3), "window_s": round(p.window_s, 3),
+                                     "horizon_s": horizon, "direction": p.direction, "t_abs": p.t_pred + t_abs0}
+                    self.forecasts.append(self.forecast)
+                    self._save_forecasts()
+                    self.send({"type": "prediction", **_public(self.forecast)})
+                    return
+        finally:
+            self._forecast_busy = False
+
+    def _save_forecasts(self) -> None:
+        (self.run_dir / "predictions.json").write_text(json.dumps([_public(f) for f in self.forecasts], indent=1))
 
     def _new_regime(self, start_frame: int, at_s: float, ratio: float) -> None:
         """The fitted model stopped predicting the motion: fit only what comes after, from scratch."""
@@ -592,6 +653,10 @@ USER_FAMILIES = {"pendulum": "pendulum models", "oscillator": "spring models", "
                  "line": "rolling and sliding models"}
 
 FRAME_HEADER = b"PLT1"  # magic, then the capture time in seconds as little-endian float64, then the JPEG
+
+
+def _public(f: dict[str, Any]) -> dict[str, Any]:
+    return {k: v for k, v in f.items() if k != "t_abs"}
 
 
 def split_frame(data: bytes) -> tuple[bytes, float | None]:

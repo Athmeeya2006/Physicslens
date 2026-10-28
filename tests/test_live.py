@@ -253,3 +253,36 @@ def test_tapped_family_fits_at_once_and_the_agent_still_proposes(harness, tmp_pa
     assert len(hyps) == 1  # the agent was still consulted, once, after the scene was read
     session.choose_family_now("projectile")  # a second tap changes nothing mid-session
     assert session.family == "pendulum"
+
+
+def test_live_prediction_is_stored_before_it_happens_and_then_judged(harness, tmp_path):
+    from physicslens.physics.coords import Coordinates, to_coordinates
+    from physicslens.physics.fit import fit_model
+    from physicslens.physics.models import MODELS
+    from physicslens.sigproc.trajectory import Trajectory
+
+    from .test_physics import pendulum_xy
+
+    session, sent = make_session(harness, tmp_path, lambda *a: "")
+    session.family, session.t0 = "pendulum", 0.0
+    session.history = [{}] * 3  # the law has been stable for a few refits
+    xy = pendulum_xy(0.5, 0.03, 40)
+    rng = np.random.default_rng(0)
+    full = to_coordinates(Trajectory(np.arange(len(xy)) / FPS, xy + rng.normal(0, 0.002, xy.shape),
+                                     np.arange(len(xy)), FPS), "pendulum")
+
+    def window(a: float, b: float) -> Coordinates:
+        i, j = int(a * FPS), int(b * FPS)
+        return Coordinates("pendulum", full.t[i:j] - full.t[i], full.q[i:j], full.names, dict(full.ctx))
+
+    spec = MODELS["pendulum_linear_damping"]
+    early = window(0, 10)
+    session._forecast_step(spec, fit_model(spec, early), early, 0.0, accepted=True)
+    made = [m for m in sent if m["type"] == "prediction"]
+    assert made and made[0]["status"] == "pending" and made[0]["target_s"] >= 10 + made[0]["horizon_s"] - 0.1
+    stored = json.loads((tmp_path / "live" / "predictions.json").read_text())
+    assert stored[0]["status"] == "pending" and stored[0]["made_wall"] > 0
+    late = window(26, 36)  # a later refit window that contains the predicted crossing
+    session._forecast_step(spec, fit_model(spec, late), late, 26.0, accepted=True)
+    judged = [m for m in sent if m["type"] == "prediction" and m["status"] != "pending"]
+    assert judged and judged[0]["status"] == "hit", judged

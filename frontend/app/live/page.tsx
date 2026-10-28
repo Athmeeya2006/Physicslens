@@ -52,8 +52,17 @@ export default function LivePage() {
   const [lengthCm, setLengthCm] = useState("");
   const [live, setLive] = useState(false);
   const [regime, setRegime] = useState<string | null>(null);
+  const [forecast, setForecast] = useState<Forecast | null>(null);
+  const [now, setNow] = useState(0);
+  // Session clock: seconds since the first frame's capture time, the same clock the server's predictions use.
+  const firstCapture = useRef<number | null>(null);
 
   useEffect(() => () => stop(), []);
+  useEffect(() => {
+    if (forecast?.status !== "pending") return;
+    const id = setInterval(() => setNow(performance.now() / 1000 - (firstCapture.current ?? performance.now() / 1000)), 100);
+    return () => clearInterval(id);
+  }, [forecast?.status]);
 
   const stop = () => {
     running.current = false;
@@ -81,6 +90,7 @@ export default function LivePage() {
       setFit(null);
       setRegime(msg.message);
     }
+    if (msg.type === "prediction") setForecast(msg as Forecast);
     if (msg.type === "selected") setStatus("Locked on. Keep the camera still while it moves.");
     if (msg.type === "notice") setNotices((n) => [{ level: msg.level, message: msg.message }, ...n].slice(0, 4));
   };
@@ -90,6 +100,8 @@ export default function LivePage() {
     setNotices([]);
     setFit(null);
     setPicked(null);
+    setForecast(null);
+    firstCapture.current = null;
     track.current.clear();
     ghost.current.clear();
     sentFrames.current = 0;
@@ -132,6 +144,7 @@ export default function LivePage() {
       // The capture time travels with the frame: phones rarely hold the nominal rate, and the server fits on
       // these times, not on arrival order. Header: "PLT1" then seconds as little-endian float64.
       const captured = performance.now() / 1000;
+      if (firstCapture.current === null) firstCapture.current = captured;
       // Sequential awaits keep frames in capture order; the server numbers them in arrival order.
       const blob = await new Promise<Blob | null>((res) => grab.toBlob(res, "image/jpeg", 0.7));
       if (blob && socket.current?.readyState === WebSocket.OPEN && socket.current.bufferedAmount < 4_000_000) {
@@ -251,6 +264,7 @@ export default function LivePage() {
           )}
           {scene && <p className="muted small">Object: {scene}</p>}
           {regime && <div className="regime-banner">{regime}</div>}
+          {forecast && <ForecastBanner f={forecast} now={now} />}
           {fit && (
             <>
               <h3 className={`status ${fit.status}`}>
@@ -275,5 +289,33 @@ export default function LivePage() {
         </div>
       </div>
     </main>
+  );
+}
+
+type Forecast = {
+  id: number; status: "pending" | "hit" | "miss" | "unmeasured"; target_s: number; window_s: number; horizon_s: number;
+  made_s: number; error_s?: number;
+};
+
+// The prediction is shown (and stored on the server) before the event; the verdict comes from the measured track.
+function ForecastBanner({ f, now }: { f: Forecast; now: number }) {
+  if (f.status === "pending") {
+    const left = Math.max(0, f.target_s - now);
+    return (
+      <div className="forecast-banner">
+        <strong>Prediction {f.id}:</strong> it passes its rest point moving the same way in{" "}
+        <span className="countdown">{left.toFixed(1)} s</span> (± {f.window_s.toFixed(2)} s), predicted {f.horizon_s.toFixed(0)} s ahead.
+      </div>
+    );
+  }
+  if (f.status === "unmeasured") {
+    return <div className="forecast-banner">Prediction {f.id}: tracking lost the object around the predicted time, so it can&apos;t be judged.</div>;
+  }
+  const err = f.error_s ?? 0;
+  return (
+    <div className={`forecast-banner ${f.status}`}>
+      <strong>Prediction {f.id}: {f.status === "hit" ? "hit" : "missed"}.</strong> It happened {Math.abs(err).toFixed(2)} s{" "}
+      {err > 0 ? "later" : "earlier"} than predicted {f.horizon_s.toFixed(0)} s in advance; the stated window was ± {f.window_s.toFixed(2)} s.
+    </div>
   );
 }
