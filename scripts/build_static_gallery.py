@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
-from physicslens.export.mjcf import build_mjcf
+from physicslens.export.mjcf import bounce_mjcf, build_mjcf
 from physicslens.export.report import report_markdown
 from physicslens.export.script import parameters_json, python_script
 
@@ -44,6 +44,10 @@ def main() -> None:
             continue
         result = json.loads((src / "result.json").read_text())
         (dst / f"physicslens-{gid}-report.md").write_text(report_markdown(result, meta.get("title")))
+        contact = (result.get("bounces") or {}).get("mujoco_contact")
+        if contact:
+            b = result["bounces"]
+            (dst / f"physicslens-{gid}-contact.xml").write_text(bounce_mjcf(b["g"], b["e_mean"], contact["radius_m"], contact["dampratio"]))
         if "fit_state" in result:
             (dst / f"physicslens-{gid}.json").write_text(parameters_json(result))
             (dst / f"physicslens-{gid}.py").write_text(python_script(result))

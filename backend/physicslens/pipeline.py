@@ -21,7 +21,7 @@ from .agent.reasoning import (
 from .agent.schemas import Scene
 from .costguard import CostGuardClient, CostGuardError
 from .costguard.cache import file_digest
-from .export.mjcf import MjcfError, check_against_fit
+from .export.mjcf import MjcfError, calibrate_contact, check_against_fit
 from .perception import media
 from .perception.calibration import (
     Calibration,
@@ -229,6 +229,11 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
             bounces = analyze_bounces(full, full_origin, calibration.px_per_m)
             if bounces is not None and calibration.rel_std > 0:
                 bounces["g_std"] = float(np.hypot(bounces["g_std"], bounces["g"] * calibration.rel_std))
+            if bounces is not None and bounces.get("accepted"):
+                # The measured restitution as MuJoCo contact parameters, tuned inside MuJoCo until its bounce matches.
+                radius = float(np.median(moving.long_px)) / calibration.px_per_m / 2
+                contact = calibrate_contact(bounces["g"], bounces["e_mean"], max(radius, 0.005))
+                bounces["mujoco_contact"] = {k: contact[k] for k in ("dampratio", "timeconst", "e_mujoco")} | {"radius_m": radius}
             if bounces is not None:
                 trail.append(bounce_trail_step(bounces))
         design = None

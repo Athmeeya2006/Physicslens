@@ -195,6 +195,14 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
             {r.bounces.forecast_nrmse != null && ` Later bounces are predicted from the first ones within ${(r.bounces.forecast_nrmse * 100).toFixed(1)}%.`}
             {r.bounces.settled_at ? ` After ${r.bounces.settled_at.toFixed(1)} s the hops were too small to resolve.` : ""}
           </p>
+          {r.bounces.mujoco_contact && (
+            <p className="small" style={{ marginTop: 8 }}>
+              MuJoCo contact model: damping ratio {r.bounces.mujoco_contact.dampratio.toFixed(3)} (time constant{" "}
+              {r.bounces.mujoco_contact.timeconst} s), tuned inside MuJoCo until its ball keeps e ={" "}
+              {r.bounces.mujoco_contact.e_mujoco.toFixed(3)} of its speed, as measured.{" "}
+              <a href={exportUrl(runId, "contact")} download>Download the contact model</a>
+            </p>
+          )}
         </div>
       )}
 

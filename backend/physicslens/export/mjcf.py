@@ -152,3 +152,52 @@ def check_against_fit(fit_state: dict[str, Any], seconds: float) -> dict[str, An
     ppm, f0 = fit_state["px_per_m"], int(fit_state["first_frame"])
     points = [[f0 + i, round(ox + x * ppm, 2), round(oy - y * ppm, 2)] for i, (x, y) in enumerate(xy_mj)]
     return {"rms_vs_fit_m": rms_m, "notes": notes, "points": points}
+
+
+# ---------- contacts: a measured coefficient of restitution as MuJoCo contact parameters ----------
+
+CONTACT_TIMECONST = 0.005  # s: a stiff contact; MuJoCo needs at least two timesteps
+DROP_HEIGHT = 0.5  # m: the calibration drop inside MuJoCo
+
+
+def bounce_mjcf(g: float, e: float, radius: float, dampratio: float) -> str:
+    """A ball on a floor. solref = (time constant, damping ratio): the damping ratio sets how much speed a bounce keeps."""
+    return (_header("physicslens_bounce", g, f"Bouncing ball: measured restitution e = {e:.3f}, g = {g:.4g} m/s^2. "
+                    f"Contact damping ratio {dampratio:.4f} was calibrated in MuJoCo to reproduce e.")
+            + f'    <geom name="floor" type="plane" size="5 5 0.1" solref="{CONTACT_TIMECONST} {dampratio:.6g}" rgba="0.8 0.8 0.8 1"/>\n'
+            + f'    <body name="ball" pos="0 0 {DROP_HEIGHT + radius:.6g}">\n      <freejoint/>\n'
+            + f'      <geom type="sphere" size="{radius:.6g}" mass="{NOMINAL_MASS}" solref="{CONTACT_TIMECONST} {dampratio:.6g}"'
+            + ' rgba="0.13 0.83 0.93 1"/>\n'
+            + "    </body>\n  </worldbody>\n</mujoco>\n")
+
+
+def mujoco_restitution(xml: str) -> float:
+    """Drop the ball in MuJoCo and measure the speed it keeps through the first impact."""
+    model = mujoco.MjModel.from_xml_string(xml)
+    data = mujoco.MjData(model)
+    v_in, touched = 0.0, False
+    for _ in range(int(3.0 / model.opt.timestep)):
+        mujoco.mj_step(model, data)
+        vz = float(data.qvel[2])
+        if data.ncon > 0:
+            touched = True
+            v_in = min(v_in, vz)
+        elif touched and vz > 0:
+            return vz / -v_in if v_in < 0 else 0.0
+        elif not touched:
+            v_in = vz
+    return 0.0
+
+
+def calibrate_contact(g: float, e: float, radius: float) -> dict[str, Any]:
+    """Bisect the contact damping ratio until MuJoCo's own bounce keeps the measured fraction of speed."""
+    lo, hi = 0.01, 3.0  # more damping keeps less speed
+    for _ in range(30):
+        mid = (lo + hi) / 2
+        if mujoco_restitution(bounce_mjcf(g, e, radius, mid)) > e:
+            lo = mid
+        else:
+            hi = mid
+    d = (lo + hi) / 2
+    xml = bounce_mjcf(g, e, radius, d)
+    return {"dampratio": d, "timeconst": CONTACT_TIMECONST, "e_mujoco": mujoco_restitution(xml), "xml": xml}

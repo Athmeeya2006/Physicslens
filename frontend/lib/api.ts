@@ -123,6 +123,7 @@ export interface AnalysisResult {
   bounces?: {
     count: number; g: number; g_std: number; e_mean: number; e_std: number; accepted: boolean;
     forecast_nrmse: number; settled_at: number | null; latex: string;
+    mujoco_contact?: { dampratio: number; timeconst: number; e_mujoco: number; radius_m: number };
     impacts: { t: number; e: number; e_std: number; tangential: number }[];
   };
 }
@@ -213,9 +214,10 @@ export const getRun = (id: string): Promise<RunView> =>
     : fetch(`${API_BASE}/api/runs/${id}`).then((r) => json<RunView>(r));
 export const clipUrl = (id: string) => (isGallery(id) ? `${staticBase(id)}/clip.mp4` : `${API_BASE}/api/runs/${id}/clip.mp4`);
 export const posterUrl = (id: string) => `${staticBase(id)}/poster.jpg`;
-export const exportUrl = (id: string, kind: "json" | "py" | "mjcf" | "report") =>
+export const exportUrl = (id: string, kind: "json" | "py" | "mjcf" | "report" | "contact") =>
   !isGallery(id) ? `${API_BASE}/api/runs/${id}/export/${kind}`
-    : kind === "report" ? `${staticBase(id)}/physicslens-${id}-report.md` : `${staticBase(id)}/physicslens-${id}.${EXPORT_EXT[kind]}`;
+    : kind === "report" ? `${staticBase(id)}/physicslens-${id}-report.md`
+    : kind === "contact" ? `${staticBase(id)}/physicslens-${id}-contact.xml` : `${staticBase(id)}/physicslens-${id}.${EXPORT_EXT[kind]}`;
 
 export function askWhatIf(id: string, question: string) {
   return fetch(`${API_BASE}/api/runs/${id}/whatif`, {

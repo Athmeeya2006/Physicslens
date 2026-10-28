@@ -31,7 +31,7 @@ from .agent.llm import LLMError as StudyLLMError
 from .agent.notes import interpret_notes
 from .agent.whatif import run_whatif
 from .costguard import CostGuardClient, CostGuardError
-from .export.mjcf import build_mjcf
+from .export.mjcf import bounce_mjcf, build_mjcf
 from .export.mp4 import ExportError, render_share_video
 from .export.report import report_markdown
 from .export.script import parameters_json, python_script
@@ -367,6 +367,7 @@ EXPORTS = {
     "py": ("text/x-python", "py"),
     "mjcf": ("application/xml", "xml"),
     "report": ("text/markdown", "md"),
+    "contact": ("application/xml", "xml"),
 }
 
 
@@ -378,6 +379,11 @@ def export(run_id: str, kind: str) -> Response:
     result = _finished_result(run_id)
     if kind == "report":  # every verdict gets a report, including "no clean equation"
         body = report_markdown(result)
+    elif kind == "contact":
+        c = (result.get("bounces") or {}).get("mujoco_contact")
+        if not c:
+            raise HTTPException(status_code=409, detail="No verified bounces to export as a contact model.")
+        body = bounce_mjcf(result["bounces"]["g"], result["bounces"]["e_mean"], c["radius_m"], c["dampratio"])
     elif "fit_state" not in result:
         raise HTTPException(status_code=409, detail="No fitted model to export for this clip.")
     elif kind == "json":

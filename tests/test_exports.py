@@ -143,3 +143,12 @@ def test_mujoco_replays_dry_friction_and_torsional_springs(model_id, params, y0,
           "px_per_m": 1000.0, "first_frame": 0}
     r = check_against_fit(fs, 3.0)
     assert not r["notes"] and r["rms_vs_fit_m"] < 2e-3  # MuJoCo's frictionloss is not smoothed like the fit's sign()
+
+
+def test_contact_model_is_tuned_in_mujoco_to_the_measured_restitution():
+    from physicslens.export.mjcf import calibrate_contact
+
+    soft, hard = calibrate_contact(9.81, 0.55, 0.03), calibrate_contact(9.81, 0.85, 0.03)
+    assert soft["e_mujoco"] == pytest.approx(0.55, abs=0.01) and hard["e_mujoco"] == pytest.approx(0.85, abs=0.01)
+    assert soft["dampratio"] > hard["dampratio"]  # more damping keeps less speed
+    assert 'solref="0.005' in soft["xml"] and '<compiler angle="radian"/>' in soft["xml"]

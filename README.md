@@ -223,6 +223,8 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Tracking that checks itself: the reasoning model inspects SAM's box and re-prompts SAM by name when it is off target
 - [x] Earth's gravity as the ruler when nothing else gives a scale; per-result engineer reports; settings spoken while filming
 - [x] Live mode fitted on each frame's capture time
+- [x] Bounces exported as MuJoCo contact parameters, tuned inside MuJoCo until its ball keeps the measured fraction of speed (the textbook damping-ratio formula is about 30% off in MuJoCo's soft contacts)
+- [x] More laws: spring with dry friction, stiffening Duffing spring, damped torsional spring (door closers, hinges); a tap in live mode starts fitting at once
 - [x] Fitting (SciPy) with BIC model selection, held-out forecasts and bootstrap uncertainty that includes the scale's own error; PySINDy shown separately as unverified model-free regression
 - [x] Verification with simulate-and-compare on held-out data
 - [x] Ghost overlay on the real video, and an on-screen decision trail showing who decided what
