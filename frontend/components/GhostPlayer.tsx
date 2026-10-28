@@ -43,10 +43,8 @@ export function GhostPlayer({ src, width, height, fps, real, secondReal, objectS
     const mujocoMap = mujoco?.length ? byFrame(mujoco) : null;
     // Canvas works in clip pixels (the same space as the track) and CSS scales it with the video, so marks
     // are sized in screen pixels here: legible on a phone, and never big enough to hide the object.
-    let raf = 0;
-
-    const draw = () => {
-      const frame = Math.round(v.currentTime * fps);
+    const draw = (mediaTime: number) => {
+      const frame = Math.round(mediaTime * fps);
       const k = width / Math.max(c.clientWidth, 1); // clip pixels per screen pixel
       const ringR = Math.min(Math.max((objectSizePx ?? 0) / 2 / k, 9), 22) * k;
       ctx.clearRect(0, 0, width, height);
@@ -115,10 +113,38 @@ export function GhostPlayer({ src, width, height, fps, real, secondReal, objectS
         ctx.lineWidth = 1.5 * k;
         ctx.stroke();
       }
-      raf = requestAnimationFrame(draw);
     };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+
+    const now = () => draw(v.currentTime);
+    const resize = new ResizeObserver(now); // mark sizes are in screen pixels, so a resized player redraws
+    resize.observe(c);
+    v.addEventListener("seeked", now);
+    now();
+    let stop: () => void;
+    if ("requestVideoFrameCallback" in v) {
+      // Called once per presented video frame with that frame's own timestamp: the overlay can't drift a
+      // frame from the picture, and nothing redraws while the video is paused.
+      let handle = 0;
+      const onFrame = (_: number, meta: VideoFrameCallbackMetadata) => {
+        draw(meta.mediaTime);
+        handle = v.requestVideoFrameCallback(onFrame);
+      };
+      handle = v.requestVideoFrameCallback(onFrame);
+      stop = () => v.cancelVideoFrameCallback(handle);
+    } else {
+      let raf = 0;
+      const loop = () => {
+        now();
+        raf = requestAnimationFrame(loop);
+      };
+      raf = requestAnimationFrame(loop);
+      stop = () => cancelAnimationFrame(raf);
+    }
+    return () => {
+      stop();
+      resize.disconnect();
+      v.removeEventListener("seeked", now);
+    };
   }, [real, secondReal, ghosts, fps, width, height, showReal, objectSizePx, whatIf, mujoco]);
 
   return (

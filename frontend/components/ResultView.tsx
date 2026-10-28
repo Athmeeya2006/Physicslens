@@ -173,7 +173,8 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
             </table>
           </div>
           <p className="muted small" style={{ marginTop: 8 }}>
-            One g is shared by every flight. Later bounces are predicted from the first ones within {(r.bounces.forecast_nrmse * 100).toFixed(1)}%.
+            One g is shared by every flight.
+            {r.bounces.forecast_nrmse != null && ` Later bounces are predicted from the first ones within ${(r.bounces.forecast_nrmse * 100).toFixed(1)}%.`}
             {r.bounces.settled_at ? ` After ${r.bounces.settled_at.toFixed(1)} s the hops were too small to resolve.` : ""}
           </p>
         </div>

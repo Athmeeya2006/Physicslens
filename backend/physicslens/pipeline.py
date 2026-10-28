@@ -78,6 +78,24 @@ Progress = Callable[[str], None]
 
 def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, options: RunOptions | None = None,
             progress: Progress = lambda _msg: None) -> dict[str, Any]:
+    return finite(_analyze(client, video, run_dir, run_id, options, progress))
+
+
+def finite(obj: Any) -> Any:
+    """NaN or infinity becomes null: JSON has no such numbers, and one would break the API and every browser."""
+    if isinstance(obj, dict):
+        return {k: finite(v) for k, v in obj.items()}
+    if isinstance(obj, list | tuple):
+        return [finite(v) for v in obj]
+    if isinstance(obj, float | np.floating):
+        return float(obj) if np.isfinite(obj) else None
+    if isinstance(obj, np.integer):
+        return int(obj)
+    return obj
+
+
+def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, options: RunOptions | None = None,
+             progress: Progress = lambda _msg: None) -> dict[str, Any]:
     options = options or RunOptions()
     run_dir.mkdir(parents=True, exist_ok=True)
     limits = client.limits
@@ -116,7 +134,8 @@ def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, op
     if scene.motion_family != "rotation":  # a spin turns in place; everything else must actually travel
         travel = float(np.ptp(moving.centers_px, axis=0).max())
         size = float(np.median(moving.long_px))
-        if travel < max(0.5 * size, 0.02 * max(info.width, info.height)):
+        # Generous on purpose: a jumping person rises a fifth of their height, a chalk mark doesn't move at all.
+        if travel < max(0.25 * size, 0.02 * max(info.width, info.height)):
             # Fitting equations to a mark that never moved would only find patterns in noise.
             raise AnalysisError(
                 f"What SAM followed as the {scene.moving_object} barely moves ({travel:.0f} px). It may have locked on to "
