@@ -2,8 +2,14 @@
 
   python scripts/judging_session.py start [--hours 6]   upload the code, start the notebook, wait for its tunnel,
                                                        then point the site's /backend.json at it and redeploy
+  python scripts/judging_session.py connect              after starting the notebook from Kaggle's editor (Save
+                                                       Version > Save & Run All), wait for its tunnel and point
+                                                       the site at it
   python scripts/judging_session.py stop                 point the site back to gallery only (the notebook ends
                                                        itself after --hours)
+
+Kaggle attaches notebook Secrets only to runs started from its own editor, not to versions pushed from the CLI,
+so a server that needs the keys is started there and connected with `connect`; `start` suits keyless tests.
 
 Needs the Kaggle CLI (pip install kaggle, token in ~/.kaggle) and the Vercel CLI logged in, the deploy folder
 var/site/physicslens linked to the Vercel project, and two Kaggle Secrets attached to the notebook:
@@ -106,9 +112,15 @@ def main() -> None:
     s.add_argument("--hours", type=float, default=6.0)
     s.add_argument("--skip-upload", action="store_true", help="reuse the code already uploaded")
     sub.add_parser("stop")
+    sub.add_parser("connect")
     a = ap.parse_args()
     if a.cmd == "stop":
         point_site("")
+        return
+    if a.cmd == "connect":
+        url = wait_for_url()
+        print(f"server: {url}")
+        point_site(url)
         return
     if not a.skip_upload:
         upload_code()

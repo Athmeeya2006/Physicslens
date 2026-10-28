@@ -176,7 +176,9 @@ the backend in demo mode next to it, then exposes only the backend through a Clo
 `python scripts/judging_session.py start --hours 6` uploads the committed code, starts the notebook, waits for
 the tunnel and points the site's `/backend.json` at it; `stop` points the site back to gallery only. The site
 switches its analysis features on only when that server answers. Setup once: add `MODEL_API_KEY` and
-`DEMO_ACCESS_CODE` as Kaggle Secrets on the notebook. Each session has its own spending cap.
+`DEMO_ACCESS_CODE` as Kaggle Secrets on the notebook. Kaggle gives Secrets only to runs started from its editor, so
+a session with keys is started there (Save Version, Save & Run All) and wired up with `judging_session.py connect`.
+Each session has its own spending cap.
 
 ### Static gallery site
 
