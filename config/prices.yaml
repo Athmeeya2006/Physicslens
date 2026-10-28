@@ -17,6 +17,6 @@ meta_api:
     audio_hour: 0.18      # billed in whole seconds
 
 glimmer:
-  muse-glimmer-30b:       # self-hosted on a free GPU notebook: no per-token charge
+  muse-glimmer-30b:       # self-hosted on our own GPU server: no per-token charge
     input: 0.0
     output: 0.0

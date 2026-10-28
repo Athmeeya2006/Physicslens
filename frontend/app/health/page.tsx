@@ -153,7 +153,7 @@ export default function HealthPage() {
         <section className="panel">
           <h2>Needs the analysis server</h2>
           <p className="muted">
-            The analysis server isn&apos;t running right now (it runs on a GPU notebook during judging sessions), so
+            The analysis server isn&apos;t running right now (it runs during judging sessions), so
             recordings can&apos;t be compared at the moment. With the server, you
             paste two result links of the same machine part; PhysicsLens refits both and flags a change in natural frequency
             or damping only when it exceeds 3 standard errors and a practical threshold (0.5% in frequency, 10% in damping),

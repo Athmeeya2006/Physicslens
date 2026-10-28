@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 // Empty NEXT_PUBLIC_API_BASE builds the static site: the gallery is static files, and the analysis server is
-// found at runtime from /backend.json (its address changes whenever the GPU notebook restarts its tunnel).
+// found at runtime from /backend.json (its address changes whenever the GPU server restarts its tunnel).
 // Unset means local development against localhost.
 const BUILD_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 const STATIC_SITE = BUILD_BASE === "";

@@ -160,7 +160,7 @@ export default function Home() {
                     uncertainties, a ghost on the video and a MuJoCo model.</li>
                 </ol>
                 <p className="muted small">
-                  The analysis server runs on a free GPU notebook during judging sessions and isn&apos;t running right now.
+                  The analysis server runs during judging sessions and isn&apos;t running right now.
                   Every recording on this page is a complete, real analysis; a <a href="/study">study</a> shows the agent
                   planning several recordings toward one goal.
                 </p>

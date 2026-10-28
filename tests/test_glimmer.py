@@ -1,4 +1,4 @@
-"""Self-hosted Muse Glimmer: the open-weight reasoning path, and the cache-only mode a GPU notebook uses."""
+"""Self-hosted Muse Glimmer: the open-weight reasoning path, and the cache-only mode a GPU server uses."""
 
 import json
 
@@ -77,7 +77,7 @@ def test_cache_only_provider_replays_hits_and_refuses_misses(settings, monkeypat
 
 
 def test_cache_only_machine_needs_no_meta_key(settings, monkeypatch):
-    """The GPU notebook replays SAM from the cache with the real SDK factory and no key at all."""
+    """The GPU server replays SAM from the cache with the real SDK factory and no key at all."""
     from physicslens.costguard import CostGuardClient
     from physicslens.costguard.client import openai_sdk_factory
     from physicslens.costguard.mock import sam_result

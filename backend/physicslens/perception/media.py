@@ -103,7 +103,7 @@ def save_prepared(clip: Path, info: VideoInfo, frames_jpeg: list[bytes], out_dir
     """Freeze a prepared clip and its keyframes, so another machine analyzes exactly these bytes.
 
     Cache keys hash the clip and keyframe bytes, and ffmpeg/OpenCV builds differ between machines, so a GPU
-    notebook replaying cached SAM results must start from the same files, not re-encode its own.
+    server replaying cached SAM results must start from the same files, not re-encode its own.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(clip, out_dir / "clip.mp4")

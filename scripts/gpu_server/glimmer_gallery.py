@@ -1,5 +1,5 @@
 # PhysicsLens on open weights: every reasoning step on Muse Glimmer 30B (Q4_K_M + vision) served by llama.cpp
-# on this notebook's GPUs. Tracking results (SAM 3.1) arrive as cached responses; this notebook has no Meta key
+# on this machine's GPUs. Tracking results (SAM 3.1) arrive as cached responses; this machine has no Meta key
 # and the Meta provider is cache-only, so nothing here can call or bill a paid API.
 import glob, os, secrets, shutil, subprocess, sys, tarfile, time, urllib.request
 

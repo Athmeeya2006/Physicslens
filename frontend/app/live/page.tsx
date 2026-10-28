@@ -201,7 +201,7 @@ export default function LivePage() {
     <main>
       <header className="page-head">
         <h1>Live analysis</h1>
-        <p className="tagline">{online ? status : online === null ? "Looking for the analysis server..." : "Live analysis needs the analysis server, which isn't running right now (it runs on a GPU notebook during judging sessions). The recordings on the Analyze page are complete, real analyses."}</p>
+        <p className="tagline">{online ? status : online === null ? "Looking for the analysis server..." : "Live analysis needs the analysis server, which isn't running right now (it runs during judging sessions). The recordings on the Analyze page are complete, real analyses."}</p>
       </header>
 
       <div className="live-grid">

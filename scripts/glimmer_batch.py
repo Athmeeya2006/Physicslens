@@ -1,4 +1,4 @@
-"""Run analyses with every reasoning step on Muse Glimmer (open weights), served by llama.cpp on a GPU notebook.
+"""Run analyses with every reasoning step on Muse Glimmer (open weights), served by llama.cpp on a GPU server.
 
 The GPU machine never holds a Meta key. SAM 3.1 tracking runs on the developer's machine through costguard,
 and its results reach the GPU machine as cached responses, so the two sides take turns:

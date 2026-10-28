@@ -157,7 +157,7 @@ class CostGuardClient:
         out = self.limits.get("output_token_limits") or {}
         self.meta_max_output_default = int(out.get("meta_max_output_tokens_default", 2000))
         self.glimmer_max_tokens_default = int(out.get("glimmer_max_tokens_default", 8000))
-        # Providers listed in PHYSICSLENS_CACHE_ONLY answer from the cache or not at all. A GPU notebook
+        # Providers listed in PHYSICSLENS_CACHE_ONLY answer from the cache or not at all. A GPU server
         # running the open-weight model replays SAM results this way and never holds a Meta key.
         self.cache_only = {p.strip() for p in os.environ.get("PHYSICSLENS_CACHE_ONLY", "").split(",") if p.strip()}
 

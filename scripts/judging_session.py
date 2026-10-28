@@ -1,18 +1,18 @@
-"""Start or stop a judging session: the server runs on a Kaggle GPU notebook, the public site points at it.
+"""Start or stop a judging session: the server runs on a hosted GPU machine, the public site points at it.
 
-  python scripts/judging_session.py start [--hours 6]   upload the code, start the notebook, wait for its tunnel,
+  python scripts/judging_session.py start [--hours 6]   upload the code, start the server, wait for its tunnel,
                                                        then point the site's /backend.json at it and redeploy
-  python scripts/judging_session.py connect              after starting the notebook from Kaggle's editor (Save
+  python scripts/judging_session.py connect              after starting the server from Kaggle's editor (Save
                                                        Version > Save & Run All), wait for its tunnel and point
                                                        the site at it
-  python scripts/judging_session.py stop                 point the site back to gallery only (the notebook ends
+  python scripts/judging_session.py stop                 point the site back to gallery only (the server ends
                                                        itself after --hours)
 
-Kaggle attaches notebook Secrets only to runs started from its own editor, not to versions pushed from the CLI,
+Kaggle attaches Secrets only to runs started from its own editor, not to versions pushed from the CLI,
 so a server that needs the keys is started there and connected with `connect`; `start` suits keyless tests.
 
 Needs the Kaggle CLI (pip install kaggle, token in ~/.kaggle) and the Vercel CLI logged in, the deploy folder
-var/site/physicslens linked to the Vercel project, and two Kaggle Secrets attached to the notebook:
+var/site/physicslens linked to the Vercel project, and two Kaggle Secrets attached to the server:
 MODEL_API_KEY and DEMO_ACCESS_CODE. Only the backend address is published; no key leaves Kaggle.
 """
 
@@ -42,7 +42,7 @@ def run(*cmd: str, timeout: float = 600) -> str:
 
 
 def upload_code() -> None:
-    """The notebook runs the committed code, never local uncommitted changes."""
+    """The server runs the committed code, never local uncommitted changes."""
     with tempfile.TemporaryDirectory() as d:
         data = Path(d)
         subprocess.run(["git", "archive", "--format=tar.gz", "-o", str(data / "physicslens-code.tar.gz"), "HEAD"],
@@ -64,11 +64,11 @@ def upload_code() -> None:
 def push_kernel(hours: float) -> None:
     with tempfile.TemporaryDirectory() as d:
         k = Path(d)
-        code = (ROOT / "scripts" / "kaggle" / "serve_notebook.py").read_text()
+        code = (ROOT / "scripts" / "gpu_server" / "serve.py").read_text()
         code = re.sub(r"^SERVE_HOURS = .*$", f"SERVE_HOURS = {hours:.2f}", code, count=1, flags=re.MULTILINE)
-        (k / "serve_notebook.py").write_text(code)
+        (k / "serve.py").write_text(code)
         (k / "kernel-metadata.json").write_text(json.dumps({
-            "id": KERNEL, "title": "physicslens-judging-server", "code_file": "serve_notebook.py", "language": "python",
+            "id": KERNEL, "title": "physicslens-judging-server", "code_file": "serve.py", "language": "python",
             "kernel_type": "script", "is_private": True, "enable_gpu": True, "enable_tpu": False,
             "enable_internet": True, "dataset_sources": [DATASET], "kernel_sources": [], "competition_sources": [],
             "model_sources": []}))
@@ -76,7 +76,7 @@ def push_kernel(hours: float) -> None:
 
 
 def wait_for_url(minutes: float = 30) -> str:
-    """Follow the notebook's log until it prints its tunnel address (setup takes about 5 to 8 minutes)."""
+    """Follow the server's log until it prints its tunnel address (setup takes about 5 to 8 minutes)."""
     proc = subprocess.Popen([KAGGLE, "kernels", "logs", "-f", KERNEL], stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True)
     deadline = time.time() + minutes * 60
@@ -92,7 +92,7 @@ def wait_for_url(minutes: float = 30) -> str:
                 break
     finally:
         proc.terminate()
-    sys.exit("No tunnel address yet; check the notebook's log on Kaggle.")
+    sys.exit("No tunnel address yet; check the server's log on Kaggle.")
 
 
 def point_site(api_base: str) -> None:

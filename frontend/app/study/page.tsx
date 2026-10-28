@@ -57,7 +57,7 @@ export default function StudyPage() {
   const plan = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setBusy("The agent is planning the study (Muse Glimmer on a free GPU: about a minute)");
+    setBusy("The agent is planning the study (Muse Glimmer, open weights: about a minute)");
     try {
       const s = await createStudy(goal);
       setStudy(s);
@@ -128,7 +128,7 @@ export default function StudyPage() {
           <h2>Start a study</h2>
           {online === false ? (
             <p className="muted">
-              The analysis server isn&apos;t running right now (it runs on a GPU notebook during judging sessions), so a new
+              The analysis server isn&apos;t running right now (it runs during judging sessions), so a new
               study can&apos;t start at the moment.
             </p>
           ) : (

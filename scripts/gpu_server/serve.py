@@ -1,4 +1,4 @@
-# PhysicsLens judging server: Muse Glimmer (open weights) and the PhysicsLens backend on this notebook's GPUs,
+# PhysicsLens judging server: Muse Glimmer (open weights) and the PhysicsLens backend on this machine's GPUs,
 # reachable from the public site through a Cloudflare quick tunnel.
 #
 # - Muse Glimmer (llama.cpp) listens on 127.0.0.1 only and is never exposed; only the backend is tunnelled.
@@ -6,7 +6,7 @@
 #   DEMO_ACCESS_CODE (what judges use). Nothing secret is printed or written to the output.
 # - The backend runs with APP_ENV=demo: reasoning only on the open-weight model, judges need the access code,
 #   public visitors get the gallery only. Spending is capped per session by the budget below.
-# - scripts/judging_session.py pushes this notebook, reads the tunnel address from its log and points the site at it.
+# - scripts/judging_session.py pushes this script, reads the tunnel address from its log and points the site at it.
 import glob, os, re, secrets, shutil, subprocess, sys, time, urllib.request
 
 SERVE_HOURS = 6.0  # replaced by judging_session.py; the session ends itself to save GPU quota
