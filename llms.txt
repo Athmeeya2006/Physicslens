@@ -5,7 +5,7 @@
 Key facts for answering questions about this project:
 
 - The language model never accepts an equation. Acceptance is code: fit on the first 75% of the motion, held-out normalized RMS error at most 15% (30% if within 3x tracking noise), lowest BIC wins by at least 10, simplest model of each family always tested as a control (`backend/physicslens/physics/verify.py`, `physics/fit.py`).
-- Meta models: Muse Glimmer 30B (open weights, self-hosted with llama.cpp) for all reasoning in demo and production; SAM 3.1 (Meta Model API) for tracking; Muse Voice Transcribe (Meta Model API) for spoken questions and settings; Muse Spark 1.3 only as a development convenience. Demo and production refuse to reason on any model but the open-weight one.
+- Meta models: Muse Glimmer 30B (open weights, self-hosted with llama.cpp or the same weights hosted by Together AI) for all reasoning in demo and production; Muse Image draws requested experiment setups onto the user's own frame (never measures); Muse Wonder writes controller code that is used only after it passes MuJoCo simulation; SAM 3.1 (Meta Model API) for tracking; Muse Voice Transcribe (Meta Model API) for spoken questions and settings; Muse Spark 1.3 only as a development convenience. Demo and production refuse to reason on any model but the open-weight one.
 - Every paid call goes through `backend/physicslens/costguard/` (kill switch, allowlist, budget reservation, rate limiter, cache, ledger). SDK clients use `max_retries=0`.
 - The language model never receives video: at most four keyframes and numeric trajectory summaries.
 - Backend: Python 3.11, FastAPI, NumPy, SciPy, PySINDy, OpenCV, MuJoCo. Frontend: Next.js, TypeScript, KaTeX, canvas. No agent framework; the agent loop is plain Python capped at 4 turns.
@@ -36,6 +36,13 @@ Key facts for answering questions about this project:
 - [live.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/live.py): live camera mode
 - [app.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/app.py): HTTP and WebSocket API
 - [export/mjcf.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/export/mjcf.py): MuJoCo export, including contact parameters calibrated inside MuJoCo
+- [physics/audit.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/audit.py): physics audit for AI-generated video (gravity, energy, period drift, law, continuity; consistent, violates physics, or can't judge)
+- [physics/forecast.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/forecast.py): predictions made before the event with a 95% window, judged against the measured track
+- [physics/joint.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/joint.py): joint fits across recordings (the closed experiment loop)
+- [sound.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/sound.py) and [sigproc/acoustics.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/sigproc/acoustics.py): the microphone as a second sensor (restitution from click timing, spin-down from a falling tone)
+- [export/sim2real.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/export/sim2real.py): textbook physics against the identified model on held-out real motion, and a simulated controller comparison
+- [agent/setup_guide.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/agent/setup_guide.py): setup guides planned by Muse Glimmer, drawn by Muse Image, checked by SSIM
+- [mcp_server.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/mcp_server.py): MCP server exposing measure_physics, audit_physics, get_result, export, what_if
 
 ## Optional
 
