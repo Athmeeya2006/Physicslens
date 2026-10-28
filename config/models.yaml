@@ -6,7 +6,7 @@ meta_api:
   api_key_env: MODEL_API_KEY
   models:
     muse-spark-1.3:
-      use: fallback reasoning, simulation-code generation (demo/prod)
+      use: development-only reasoning; demo and prod refuse it and reason on Muse Glimmer
       api: responses
     muse-spark-1.3-contributor:
       use: same as muse-spark-1.3 in APP_ENV=dev only, if the account has access

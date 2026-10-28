@@ -138,4 +138,4 @@ def test_small_angle_approximation_is_not_a_rival_theory():
     assert "indistinguishable" in verdict.reason
     assert verdict.winner.params["g"] == pytest.approx(G, rel=0.03)
     why = judge_candidates(verdict)["pendulum_small_angle"]
-    assert why[0] == "rejected" and "approximation" in why[1]
+    assert why[0] == "approximation" and "exact law is kept" in why[1]

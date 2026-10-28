@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Tex } from "@/components/Equation";
-import { accessCode, API_BASE, useBackend } from "@/lib/api";
+import { accessCode, API_BASE, useBackend, formatUnit } from "@/lib/api";
 
 const FPS = 25;
 const MAX_WIDTH = 640; // SAM bills per frame, not per pixel; smaller frames just keep the upload light
@@ -233,7 +233,7 @@ export default function LivePage() {
               )}
               {fit.parameters?.map((p) => (
                 <p key={p.name}>
-                  <Tex tex={p.latex} /> = {p.value.toPrecision(4)} {p.unit}
+                  <Tex tex={p.latex} /> = {p.value.toPrecision(4)} {formatUnit(p.unit)}
                   {p.spread !== null && <span className="muted"> (± {p.spread.toPrecision(2)} across recent fits)</span>}
                 </p>
               ))}

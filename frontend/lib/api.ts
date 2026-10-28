@@ -74,7 +74,7 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "scene" | "tracking" | "hypotheses" | "verification" | "design" | "collision" | "regime" | "chaos" | "agent";
+  step: "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "agent";
   provider: string | null;
   model: string;
   text: string;
@@ -114,6 +114,7 @@ export interface AnalysisResult {
     decisive: boolean; noise_mm: number; options_tested: number; models: string[];
   };
   scale_note?: string;
+  scale_basis?: string;
   double?: {
     params: { g: number; mu: number; gamma: number }; L1: number; L2: number; accepted: boolean; reason: string;
     lyapunov_per_s: number; chaotic: boolean; predictability_s: number | null; latex: string;
@@ -211,8 +212,9 @@ export const getRun = (id: string): Promise<RunView> =>
     : fetch(`${API_BASE}/api/runs/${id}`).then((r) => json<RunView>(r));
 export const clipUrl = (id: string) => (isGallery(id) ? `${staticBase(id)}/clip.mp4` : `${API_BASE}/api/runs/${id}/clip.mp4`);
 export const posterUrl = (id: string) => `${staticBase(id)}/poster.jpg`;
-export const exportUrl = (id: string, kind: "json" | "py" | "mjcf") =>
-  isGallery(id) ? `${staticBase(id)}/physicslens-${id}.${EXPORT_EXT[kind]}` : `${API_BASE}/api/runs/${id}/export/${kind}`;
+export const exportUrl = (id: string, kind: "json" | "py" | "mjcf" | "report") =>
+  !isGallery(id) ? `${API_BASE}/api/runs/${id}/export/${kind}`
+    : kind === "report" ? `${staticBase(id)}/physicslens-${id}-report.md` : `${staticBase(id)}/physicslens-${id}.${EXPORT_EXT[kind]}`;
 
 export function askWhatIf(id: string, question: string) {
   return fetch(`${API_BASE}/api/runs/${id}/whatif`, {
@@ -251,4 +253,13 @@ export function startRun(file: File, inputs: RunInputs, turnstileToken: string |
 // The open-weight reasoning model: Muse Glimmer, served from our own GPU.
 export function isOpenWeight(model: string | undefined): boolean {
   return !!model && model.startsWith("muse-glimmer");
+}
+
+// Units as people write them: m/s² rather than m/s^2, s⁻¹ rather than 1/s.
+const SUP: Record<string, string> = { "-": "⁻", "1": "¹", "2": "²", "3": "³", "4": "⁴" };
+export function formatUnit(unit: string | undefined | null): string {
+  if (!unit) return "";
+  return unit
+    .replace(/^1\/([a-z]+)$/i, "$1^-1")
+    .replace(/\^(-?\d)/g, (_, e: string) => [...e].map((c) => SUP[c] ?? c).join(""));
 }

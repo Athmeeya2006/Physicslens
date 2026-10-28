@@ -1,5 +1,7 @@
 "use client";
 
+import { formatUnit } from "@/lib/api";
+
 import { useState } from "react";
 
 // One metric per chart (never two y-scales). Colors validated on the light panel surface (#f5f6f3):
@@ -44,7 +46,7 @@ export function TrendChart({ title, unit, points }: { title: string; unit: strin
 
   return (
     <figure className="trend-chart">
-      <figcaption>{title} ({unit})</figcaption>
+      <figcaption>{title} ({formatUnit(unit)})</figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${title} across recordings`} onMouseLeave={() => setHover(null)}>
         {niceTicks(lo, hi).map((t) => (
           <g key={t}>

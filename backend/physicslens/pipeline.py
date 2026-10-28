@@ -11,9 +11,15 @@ from typing import Any
 import meta_sam_parser as msp
 import numpy as np
 
-from .agent.reasoning import agent_turn, propose_hypotheses, understand_scene
+from .agent.llm import LLMError
+from .agent.reasoning import (
+    agent_turn,
+    check_track,
+    propose_hypotheses,
+    understand_scene,
+)
 from .agent.schemas import Scene
-from .costguard import CostGuardClient
+from .costguard import CostGuardClient, CostGuardError
 from .costguard.cache import file_digest
 from .export.mjcf import MjcfError, check_against_fit
 from .perception import media
@@ -24,9 +30,10 @@ from .perception.calibration import (
     from_reference,
 )
 from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
+from .perception.track_quality import assess_track, overlay_frames
 from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
-from .physics.custom import FREE_MODELS, FreeParam, build, register
+from .physics.custom import FREE_MODELS, FreeParam, build, register, spec_for
 from .physics.design import design_experiment
 from .physics.double import HORIZON_S as DOUBLE_HORIZON_S
 from .physics.double import (
@@ -127,7 +134,8 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     scene, call = understand_scene(client, frames_jpeg, run_id, options.audience, hint=hint)
     ref = "no reference object" if scene.reference_kind == "none" else f"reference: {scene.reference_kind.replace('_', ' ')}"
     told = f" (asked to measure: {hint})" if hint else ""
-    record("scene", call, f"Sees a {scene.moving_object} {MOTION_PHRASE[scene.motion_family]}; {ref}{told}.")
+    record("scene", call, f"Sees {article(scene.moving_object)} {scene.moving_object} {MOTION_PHRASE[scene.motion_family]}; "
+                          f"{ref}{told}.")
 
     progress(f"Tracking the {scene.moving_object} with SAM 3.1")
     tracks = track_objects(client, clip, info, scene, run_id, options.audience)
@@ -136,6 +144,8 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         raise AnalysisError(f"SAM could not follow the {scene.moving_object} through the clip.")
     trail.append({"step": "tracking", "provider": "meta_api", "model": "sam-3.1",
                   "text": f"Tracked the {scene.moving_object} in {len(moving.frames)} of {info.frames} frames."})
+    moving = check_and_repair_track(client, clip, info, scene, moving, run_id, options.audience, record, trail, progress)
+    tracks[MOVING_ID] = moving
     if scene.motion_family != "rotation":  # a spin turns in place; everything else must actually travel
         travel = float(np.ptp(moving.centers_px, axis=0).max())
         size = float(np.median(moving.long_px))
@@ -234,7 +244,10 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         progress("Agent reviewing the verdict")
         context = agent_context(verdict, family, summary, scene, tried)
         if calibration.source == "none":
-            context["scale"] = "none: lengths and g are uncalibrated, frequency, damping and friction are exact"
+            context["scale"] = ("none, so the app will use Earth's gravity as the ruler: lengths will be reported in meters "
+                                "assuming g = 9.81 m/s^2; say so if you mention a length"
+                                if gravity_ruler_applies(verdict.winner, family) else
+                                "none: lengths and g are uncalibrated, frequency, damping and friction are exact")
         if design is not None:
             context["experiment_design"] = {k: design[k] for k in ("recommended", "decisive", "noise_mm", "models")}
         if bounces is not None:
@@ -322,6 +335,15 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
              "ci95": [est[p.name].ci_low, est[p.name].ci_high]}
             for p in spec.params
         ] + derived_parameters(coords)
+    g_fit = next((p for p in result.get("parameters", []) if p["name"] == "g"), None)
+    if (calibration.source == "none" and gravity_ruler_applies(verdict.winner, family) and g_fit is not None
+            and g_fit["std"] < RULER_MAX_REL_STD * g_fit["value"]):
+        calibration = apply_gravity_ruler(result)
+        if "fit_state" in result:
+            try:
+                result["mujoco"] = check_against_fit(result["fit_state"], len(traj) / traj.fps)
+            except MjcfError as e:
+                log.warning("MuJoCo check skipped after rescaling: %s", e)
     add_scale_error(result.get("parameters", []), calibration.rel_std)
     if calibration.source == "none":
         result["scale_note"] = SCALE_NOTE
@@ -446,6 +468,10 @@ def rotation_summary(c: Coordinates) -> dict[str, Any]:
 
 
 FORECAST_POINTS = 400
+def article(noun: str) -> str:
+    return "an" if noun[:1].lower() in "aeiou" else "a"
+
+
 MOTION_PHRASE = {
     "pendulum": "swinging like a pendulum", "oscillator": "oscillating back and forth",
     "projectile": "flying or falling freely", "double_pendulum": "swinging as a double pendulum",
@@ -590,6 +616,52 @@ def track_objects(client: CostGuardClient, clip: Path, info: media.VideoInfo, sc
         raise AnalysisError(str(e)) from e
 
 
+NAMED_SAM_METADATA = {"mask_encoding": "one_bit", "include_confidence": "true"}  # concept prompts take no direction
+
+
+def check_and_repair_track(client: CostGuardClient, clip: Path, info: media.VideoInfo, scene: Scene, moving: ObjectTrack,
+                           run_id: str, audience: str, record: Callable[..., None], trail: list[dict[str, Any]],
+                           progress: Progress) -> ObjectTrack:
+    """Before any physics, the reasoning model looks at what SAM followed; if it's the wrong thing, SAM is asked again
+    by name. A box placed a little off (on a clasp, a shadow, a digit drawn on the video) is the usual cause."""
+    progress("Checking what was tracked")
+    q = assess_track(moving, info.frames)
+    numbers = {"tracked_frames": f"{q.coverage:.0%}", "largest_jump_vs_typical_step": round(q.jump_ratio, 1),
+               "outline_size_spread": f"{q.size_spread:.0%}", "problems": q.problems}
+    try:
+        check, call = check_track(client, overlay_frames(str(clip), moving), scene.moving_object, numbers, run_id, audience)
+    except (LLMError, CostGuardError) as e:  # a safeguard: without it the first track stands
+        log.warning("Track check skipped: %s", e)
+        return moving
+    obj = scene.moving_object
+    record("track_check", call, f"Looks at what SAM followed: {check.tracked_thing}. "
+           + ("That is the object to measure." if check.on_target else f"That is not the {obj}, so it asks SAM again by name."),
+           status="accepted" if check.on_target else "rejected", reasoning_summary=check.reasoning_summary)
+    if check.on_target:
+        return moving
+    progress(f"Re-tracking the {obj} by name with SAM 3.1")
+    named = track_by_name(client, clip, info, scene, run_id, audience)
+    if named is None:
+        trail.append({"step": "tracking", "provider": "meta_api", "model": "sam-3.1",
+                      "text": f"SAM found nothing called {obj!r}; the first track is kept."})
+        return moving
+    trail.append({"step": "tracking", "provider": "meta_api", "model": "sam-3.1",
+                  "text": f"Re-tracked the {obj} by name: {len(named.frames)} of {info.frames} frames."})
+    return named
+
+
+def track_by_name(client: CostGuardClient, clip: Path, info: media.VideoInfo, scene: Scene, run_id: str,
+                  audience: str) -> ObjectTrack | None:
+    """A concept prompt: SAM finds the object from its name, independent of any box. The match that moves most wins."""
+    r = client.sam_video(prompt=scene.moving_object, video_path=clip, video_hash=file_digest(clip), est_frames=info.frames,
+                         metadata=NAMED_SAM_METADATA, run_id=run_id, audience=audience)
+    try:
+        found = tracks_from_text(r.text, completed=r.finish_reason in (None, "completed"))
+    except TrackingError:
+        return None
+    return max(found.values(), key=lambda t: (len(t.frames) >= 0.5 * info.frames, float(np.ptp(t.centers_px, axis=0).max())))
+
+
 def _box(box, info: media.VideoInfo) -> msp.PromptBox:
     x1, y1, x2, y2 = box.to_pixels(info.width, info.height)
     return msp.PromptBox(x1, y1, max(x2, x1 + 1), max(y2, y1 + 1))
@@ -706,6 +778,73 @@ def fit_summary(f: FitResult, rationale: str | None = None) -> dict[str, Any]:
     return {"model_id": f.model_id, "title": spec.title, "params": f.params, "bic": f.bic,
             "heldout_nrmse": f.heldout_nrmse, "rmse": f.rmse, "rationale": rationale,
             "param_meta": [{"name": p.name, "latex": p.latex, "unit": p.unit} for p in spec.params]}
+
+
+EARTH_G = 9.81
+RULER_MAX_REL_STD = 0.1  # g must itself be well measured before it can serve as the ruler
+
+
+def gravity_ruler_applies(winner: FitResult | None, family: str) -> bool:
+    """No reference in view, but the verified law contains g: assume Earth and let gravity set the scale."""
+    return (winner is not None and family in ("projectile", "pendulum") and winner.params.get("g", 0.0) > 0)
+
+
+def length_power(unit: str) -> int:
+    """How a quantity scales with length: m and m/s^2 once, 1/m inversely, angles and times not at all."""
+    num, _, den = (unit or "").partition("/")
+    return int(needs_scale(num)) - int(needs_scale(den))
+
+
+def apply_gravity_ruler(result: dict[str, Any]) -> Calibration:
+    """Rescale every length so the fitted g is 9.81 m/s^2; g becomes the assumption, its spread the scale's error.
+
+    Pixels don't change, so ghosts and tracks drawn on the clip stay exactly where they were.
+    """
+    params = {p["name"]: p for p in result["parameters"]}
+    g = params["g"]
+    rel = g["std"] / g["value"]
+    f = EARTH_G / g["value"]
+    measured = round(g["value"], 3)
+
+    def scaled(v: float, unit: str) -> float:
+        return v * f ** length_power(unit)
+
+    for p in result["parameters"]:
+        k = length_power(p["unit"])
+        if k:
+            p["value"], p["std"] = scaled(p["value"], p["unit"]), abs(scaled(p["std"], p["unit"]))
+            p["ci95"] = sorted(scaled(c, p["unit"]) for c in p["ci95"])
+    g.update(value=EARTH_G, std=0.0, ci95=[EARTH_G, EARTH_G], derived="assumed: Earth's gravity, used as the ruler")
+    for fit in result.get("ranking", []):
+        units = {m["name"]: m["unit"] for m in fit.get("param_meta", [])}
+        fit["params"] = {k: scaled(v, units.get(k, "")) for k, v in fit["params"].items()}
+    fs = result.get("fit_state")
+    if fs:
+        units = {p.name: p.unit for p in spec_for(fs).params}
+        fs["params"] = {k: scaled(v, units.get(k, "")) for k, v in fs["params"].items()}
+        fs["ctx"] = {k: v * f if k in ("pivot_x", "pivot_y", "length_m", "length_std", "origin_x", "origin_y") else v
+                     for k, v in fs["ctx"].items()}
+        if result.get("family") == "projectile":
+            fs["y0"] = [v * f for v in fs["y0"]]  # positions and velocities; a pendulum's angle needs no scale
+        fs["px_per_m"] = fs["px_per_m"] / f
+    fc = result.get("forecast")
+    if fc and fc.get("unit") == "m":
+        fc["measured"] = [v * f for v in fc["measured"]]
+        fc["forecast"] = [v * f for v in fc["forecast"]]
+    if result.get("bounces"):
+        result["bounces"]["g"] *= f
+        result["bounces"]["g_std"] *= f
+    cal = Calibration(NOMINAL_PX_PER_M / f, rel, "gravity")
+    result["calibration"] = {"px_per_m": cal.px_per_m, "rel_std": cal.rel_std, "source": cal.source}
+    result["scale_basis"] = (f"No reference of known size was in view, so Earth's gravity is the ruler: the fit gave "
+                             f"g = {measured} in the clip's own units, and every length is scaled so that g = 9.81 m/s² "
+                             f"(scale uncertainty {rel:.1%}). Filmed somewhere other than Earth, lengths would be off.")
+    result["trail"].append({
+        "step": "plausibility", "provider": None, "model": "simulate-and-compare", "status": "accepted",
+        "text": f"With no reference in view, g came out as {measured} in arbitrary units. Assuming the clip was filmed on "
+                f"Earth, gravity becomes the ruler: lengths are scaled by {f:.3g} so that g = 9.81 m/s², with a "
+                f"{rel:.1%} scale uncertainty carried into every length."})
+    return cal
 
 
 def add_scale_error(parameters: list[dict[str, Any]], rel_std: float) -> None:

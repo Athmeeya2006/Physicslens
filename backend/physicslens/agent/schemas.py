@@ -155,3 +155,14 @@ class WhatIfPlan(Strict):
     @classmethod
     def no_dashes(cls, v: str) -> str:
         return _plain_dashes(v)
+
+
+class TrackCheck(Strict):
+    on_target: bool = Field(description="True if the green box surrounds the named object in all three frames.")
+    tracked_thing: str = Field(description="What the green box actually surrounds, in a few words.")
+    reasoning_summary: str = Field(description="One sentence: what you saw in the three frames.")
+
+    @field_validator("tracked_thing", "reasoning_summary")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)

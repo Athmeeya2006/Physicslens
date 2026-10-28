@@ -102,3 +102,31 @@ def test_export_endpoints(kind, marker):
     r = TestClient(app_module.app).get(f"/api/runs/{run_id}/export/{kind}")
     assert r.status_code == 200 and marker in r.text
     assert f"physicslens-{run_id}" in r.headers["content-disposition"]
+
+
+def test_mujoco_replays_linear_drag_exactly():
+    from physicslens.export.mjcf import build_mjcf, check_against_fit
+
+    fs = {"model_id": "linear_drag", "params": {"g": 9.81, "k": 2.6}, "y0": [0.0, 0.0, 2.0, 3.0], "ctx": {},
+          "fps": 30.0, "origin_px": [100.0, 400.0], "px_per_m": 500.0, "first_frame": 0}
+    xml, notes = build_mjcf(fs)
+    assert 'type="free" damping=' in xml and not notes  # joint damping = k * mass is exactly linear drag
+    assert check_against_fit(fs, 1.5)["rms_vs_fit_m"] < 1e-4
+
+
+def test_report_covers_every_verdict():
+    import json
+    from pathlib import Path
+
+    from physicslens.export.report import report_markdown
+
+    accepted = json.loads(Path("gallery/gallery-paperbag/result.json").read_text())
+    md = report_markdown(accepted, "Paper bag")
+    for section in ("# Paper bag", "## Setup", "## Method", "## Result", "## Every candidate tested", "## Limitations",
+                    "## Provenance", "slow motion x20", "s⁻¹"):
+        assert section in md
+    no_fit = {"status": "no_fit", "reason": "Nothing forecasts the held-out motion.", "trail": [], "ranking": [],
+              "llm_calls": [], "clip": {"width": 640, "height": 360, "fps": 30.0, "frames": 60},
+              "calibration": {"source": "none", "px_per_m": 1000.0, "rel_std": 0.0}}
+    md = report_markdown(no_fit)
+    assert "No clean governing equation" in md and "## Result" not in md

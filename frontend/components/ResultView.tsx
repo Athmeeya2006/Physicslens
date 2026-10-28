@@ -1,9 +1,9 @@
 "use client";
 
-import { Download, Film, FileCode2, FileJson, Boxes } from "lucide-react";
+import { Boxes, Download, FileCode2, FileJson, FileText, Film } from "lucide-react";
 import { useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
-import { clipUrl, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend } from "@/lib/api";
+import { clipUrl, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
 import { Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
@@ -46,6 +46,18 @@ function mujocoGap(m: number, uncalibrated: boolean): string {
   return v < 0.001 ? `less than 0.001 ${unit}` : `${v.toFixed(v < 1 ? 3 : 1)} ${unit}`;
 }
 
+// Readable names for the tags; the exact model id stays in the tooltip for anyone verifying.
+function modelName(id: string): string {
+  if (id.startsWith("muse-glimmer")) return "Muse Glimmer 30B · open weights";
+  if (id === "sam-3.1") return "SAM 3.1";
+  if (id.startsWith("muse-spark")) return `Muse Spark 1.3${id.endsWith("contributor") ? " (development)" : ""}`;
+  return id;
+}
+
+const SCALE_SOURCE: Record<string, string> = {
+  user: "the length you gave", object_size: "the object's size you gave", gravity: "Earth's gravity (assumed)",
+};
+
 function prettyModel(id: string, titles: Record<string, string>): string {
   return titles[id] ?? id.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
 }
@@ -75,11 +87,12 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         <div className="provenance">
           <span>Models used:</span>
           {models.map((m) => (
-            <span key={m} className={`model-tag ${isOpenWeight(m) ? "open" : ""}`}>{m}</span>
+            <span key={m} className={`model-tag ${isOpenWeight(m) ? "open" : ""}`} title={m}>{modelName(m)}</span>
           ))}
           <span className="model-tag">numerical verification</span>
         </div>
         {r.scale_note && <p className="note">{r.scale_note}</p>}
+        {r.scale_basis && <p className="note">{r.scale_basis}</p>}
       </div>
 
       <div className="result-grid">
@@ -121,7 +134,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
                   return (
                     <tr key={p.name}>
                       <td><Tex tex={p.latex} /> {p.derived && <span className="muted small">{p.derived}</span>}</td>
-                      <td className="num"><span className="param-value">{fmtAt(p.value, d)}</span> ± {fmtAt(p.std, d)} {p.unit}{" "}
+                      <td className="num"><span className="param-value">{fmtAt(p.value, d)}</span> ± {fmtAt(p.std, d)} {formatUnit(p.unit)}{" "}
                         {p.uncalibrated && <span className="uncal">uncalibrated</span>}
                         <div className="ci-inline muted small">95%: {fmtAt(p.ci95[0], d)} to {fmtAt(p.ci95[1], d)}</div></td>
                       <td className="num ci-col">{fmtAt(p.ci95[0], d)} to {fmtAt(p.ci95[1], d)}</td>
@@ -203,6 +216,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
             {r.mujoco && <a className="button" href={exportUrl(runId, "mjcf")} download><Boxes size={16} aria-hidden="true" />MuJoCo model</a>}
             <a className={`button ${r.mujoco ? "secondary" : ""}`} href={exportUrl(runId, "py")} download><FileCode2 size={16} aria-hidden="true" />Python simulation</a>
             <a className="button secondary" href={exportUrl(runId, "json")} download><FileJson size={16} aria-hidden="true" />Parameters</a>
+            <a className="button secondary" href={exportUrl(runId, "report")} download><FileText size={16} aria-hidden="true" />Report</a>
             <button className="secondary" onClick={onShare} disabled={share.state === "busy"}>
               <Film size={16} aria-hidden="true" />{share.state === "busy" ? "Rendering video" : "Shareable video"}
             </button>
@@ -238,7 +252,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
                   <td className="fitted">
                     {(f.param_meta ?? Object.keys(f.params).map((name) => ({ name, latex: name, unit: "" }))).map((p) => (
                       <div key={p.name}>
-                        <Tex tex={p.latex} /> = {fmt(f.params[p.name])} {p.unit}
+                        <Tex tex={p.latex} /> = {fmt(f.params[p.name])} {formatUnit(p.unit)}
                         {r.scale_note && needsScale(p.unit) && <span className="uncal">uncalibrated</span>}
                       </div>
                     ))}
@@ -261,7 +275,8 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         <summary>Measurement details</summary>
         <ul>
           <li>Object: {r.scene.moving_object}. {r.scene.observations}</li>
-          <li>Scale: {r.calibration.source === "none" ? "no reference in view (nominal scale)" : `${r.calibration.px_per_m.toFixed(1)} px/m from ${r.calibration.source.replaceAll("_", " ")}`}</li>
+          <li>Scale: {r.calibration.source === "none" ? "no reference in view (nominal scale)"
+            : `${r.calibration.px_per_m.toFixed(1)} px/m from ${SCALE_SOURCE[r.calibration.source] ?? r.calibration.source.replaceAll("_", " ")}`}</li>
           <li>Clip: {r.clip.width} by {r.clip.height} px at {r.clip.fps.toFixed(1)} fps, {r.clip.frames} frames
             {r.clip.slow_motion && r.clip.slow_motion > 1 ? `, slow motion ${r.clip.slow_motion} times (times are real time)` : ""}</li>
           {r.sindy && (

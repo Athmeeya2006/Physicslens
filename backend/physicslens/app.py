@@ -31,6 +31,7 @@ from .agent.whatif import run_whatif
 from .costguard import CostGuardClient, CostGuardError
 from .export.mjcf import build_mjcf
 from .export.mp4 import ExportError, render_share_video
+from .export.report import report_markdown
 from .export.script import parameters_json, python_script
 from .live import LiveConfig, LiveSession
 from .physics.health import (
@@ -356,6 +357,7 @@ EXPORTS = {
     "json": ("application/json", "json"),
     "py": ("text/x-python", "py"),
     "mjcf": ("application/xml", "xml"),
+    "report": ("text/markdown", "md"),
 }
 
 
@@ -365,9 +367,11 @@ def export(run_id: str, kind: str) -> Response:
     if kind not in EXPORTS:
         raise HTTPException(status_code=404)
     result = _finished_result(run_id)
-    if "fit_state" not in result:
+    if kind == "report":  # every verdict gets a report, including "no clean equation"
+        body = report_markdown(result)
+    elif "fit_state" not in result:
         raise HTTPException(status_code=409, detail="No fitted model to export for this clip.")
-    if kind == "json":
+    elif kind == "json":
         body = parameters_json(result)
     elif kind == "py":
         body = python_script(result)

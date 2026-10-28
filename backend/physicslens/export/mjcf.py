@@ -86,11 +86,15 @@ def build_mjcf(fit_state: dict[str, Any]) -> tuple[str, list[str]]:
                + f'      <geom type="capsule" fromto="{-arm:.6g} 0 0 {arm:.6g} 0 0" size="{max(0.005, arm / 8):.4g}" rgba="0.13 0.83 0.93 1" mass="0"/>\n'
                + "    </body>\n  </worldbody>\n</mujoco>\n")
     elif spec.family == "projectile":
-        if spec.id != "free_fall":
-            notes.append("Drag is not representable without object geometry for MuJoCo's fluid model; exported "
-                         "without drag. Use the Python script for the exact model.")
+        joint = "<freejoint/>"
+        if spec.id == "linear_drag":
+            # Joint damping is a force -damping * velocity, so damping = k * mass is exactly linear drag.
+            joint = f'<joint name="free" type="free" damping="{p["k"] * NOMINAL_MASS:.6g}"/>'
+        elif spec.id != "free_fall":
+            notes.append("Quadratic drag is not representable without object geometry for MuJoCo's fluid model; "
+                         "exported without drag. Use the Python script for the exact model.")
         xml = (_header("physicslens_projectile", p["g"], f"Projectile, g = {p['g']:.4g} m/s^2.")
-               + '    <body name="object" pos="0 0 0">\n      <freejoint/>\n'
+               + f'    <body name="object" pos="0 0 0">\n      {joint}\n'
                + f'      <inertial pos="0 0 0" mass="{NOMINAL_MASS}" diaginertia="1e-6 1e-6 1e-6"/>\n'
                + '      <geom type="sphere" size="0.02" rgba="0.13 0.83 0.93 1" mass="0" contype="0" conaffinity="0"/>\n'
                + "    </body>\n  </worldbody>\n</mujoco>\n")

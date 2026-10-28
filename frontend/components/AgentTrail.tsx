@@ -1,16 +1,19 @@
 "use client";
 
 import {
-  Compass, Crosshair, Eye, FlaskConical, GitBranch, Lightbulb, MessageSquareText, Orbit, Split, type LucideIcon,
+  Compass, Crosshair, Eye, FlaskConical, GitBranch, Lightbulb, MessageSquareText, Orbit, Ruler, ScanEye, Split,
+  type LucideIcon,
 } from "lucide-react";
 import type { TrailStep } from "@/lib/api";
 
 const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
   scene: { label: "Looks at the scene", icon: Eye },
   tracking: { label: "Tracks the object", icon: Crosshair },
+  track_check: { label: "Checks what it tracked", icon: ScanEye },
   hypotheses: { label: "Proposes equations", icon: Lightbulb },
   verification: { label: "Tests them against the data", icon: FlaskConical },
   design: { label: "Designs the next experiment", icon: Compass },
+  plausibility: { label: "Checks the result is physically plausible", icon: Ruler },
   regime: { label: "Notices the dynamics changed", icon: Split },
   collision: { label: "Analyzes the bounces", icon: GitBranch },
   chaos: { label: "Measures chaos", icon: Orbit },
@@ -24,7 +27,7 @@ const ACTION_LABEL: Record<string, string> = {
   give_up: "Reports no clean equation",
 };
 
-const ITEM_STATUS: Record<string, string> = { accepted: "Accepted", tied: "Tied", rejected: "Rejected" };
+const ITEM_STATUS: Record<string, string> = { accepted: "Accepted", tied: "Tied", rejected: "Rejected", approximation: "Same law" };
 // Candidate experiments are not models: say whether each would settle the question.
 const DESIGN_STATUS: Record<string, string> = { accepted: "Decisive", tied: "Too close", rejected: "Too close" };
 

@@ -8,7 +8,7 @@ from typing import Any
 from ..costguard import CostGuardClient
 from ..physics.models import MODELS
 from .llm import LLMCall, ask_json
-from .schemas import AgentTurn, Hypotheses, Scene
+from .schemas import AgentTurn, Hypotheses, Scene, TrackCheck
 
 SCENE_SYSTEM = """You look at up to four frames from a short phone video of something moving, for a physics measurement tool.
 Identify the single object whose motion should be measured and a reference object of known size in the same plane.
@@ -76,3 +76,18 @@ def propose_hypotheses(client: CostGuardClient, summary: dict[str, Any], scene: 
 def agent_turn(client: CostGuardClient, context: dict[str, Any], run_id: str, audience: str = "dev") -> tuple[AgentTurn, LLMCall]:
     return ask_json(client, task="agent", system=AGENT_SYSTEM, text=json.dumps(context), schema_model=AgentTurn,
                     run_id=run_id, audience=audience, meta_effort="minimal")
+
+
+TRACK_CHECK_SYSTEM = """You check a measurement before any physics is fitted to it. The image shows three frames of a
+clip (start, middle, end) side by side. In each, a green box marks what the segmentation model tracked as the moving
+object. Say whether the green box surrounds the named object itself in all three frames. A box on a part of it (a hook,
+a clasp, a shadow), on something else, or on text drawn over the video is off target. Numbers about the track's
+smoothness are given as extra evidence. Do not judge the physics."""
+
+
+def check_track(client: CostGuardClient, overlay_jpeg: bytes, object_name: str, quality: dict[str, Any], run_id: str,
+                audience: str = "dev") -> tuple[TrackCheck, LLMCall]:
+    payload = {"object": object_name, "track_numbers": quality}
+    return ask_json(client, task="track_check", system=TRACK_CHECK_SYSTEM, text=json.dumps(payload),
+                    schema_model=TrackCheck, run_id=run_id, images=[overlay_jpeg], audience=audience,
+                    meta_effort="minimal", max_output_tokens=800)

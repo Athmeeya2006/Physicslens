@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TrendChart } from "@/components/TrendChart";
-import { API_BASE, useBackend } from "@/lib/api";
+import { API_BASE, useBackend, formatUnit } from "@/lib/api";
 
 interface MetricRow {
   metric: string;
@@ -191,8 +191,8 @@ export default function HealthPage() {
               {result.metrics.map((m) => (
                 <tr key={m.metric} className={m.flagged ? "flagged" : ""}>
                   <td>{m.label}</td>
-                  <td>{fmt(m.baseline)} ± {fmt(m.baseline_std)} {m.unit}</td>
-                  <td>{fmt(m.current)} ± {fmt(m.current_std)} {m.unit}</td>
+                  <td>{fmt(m.baseline)} ± {fmt(m.baseline_std)} {formatUnit(m.unit)}</td>
+                  <td>{fmt(m.current)} ± {fmt(m.current_std)} {formatUnit(m.unit)}</td>
                   <td>{m.change_pct >= 0 ? "+" : ""}{m.change_pct.toFixed(1)}%</td>
                   <td>{Math.abs(m.z).toFixed(1)} std. errors{m.flagged ? " (flagged)" : ""}</td>
                 </tr>

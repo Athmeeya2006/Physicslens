@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from physicslens.export.mjcf import build_mjcf
+from physicslens.export.report import report_markdown  # noqa: E402
 from physicslens.export.script import parameters_json, python_script
 
 SRC = ROOT / "gallery"
@@ -32,6 +33,8 @@ def main() -> None:
             if (src / name).is_file():
                 shutil.copy(src / name, dst / name)
         result = json.loads((src / "result.json").read_text())
+        meta = json.loads(meta_file.read_text())
+        (dst / f"physicslens-{gid}-report.md").write_text(report_markdown(result, meta.get("title")))
         if "fit_state" in result:
             (dst / f"physicslens-{gid}.json").write_text(parameters_json(result))
             (dst / f"physicslens-{gid}.py").write_text(python_script(result))
@@ -41,7 +44,6 @@ def main() -> None:
             if notes:
                 xml = xml.replace("<worldbody>", "<!-- " + " ".join(notes).replace("--", "-") + " -->\n  <worldbody>", 1)
             (dst / f"physicslens-{gid}.xml").write_text(xml)
-        meta = json.loads(meta_file.read_text())
         eq = result.get("equation") or {}
         index.append({"id": gid, **meta, "status": result.get("status"), "family": result.get("family"),
                       "equation_title": eq.get("title"), "object": (result.get("scene") or {}).get("moving_object")})

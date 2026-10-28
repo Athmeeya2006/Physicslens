@@ -162,6 +162,7 @@ td { padding: 8px 12px 8px 0; vertical-align: top; border-top: 1px solid var(--s
 .verdict.accepted { background: var(--ok-soft); color: var(--ok); }
 .verdict.tied, .verdict.ambiguous { background: var(--tie-soft); color: var(--tie); }
 .verdict.rejected, .verdict.no_fit { background: var(--bad-soft); color: var(--bad); }
+.verdict.approximation { background: var(--sunk); color: var(--ink-2); }
 
 .result-head { display: grid; gap: 8px; margin: 8px 0 20px; }
 .result-head h2 { font-size: 1.9rem; letter-spacing: -0.02em; }

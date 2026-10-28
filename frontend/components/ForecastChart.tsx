@@ -1,5 +1,7 @@
 "use client";
 
+import { formatUnit } from "@/lib/api";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AnalysisResult } from "@/lib/api";
 
@@ -65,7 +67,7 @@ export function ForecastChart({ f, uncalibrated = false }: { f: Forecast; uncali
   const bandX = x(f.heldout_start);
   const h = hover;
   // Without a scale reference lengths are in arbitrary units; angles never need one.
-  const unitText = uncalibrated && f.unit === "m" ? "uncalibrated units" : f.unit;
+  const unitText = uncalibrated && f.unit === "m" ? "uncalibrated units" : formatUnit(f.unit);
   const unit = unitText ? ` (${unitText})` : "";
   const narrowBand = W - PAD.right - bandX < 250;
   const bandLabel = W < 520 ? "Held out" : "Held out: the model never saw this";

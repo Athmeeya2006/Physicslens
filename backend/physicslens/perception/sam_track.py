@@ -25,6 +25,7 @@ class ObjectTrack:
     long_px: np.ndarray  # (N,) min-area-rectangle sides: used to calibrate scale from reference objects
     short_px: np.ndarray
     confidence: np.ndarray
+    boxes: np.ndarray | None = None  # (N, 4) SAM's own box per frame (left, top, right, bottom), for drawing checks
 
 
 def parse_sam_text(text: str, completed: bool = True) -> list[msp.SegmentationMaskRecord]:
@@ -66,13 +67,15 @@ def tracks_from_records(records: list[msp.SegmentationMaskRecord]) -> dict[str, 
         if shape is None:
             continue
         # Keyed by frame index and object id, never by line order: frames can arrive out of order.
-        per_object.setdefault(r.object_id, {})[r.frame.frame_index] = (*shape, r.confidence or 0.0)
+        b = r.bounds
+        per_object.setdefault(r.object_id, {})[r.frame.frame_index] = (
+            *shape, r.confidence or 0.0, b.left, b.top, b.right, b.bottom)
 
     tracks = {}
     for oid, by_frame in per_object.items():
         frames = np.array(sorted(by_frame))
         rows = np.array([by_frame[f] for f in frames])
-        tracks[oid] = ObjectTrack(oid, frames, rows[:, 0:2], rows[:, 4], rows[:, 2], rows[:, 3], rows[:, 5])
+        tracks[oid] = ObjectTrack(oid, frames, rows[:, 0:2], rows[:, 4], rows[:, 2], rows[:, 3], rows[:, 5], rows[:, 6:10])
     return tracks
 
 

@@ -94,7 +94,7 @@ def judge_candidates(v: Verdict) -> dict[str, tuple[str, str]]:
             out[f.model_id] = ("tied", "fits about as well as the best; the data can't separate them")
         elif APPROXIMATES.get(f.model_id, ("",))[0] in contenders and forecasts_well(f):
             _, what = APPROXIMATES[f.model_id]
-            out[f.model_id] = ("rejected", f"{what}: indistinguishable at this amplitude, so the exact law is kept")
+            out[f.model_id] = ("approximation", f"{what}: indistinguishable at this amplitude, so the exact law is kept")
         elif not forecasts_well(f):
             out[f.model_id] = ("rejected", f"forecast error {f.heldout_nrmse:.0%} on held-out data")
         elif best is not None and f.k > best.k:
