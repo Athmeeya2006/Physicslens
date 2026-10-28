@@ -8,8 +8,14 @@ import "./globals.css";
 const ui = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-ui", display: "swap" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://physicslens.vercel.app"),
   title: "PhysicsLens",
   description: "Film something moving and get the equation that governs it, verified against the real motion and exportable to MuJoCo.",
+  openGraph: {
+    title: "PhysicsLens",
+    description: "Film something moving. Get its equation, verified against motion it never saw, and export it to MuJoCo.",
+    images: [{ url: "/og.jpg", width: 1200, height: 630 }],
+  },
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#121820" };

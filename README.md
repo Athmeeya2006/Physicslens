@@ -163,6 +163,12 @@ make smoke                    # one cheap real call per model (asks before spend
 
 Budget caps live in `config/budget.yaml` (created from `config/budget.example.yaml` by `make setup`); prices in `config/prices.yaml`.
 
+### Static gallery site
+
+The public gallery is a static export that needs no server: `python scripts/build_static_gallery.py` copies each
+gallery result, clip, poster and export into `frontend/public/gallery/` (gitignored), then
+`cd frontend && STATIC_EXPORT=1 NEXT_PUBLIC_API_BASE="" npx next build` writes the site to `frontend/out/`.
+
 ### Public deployment settings
 
 | Variable | Effect |
