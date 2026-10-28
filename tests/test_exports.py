@@ -130,3 +130,16 @@ def test_report_covers_every_verdict():
               "calibration": {"source": "none", "px_per_m": 1000.0, "rel_std": 0.0}}
     md = report_markdown(no_fit)
     assert "No clean governing equation" in md and "## Result" not in md
+
+
+@pytest.mark.parametrize("model_id, params, y0, ctx", [
+    ("oscillator_dry", {"omega": 6.0, "s0": 0.0, "f": 0.12}, [0.08, 0.0], {"origin_x": 0, "origin_y": 0, "axis_x": 0, "axis_y": 1}),
+    ("spin_spring", {"kappa": 9.0, "phi0": 0.2, "k": 0.8}, [1.4, 0.0], {"arm_m": 0.3, "center_x": 0, "center_y": 0}),
+])
+def test_mujoco_replays_dry_friction_and_torsional_springs(model_id, params, y0, ctx):
+    from physicslens.export.mjcf import check_against_fit
+
+    fs = {"model_id": model_id, "params": params, "y0": y0, "ctx": ctx, "fps": 30.0, "origin_px": [200.0, 200.0],
+          "px_per_m": 1000.0, "first_frame": 0}
+    r = check_against_fit(fs, 3.0)
+    assert not r["notes"] and r["rms_vs_fit_m"] < 2e-3  # MuJoCo's frictionloss is not smoothed like the fit's sign()

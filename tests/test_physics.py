@@ -139,3 +139,28 @@ def test_small_angle_approximation_is_not_a_rival_theory():
     assert verdict.winner.params["g"] == pytest.approx(G, rel=0.03)
     why = judge_candidates(verdict)["pendulum_small_angle"]
     assert why[0] == "approximation" and "exact law is kept" in why[1]
+
+
+def test_dry_friction_spring_is_told_from_viscous_damping():
+    """Coulomb friction removes the same amplitude every swing (straight-line decay); viscous damping doesn't."""
+    from physicslens.physics.models import MODELS as M
+
+    t = np.arange(0, 6, 1 / FPS)
+    y = solve_ivp(lambda _t, s: M["oscillator_dry"].rhs(s, {"omega": 6.0, "s0": 0.0, "f": 0.12}, {}), (0, 6), [0.08, 0.0],
+                  t_eval=t, rtol=1e-9, atol=1e-11, max_step=0.005).y[0]
+    _, v = run(track(np.column_stack([0.01 * y, y + 0.3])), "oscillator")
+    assert v.status == "accepted" and v.winner.model_id == "oscillator_dry"
+    assert v.winner.params["f"] == pytest.approx(0.12, rel=0.1)
+
+
+def test_door_closer_is_a_damped_torsional_spring():
+    from physicslens.physics.coords import Coordinates
+
+    t = np.arange(0, 5, 1 / FPS)
+    true = {"kappa": 9.0, "phi0": 0.2, "k": 0.8}
+    phi = solve_ivp(lambda _t, s: MODELS["spin_spring"].rhs(s, true, {}), (0, 5), [1.4, 0.0], t_eval=t, rtol=1e-10).y[0]
+    phi = phi + np.random.default_rng(3).normal(0, 0.004, len(t))
+    c = Coordinates("rotation", t, phi[:, None], ("phi",), {"arm_m": 0.3, "center_x": 0.0, "center_y": 0.0})
+    v = assess(c, [fit_model(m, c) for m in models_for("rotation")])
+    assert v.status == "accepted" and v.winner.model_id == "spin_spring"
+    assert v.winner.params["kappa"] == pytest.approx(9.0, rel=0.03) and v.winner.params["k"] == pytest.approx(0.8, rel=0.1)

@@ -237,3 +237,19 @@ def test_capture_timestamps_set_the_time_base(harness, tmp_path):
     g_stamped, fit = final_g(25, True, "stamped")  # the server's nominal rate is wrong; the stamps are right
     assert g_stamped == pytest.approx(g_true, rel=0.02)
     assert fit["measured_fps"] == pytest.approx(FPS, rel=0.01)
+
+
+def test_tapped_family_fits_at_once_and_the_agent_still_proposes(harness, tmp_path):
+    sam = FakeSam()
+    session, sent = make_session(harness, tmp_path, sam)
+    session.choose_family_now("pendulum")
+    assert session.family == "pendulum" and "pendulum" in session.candidates
+    frames = clip_jpegs()
+    for i in range(150):
+        session.add_frame(frames[i % CLIP_FRAMES])
+    fits = [m for m in sent if m["type"] == "fit" and m.get("equation")]
+    assert fits and fits[-1]["equation"]["model_id"].startswith("pendulum")
+    hyps = [m for m in sent if m["type"] == "hypotheses"]
+    assert len(hyps) == 1  # the agent was still consulted, once, after the scene was read
+    session.choose_family_now("projectile")  # a second tap changes nothing mid-session
+    assert session.family == "pendulum"

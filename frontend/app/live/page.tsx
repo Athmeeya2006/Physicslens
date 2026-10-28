@@ -28,6 +28,10 @@ function wsUrl(): string {
   return API_BASE.replace(/^http/, "ws") + "/ws/live";
 }
 
+const LIVE_FAMILIES: [string, string][] = [
+  ["pendulum", "Swinging"], ["oscillator", "On a spring"], ["projectile", "Thrown or falling"], ["line", "Rolling or sliding"],
+];
+
 export default function LivePage() {
   const online = useBackend();
   const video = useRef<HTMLVideoElement>(null);
@@ -42,6 +46,7 @@ export default function LivePage() {
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [status, setStatus] = useState("Point the camera at something moving, side-on, then press Start.");
   const [scene, setScene] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
   const [fit, setFit] = useState<FitMsg | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [lengthCm, setLengthCm] = useState("");
@@ -84,6 +89,7 @@ export default function LivePage() {
     if (!online) return;
     setNotices([]);
     setFit(null);
+    setPicked(null);
     track.current.clear();
     ghost.current.clear();
     sentFrames.current = 0;
@@ -221,6 +227,20 @@ export default function LivePage() {
             </div>
           )}
           {live && <button onClick={stop}>Stop</button>}
+          {live && !picked && !fit?.equation && (
+            <div className="stack" style={{ gap: 6 }}>
+              <span className="small muted">What is it? Tap to start fitting now; the agent&apos;s hypotheses refine it when ready.</span>
+              <div className="chips">
+                {LIVE_FAMILIES.map(([family, label]) => (
+                  <button key={family} type="button" className="chip" onClick={() => {
+                    socket.current?.send(JSON.stringify({ type: "family", family }));
+                    setPicked(label);
+                  }}>{label}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {live && picked && <p className="small muted">You picked: {picked}</p>}
           {live && (
             <VoiceNotes onNotes={(n) => {
               // A length said while filming goes straight into the running session.

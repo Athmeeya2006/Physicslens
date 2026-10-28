@@ -117,6 +117,8 @@ class LiveSession:
         self.reanchor: tuple[int, tuple[int, int, int, int]] | None = None
         self.use_data_url = True
         self.family: str | None = None
+        self.family_from_user = False  # tapped "what is it?": fit now, let the agent's hypotheses refine it later
+        self._agent_consulted = False
         self.candidates: list[str] = []
         self.warm: dict[str, dict[str, float]] = {}
         self.history: list[dict[str, float]] = []
@@ -161,6 +163,32 @@ class LiveSession:
         else:
             self._wake.set()
         return idx
+
+    def choose_family_now(self, family: str) -> None:
+        """The user says what it is, so fitting starts at once instead of after the reasoning model's first answers."""
+        if family not in USER_FAMILIES or self.family is not None:
+            return
+        with self.lock:
+            self.family = family
+            self.family_from_user = True
+            self.candidates = _with_control(family, [m.id for m in models_for(family)])
+        self.send({"type": "notice", "level": "info",
+                   "message": f"Fitting {USER_FAMILIES[family]} now; the agent's own hypotheses will refine them when ready."})
+
+    def _consult_agent(self, traj) -> None:
+        """After a tapped family: the agent still proposes; its candidates join if it agrees, and it says so if not."""
+        assert self.scene is not None
+        hyp, call = propose_hypotheses(self.client, summarize(traj, self.calibration is None and not self.cfg.pendulum_length_m),
+                                       self.scene, self.run_id, self.cfg.audience, run_cap_usd=self.cfg.run_cap_usd)
+        self.send({"type": "hypotheses", "family": hyp.family, "model": call.model, "provider": call.provider,
+                   "items": _hypothesis_items(hyp)})
+        if hyp.family == self.family:
+            ids, _ = _candidates(hyp)
+            with self.lock:
+                self.candidates = list(dict.fromkeys([*self.candidates, *ids]))
+        else:
+            self.send({"type": "notice", "level": "info",
+                       "message": f"The agent reads this as {hyp.family} motion, not {self.family}. Restart and pick that if it agrees with what you see."})
 
     def set_length(self, meters: float) -> None:
         """A length said out loud mid-session. It replaces an earlier given length, never a reference object's scale."""
@@ -458,6 +486,9 @@ class LiveSession:
             if self.scene is None:
                 return None  # tracking started from a tap; the scene model hasn't answered yet
             self._choose_family(traj)
+        elif self.family_from_user and self.scene is not None and not self._agent_consulted:
+            self._agent_consulted = True
+            self._run(lambda t=traj: self._consult_agent(t))  # in the background: refits keep running meanwhile
         try:
             coords = to_coordinates(traj, self.family)  # type: ignore[arg-type]
         except ValueError as e:
@@ -556,6 +587,9 @@ class LiveSession:
         py = origin[1] - xy[:, 1] * ppm
         return [[int(f), round(float(x), 2), round(float(y), 2)] for f, x, y in zip(ids, px, py, strict=True)]
 
+
+USER_FAMILIES = {"pendulum": "pendulum models", "oscillator": "spring models", "projectile": "thrown-object models",
+                 "line": "rolling and sliding models"}
 
 FRAME_HEADER = b"PLT1"  # magic, then the capture time in seconds as little-endian float64, then the JPEG
 

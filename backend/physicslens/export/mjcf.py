@@ -26,6 +26,7 @@ class MjcfError(ValueError):
 def _header(name: str, gravity: float, note: str) -> str:
     return (f'<mujoco model="{name}">\n'
             f"  <!-- Exported by PhysicsLens from a phone video. {note} -->\n"
+            '  <compiler angle="radian"/>\n'  # MJCF reads angles (e.g. a hinge's springref) in degrees otherwise
             f'  <option timestep="{TIMESTEP}" integrator="RK4" gravity="0 0 {-gravity:.6g}"/>\n'
             '  <visual><global offwidth="640" offheight="480"/></visual>\n'
             "  <worldbody>\n"
@@ -64,16 +65,21 @@ def build_mjcf(fit_state: dict[str, Any]) -> tuple[str, list[str]]:
     elif spec.family == "oscillator":
         omega, zeta, s0 = p["omega"], p.get("zeta", 0.0), p["s0"]
         ax, az = ctx["axis_x"], ctx["axis_y"]
+        dry = f' frictionloss="{p["f"] * NOMINAL_MASS:.6g}"' if "f" in p else ""  # MuJoCo's dry friction force
+        if spec.id == "duffing":
+            notes.append("The cubic (stiffening) term has no MuJoCo joint equivalent; exported with the linear spring "
+                         "only. Use the Python script for the exact model.")
         xml = (_header("physicslens_oscillator", 0.0,
                        f"Spring-mass, omega = {omega:.4g} rad/s, zeta = {zeta:.4g}. Gravity is folded into the equilibrium s0.")
                + '    <body name="mass" pos="0 0 0">\n'
                + f'      <joint name="stretch" type="slide" axis="{ax:.6g} 0 {az:.6g}" stiffness="{omega**2 * NOMINAL_MASS:.6g}"'
-               + f' damping="{2 * zeta * omega * NOMINAL_MASS:.6g}" springref="{s0:.6g}"/>\n'
+               + f' damping="{2 * zeta * omega * NOMINAL_MASS:.6g}" springref="{s0:.6g}"{dry}/>\n'
                + f'      <inertial pos="0 0 0" mass="{NOMINAL_MASS}" diaginertia="1e-6 1e-6 1e-6"/>\n'
                + '      <geom type="sphere" size="0.02" rgba="0.13 0.83 0.93 1" mass="0"/>\n'
                + "    </body>\n  </worldbody>\n</mujoco>\n")
     elif spec.family == "rotation":
         c, k, q = p.get("c", 0.0), p.get("k", 0.0), p.get("q", 0.0)
+        spring = (f' stiffness="{p["kappa"]:.6g}" springref="{p["phi0"]:.6g}"' if "kappa" in p else "")
         if q:
             notes.append("Air drag on the spin (q w|w|) has no MuJoCo joint equivalent; exported without it. "
                          "Use the Python script for the exact model.")
@@ -81,7 +87,7 @@ def build_mjcf(fit_state: dict[str, Any]) -> tuple[str, list[str]]:
         # Unit moment of inertia, so joint damping equals k and dry-friction torque (frictionloss) equals c.
         xml = (_header("physicslens_spin", 0.0, f"Spin-down: dry friction c = {c:.4g} rad/s^2, viscous k = {k:.4g} 1/s.")
                + '    <body name="spinner" pos="0 0 0">\n'
-               + f'      <joint name="spin" type="hinge" axis="0 -1 0" damping="{k:.6g}" frictionloss="{c:.6g}"/>\n'
+               + f'      <joint name="spin" type="hinge" axis="0 -1 0" damping="{k:.6g}" frictionloss="{c:.6g}"{spring}/>\n'
                + f'      <inertial pos="0 0 0" mass="{NOMINAL_MASS}" diaginertia="1 1 1"/>\n'
                + f'      <geom type="capsule" fromto="{-arm:.6g} 0 0 {arm:.6g} 0 0" size="{max(0.005, arm / 8):.4g}" rgba="0.13 0.83 0.93 1" mass="0"/>\n'
                + "    </body>\n  </worldbody>\n</mujoco>\n")

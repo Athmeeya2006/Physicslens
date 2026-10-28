@@ -160,6 +160,43 @@ def _plane(accel: bool) -> Rhs:
     return rhs
 
 
+V_EPS = 0.01  # m/s: smooths sign(v) so dry friction lets the mass stop without solver chatter
+
+
+def _oscillator_dry(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
+    x, v = s
+    return np.array([v, -p["omega"] ** 2 * (x - p["s0"]) - p["f"] * np.tanh(v / V_EPS)])
+
+
+def _duffing(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
+    x, v = s
+    d = x - p["s0"]
+    return np.array([v, -p["omega"] ** 2 * d - p["beta"] * d**3 - 2 * p["zeta"] * p["omega"] * v])
+
+
+def _torsion(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
+    ph, w = s
+    return np.array([w, -p["kappa"] * (ph - p["phi0"]) - p["k"] * w])
+
+
+OMEGA = Param("omega", r"\omega", "rad/s", 0.1, 200.0)
+S0 = Param("s0", "s_0", "m", -10.0, 10.0)
+for _m in [
+    # Dry (Coulomb) friction takes the same amount off every swing: amplitude falls in a straight line, not exponentially.
+    ModelSpec("oscillator_dry", "oscillator", "Spring with dry friction",
+              r"\ddot s = -\omega^2 (s - s_0) - f\,\mathrm{sgn}(\dot s)",
+              (OMEGA, S0, Param("f", "f", "m/s^2", 0.0, 50.0)), _oscillator_dry),
+    ModelSpec("duffing", "oscillator", "Stiffening spring (Duffing)",
+              r"\ddot s = -\omega^2 (s - s_0) - \beta (s - s_0)^3 - 2\zeta\omega\dot s",
+              (OMEGA, S0, Param("beta", r"\beta", "1/(m^2 s^2)", -1e5, 1e5, 0.0), Param("zeta", r"\zeta", "", 0.0, 2.0)), _duffing),
+    # A door closer, a cabinet hinge, a torsion pendulum: a damped rotational spring.
+    ModelSpec("spin_spring", "rotation", "Torsional spring with damping",
+              r"\ddot\varphi = -\kappa (\varphi - \varphi_0) - k\dot\varphi",
+              (Param("kappa", r"\kappa", "1/s^2", 0.01, 4e4), Param("phi0", r"\varphi_0", "rad", -50.0, 50.0), K_VISC), _torsion),
+]:
+    MODELS[_m.id] = _m
+
+
 # Controls for motion that fits no named family ("line": along one axis, "plane": anywhere in the image plane).
 # Any free-form law the agent writes is tested against these, so it has to beat "nothing acts on it".
 for _m in [

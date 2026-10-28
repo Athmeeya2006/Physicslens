@@ -80,6 +80,10 @@ def initial_guess(spec: ModelSpec, c: Coordinates) -> dict[str, float]:
                 guess["g"] = 9.8
         elif p.name == "omega":
             guess["omega"] = dominant_omega(c.t, q)
+        elif p.name == "kappa":
+            guess["kappa"] = dominant_omega(c.t, q) ** 2
+        elif p.name == "phi0":
+            guess["phi0"] = float(q.mean())
         elif p.name == "s0":
             guess["s0"] = float(q.mean())
         else:
