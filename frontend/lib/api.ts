@@ -310,3 +310,10 @@ export function addStudyRun(id: string, file: File, label: string, inputs: RunIn
 }
 export const studyFileUrl = (id: string, kind: "report" | "mjcf") =>
   id.startsWith("gallery-") ? `/gallery/${id}/physicslens-${id}.${kind === "report" ? "md" : "xml"}` : `${API_BASE}/api/studies/${id}/${kind}`;
+
+// A value rounded to the precision its uncertainty supports: two significant figures of the uncertainty.
+export function withUncertainty(value: number, std: number): [string, string] {
+  if (!(std > 0) || !Number.isFinite(std)) return [value.toPrecision(4), ""];
+  const d = Math.min(8, Math.max(0, 1 - Math.floor(Math.log10(std))));
+  return [value.toFixed(d), std.toFixed(d)];
+}

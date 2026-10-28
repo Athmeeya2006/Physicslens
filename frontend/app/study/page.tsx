@@ -6,7 +6,7 @@ import { AgentTrail } from "@/components/AgentTrail";
 import { VoiceNotes } from "@/components/VoiceNotes";
 import { Tex } from "@/components/Equation";
 import type { GalleryItem, RunView, Study } from "@/lib/api";
-import { addStudyRun, createStudy, formatUnit, getGallery, getRun, getStudy, posterUrl, reviewStudy, studyFileUrl, useBackend } from "@/lib/api";
+import { addStudyRun, createStudy, formatUnit, getGallery, withUncertainty, getRun, getStudy, posterUrl, reviewStudy, studyFileUrl, useBackend } from "@/lib/api";
 
 const EXAMPLES = [
   "Are the front shock absorbers on my car worn out?",
@@ -185,7 +185,7 @@ export default function StudyPage() {
             <div className="stack">
               <section className="panel">
                 <h3>The plan: {DELIVERABLE[study.plan.deliverable]}</h3>
-                <p className="small muted" style={{ marginBottom: 8 }}>Measure {study.plan.quantities.join("; ")}. Done when {study.plan.done_when}</p>
+                <p className="small muted" style={{ marginBottom: 8 }}>Measure {study.plan.quantities.join("; ")}. Done when {lowerFirst(study.plan.done_when)}</p>
                 <ol className="checklist">
                   {study.plan.recordings.map((p) => {
                     const done = study.recordings.some((r) => r.label === p.label);
@@ -263,7 +263,7 @@ export default function StudyPage() {
                         {study.combined.map((c) => (
                           <tr key={c.name}>
                             <td><Tex tex={c.latex} /></td>
-                            <td className="num">{c.value.toPrecision(4)} ± {c.std.toPrecision(2)} {formatUnit(c.unit)}{c.uncalibrated && <span className="uncal">uncalibrated</span>}</td>
+                            <td className="num">{withUncertainty(c.value, c.std).join(" ± ")} {formatUnit(c.unit)}{c.uncalibrated && <span className="uncal">uncalibrated</span>}</td>
                             <td className="num">{c.n}</td>
                             <td>{c.n === 1 ? <span className="muted small">one recording</span>
                               : <span className={`verdict ${c.consistent ? "accepted" : "rejected"}`}>{c.consistent ? "Agree" : "Disagree"}</span>}</td>
@@ -325,4 +325,8 @@ function nextRecording(s: Study) {
   const last = s.turns.at(-1);
   if (last?.action === "record_more" && last.next_recording) return last.next_recording;
   return s.plan.recordings.find((p) => !s.recordings.some((r) => r.label === p.label)) ?? null;
+}
+
+function lowerFirst(text: string): string {
+  return text && /^[A-Z][a-z]/.test(text) ? text[0].toLowerCase() + text.slice(1) : text;
 }
