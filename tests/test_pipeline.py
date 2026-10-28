@@ -291,3 +291,10 @@ def test_track_check_failure_keeps_the_first_track(harness, tmp_path):
            responses_result(text=json.dumps(AGENT)))
     result = analyze(harness.client, CLIP, tmp_path / "run", "run-nocheck", RunOptions(pendulum_length_m=0.6))
     assert [t["step"] for t in result["trail"]][:3] == ["scene", "tracking", "hypotheses"]
+
+
+def test_schema_words_echoed_next_to_a_valid_answer_are_dropped(harness):
+    echoed = {**SCENE, "type": "object", "required": list(SCENE), "additionalProperties": False}
+    harness.sdk("meta_api").script.append(responses_result(text=json.dumps(echoed)))
+    scene, _ = ask_json(harness.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r")
+    assert scene.moving_object == SCENE["moving_object"] and len(harness.sdk("meta_api").calls) == 1  # no retry

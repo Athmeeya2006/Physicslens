@@ -92,6 +92,25 @@ def _strip_fences(text: str) -> str:
 
 
 
+# Some models echo parts of the JSON schema next to a correct answer; none of our schemas has fields with these
+# names, so they are dropped rather than costing a full retry.
+_SCHEMA_ECHO = {"type", "required", "additionalProperties", "properties", "$schema", "title"}
+
+
+def _validate(schema_model: type[T], raw_text: str) -> T:
+    text = _strip_fences(raw_text)
+    try:
+        return schema_model.model_validate_json(text)
+    except ValidationError as first:
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            raise first from None
+        if not isinstance(data, dict) or not (_SCHEMA_ECHO & data.keys()) or (_SCHEMA_ECHO & schema_model.model_fields.keys()):
+            raise
+        return schema_model.model_validate({k: v for k, v in data.items() if k not in _SCHEMA_ECHO})
+
+
 def ask_json(
     client: CostGuardClient,
     *,
@@ -116,7 +135,7 @@ def ask_json(
                      run_cap_usd=run_cap_usd)
         raw_text, info = call
         try:
-            return schema_model.model_validate_json(_strip_fences(raw_text)), info
+            return _validate(schema_model, raw_text), info
         except ValidationError as e:
             log.warning("%s: invalid JSON from %s (attempt %d): %s", task, info.model, attempt + 1, e.errors()[:3])
             error_note = f"\n\nYour previous answer was invalid: {e.errors()[:3]}. Reply with JSON matching the schema exactly."
