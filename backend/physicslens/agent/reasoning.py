@@ -39,7 +39,10 @@ three laws of your own in free_models. Each law gives the acceleration in a clos
   empty) and c (1/m); mu and g only ever appear as a product, so g is written as 9.81.
 Write the physics you actually believe, simplest first. Your laws are fitted and tested on held-out motion
 against the controls exactly like the listed models; one that does not beat them is rejected.
-For the named families, free_models must be []."""
+For the named families, free_models must be [].
+If the start or end of the clip is clearly not free motion (a hand still throwing, holding or catching the object),
+give fit_window with the free stretch in seconds and why; otherwise null. Code checks it: a window that drops more
+than 30% of the clip is refused, and the whole clip is fitted too, so cutting can't hide a bad fit."""
 
 AGENT_SYSTEM = """You are the experiment-planning agent of a system-identification tool. Numerical verification has already
 fitted and simulated candidate equations against the measured motion; its verdict is final and you must not contradict it.

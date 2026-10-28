@@ -306,6 +306,10 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
               <div className="sindy">{Object.entries(r.sindy).map(([lhs, rhs]) => <code key={lhs}>{lhs} = {rhs}</code>)}</div>
             </li>
           )}
+          {r.full_clip_verdict && (
+            <li>Fitted on the stretch the agent marked as free motion. Fitted on the whole clip instead, the verdict is
+              {" "}<strong>{r.full_clip_verdict.status === "accepted" ? "accepted" : r.full_clip_verdict.status === "ambiguous" ? "a tie" : "no clean equation"}</strong>: {r.full_clip_verdict.reason}</li>
+          )}
           {!r.sindy && r.sindy_check && !r.sindy_check.shown && r.sindy_check.reason !== "no verified law to compare with" && (
             <li>Model-free regression (PySINDy) disagreed with the verified model, so it is hidden: {r.sindy_check.reason}.</li>
           )}

@@ -104,6 +104,7 @@ export interface AnalysisResult {
   ghosts?: { model_id: string; points: TrackPoint[] }[];
   sindy?: Record<string, string> | null;
   sindy_check?: { shown: boolean; reason: string; heldout_nrmse: number | null };
+  full_clip_verdict?: { status: string; reason: string; winner: string | null } | null;
   equation?: { model_id: string; title: string; latex: string };
   parameters?: Parameter[];
   llm_calls: { step: string; provider: string; model: string; cached: boolean }[];

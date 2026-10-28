@@ -101,11 +101,20 @@ class FreeModelIn(Strict):
     rationale: str = Field(description="One sentence: which numbers in the summary point to this law.")
 
 
+class FitWindow(Strict):
+    start_s: float = Field(ge=0)
+    end_s: float = Field(gt=0)
+    reason: str = Field(max_length=200)
+
+
 class Hypotheses(Strict):
     family: Family
     candidates: list[Hypothesis] = Field(min_length=1, max_length=4)
     free_models: list[FreeModelIn] = Field(max_length=3, description=(
         "Only for family line or plane: equations you write yourself when no listed model fits the physics. Otherwise []."))
+    fit_window: FitWindow | None = Field(default=None, description=(
+        "Optional: the stretch of the clip (seconds from its start) that is free motion, when its start or end is not "
+        "(a hand throwing, holding or catching it). null to fit everything. It must keep at least 70% of the clip."))
 
     @model_validator(mode="after")
     def same_family(self) -> Hypotheses:

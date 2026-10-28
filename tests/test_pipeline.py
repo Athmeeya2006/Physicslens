@@ -298,3 +298,32 @@ def test_schema_words_echoed_next_to_a_valid_answer_are_dropped(harness):
     harness.sdk("meta_api").script.append(responses_result(text=json.dumps(echoed)))
     scene, _ = ask_json(harness.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r")
     assert scene.moving_object == SCENE["moving_object"] and len(harness.sdk("meta_api").calls) == 1  # no retry
+
+
+@pytest.mark.parametrize(("window", "used"), [((0.2, 1.9), True), ((0.0, 0.8), False)])
+def test_agent_fit_window_is_guarded_and_the_whole_clip_is_kept(harness, tmp_path, window, used):
+    """The agent may leave out a throw or a catch, but never most of the clip, and the whole-clip verdict stays."""
+    hyp = {**HYPOTHESES, "fit_window": {"start_s": window[0], "end_s": window[1], "reason": "a hand holds it at first"}}
+    script(harness,
+           responses_result(text=json.dumps(SCENE)),
+           sam_result(frames=60, text=sam_text_as_object_1()),
+           responses_result(text=json.dumps(TRACK_OK)),
+           responses_result(text=json.dumps(hyp)),
+           responses_result(text=json.dumps(AGENT)))
+    result = analyze(harness.client, CLIP, tmp_path / "run", f"run-window-{used}", RunOptions(pendulum_length_m=0.6))
+    notes = [t["text"] for t in result["trail"] if t["step"] == "plausibility"]
+    if used:
+        assert any(n.startswith("Fits 0.20 to 1.90 s") for n in notes)
+        assert result["full_clip_verdict"]["status"] in ("accepted", "ambiguous", "no_fit")
+        assert len(result["real_track_px"]) < 60
+    else:
+        assert any("Refused the agent's fit window" in n and "70%" in n for n in notes)
+        assert result["full_clip_verdict"] is None and len(result["real_track_px"]) == 60
+
+
+def test_window_guard():
+    from physicslens.physics.verify import window_indices
+    t = np.arange(300) / 30
+    assert window_indices(t, 1.0, 9.0) == (30, 271)
+    assert "below the 70%" in window_indices(t, 3.0, 7.0)
+    assert "ends before" in window_indices(t, 5.0, 4.0)

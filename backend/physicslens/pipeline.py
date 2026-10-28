@@ -52,7 +52,7 @@ from .physics.regime import RegimeChange, detect_change
 from .physics.rotation import RotationError, rotation_coordinates
 from .physics.sindy import vet
 from .physics.uncertainty import bootstrap
-from .physics.verify import Verdict, assess, judge_candidates
+from .physics.verify import Verdict, assess, judge_candidates, window_indices
 from .sigproc.cleanup import detect_impacts, differentiate, fill_short_gaps, split_at
 from .sigproc.summary import summarize
 from .sigproc.trajectory import Trajectory, from_pixels
@@ -209,6 +209,7 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
 
     tried: list[str] = []
     family = hyp.family
+    full_clip_verdict: dict[str, Any] | None = None  # set when the agent's fit window was used
     candidate_ids, rationales = _candidates(hyp)
     verdict: Verdict | None = None
     coords: Coordinates | None = None
@@ -221,11 +222,28 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         if rotation is None:
             traj, origin_px = (longest_flight(full, full_origin, calibration.px_per_m) if family == "projectile"
                                else (full, full_origin))
+        unwindowed = traj
+        if rotation is None and hyp.fit_window is not None and family == hyp.family and len(tried) == 1:
+            w = hyp.fit_window
+            span = window_indices(traj.t, w.start_s, w.end_s)
+            if isinstance(span, str):
+                trail.append({"step": "plausibility", "provider": None, "model": "simulate-and-compare", "status": "rejected",
+                              "text": f"Refused the agent's fit window ({w.start_s:.2f} to {w.end_s:.2f} s): {span}. Fitting the whole clip."})
+            else:
+                traj = traj.slice(*span)
+                trail.append({"step": "plausibility", "provider": None, "model": "simulate-and-compare", "status": "accepted",
+                              "text": f"Fits {w.start_s:.2f} to {w.end_s:.2f} s as the agent proposed ({w.reason}); the "
+                                      "whole clip is fitted too and its verdict kept beside this one."})
         progress(f"Fitting and simulating {len(candidate_ids)} {family} models")
         given = known_length_geometry(moving, origin_px, calibration, options) if family == "pendulum" else None
         coords, verdict = fit_and_verify(traj, family, candidate_ids,
                                          rotation if family == "rotation" else
                                          to_coordinates(traj, "pendulum", given) if given else None)
+        if unwindowed is not traj:
+            _, whole = fit_and_verify(unwindowed, family, candidate_ids,
+                                      to_coordinates(unwindowed, "pendulum", given) if given else None)
+            full_clip_verdict = {"status": whole.status, "reason": whole.reason,
+                                 "winner": whole.winner.model_id if whole.winner else None}
         judged = judge_candidates(verdict)
         trail.append({"step": "verification", "provider": None, "model": "simulate-and-compare", "text": verdict.reason,
                       "status": verdict.status,
@@ -294,6 +312,7 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         # For a spin the ghost is a small marker on the rim, not the whole object.
         "object_size_px": float(np.median(moving.long_px)) * (0.25 if rotation is not None else 1.0),
         "llm_calls": llm_calls,
+        "full_clip_verdict": full_clip_verdict,
         "trail": trail,
         "summary": summary,
     }

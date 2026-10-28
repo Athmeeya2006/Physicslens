@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+import numpy as np
+
 from .coords import Coordinates, length_is_reliable
 from .fit import FitResult
 from .models import MODELS
@@ -104,3 +106,19 @@ def judge_candidates(v: Verdict) -> dict[str, tuple[str, str]]:
         else:
             out[f.model_id] = ("rejected", "does not explain the motion")
     return out
+
+
+# The agent may leave out a throw or a catch, but never most of the clip: that would let it pick the part that fits.
+MIN_WINDOW_FRACTION = 0.7
+
+
+def window_indices(t: np.ndarray, start_s: float, end_s: float) -> tuple[int, int] | str:
+    """Sample range for an agent's fit window, or the reason it is refused."""
+    duration = float(t[-1] - t[0])
+    start, end = max(start_s, 0.0) + t[0], min(end_s, duration) + t[0]
+    if end <= start:
+        return "it ends before it starts"
+    if (end - start) < MIN_WINDOW_FRACTION * duration:
+        return f"it keeps {(end - start) / duration:.0%} of the clip, below the {MIN_WINDOW_FRACTION:.0%} minimum"
+    i, j = int(np.searchsorted(t, start)), int(np.searchsorted(t, end, side="right"))
+    return (i, j) if j - i >= 30 else "it leaves too few samples to fit"
