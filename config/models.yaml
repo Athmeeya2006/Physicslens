@@ -1,5 +1,7 @@
 # Model allowlist. costguard/client.py refuses any model ID not listed here.
-# NEVER add: muse-wonder-1.0, muse-image-1.0 (too expensive / not needed).
+# NEVER add: muse-image-1.0 (not needed).
+# muse-wonder-1.0 is approved by the human for one use only: writing controller code that simulation then tests.
+# It needs its own daily cap in config/budget.yaml (model_daily_caps_usd) and is never offered to public visitors.
 
 meta_api:
   base_url: https://api.meta.ai/v1
@@ -18,6 +20,12 @@ meta_api:
     muse-voice-transcribe-1.0:
       use: voice what-if questions
       api: websocket wss://api.meta.ai/v1/asr/realtime
+    muse-wonder-1.0:
+      use: writes controller code for an identified system; only MuJoCo simulation decides whether it is used
+      api: responses
+      audiences: [dev, judge]       # costguard refuses it for public visitors
+      requires_model_daily_cap: true
+      note: preview model; no contributor mode
 
 # Muse Glimmer: open weights, self-hosted with llama.cpp (llama-server, OpenAI Chat Completions).
 # Weights: meta-models/Muse-Glimmer-30B-GGUF, Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf + mmproj (vision).

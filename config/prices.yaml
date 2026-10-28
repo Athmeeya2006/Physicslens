@@ -15,6 +15,10 @@ meta_api:
     video_frame: 0.0002   # $0.20 per 1,000 frames; minimum 50 frames billed per video request
   muse-voice-transcribe-1.0:
     audio_hour: 0.18      # billed in whole seconds
+  muse-wonder-1.0:        # Standard mode (Meta's Pricing and rate limits page, Oct 28 2026); no contributor mode
+    input: 4.00
+    cached_input: 0.20
+    output: 20.00         # reasoning tokens are billed as output
 
 glimmer:
   muse-glimmer-30b:       # self-hosted on our own GPU server: no per-token charge

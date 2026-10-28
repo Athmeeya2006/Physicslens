@@ -25,6 +25,9 @@ class Allowlist:
                 f"Model {model!r} is not in config/models.yaml; refusing the call."
             ) from None
 
+    def model_cfg(self, model: str) -> dict[str, Any]:
+        return (self._provider_cfg[self.provider_for(model)].get("models") or {}).get(model) or {}
+
     def models(self, provider: str) -> list[str]:
         return [m for m, p in self._provider_of.items() if p == provider]
 

@@ -151,6 +151,7 @@ class CostGuardClient:
         self.sam_timeout = float(timeouts.get("sam_clip", 120))
         self.glimmer_timeout = float(timeouts.get("glimmer", 900))
         self.together_timeout = float(timeouts.get("together", 300))
+        self.wonder_timeout = float(timeouts.get("wonder", 180))
         retries = self.limits.get("retries") or {}
         self._backoff_start = float(retries.get("backoff_start_ms", 500)) / 1000
         self._llm_policy = _RetryPolicy(int(retries.get("on_429_max", 3)), int(retries.get("on_transient_5xx_max", 2)))
@@ -176,6 +177,9 @@ class CostGuardClient:
         if model == META_CONTRIBUTOR_MODEL and self.settings.app_env != "dev":
             raise ModelNotAllowed(f"{model} is only allowed in APP_ENV=dev.")
         self.pricing.entry(provider, model)
+        if self.allowlist.model_cfg(model).get("requires_model_daily_cap") and \
+                model not in (self.guard.budget.get("model_daily_caps_usd") or {}):
+            raise ModelNotAllowed(f"{model} needs its own daily cap (model_daily_caps_usd in config/budget.yaml); refusing the call.")
         return provider
 
     def _sdk(self, provider: str, timeout: float) -> Any:
@@ -205,6 +209,9 @@ class CostGuardClient:
     ) -> CallResult:
         self.check_kill_switch()
         self._check_model(model, provider)
+        audiences = self.allowlist.model_cfg(model).get("audiences")
+        if audiences is not None and audience not in audiences:
+            raise ModelNotAllowed(f"{model} is not available to {audience} requests.")
         res = self.guard.check_and_reserve(provider, model, est_cost, run_id, audience, run_cap_usd)
         try:
             self.limiter.acquire(model, timeout=self.llm_timeout)
@@ -312,8 +319,10 @@ class CostGuardClient:
         preflight_tokens: bool = False,
         use_cache: bool = True,
         run_cap_usd: float | None = None,
+        timeout: float | None = None,
     ) -> CallResult:
         model = model or self.settings.meta_text_model()
+        timeout = timeout or self.llm_timeout
         if effort not in META_EFFORTS:
             raise InvalidRequest(f"Meta reasoning effort must be one of {META_EFFORTS}, got {effort!r}.")
         max_out = max_output_tokens or self.meta_max_output_default
@@ -337,8 +346,8 @@ class CostGuardClient:
 
         def request() -> tuple[Any, Any]:
             # Created on first real request: a cache hit (or a cache-only machine) needs no key.
-            sdk = self._sdk(provider, self.llm_timeout)
-            raw = sdk.responses.with_raw_response.create(**body, timeout=self.llm_timeout)
+            sdk = self._sdk(provider, timeout)
+            raw = sdk.responses.with_raw_response.create(**body, timeout=timeout)
             return raw.parse(), raw.headers
 
         return self._execute(

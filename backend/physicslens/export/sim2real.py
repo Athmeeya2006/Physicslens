@@ -321,7 +321,8 @@ def control_study(fit_state: dict[str, Any], plants: list[dict[str, float]], cal
     }
 
 
-def bootstrap_plants(spec: ModelSpec, c: Coordinates, fit_state: dict[str, Any], reps: int) -> list[dict[str, float]]:
+def bootstrap_plants(spec: ModelSpec, c: Coordinates, fit_state: dict[str, Any], reps: int,
+                     seed: int = 0) -> list[dict[str, float]]:
     """Pendulums drawn from the bootstrap refits of the accepted model, the same spread its intervals come from."""
     y0 = np.array(fit_state["y0"], dtype=float)
     sim = simulate(spec, fit_state["params"], y0, c.t, c.ctx)
@@ -329,7 +330,7 @@ def bootstrap_plants(spec: ModelSpec, c: Coordinates, fit_state: dict[str, Any],
         raise Sim2RealError("The accepted model could not be re-simulated.")
     fit = FitResult(spec.id, dict(fit_state["params"]), y0, sim.size, len(spec.params) + len(y0), 0.0, 0.0, 0.0, 0.0,
                     0.0, 0.0, success=True, sim=sim)
-    samples, lengths = bootstrap_samples(spec, c, fit, reps=reps)
+    samples, lengths = bootstrap_samples(spec, c, fit, reps=reps, seed=seed)
     plants = []
     for row, length in zip(samples, lengths, strict=True):
         p = dict(zip(spec.param_names, (float(v) for v in row), strict=True))

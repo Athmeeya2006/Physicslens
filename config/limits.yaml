@@ -5,6 +5,7 @@ requests_per_minute:
   sam-3.1: 60
   muse-glimmer-30b: 10
   meta-models/Muse-Glimmer-30B: 20
+  muse-wonder-1.0: 6
 voice_max_concurrent_streams: 2
 llm_min_seconds_between_calls_live_mode: 5
 
@@ -19,6 +20,7 @@ timeouts_seconds:
   llm: 60
   sam_clip: 120
   together: 300         # hosted, about 100 output tokens per second
+  wonder: 180          # writing a controller takes longer than a short JSON answer
   glimmer: 900          # a 30B model on two T4s decodes slowly; still bounded
 
 circuit_breaker:
@@ -45,3 +47,15 @@ media:
   sam_fps_live: 25
   sam_min_frames_per_request: 50
   files_api_expires_seconds: 86400
+
+# Controllers written by Muse Wonder and tested in MuJoCo.
+control:
+  max_attempts: 3                 # per task; after that the honest "no controller met the goal"
+  success_fraction: 0.90          # of the robustness set (nominal plus bootstrap samples), nominal included
+  bootstrap_samples: 50
+  sample_seed: 7
+  wonder_effort: low              # never high/xhigh/max
+  wonder_max_output_tokens: 8000  # reasoning plus the code
+  sandbox_cpu_seconds: 25         # per evaluation set, enforced with RLIMIT_CPU in the child process
+  sandbox_wall_seconds: 30
+  sandbox_memory_mb: 1536         # RLIMIT_AS; numpy and MuJoCo need a few hundred MB of address space
