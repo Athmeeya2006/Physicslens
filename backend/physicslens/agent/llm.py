@@ -42,9 +42,17 @@ def fallback_allowed(client: CostGuardClient) -> bool:
     return client.settings.app_env == "dev"
 
 
+def glimmer_provider() -> str | None:
+    """"glimmer" (our own llama-server) or "together" (the same open weights, hosted), else None.
+
+    Chosen explicitly by the machine serving the app, never inferred, so a run's provider is never a surprise.
+    """
+    p = os.environ.get("REASONING_PROVIDER", "").strip().lower()
+    return p if p in ("glimmer", "together") else None
+
+
 def glimmer_selected() -> bool:
-    # Chosen explicitly by the machine serving Glimmer, never inferred, so a run's provider is never a surprise.
-    return os.environ.get("REASONING_PROVIDER", "").strip().lower() == "glimmer"
+    return glimmer_provider() is not None
 
 
 @dataclass(frozen=True)
@@ -155,10 +163,10 @@ def _call(client: CostGuardClient, *, task: str, system: str, text: str, schema_
             r = client.glimmer_chat(messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": content}],
                                     run_id=run_id, audience=audience, max_tokens=max(client.glimmer_max_tokens_default,
                                                                                      max_output_tokens * 4),
-                                    run_cap_usd=run_cap_usd)
+                                    run_cap_usd=run_cap_usd, provider=glimmer_provider() or "glimmer")
         except (ProviderCallFailed, CircuitOpen) as e:
             raise OpenWeightUnavailable(f"Muse Glimmer failed for {task}: {e}") from e
-        return r.text, LLMCall("glimmer", r.model, r.reasoning, r.cost_usd, r.cached)
+        return r.text, LLMCall(glimmer_provider() or "glimmer", r.model, r.reasoning, r.cost_usd, r.cached)
     if not fallback_allowed(client):
         raise OpenWeightUnavailable("The open-weight model is not configured (REASONING_PROVIDER=glimmer and GLIMMER_BASE_URL).")
     meta_content = [{"type": "input_text", "text": text}] + [{"type": "input_image", "image_url": image_b64(j)} for j in images]

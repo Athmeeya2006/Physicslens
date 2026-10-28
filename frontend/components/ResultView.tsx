@@ -294,6 +294,9 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
               <div className="sindy">{Object.entries(r.sindy).map(([lhs, rhs]) => <code key={lhs}>{lhs} = {rhs}</code>)}</div>
             </li>
           )}
+          {!r.sindy && r.sindy_check && !r.sindy_check.shown && r.sindy_check.reason !== "no verified law to compare with" && (
+            <li>Model-free regression (PySINDy) disagreed with the verified model, so it is hidden: {r.sindy_check.reason}.</li>
+          )}
           <li>Model calls: {r.llm_calls.map((c) => `${c.step}: ${c.model}${c.cached ? " (cached)" : ""}`).join(", ")}; tracking: sam-3.1</li>
         </ul>
       </details>

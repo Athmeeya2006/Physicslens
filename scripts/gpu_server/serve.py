@@ -1,3 +1,6 @@
+# ruff: noqa: SIM115, PLW1510, BLE001, S110
+# A long-running setup script: log files stay open for the lifetime of the servers they capture, probes may fail
+# while a server starts, and an unavailable secrets service just means "no secret".
 # PhysicsLens judging server: Muse Glimmer (open weights) and the PhysicsLens backend on this machine's GPUs,
 # reachable from the public site through a Cloudflare quick tunnel.
 #
@@ -7,7 +10,15 @@
 # - The backend runs with APP_ENV=demo: reasoning only on the open-weight model, judges need the access code,
 #   public visitors get the gallery only. Spending is capped per session by the budget below.
 # - scripts/judging_session.py pushes this script, reads the tunnel address from its log and points the site at it.
-import glob, os, re, secrets, shutil, subprocess, sys, time, urllib.request
+import glob
+import os
+import re
+import secrets
+import shutil
+import subprocess
+import sys
+import time
+import urllib.request
 
 SERVE_HOURS = 6.0  # replaced by judging_session.py; the session ends itself to save GPU quota
 SESSION_BUDGET = {  # costguard caps for this session (the ledger lives as long as the session)
@@ -70,7 +81,7 @@ libdirs = subprocess.run("find /tmp/llama -name '*.so*' -printf '%h\n' | sort -u
 llama_env = dict(os.environ, LD_LIBRARY_PATH=":".join(libdirs + [os.environ.get("LD_LIBRARY_PATH", "")]))
 sh("pip install -q -U huggingface_hub hf_transfer")
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
-from huggingface_hub import hf_hub_download  # noqa: E402
+from huggingface_hub import hf_hub_download
 
 REPO = "meta-models/Muse-Glimmer-30B-GGUF"
 weights = {f: hf_hub_download(REPO, f, local_dir="/tmp/glimmer") for f in (
@@ -104,7 +115,7 @@ except subprocess.CalledProcessError:
     sh("pip install -q " + " ".join(f"'{r.split('==')[0]}'" for r in req))
 if shutil.which("ffmpeg") is None:
     sh("apt-get -qq update && apt-get -qq install -y ffmpeg > /dev/null")
-import yaml  # noqa: E402
+import yaml
 
 with open(f"{src}/config/budget.yaml", "w") as f:
     yaml.safe_dump(SESSION_BUDGET, f)

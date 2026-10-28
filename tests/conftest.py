@@ -12,6 +12,7 @@ REPO_CONFIG = Path(__file__).resolve().parents[1] / "config"
 TEST_BUDGET = {
     "meta_api": {"hard_cap_usd": 1.00, "daily_cap_usd": 0.50},
     "glimmer": {"hard_cap_usd": 0.00, "daily_cap_usd": 0.00},
+    "together": {"hard_cap_usd": 0.50, "daily_cap_usd": 0.20},
     "per_run_cap_usd": 0.20,
     "smoke_cap_usd": 0.10,
     "judge_daily_cap_usd": 0.30,

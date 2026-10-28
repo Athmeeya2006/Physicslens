@@ -32,6 +32,19 @@ def test_glimmer_used_when_selected(settings, glimmer_env):
     assert h.sdk("meta_api").calls == []
 
 
+def test_hosted_glimmer_is_priced_and_labeled_open_weight(settings, monkeypatch):
+    monkeypatch.setenv("REASONING_PROVIDER", "together")
+    monkeypatch.setenv("TOGETHER_API_KEY", "test-not-a-real-key")
+    h = Harness(settings)
+    h.sdk("together").script.append(chat_result(text=json.dumps(SCENE)))
+    _, call = ask_json(h.client, task="scene", system="s", text="t", schema_model=Scene, run_id="r")
+    assert call.provider == "together" and call.model == "meta-models/Muse-Glimmer-30B"
+    assert call.cost_usd > 0  # a paid provider goes through the ledger like any other
+    sent = h.sdk("together").calls[0]
+    assert sent["model"] == "meta-models/Muse-Glimmer-30B" and "temperature" not in sent
+    assert h.sdk("meta_api").calls == [] and h.sdk("glimmer").calls == []
+
+
 def test_glimmer_failure_never_falls_back_even_in_dev(settings, glimmer_env):
     h = Harness(settings)
     assert settings.app_env == "dev"

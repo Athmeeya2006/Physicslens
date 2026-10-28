@@ -98,6 +98,7 @@ export interface AnalysisResult {
   object_size_px?: number;
   ghosts?: { model_id: string; points: TrackPoint[] }[];
   sindy?: Record<string, string> | null;
+  sindy_check?: { shown: boolean; reason: string; heldout_nrmse: number | null };
   equation?: { model_id: string; title: string; latex: string };
   parameters?: Parameter[];
   llm_calls: { step: string; provider: string; model: string; cached: boolean }[];
@@ -253,9 +254,9 @@ export function startRun(file: File, inputs: RunInputs, turnstileToken: string |
   return fetch(`${API_BASE}/api/runs`, { method: "POST", body: form, headers: codeHeaders() }).then((r) => json<RunView>(r));
 }
 
-// The open-weight reasoning model: Muse Glimmer, served from our own GPU.
+// The open-weight reasoning model: Muse Glimmer, self-hosted or on a hosted provider serving the same weights.
 export function isOpenWeight(model: string | undefined): boolean {
-  return !!model && model.startsWith("muse-glimmer");
+  return !!model && /muse-glimmer/i.test(model);
 }
 
 // Units as people write them: m/s² rather than m/s^2, s⁻¹ rather than 1/s.

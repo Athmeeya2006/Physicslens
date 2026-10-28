@@ -26,6 +26,7 @@ from ..settings import (
     GLIMMER_MODEL,
     META_CONTRIBUTOR_MODEL,
     SAM_MODEL,
+    TOGETHER_GLIMMER_MODEL,
     VOICE_MODEL,
     Settings,
     load_budget,
@@ -149,6 +150,7 @@ class CostGuardClient:
         self.llm_timeout = float(timeouts.get("llm", 60))
         self.sam_timeout = float(timeouts.get("sam_clip", 120))
         self.glimmer_timeout = float(timeouts.get("glimmer", 900))
+        self.together_timeout = float(timeouts.get("together", 300))
         retries = self.limits.get("retries") or {}
         self._backoff_start = float(retries.get("backoff_start_ms", 500)) / 1000
         self._llm_policy = _RetryPolicy(int(retries.get("on_429_max", 3)), int(retries.get("on_transient_5xx_max", 2)))
@@ -365,23 +367,29 @@ class CostGuardClient:
         audience: str = "dev",
         use_cache: bool = True,
         run_cap_usd: float | None = None,
+        provider: str = "glimmer",
     ) -> CallResult:
+        """provider "glimmer" is our own llama-server; "together" is the same open weights on Together AI."""
         if strength not in GLIMMER_STRENGTHS:
             raise InvalidRequest(f"Glimmer reasoning strength must be one of {GLIMMER_STRENGTHS}, got {strength!r}.")
-        provider, model = "glimmer", GLIMMER_MODEL
+        if provider not in ("glimmer", "together"):
+            raise InvalidRequest(f"Unknown Glimmer provider {provider!r}.")
+        model = GLIMMER_MODEL if provider == "glimmer" else TOGETHER_GLIMMER_MODEL
+        timeout = self.glimmer_timeout if provider == "glimmer" else self.together_timeout
         self.check_kill_switch()
         self._check_model(model, provider)
         max_tok = max_tokens or self.glimmer_max_tokens_default
         # Sampling stays at the model's defaults (temperature 1.0); temperature 0 makes it loop.
-        body = {"model": model, "messages": messages, "max_tokens": max_tok,
-                "chat_template_kwargs": {"reasoning_strength": strength}}
+        # TODO(verify): whether Together passes chat_template_kwargs through to the template; until a test call
+        # shows it does, it is sent only to our own llama-server, and Together runs at its default strength.
+        extra = {"chat_template_kwargs": {"reasoning_strength": strength}} if provider == "glimmer" else {}
+        body = {"model": model, "messages": messages, "max_tokens": max_tok, **extra}
         est_cost = self.pricing.worst_case_tokens(provider, model, _estimate_input_tokens(messages), max_tok)
 
         def request() -> tuple[Any, Any]:
-            sdk = self._sdk(provider, self.glimmer_timeout)
+            sdk = self._sdk(provider, timeout)
             raw = sdk.chat.completions.with_raw_response.create(
-                model=model, messages=messages, max_tokens=max_tok, timeout=self.glimmer_timeout,
-                extra_body={"chat_template_kwargs": body["chat_template_kwargs"]})
+                model=model, messages=messages, max_tokens=max_tok, timeout=timeout, extra_body=extra or None)
             return raw.parse(), raw.headers
 
         return self._execute(

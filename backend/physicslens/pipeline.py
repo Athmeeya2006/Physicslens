@@ -48,7 +48,7 @@ from .physics.fit import FitResult, fit_model
 from .physics.models import MODELS, models_for, needs_scale
 from .physics.regime import RegimeChange, detect_change
 from .physics.rotation import RotationError, rotation_coordinates
-from .physics.sindy import discover
+from .physics.sindy import vet
 from .physics.uncertainty import bootstrap
 from .physics.verify import Verdict, assess, judge_candidates
 from .sigproc.cleanup import detect_impacts, differentiate, fill_short_gaps, split_at
@@ -293,7 +293,9 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     }
     if coords is not None:
         try:
-            result["sindy"] = discover(coords).equations
+            vetted = vet(coords, verdict.winner if verdict.status == "accepted" else None)
+            result["sindy"] = vetted["equations"] if vetted["shown"] else None
+            result["sindy_check"] = vetted
         except (ValueError, np.linalg.LinAlgError) as e:  # supporting evidence only; must not sink the result
             log.warning("SINDy failed: %s", e)
             result["sindy"] = None

@@ -1,7 +1,18 @@
+# ruff: noqa: SIM115, PLW1510, BLE001
+# A long-running setup script: log files stay open for the lifetime of the servers they capture, probes may fail
+# while a server starts, and an unavailable secrets service just means "no secret".
 # PhysicsLens on open weights: every reasoning step on Muse Glimmer 30B (Q4_K_M + vision) served by llama.cpp
 # on this machine's GPUs. Tracking results (SAM 3.1) arrive as cached responses; this machine has no Meta key
 # and the Meta provider is cache-only, so nothing here can call or bill a paid API.
-import glob, os, secrets, shutil, subprocess, sys, tarfile, time, urllib.request
+import glob
+import os
+import secrets
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
+import urllib.request
 
 T0 = time.time()
 def sh(cmd):
@@ -36,6 +47,7 @@ llama_env = dict(os.environ, LD_LIBRARY_PATH=":".join(libdirs + [os.environ.get(
 sh("pip install -q -U huggingface_hub hf_transfer")
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 from huggingface_hub import hf_hub_download
+
 REPO = "meta-models/Muse-Glimmer-30B-GGUF"
 model = hf_hub_download(REPO, "Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf", local_dir="/tmp/glimmer")
 mmproj = hf_hub_download(REPO, "mmproj-Muse-Glimmer-30B-Q4_K_M.gguf", local_dir="/tmp/glimmer")

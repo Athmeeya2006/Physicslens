@@ -20,3 +20,9 @@ glimmer:
   muse-glimmer-30b:       # self-hosted on our own GPU server: no per-token charge
     input: 0.0
     output: 0.0
+
+together:
+  meta-models/Muse-Glimmer-30B:   # from Together's model page as quoted in Meta's Glimmer deploy guide, Oct 28 2026
+    input: 0.35
+    cached_input: 0.04
+    output: 1.50

@@ -29,3 +29,13 @@ glimmer:
       use: open-weight reasoning (scene understanding, hypotheses, agent decisions, explanations)
       api: chat_completions
       note: reasoning cannot be switched off; strength low|medium|high|xhigh via chat_template_kwargs
+
+# The same open weights on a hosted provider listed in Meta's Glimmer deploy guide (OpenAI Chat Completions).
+together:
+  base_url: https://api.together.xyz/v1
+  api_key_env: TOGETHER_API_KEY
+  models:
+    meta-models/Muse-Glimmer-30B:
+      use: open-weight reasoning, hosted (same roles as muse-glimmer-30b)
+      api: chat_completions
+      note: Together caps generation at 32,768 output tokens per request

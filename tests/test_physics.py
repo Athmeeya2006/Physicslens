@@ -5,7 +5,7 @@ import pytest
 from physicslens.physics.coords import length_is_reliable, to_coordinates
 from physicslens.physics.fit import fit_model
 from physicslens.physics.models import MODELS, models_for
-from physicslens.physics.sindy import discover
+from physicslens.physics.sindy import discover, vet
 from physicslens.physics.uncertainty import bootstrap
 from physicslens.physics.verify import assess, judge_candidates
 from physicslens.sigproc.trajectory import Trajectory
@@ -57,6 +57,27 @@ def test_sindy_finds_pendulum_structure(damped_pendulum):
     c, _ = damped_pendulum
     terms = discover(c).terms["theta''"]
     assert terms["sin(theta)"] == pytest.approx(-G / c.ctx["length_m"], rel=0.05)
+
+
+def test_sindy_is_shown_when_it_forecasts_like_the_verified_law(damped_pendulum):
+    c, v = damped_pendulum
+    out = vet(c, v.winner)
+    assert out["shown"], out["reason"]
+
+
+def test_sindy_is_hidden_when_its_forecast_is_far_worse():
+    rng = np.random.default_rng(3)
+    xy = pendulum_xy(0.9, 0.08, 10)
+    c, v = run(Trajectory(np.arange(len(xy)) / FPS, xy + rng.normal(0, 0.02, xy.shape), np.arange(len(xy)), FPS),
+               "pendulum")
+    out = vet(c, v.winner)
+    # Noisy derivatives push the sparse fit off the law; it stays in the JSON but is not shown.
+    assert out["equations"] and not out["shown"] and out["reason"]
+
+
+def test_sindy_is_hidden_without_a_verified_law(damped_pendulum):
+    c, _ = damped_pendulum
+    assert vet(c, None)["shown"] is False
 
 
 def test_undamped_pendulum_prefers_simplest_model():
