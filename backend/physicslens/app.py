@@ -112,6 +112,9 @@ def budget() -> dict[str, object]:
 
 
 @app.post("/api/runs")
+# An audit is a normal run: every result carries result["audit"] (local math, no extra model calls), so the audit
+# endpoint shares the upload handling, access rules and limits of /api/runs exactly.
+@app.post("/api/audit")
 def create_run(
     request: Request,
     video: Annotated[UploadFile, File()],

@@ -126,6 +126,29 @@ export interface AnalysisResult {
     mujoco_contact?: { dampratio: number; timeconst: number; e_mujoco: number; radius_m: number };
     impacts: { t: number; e: number; e_std: number; tangential: number }[];
   };
+  audit?: PhysicsAudit;
+}
+
+// The physics audit: each check measured on the track, with its size and its distance from what physics allows.
+export interface AuditCheck {
+  check: "gravity" | "energy" | "period" | "law" | "kinematics";
+  title: string;
+  status: "pass" | "violation" | "skipped";
+  text: string;
+  value: number | null;
+  std: number | null;
+  expected: number | null;
+  unit: string;
+  z: number | null;
+}
+
+export interface PhysicsAudit {
+  verdict: "consistent" | "violates_physics" | "cant_judge";
+  headline: string;
+  reasons: string[];
+  checks: AuditCheck[];
+  violations: AuditCheck[];
+  thresholds?: Record<string, number>;
 }
 
 export interface RunView {
@@ -241,7 +264,8 @@ export interface RunInputs {
   objectHint: string | null;
 }
 
-export function startRun(file: File, inputs: RunInputs, turnstileToken: string | null): Promise<RunView> {
+// path: "/api/audit" runs the same analysis as an audit (every result carries its physics audit).
+export function startRun(file: File, inputs: RunInputs, turnstileToken: string | null, path = "/api/runs"): Promise<RunView> {
   const { pendulumLengthM, objectSizeM, slowMotion, objectHint } = inputs;
   const form = new FormData();
   form.append("video", file);
@@ -250,7 +274,7 @@ export function startRun(file: File, inputs: RunInputs, turnstileToken: string |
   if (objectSizeM) form.append("object_size_m", String(objectSizeM));
   if (slowMotion && slowMotion > 1) form.append("slow_motion", String(slowMotion));
   if (turnstileToken) form.append("turnstile_token", turnstileToken);
-  return fetch(`${API_BASE}/api/runs`, { method: "POST", body: form, headers: codeHeaders() }).then((r) => json<RunView>(r));
+  return fetch(`${API_BASE}${path}`, { method: "POST", body: form, headers: codeHeaders() }).then((r) => json<RunView>(r));
 }
 
 // The open-weight reasoning model: Muse Glimmer, served from our own GPU.

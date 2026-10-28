@@ -31,6 +31,8 @@ from .perception.calibration import (
 )
 from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
 from .perception.track_quality import assess_track, overlay_frames
+from .physics.audit import AuditInput, LawEvidence, audit
+from .physics.audit import cant_judge as audit_cant_judge
 from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
 from .physics.custom import FREE_MODELS, FreeParam, build, register, spec_for
@@ -199,6 +201,8 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
             "ranking": [], "real_track_px": dbl.pop("inner_track_px"), "object_size_px": float(np.median(moving.long_px)),
             "llm_calls": llm_calls, "trail": trail, "summary": summary, "ghosts": ghosts, "double": dbl,
             **({"scale_note": SCALE_NOTE} if calibration.source == "none" else {}),
+            "audit": audit_cant_judge("the physics audit doesn't cover double pendulums yet: chaos amplifies tracking "
+                                      "noise, so slow drifts can't be told apart from it."),
         }
 
     tried: list[str] = []
@@ -354,8 +358,44 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         result["scale_note"] = SCALE_NOTE
         for p in result.get("parameters", []):
             p["uncalibrated"] = needs_scale(p["unit"])
+    progress("Auditing the motion for physics violations")
+    result["audit"] = audit_clip(full, family, calibration, verdict, moving, tracks.get(REFERENCE_ID), info, change, result, video)
     progress("Done")
     return result
+
+
+def audit_clip(full: Trajectory, family: str, calibration: Calibration, verdict: Verdict, moving: ObjectTrack,
+               reference: ObjectTrack | None, info: media.VideoInfo, change: RegimeChange | None,
+               result: dict[str, Any], video: Path) -> dict[str, Any]:
+    """The physics audit on the whole track, with what the rest of the analysis found. Local math only."""
+    real_scale = calibration.source not in ("none", "gravity")
+    g = next((p for p in result.get("parameters", []) if p["name"] == "g"), None) if real_scale else None
+    b = result.get("bounces") if real_scale else None
+    if g is None and b and b.get("accepted"):
+        g = {"value": b["g"], "std": b["g_std"]}
+    best = verdict.winner or (verdict.ranked[0] if verdict.ranked else None)
+    law = LawEvidence(verdict.status, best.model_id if best else None, best.heldout_nrmse if best else None,
+                      best.heldout_rmse / best.noise_sigma if best and best.noise_sigma > 0 else None,
+                      g["value"] if g else None, g["std"] if g else None)
+    # Mask size per sample of the track (its fitted rectangle), interpolated over the short gaps the track fills.
+    areas = np.interp(full.frames, moving.frames, moving.long_px * moving.short_px)
+    try:
+        varies = media.frame_rate_varies(video) if video.is_file() else None
+    except media.MediaError as e:
+        log.warning("Frame-rate check skipped: %s", e)
+        varies = None
+    try:
+        return audit(AuditInput(
+            traj=full, family=family, calibration_source=calibration.source,
+            px_per_m=NOMINAL_PX_PER_M if calibration.source == "gravity" else calibration.px_per_m,
+            scale_rel_std=calibration.rel_std, law=law, object_size_px=float(np.median(moving.long_px)), areas_px=areas,
+            confidence=moving.confidence, coverage=len(moving.frames) / max(info.frames, 1), frame_rate_varies=varies,
+            reference_px=reference.centers_px if reference is not None else None,
+            reference_size_px=float(np.median(reference.long_px)) if reference is not None else None,
+            regime_change_s=change.t_estimate if change is not None else None))
+    except (ValueError, np.linalg.LinAlgError) as e:  # the audit is a second opinion; it must not sink the result
+        log.warning("Physics audit failed: %s", e)
+        return audit_cant_judge(f"the audit's own measurement failed on this track ({e}).")
 
 
 def prepare(video: Path, run_dir: Path, options: RunOptions, media_cfg: dict[str, Any], start_s: float = 0.0,

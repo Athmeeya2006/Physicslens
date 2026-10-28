@@ -65,6 +65,24 @@ When nothing fits, it says so: *"no clean governing equation found."* It never i
 
 Changes during a clip (say, the string is shortened mid-recording) are detected; each regime is fitted separately, and live mode refits on the new motion.
 
+### Physics audit
+
+Every analysis also asks a sharper question: does this motion break a law that every real object obeys? That makes PhysicsLens a lie detector for AI-generated video and for world models: upload a clip on the **Physics audit** page (or `POST /api/audit`, the same upload as `POST /api/runs`; every result carries `result["audit"]`). The audit is local math on the tracked motion, with no extra model calls, and it reports one of three verdicts:
+
+- **violates physics**, listing each violation with its size and significance, for example "g = 14.2 ± 0.6 m/s² (scale from the A4 sheet in view), against 9.81 m/s²" or a bounce that gains 21% energy (e = 1.10);
+- **consistent**, when at least one dynamics check applies and none is violated;
+- **can't judge**, the default whenever a precondition fails: under 1.5 s of motion, the object tracked in under 70% of frames, low tracker confidence, a variable frame rate, a camera that moves (the scale reference drifts), or motion too small against the tracking noise.
+
+| Check | What counts as a violation |
+|---|---|
+| Gravity | with a real scale, g more than 25% from 9.81 m/s²; with none, one flight's g more than 25% from the others', or gravity pointing more than 10° differently |
+| Energy | a bounce returning more than 110% of its speed (e > 1.1); a free flight gaining more than 15% of its energy; a passive swing growing more than 20% over the clip |
+| Period drift | an oscillator's frequency drifting more than 4% over the clip, after correcting a pendulum for its amplitude, unless a regime change explains it |
+| Law | the object moves like a pendulum, spring or projectile, yet no law (the agent's own included) forecasts its held-out motion within 50% |
+| Kinematics | a one-frame position break larger than 5% of the motion and half the object's size (teleporting), or the mask's size stepping by 1.5 times (morphing) |
+
+Each violation also needs at least 5 standard errors (8 for the frame-to-frame checks, which test every frame against a heavy-tailed noise level). Both bars are deliberate: false accusations are worse than misses, and the practical sizes sit above real-world effects the noise model doesn't know about, such as a reference sheet 10 to 20 cm out of the plane of motion (10 to 20% in g). A one- or two-frame tracker glitch that comes straight back is not counted as a teleport.
+
 ## How it works
 
 ```mermaid
@@ -129,6 +147,7 @@ SAM 3.1 is used as a **scientific measurement instrument**: its masks become pos
 - spin-down: all four friction laws identified, coefficients within 3%, orientation from masks to 0.004 rad
 - free-form laws: an air-drag law written as text recovers its coefficient within 5%; a 2D drag law recovers g within 3%; a wrong law loses to the controls
 - machine health: no false alarm when the same system is re-recorded; a 50% rise in damping and a 2% frequency shift are flagged
+- physics audit: g = 14.2 with a real scale, a bounce with e = 1.1, a 15% period drift, a swing growing threefold over 10 s, a 15 cm teleport, a mask that more than doubles in size and a g that changes between flights (no scale) are each caught; of 40 seeded clean clips (bounces, pendulums, springs, 1 to 4 mm noise) none is accused, 39 are judged consistent and 1 can't be judged. **Accuracy on real AI-generated video has not been measured yet**: that needs a licensed set of generated clips, which is still to be decided.
 
 ## Engineering highlights
 
@@ -215,7 +234,7 @@ gallery result, clip, poster and export into `frontend/public/gallery/` (gitigno
 ```
 config/        model allowlist, prices, budget example, rate limits
 backend/       FastAPI app: costguard, perception, sigproc, physics, agent, voice, export, live mode
-frontend/      Next.js web app (works in a mobile browser): analyze, live, machine health
+frontend/      Next.js web app (works in a mobile browser): analyze, live, machine health, physics audit
 gallery/       curated real analyses shown to visitors (clip licenses in gallery/README.md)
 samples/       short public test clips
 scripts/       smoke-clip generator, gallery promotion
@@ -251,6 +270,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Double pendulum: two tracked bobs, short-horizon fitting, chaos measured
 - [x] Spin-down of rotating objects: friction law identified, exported to MuJoCo with native dry friction
 - [x] Public access: free gallery of real analyses, judge access code, per-visitor limits, optional bot check
+- [x] Physics audit, a lie detector for AI-generated video and world models: gravity, energy, period drift, a forecasting law and frame-to-frame continuity, each violation reported with its size and significance, and "can't judge" when the clip can't support a verdict
 
 ## Limitations
 
