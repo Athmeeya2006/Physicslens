@@ -1,6 +1,6 @@
 """Bundle the gallery into the frontend as static files, so the site works without the backend.
 
-Writes frontend/public/gallery/<id>/ (result, clip, share video, poster and the three exports) plus
+Writes frontend/public/gallery/<id>/ (result, clip, share video, poster, the three exports and the sim-to-real comparison) plus
 frontend/public/gallery/index.json. Run before building the static site.
 """
 
@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 from physicslens.export.mjcf import bounce_mjcf, build_mjcf
 from physicslens.export.report import report_markdown
 from physicslens.export.script import parameters_json, python_script
+from physicslens.export.sim2real import Sim2RealError, sim2real
 
 SRC = ROOT / "gallery"
 DST = ROOT / "frontend" / "public" / "gallery"
@@ -57,6 +58,11 @@ def main() -> None:
             if notes:
                 xml = xml.replace("<worldbody>", "<!-- " + " ".join(notes).replace("--", "-") + " -->\n  <worldbody>", 1)
             (dst / f"physicslens-{gid}.xml").write_text(xml)
+            if result.get("status") == "accepted":
+                try:
+                    (dst / "sim2real.json").write_text(json.dumps(sim2real(result)))
+                except Sim2RealError as e:
+                    print(f"{gid}: no sim-to-real comparison ({e})")
         eq = result.get("equation") or {}
         if meta.get("hidden"):
             continue  # a study's recording: reachable from its study, not listed on its own

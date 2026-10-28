@@ -8,6 +8,7 @@ import { AgentTrail } from "./AgentTrail";
 import { Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
 import { GhostPlayer } from "./GhostPlayer";
+import { SimToReal } from "./SimToReal";
 import { WhatIf } from "./WhatIf";
 
 const STATUS_TEXT: Record<AnalysisResult["status"], string> = {
@@ -120,6 +121,8 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <ForecastChart f={r.forecast} uncalibrated={!!r.scale_note} />
         </div>
       )}
+
+      {r.status === "accepted" && r.fit_state && <SimToReal runId={runId} />}
 
       {r.equation && (
         <div className="panel">

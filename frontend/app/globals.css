@@ -225,6 +225,8 @@ td { padding: 8px 12px 8px 0; vertical-align: top; border-top: 1px solid var(--s
 .forecast .heldout-label { fill: var(--model); font-size: 11.5px; font-weight: 650; font-family: var(--font); }
 .forecast .measured { fill: #56616d; }
 .forecast .model-line { fill: none; stroke: var(--model); stroke-width: 2; }
+.forecast .textbook-line { fill: none; stroke: var(--tie); stroke-width: 2; stroke-dasharray: 6 4; }
+.sim-label { background: var(--tie-soft); color: var(--ink); border-radius: var(--radius); padding: 8px 12px; font-size: 0.88rem; font-weight: 600; }
 .forecast .cursor { stroke: var(--ink-3); stroke-width: 1; }
 .forecast .tip rect { fill: var(--ink); }
 .forecast .tip text { fill: var(--surface-2); font-size: 11.5px; font-family: var(--font); }
