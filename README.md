@@ -29,20 +29,20 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 11. [Live mode](#live-mode)
 12. [Machine health](#machine-health)
 13. [Sound as a second sensor](#sound-as-a-second-sensor)
-13. [Exports](#exports)
-14. [Sim-to-real gap, made visible](#sim-to-real-gap-made-visible)
-14. [Validation](#validation)
-15. [Cost and safety controls](#cost-and-safety-controls)
-16. [Getting started (Linux)](#getting-started-linux)
-17. [Configuration reference](#configuration-reference)
-18. [HTTP and WebSocket API](#http-and-websocket-api)
-19. [Project structure](#project-structure)
-20. [Testing](#testing)
-21. [What we built during the hackathon](#what-we-built-during-the-hackathon)
-22. [Limitations](#limitations)
-23. [Roadmap](#roadmap)
-24. [Acknowledgements](#acknowledgements)
-25. [License](#license)
+14. [Exports](#exports)
+15. [Sim-to-real gap, made visible](#sim-to-real-gap-made-visible)
+16. [Validation](#validation)
+17. [Cost and safety controls](#cost-and-safety-controls)
+18. [Getting started (Linux)](#getting-started-linux)
+19. [Configuration reference](#configuration-reference)
+20. [HTTP and WebSocket API](#http-and-websocket-api)
+21. [Project structure](#project-structure)
+22. [Testing](#testing)
+23. [What we built during the hackathon](#what-we-built-during-the-hackathon)
+24. [Limitations](#limitations)
+25. [Roadmap](#roadmap)
+26. [Acknowledgements](#acknowledgements)
+27. [License](#license)
 
 ---
 
@@ -378,9 +378,10 @@ All routes are in `backend/physicslens/app.py`. Routes that start paid work need
 | `GET /api/health` | status, environment, mock mode, and what this visitor may do |
 | `GET /api/gallery` | the curated results |
 | `GET /api/budget` | spent and remaining per provider (development UI) |
-| `POST /api/runs` | upload a clip with optional settings (length, object size, hint, slow-motion factor); returns a run id |
+| `POST /api/runs` | upload a clip with optional settings (length, object size, hint, slow-motion factor, blade count for sound); returns a run id |
 | `GET /api/runs/{id}` | progress and, when done, the full result |
 | `GET /api/runs/{id}/clip.mp4`, `/poster.jpg`, `/share.mp4` | media for a run; `POST /api/runs/{id}/share` renders the shareable MP4 |
+| `GET /api/runs/{id}/sim2real` | the sim-to-real comparison, computed on first request and cached |
 | `GET /api/runs/{id}/export/{kind}` | `json`, `py` (Python script), `mjcf`, `contact`, `report` |
 | `POST /api/runs/{id}/whatif` | a typed what-if question |
 | `POST /api/compare`, `POST /api/health/trend` | machine-health comparison and trend |
