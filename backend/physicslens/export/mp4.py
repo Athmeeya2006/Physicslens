@@ -115,7 +115,7 @@ def build_panel(result: dict[str, Any], frame_width: int) -> Image.Image:
         for line in lines:
             rows.append(_text_row(line, int(22 * s), int(900 * s)))
 
-    rows.append(_text_row("Dashed circle: simulation of the fitted equation. White trail: measured by SAM 3.1.",
+    rows.append(_text_row("Dashed ring: simulation of the fitted equation. White trail: measured by SAM 3.1.",
                           int(18 * s), int(900 * s), fill=(180, 190, 205)))
     rows.append(_text_row("PhysicsLens", int(18 * s), int(900 * s), fill=(34, 211, 238)))
 
@@ -138,11 +138,11 @@ def _text_row(text: str, size: int, max_w: int, fill: tuple[int, int, int] = (23
 
 
 def _dashed_circle(frame: np.ndarray, center: tuple[int, int], radius: int, thickness: int) -> None:
-    overlay = frame.copy()
-    cv2.circle(overlay, center, radius, GHOST_BGR, -1, cv2.LINE_AA)
-    cv2.addWeighted(overlay, 0.28, frame, 0.72, 0, dst=frame)
+    """An open dashed ring with a centre dot, like the web player: the object stays visible inside it."""
     for start in range(0, 360, 30):
+        cv2.ellipse(frame, center, (radius, radius), 0, start, start + 18, (20, 20, 20), thickness + 2, cv2.LINE_AA)
         cv2.ellipse(frame, center, (radius, radius), 0, start, start + 18, GHOST_BGR, thickness, cv2.LINE_AA)
+    cv2.circle(frame, center, thickness + 1, GHOST_BGR, -1, cv2.LINE_AA)
 
 
 def _quiet_corner(points: list[tuple[float, float]], w: int, h: int, pw: int, ph: int, margin: int = 10) -> tuple[int, int]:
@@ -170,7 +170,8 @@ def render_share_video(result: dict[str, Any], clip: Path, out: Path) -> Path:
     real = {int(f): (x, y) for f, x, y in result.get("real_track_px", [])}
     ghosts = result.get("ghosts") or []
     ghost = {int(f): (x, y) for f, x, y in ghosts[0]["points"]} if ghosts else {}
-    radius = max(4, int((result.get("object_size_px") or min(w, h) / 20) / 2))
+    # About the object's size, but never so big that the ring hides what it is compared with.
+    radius = int(min(max(4, (result.get("object_size_px") or min(w, h) / 20) / 2), max(w, h) * 0.03))
     thickness = max(2, w // 400)
 
     panel = build_panel(result, w)

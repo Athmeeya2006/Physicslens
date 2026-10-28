@@ -99,7 +99,12 @@ SAM 3.1 is used as a **scientific measurement instrument**: its masks become pos
 
 ## Validation
 
-**On real footage** (a 0.5 m pendulum, CC BY-SA clip, see `gallery/README.md`): SAM 3.1 tracked the bob in 164 of 164 frames from a box placed by the reasoning model; every pendulum model gives g between 9.81 and 9.83 m/s²; the ghost stays within about 8 px of a bob about 80 px across. With only 6.5 s of a small swing the candidates tie, and the agent asks for a longer, larger swing.
+**On real footage**, with every reasoning step on Muse Glimmer (open weights) and tracking by SAM 3.1 (clips and licenses in `gallery/README.md`):
+
+- **Pendulum** (0.5 m string, length given): g = 9.79 ± 0.01 m/s² from the period, against 9.81. A small swing can't tell sin θ from θ, so the exact law is kept and the approximation noted. The result rests on the given length: with the pivot out of frame the arc alone can't fix it (two stretches of the same swing gave radii 50% apart), so the app does not re-measure a length you supply.
+- **Paper bag thrown across a blackboard** (filmed at 200 fps, analyzed with a slow-motion factor of 20): free fall misses the held-out last quarter by 41% and is rejected; linear air drag forecasts it within 11%, with a velocity time constant of 0.38 s (scale-free); quadratic drag scores 548 BIC worse.
+- **Air-track spring cart** (nothing of known size in view): damped harmonic oscillator, ω = 2.741 ± 0.002 rad/s and damping ratio ζ = 0.022 ± 0.001; the undamped model misses the held-out motion by 48%.
+- What didn't work, honestly: on 240p Apollo 16 TV footage of an astronaut jumping, with two jumps separated by standing and no usable scale, no equation passed, and the result is not in the gallery.
 
 **Exports:** for every exactly representable model, the MuJoCo export replayed in MuJoCo matches the fitted motion to under 0.1 mm; the generated Python script matches to 1e-9.
 
@@ -223,6 +228,10 @@ All code in this repository was written during the hackathon building period (Oc
 - Deformable and fluid motion (cloth, water, smoke) is reported as "no clean equation," not modeled.
 - Accuracy depends on frame rate, lighting and a visible reference of known size (or a known pendulum length).
 - The double pendulum assumes point masses on light rods; solid-bar pendulums may fit worse.
+- Phone video with a variable frame rate is resampled to a constant rate, which can shift a frame's time by up to half a frame. Live mode uses each frame's capture time instead.
+- Laws the agent writes may depend on position and velocity, not explicitly on time, so driven systems (a motor, a push) are out of reach.
+- Driven motion (a car under throttle, a person walking) has no single governing law; at most its kinematics can be fitted.
+- Stopping a live session doesn't save it as a result yet; record a clip for something you can keep and export.
 
 ## Roadmap
 

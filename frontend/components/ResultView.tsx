@@ -39,9 +39,11 @@ function needsScale(unit: string): boolean {
   return /(^|[^a-z])m($|[^a-z])/.test(unit);
 }
 
-function mujocoGap(m: number): string {
-  const mm = m * 1000;
-  return mm < 0.001 ? "less than 0.001 mm" : `${mm.toFixed(mm < 1 ? 3 : 1)} mm`;
+// Without a scale the nominal 1000 px/m makes a "mm" one pixel, so say pixels.
+function mujocoGap(m: number, uncalibrated: boolean): string {
+  const v = m * 1000;
+  const unit = uncalibrated ? "px" : "mm";
+  return v < 0.001 ? `less than 0.001 ${unit}` : `${v.toFixed(v < 1 ? 3 : 1)} ${unit}`;
 }
 
 function prettyModel(id: string, titles: Record<string, string>): string {
@@ -189,9 +191,12 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <h3>Use the result</h3>
           <p className="muted small">
             Take the identified dynamics into a robot simulator or your own code.
-            {r.mujoco?.rms_vs_fit_m != null && (
-              <> MuJoCo replays the exported model within {mujocoGap(r.mujoco.rms_vs_fit_m)} of the fitted motion (the green dot on the video).</>
-            )}
+            {r.mujoco?.rms_vs_fit_m != null && (r.mujoco.notes.length === 0 ? (
+              <> MuJoCo replays the exported model within {mujocoGap(r.mujoco.rms_vs_fit_m, !!r.scale_note)} of the fitted motion (the green dot on the video).</>
+            ) : (
+              <> The MuJoCo model is an approximation (see the note below), so its replay departs from the fitted motion by{" "}
+                {mujocoGap(r.mujoco.rms_vs_fit_m, !!r.scale_note)} RMS (the green dot); the Python simulation runs the exact equation.</>
+            ))}
           </p>
           <div className="export-links">
             {r.mujoco && <a className="button" href={exportUrl(runId, "mjcf")} download><Boxes size={16} aria-hidden="true" />MuJoCo model</a>}

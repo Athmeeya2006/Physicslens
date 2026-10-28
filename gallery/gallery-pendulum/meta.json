@@ -1,6 +1,6 @@
 {
-  "title": "Pendulum: the agent designs a better experiment",
-  "description": "A 0.5 m pendulum swinging for 6.5 s. Two equations explain it equally well, so PhysicsLens simulates both under a dozen possible experiments and asks for the cheapest one that would tell them apart.",
+  "title": "Pendulum: g from the period",
+  "description": "A 0.5 m pendulum swinging for 6.5 s. With the length given, the period alone gives g = 9.79 m/s\u00b2. A small-angle swing can't tell sin \u03b8 from \u03b8, so the exact law is kept instead of asking for a new experiment.",
   "credit": "Video: Rhetos / Mathe-AC Lernwerkstatt, Wikimedia Commons, CC BY-SA 4.0 (trimmed and downscaled)",
-  "order": 1
+  "order": 2
 }

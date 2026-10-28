@@ -84,8 +84,7 @@ def test_pendulum_clip_end_to_end(harness, tmp_path):
     cap.set(cv2.CAP_PROP_POS_FRAMES, 30)
     ok, frame = cap.read()
     _, gx, gy = next(p for p in result["ghosts"][0]["points"] if p[0] == 30)
-    r = int(result["object_size_px"] / 2)
-    b, g, red = (int(v) for v in frame[round(gy), round(gx) + r])  # outline at angle 0 (inside the first dash)
+    b, g, red = (int(v) for v in frame[round(gy), round(gx)])  # the ghost's centre dot
     assert ok and b > 150 and g > 150 and red < 120
 
     calls = harness.sdk("meta_api").calls
