@@ -18,9 +18,13 @@ META_CONTRIBUTOR_MODEL = "muse-spark-1.3-contributor"
 SAM_MODEL = "sam-3.1"
 VOICE_MODEL = "muse-voice-transcribe-1.0"
 IMAGE_MODEL = "muse-image-1.0"
+# Muse Spark Open (open weights) on Baseten; the hackathon key only works with the "-1026" name.
+BASETEN_MODEL = "meta-models/muse-spark-open-1026"
 GLIMMER_MODEL = "muse-glimmer-30b"
 # The same open weights served by a hosted provider listed in Meta's Glimmer deploy guide (Together AI).
 TOGETHER_GLIMMER_MODEL = "meta-models/Muse-Glimmer-30B"
+# Providers serving Meta open-weight models; the only ones demo and prod may reason on.
+OPEN_WEIGHT_MODELS = {"baseten": BASETEN_MODEL, "glimmer": GLIMMER_MODEL, "together": TOGETHER_GLIMMER_MODEL}
 
 
 class ConfigError(RuntimeError):

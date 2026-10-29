@@ -1,7 +1,8 @@
 """Structured (Pydantic-validated) calls to the reasoning model.
 
-The submitted build reasons on Muse Glimmer (open weights, self-hosted). Muse Spark 1.3 on the Meta API is a
-development convenience only: demo and production refuse to reason on anything but the open-weight model.
+The submitted build reasons on Meta's open-weight models: Muse Spark Open served by Baseten first, and Muse Glimmer
+on our own server as the fallback (or as the chosen provider). Muse Spark 1.3 on the Meta API is a development
+convenience only: demo and production refuse to reason on anything but open weights.
 """
 
 from __future__ import annotations
@@ -11,13 +12,14 @@ import copy
 import json
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
 from ..costguard import CostGuardClient, CostGuardError
 from ..costguard.errors import CircuitOpen, ProviderCallFailed
+from ..settings import OPEN_WEIGHT_MODELS
 
 log = logging.getLogger("physicslens.agent")
 T = TypeVar("T", bound=BaseModel)
@@ -42,17 +44,20 @@ def fallback_allowed(client: CostGuardClient) -> bool:
     return client.settings.app_env == "dev"
 
 
-def glimmer_provider() -> str | None:
-    """"glimmer" (our own llama-server) or "together" (the same open weights, hosted), else None.
+def reasoning_provider() -> str | None:
+    """"baseten" (Muse Spark Open), "glimmer" (our own llama-server) or "together" (Glimmer hosted), else None.
 
     Chosen explicitly by the machine serving the app, never inferred, so a run's provider is never a surprise.
     """
     p = os.environ.get("REASONING_PROVIDER", "").strip().lower()
-    return p if p in ("glimmer", "together") else None
+    return p if p in OPEN_WEIGHT_MODELS else None
 
 
-def glimmer_selected() -> bool:
-    return glimmer_provider() is not None
+def provider_chain(provider: str) -> list[str]:
+    """Muse Spark Open falls back to our own Glimmer server when one is configured; nothing else falls back."""
+    if provider == "baseten" and os.environ.get("GLIMMER_BASE_URL", "").strip():
+        return ["baseten", "glimmer"]
+    return [provider]
 
 
 @dataclass(frozen=True)
@@ -62,6 +67,8 @@ class LLMCall:
     reasoning: str | None
     cost_usd: float
     cached: bool
+    # Providers tried before this one answered, with why each failed (shown in the decision trail).
+    fallbacks: tuple[str, ...] = field(default=())
 
 
 def strict_schema(model: type[BaseModel]) -> dict[str, Any]:
@@ -157,18 +164,29 @@ def _call(client: CostGuardClient, *, task: str, system: str, text: str, schema_
     content: list[dict[str, Any]] = [{"type": "text", "text": text}]
     content += [{"type": "image_url", "image_url": {"url": image_b64(j)}} for j in images]
     sys_prompt = f"{system}\n\nReply with only a JSON object matching this JSON schema:\n{json.dumps(schema)}"
-    if glimmer_selected():
-        try:
-            # Glimmer always thinks before answering, so it gets room for reasoning on top of the answer.
-            r = client.glimmer_chat(messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": content}],
-                                    run_id=run_id, audience=audience, max_tokens=max(client.glimmer_max_tokens_default,
-                                                                                     max_output_tokens * 4),
-                                    run_cap_usd=run_cap_usd, provider=glimmer_provider() or "glimmer")
-        except (ProviderCallFailed, CircuitOpen) as e:
-            raise OpenWeightUnavailable(f"Muse Glimmer failed for {task}: {e}") from e
-        return r.text, LLMCall(glimmer_provider() or "glimmer", r.model, r.reasoning, r.cost_usd, r.cached)
+    provider = reasoning_provider()
+    if provider:
+        messages = [{"role": "system", "content": sys_prompt}, {"role": "user", "content": content}]
+        failures: list[str] = []
+        for p in provider_chain(provider):
+            # Open-weight models always think before answering, so they get room for reasoning on top of the answer.
+            if p == "baseten":
+                effort = client.baseten_effort_by_task.get(task, client.baseten_effort_default)
+                default = client.baseten_max_tokens_by_effort.get(effort, client.baseten_max_tokens_default)
+            else:
+                effort, default = "low", client.glimmer_max_tokens_default
+            try:
+                r = client.open_weight_chat(messages=messages, run_id=run_id, provider=p, audience=audience,
+                                            effort=effort, max_tokens=max(default, max_output_tokens * 4),
+                                            run_cap_usd=run_cap_usd)
+            except (ProviderCallFailed, CircuitOpen) as e:
+                log.warning("%s: %s failed (%s)", task, p, e)
+                failures.append(f"{OPEN_WEIGHT_MODELS[p]} on {p} failed: {e}")
+                continue
+            return r.text, LLMCall(p, r.model, r.reasoning, r.cost_usd, r.cached, tuple(failures))
+        raise OpenWeightUnavailable(f"The open-weight model failed for {task}: {'; '.join(failures)}")
     if not fallback_allowed(client):
-        raise OpenWeightUnavailable("The open-weight model is not configured (REASONING_PROVIDER=glimmer and GLIMMER_BASE_URL).")
+        raise OpenWeightUnavailable("The open-weight model is not configured (REASONING_PROVIDER=baseten, glimmer or together).")
     meta_content = [{"type": "input_text", "text": text}] + [{"type": "input_image", "image_url": image_b64(j)} for j in images]
     r = client.meta_text(
         input=[{"role": "user", "content": meta_content}], instructions=system, schema=schema, schema_name=task,

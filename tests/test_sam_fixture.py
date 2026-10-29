@@ -44,3 +44,16 @@ def test_masks_are_box_local(index):
     ys, xs = np.nonzero(raster)
     tx, ty = true_center(frame)
     assert abs(x1 + xs.mean() - tx) < 1.5 and abs(y1 + ys.mean() - ty) < 1.5
+
+
+def test_a_corrupted_mask_is_dropped_not_measured():
+    """Validation moved out of the parser into the single strict decode: a bad payload must still never become data."""
+    from physicslens.perception.sam_track import tracks_from_text
+    lines = [ln for ln in frame_lines() if ln.strip()]
+    good = tracks_from_text("\n".join(lines))
+    m = re.search(r"data=(\d+),(\d+),!(\S+?)\|>", lines[5])
+    corrupt = lines[5].replace(m.group(3), m.group(3)[::-1])  # same length and marker, wrong content
+    bad = tracks_from_text("\n".join([*lines[:5], corrupt, *lines[6:]]))
+    oid = next(iter(good))
+    assert 5 in good[oid].frames and 5 not in bad[oid].frames
+    assert len(bad[oid].frames) == len(good[oid].frames) - 1

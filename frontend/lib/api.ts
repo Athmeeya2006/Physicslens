@@ -78,13 +78,16 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "plan" | "study_turn" | "joint_fit" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "audio" | "agent" | "setup_guide" | "controller" | "control_test";
+  step: "skeptic" | "scaling" | "locate" | "plan" | "study_turn" | "joint_fit" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "audio" | "agent" | "setup_guide" | "controller" | "control_test";
   provider: string | null;
   model: string;
   text: string;
   status?: string;
   action?: string;
   reasoning_summary?: string;
+  reasoning?: string;
+  fallbacks?: string[];
+  expectation?: string | null;
   label?: string;
   items?: { model_id: string; title: string; why: string; status?: "accepted" | "tied" | "rejected" }[];
 }
@@ -105,6 +108,9 @@ export interface AnalysisResult {
   sindy?: Record<string, string> | null;
   sindy_check?: { shown: boolean; reason: string; heldout_nrmse: number | null };
   full_clip_verdict?: { status: string; reason: string; winner: string | null } | null;
+  units?: { length: string; time: string } | null;
+  hypothesis_votes?: { samples: number; winner: string; proposed_by: number; families: string[] } | null;
+  skeptic?: { tested: number; survived: boolean; accepted_before: string; concerns: string[] } | { skipped: string } | null;
   equation?: { model_id: string; title: string; latex: string };
   parameters?: Parameter[];
   llm_calls: { step: string; provider: string; model: string; cached: boolean }[];
@@ -226,6 +232,7 @@ export interface Health {
   can_upload: boolean;
   can_go_live: boolean;
   turnstile_site_key: string;
+  reasoning?: { provider: string; model: string } | null;
 }
 
 export interface GalleryItem {
@@ -367,6 +374,7 @@ export interface RunInputs {
   objectSizeM: number | null;
   slowMotion: number | null;
   objectHint: string | null;
+  setting?: number | null;
   depth3d?: boolean;
   focalPx?: number | null;
 }
@@ -388,7 +396,7 @@ export function startRun(file: File, inputs: RunInputs, turnstileToken: string |
 
 // The open-weight reasoning model: Muse Glimmer, self-hosted or on a hosted provider serving the same weights.
 export function isOpenWeight(model: string | undefined): boolean {
-  return !!model && /muse-glimmer/i.test(model);
+  return !!model && /muse-glimmer|muse-spark-open/i.test(model);
 }
 
 // Units as people write them: m/s² rather than m/s^2, s⁻¹ rather than 1/s.
@@ -411,11 +419,24 @@ export interface Combined {
   name: string; latex: string; unit: string; value: number; std: number; n: number; consistent: boolean;
   p_value: number | null; uncalibrated: boolean;
 }
+export interface PlannedSweep {
+  variable: string; unit: string; response: string; values: number[]; expected_law: string; why: string;
+}
+export interface Sweep {
+  variable: string; unit: string; response: string; expected_law: string; why: string;
+  status: "accepted" | "ambiguous" | "no_fit" | "too_few"; reason: string;
+  points: { label: string; run_id: string; x: number; y: number; std: number }[];
+  winner: { law: string; title: string; latex: string; params: number[]; loo_z: number[]; matches_expectation: boolean } | null;
+  next: { x: number; y?: number; std?: number; low?: number; high?: number; separates?: string[] } | null;
+  checks: { x: number; label: string; predicted: number; predicted_std: number; measured: number; measured_std: number;
+            z: number; within_95: boolean }[];
+}
 export interface Study {
   id: string; goal: string; status: "recording" | "finished";
   plan: { deliverable: "simulation_model" | "health_check" | "parameter_sheet"; quantities: string[];
-          recordings: PlannedRecording[]; done_when: string; reasoning_summary: string };
-  recordings: { run_id: string; label: string }[];
+          recordings: PlannedRecording[]; done_when: string; reasoning_summary: string; sweep?: PlannedSweep | null };
+  recordings: { run_id: string; label: string; x?: number }[];
+  sweep?: Sweep | null;
   combined: Combined[];
   health: { drift: boolean; summary: string } | null;
   turns: StudyTurn[];
@@ -438,6 +459,7 @@ export function addStudyRun(id: string, file: File, label: string, inputs: RunIn
   if (inputs.objectSizeM) form.append("object_size_m", String(inputs.objectSizeM));
   if (inputs.slowMotion && inputs.slowMotion > 1) form.append("slow_motion", String(inputs.slowMotion));
   if (inputs.objectHint?.trim()) form.append("object_hint", inputs.objectHint.trim().slice(0, 60));
+  if (inputs.setting) form.append("setting", String(inputs.setting));
   return fetch(`${API_BASE}/api/studies/${id}/runs`, { method: "POST", body: form, headers: codeHeaders() })
     .then((r) => json<{ study: Study; run: RunView }>(r));
 }

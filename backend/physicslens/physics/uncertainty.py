@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 
 import numpy as np
 
 from .coords import Coordinates
-from .fit import FitResult, fit_window
+from .fit import FitResult, FitTimeout, fit_window
 from .models import ModelSpec
 
 
@@ -17,6 +18,10 @@ class ParamEstimate:
     std: float
     ci_low: float
     ci_high: float
+
+
+MAX_BOOTSTRAP_SECONDS = 60.0  # a slow law (an agent-written one with sign()) took minutes for 40 refits
+MIN_BOOTSTRAP_REPS = 8
 
 
 def bootstrap_samples(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 24,
@@ -35,14 +40,22 @@ def bootstrap_samples(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int
     upper = np.concatenate([[p.upper for p in spec.params], np.full(len(fit.y0), np.inf)])
 
     samples, lengths = [], []
+    t_end = time.monotonic() + MAX_BOOTSTRAP_SECONDS
     for _ in range(reps):
+        # Past the time budget, the refits so far give the spread (never fewer than MIN_BOOTSTRAP_REPS).
+        if time.monotonic() > t_end and len(samples) >= MIN_BOOTSTRAP_REPS:
+            break
         starts = rng.integers(0, n - block + 1, size=n // block + 1)
         boot_resid = np.concatenate([resid[s:s + block] for s in starts])[:n]
         ctx = dict(c.ctx)
         if "length_std" in ctx:
             ctx["length_m"] = rng.normal(ctx["length_m"], ctx["length_std"])
         boot = Coordinates(c.family, c.t, fit.sim + boot_resid, c.names, ctx)
-        theta = fit_window(spec, boot, n, theta_hat, lower, upper, max_nfev=40)
+        try:
+            theta = fit_window(spec, boot, n, theta_hat, lower, upper, max_nfev=40,
+                               deadline=time.monotonic() + MAX_BOOTSTRAP_SECONDS / MIN_BOOTSTRAP_REPS)
+        except FitTimeout:
+            continue  # one refit stuck in a law's corners is skipped, not waited for
         samples.append(theta[: len(spec.params)])
         lengths.append(ctx.get("length_m", np.nan))
     return np.array(samples), np.array(lengths)
@@ -57,6 +70,7 @@ def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 40, s
     arr, _ = bootstrap_samples(spec, c, fit, reps, seed)
     out = {}
     for i, name in enumerate(spec.param_names):
-        v, sd = fit.params[name], float(arr[:, i].std(ddof=1))
+        # Too few refits finished in time: the uncertainty is unknown (shown without a +-), never a made-up number.
+        v, sd = fit.params[name], float(arr[:, i].std(ddof=1)) if len(arr) >= 2 else float("nan")
         out[name] = ParamEstimate(v, sd, v - 1.96 * sd, v + 1.96 * sd)
     return out

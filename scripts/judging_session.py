@@ -1,6 +1,9 @@
-"""Start or stop a judging session: the server runs on a hosted GPU machine, the public site points at it.
+"""Start or stop a judging session: the server runs on a Kaggle machine, the public site points at it.
 
-  python scripts/judging_session.py start [--hours 6]   upload the code, start the server, wait for its tunnel,
+  python scripts/judging_session.py start [--hours 11.5] [--gpu]
+                                                       upload the code, start the server (CPU by default:
+                                                       reasoning on Muse Spark Open via Baseten; --gpu adds
+                                                       Muse Glimmer as the fallback), wait for its tunnel,
                                                        then point the site's /backend.json at it and redeploy
   python scripts/judging_session.py connect              after starting the server from Kaggle's editor (Save
                                                        Version > Save & Run All), wait for its tunnel and point
@@ -17,8 +20,9 @@ Kaggle attaches Secrets only to runs started from its own editor, not to version
 so a server that needs the keys is started there and connected with `connect`; `start` suits keyless tests.
 
 Needs the Kaggle CLI (pip install kaggle, token in ~/.kaggle) and the Vercel CLI logged in, the deploy folder
-var/site/physicslens linked to the Vercel project, and two Kaggle Secrets attached to the server:
-MODEL_API_KEY and DEMO_ACCESS_CODE. Only the backend address is published; no key leaves Kaggle.
+var/site/physicslens linked to the Vercel project, and three Kaggle Secrets attached to the server:
+BASETEN_API_KEY, MODEL_API_KEY and DEMO_ACCESS_CODE. Only the backend address is published; no key leaves Kaggle.
+A laptop can serve instead (scripts/serve_local.py); `connect --url` points the site at either.
 """
 
 from __future__ import annotations
@@ -67,18 +71,20 @@ def upload_code() -> None:
     sys.exit("The Kaggle dataset did not become ready.")
 
 
-def push_kernel(hours: float) -> None:
+def push_kernel(hours: float, gpu: bool) -> None:
     with tempfile.TemporaryDirectory() as d:
         k = Path(d)
         code = (ROOT / "scripts" / "gpu_server" / "serve.py").read_text()
         code = re.sub(r"^SERVE_HOURS = .*$", f"SERVE_HOURS = {hours:.2f}", code, count=1, flags=re.MULTILINE)
+        code = re.sub(r"^SERVE_GPU = .*$", f"SERVE_GPU = {gpu}", code, count=1, flags=re.MULTILINE)
         (k / "serve.py").write_text(code)
         (k / "kernel-metadata.json").write_text(json.dumps({
             "id": KERNEL, "title": "physicslens-judging-server", "code_file": "serve.py", "language": "python",
-            "kernel_type": "script", "is_private": True, "enable_gpu": True, "enable_tpu": False,
+            "kernel_type": "script", "is_private": True, "enable_gpu": gpu, "enable_tpu": False,
             "enable_internet": True, "dataset_sources": [DATASET], "kernel_sources": [], "competition_sources": [],
             "model_sources": []}))
-        print(run(KAGGLE, "kernels", "push", "-p", str(k), "--accelerator", "NvidiaTeslaT4").strip())
+        accel = ["--accelerator", "NvidiaTeslaT4"] if gpu else []
+        print(run(KAGGLE, "kernels", "push", "-p", str(k), *accel).strip())
 
 
 def wait_for_url(minutes: float = 30) -> str:
@@ -124,7 +130,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("start")
-    s.add_argument("--hours", type=float, default=6.0)
+    s.add_argument("--hours", type=float, default=11.5, help="Kaggle stops any run at 12 h")
+    s.add_argument("--gpu", action="store_true", help="also serve Muse Glimmer as the open-weight fallback (uses GPU quota)")
     s.add_argument("--skip-upload", action="store_true", help="reuse the code already uploaded")
     sub.add_parser("stop")
     cn = sub.add_parser("connect")
@@ -149,7 +156,7 @@ def main() -> None:
         return
     if not a.skip_upload:
         upload_code()
-    push_kernel(a.hours)
+    push_kernel(min(a.hours, 11.75), a.gpu)
     url = wait_for_url()
     print(f"server: {url}")
     point_site(url)

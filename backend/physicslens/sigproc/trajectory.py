@@ -34,9 +34,11 @@ class Trajectory:
         return Trajectory(self.t[start:stop], self.xy[start:stop], self.frames[start:stop], self.fps)
 
 
-def from_pixels(frames: np.ndarray, centers_px: np.ndarray, fps: float, px_per_m: float) -> Trajectory:
-    """Pixel centers (col, row) to meters with y up, origin at the first sample."""
+def from_pixels(frames: np.ndarray, centers_px: np.ndarray, fps: float, px_per_m: float,
+                origin: np.ndarray | None = None) -> Trajectory:
+    """Pixel centers (col, row) to meters with y up, origin at the first sample unless a fixed origin is given."""
     frames = np.asarray(frames, dtype=int)
     c = np.asarray(centers_px, dtype=float)
-    xy = np.column_stack([(c[:, 0] - c[0, 0]) / px_per_m, -(c[:, 1] - c[0, 1]) / px_per_m])
+    o = c[0] if origin is None else np.asarray(origin, dtype=float)
+    xy = np.column_stack([(c[:, 0] - o[0]) / px_per_m, -(c[:, 1] - o[1]) / px_per_m])
     return Trajectory(t=(frames - frames[0]) / fps, xy=xy, frames=frames, fps=fps)

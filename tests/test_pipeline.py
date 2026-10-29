@@ -29,6 +29,9 @@ AGENT = {"action": "explain", "message": "The ball swings like a pendulum.", "ne
          "reasoning_summary": "Verification accepted a pendulum model."}
 
 
+SKEPTIC_NONE = {"challenges": [], "concerns": [], "reasoning_summary": "Nothing in the numbers points elsewhere."}
+
+
 def sam_text_as_object_1() -> str:
     raw = json.loads(FIXTURE.read_text())
     text = "".join(c.get("text", "") for item in raw["output"] for c in item.get("content") or [])
@@ -46,9 +49,11 @@ def test_pendulum_clip_end_to_end(harness, tmp_path):
            sam_result(frames=60, text=sam_text_as_object_1()),
            responses_result(text=json.dumps(TRACK_OK)),
            responses_result(text=json.dumps(HYPOTHESES)),
-           responses_result(text=json.dumps(AGENT)))
+           responses_result(text=json.dumps(AGENT)),
+           responses_result(text=json.dumps(SKEPTIC_NONE)))
     steps: list[str] = []
     result = analyze(harness.client, CLIP, tmp_path / "run", "run-e2e", RunOptions(pendulum_length_m=0.6), steps.append)
+    accepted = result["status"] == "accepted"
 
     assert result["status"] in ("accepted", "ambiguous")
     assert len(result["real_track_px"]) == 60
@@ -57,7 +62,7 @@ def test_pendulum_clip_end_to_end(harness, tmp_path):
     real = {f: (x, y) for f, x, y in result["real_track_px"]}
     worst = max(abs(x - real[f][0]) + abs(y - real[f][1]) for f, x, y in result["ghosts"][0]["points"])
     assert worst < 6
-    assert [c["step"] for c in result["llm_calls"]] == ["scene", "track_check", "hypotheses", "agent"]
+    assert [c["step"] for c in result["llm_calls"]] == ["scene", "track_check", "hypotheses", "agent"] + (["skeptic"] if accepted else [])
     assert len(result["mujoco"]["points"]) == 60
     assert result["mujoco"]["rms_vs_fit_m"] is not None
     trail = result["trail"]
@@ -65,6 +70,8 @@ def test_pendulum_clip_end_to_end(harness, tmp_path):
     if result["status"] == "ambiguous":  # a tie always comes with a simulated experiment design
         expected.insert(5, "design")
         assert result["experiment_design"]["recommended"]["label"]
+    if accepted:  # an accepted law always faces the referee
+        expected.append("skeptic")
     assert [t["step"] for t in trail] == expected
     fc = result["forecast"]  # the verification, as plottable data
     assert len(fc["t"]) == len(fc["measured"]) == len(fc["forecast"]) and fc["t"][0] < fc["heldout_start"] < fc["t"][-1]

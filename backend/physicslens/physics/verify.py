@@ -46,7 +46,28 @@ def forecasts_well(f: FitResult) -> bool:
     return f.heldout_nrmse <= HARD_MAX_HELDOUT_NRMSE and f.heldout_rmse <= MAX_HELDOUT_NOISE_RATIO * f.noise_sigma
 
 
+SAME_LAW_REL = 1e-4  # simulated paths closer than this (relative to the motion's size) are one law, written twice
+
+
+def distinct(fits: list[FitResult]) -> list[FitResult]:
+    """Drop fits that are the same law as an earlier one: same parameter count, practically the same simulation.
+
+    Independent proposals often write one law in different notation (GM*x/(x^2+y^2)^1.5 and k*x/hypot(x,y)^3); counted
+    separately, they would "tie" with themselves and turn a clear answer into a fake ambiguity.
+    """
+    kept: list[FitResult] = []
+    for f in fits:
+        if f.success and f.sim is not None and any(
+                g.k == f.k and g.sim is not None and g.sim.shape == f.sim.shape
+                and float(np.max(np.abs(g.sim - f.sim))) <= SAME_LAW_REL * (float(np.ptp(g.sim)) + 1e-12)
+                for g in kept):
+            continue
+        kept.append(f)
+    return kept
+
+
 def decide(fits: list[FitResult]) -> Verdict:
+    fits = distinct(fits)
     ranked = tuple(sorted((f for f in fits if f.success), key=lambda f: f.bic))
     passing = [f for f in ranked if forecasts_well(f)]
     if not passing:
@@ -112,13 +133,14 @@ def judge_candidates(v: Verdict) -> dict[str, tuple[str, str]]:
 MIN_WINDOW_FRACTION = 0.7
 
 
-def window_indices(t: np.ndarray, start_s: float, end_s: float) -> tuple[int, int] | str:
-    """Sample range for an agent's fit window, or the reason it is refused."""
+def window_indices(t: np.ndarray, start_s: float, end_s: float, min_fraction: float = MIN_WINDOW_FRACTION,
+                   min_samples: int = 30) -> tuple[int, int] | str:
+    """Sample range for an agent's fit window, or the reason it is refused. Looking needs less than fitting."""
     duration = float(t[-1] - t[0])
     start, end = max(start_s, 0.0) + t[0], min(end_s, duration) + t[0]
     if end <= start:
         return "it ends before it starts"
-    if (end - start) < MIN_WINDOW_FRACTION * duration:
-        return f"it keeps {(end - start) / duration:.0%} of the clip, below the {MIN_WINDOW_FRACTION:.0%} minimum"
+    if (end - start) < min_fraction * duration:
+        return f"it keeps {(end - start) / duration:.0%} of the clip, below the {min_fraction:.0%} minimum"
     i, j = int(np.searchsorted(t, start)), int(np.searchsorted(t, end, side="right"))
-    return (i, j) if j - i >= 30 else "it leaves too few samples to fit"
+    return (i, j) if j - i >= min_samples else "it leaves too few samples"

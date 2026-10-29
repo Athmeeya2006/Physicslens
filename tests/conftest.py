@@ -12,6 +12,7 @@ REPO_CONFIG = Path(__file__).resolve().parents[1] / "config"
 TEST_BUDGET = {
     "meta_api": {"hard_cap_usd": 1.00, "daily_cap_usd": 0.50},
     "glimmer": {"hard_cap_usd": 0.00, "daily_cap_usd": 0.00},
+    "baseten": {"hard_cap_usd": 0.50, "daily_cap_usd": 0.20},
     "together": {"hard_cap_usd": 0.50, "daily_cap_usd": 0.20},
     "per_run_cap_usd": 0.20,
     "smoke_cap_usd": 0.10,
@@ -25,6 +26,9 @@ TEST_BUDGET = {
 @pytest.fixture(autouse=True)
 def _no_kill_env(monkeypatch):
     monkeypatch.delenv("PHYSICSLENS_KILL", raising=False)
+    # Importing the app loads the developer's .env; tests choose their reasoning provider explicitly.
+    for name in ("REASONING_PROVIDER", "GLIMMER_BASE_URL", "PHYSICSLENS_CACHE_ONLY"):
+        monkeypatch.delenv(name, raising=False)
 
 
 @pytest.fixture
@@ -33,6 +37,11 @@ def settings(tmp_path) -> Settings:
     config.mkdir()
     for name in ("models.yaml", "prices.yaml", "limits.yaml"):
         shutil.copy(REPO_CONFIG / name, config / name)
+    # Most tests script the model's replies in order; the single-frame locate call is tested on its own.
+    limits = yaml.safe_load((config / "limits.yaml").read_text())
+    limits.setdefault("scene", {})["locate_single_image"] = False
+    limits.setdefault("agent", {})["hypothesis_samples"] = 1
+    (config / "limits.yaml").write_text(yaml.safe_dump(limits))
     (config / "budget.yaml").write_text(yaml.safe_dump(TEST_BUDGET))
     return Settings(app_env="dev", mock_models=True, repo_root=tmp_path, config_dir=config, var_dir=tmp_path / "var")
 

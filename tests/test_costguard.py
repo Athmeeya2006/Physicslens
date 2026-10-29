@@ -94,7 +94,7 @@ def test_missing_price_refuses_call(settings, monkeypatch):
     monkeypatch.setenv("GLIMMER_BASE_URL", "http://127.0.0.1:8080/v1")
     h = Harness(settings)
     with pytest.raises(PriceMissing):
-        h.client.glimmer_chat(messages=[{"role": "user", "content": "hi"}], run_id="r")
+        h.client.open_weight_chat(messages=[{"role": "user", "content": "hi"}], run_id="r", provider="glimmer")
     assert h.sdk("glimmer").calls == []
 
 
@@ -136,7 +136,13 @@ def test_expensive_meta_effort_refused(harness, effort):
 @pytest.mark.parametrize("strength", ["high", "xhigh", "minimal"])
 def test_expensive_glimmer_strength_refused(harness, strength):
     with pytest.raises(InvalidRequest):
-        harness.client.glimmer_chat(messages=[], run_id="r", strength=strength)
+        harness.client.open_weight_chat(messages=[], run_id="r", provider="glimmer", effort=strength)
+
+
+@pytest.mark.parametrize("effort", ["max", "minimal", "none"])
+def test_invalid_baseten_effort_refused(harness, effort):
+    with pytest.raises(InvalidRequest):
+        harness.client.open_weight_chat(messages=[], run_id="r", provider="baseten", effort=effort)
 
 
 def test_meta_request_shape(harness):

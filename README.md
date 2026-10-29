@@ -106,6 +106,23 @@ Changes during a clip (say, the string is shortened mid-recording) are detected;
 
 **3D from one phone, balls only.** A ball looks the same from every side, so its apparent size gives its distance: Z = f·D/d, with D the diameter you enter, d the diameter of the disc with the mask's area, and f the camera's focal length in pixels. Its image position then gives X and Y. Frames where the mask is stretched by motion blur (aspect ratio over 1.3), loses over 30% of its area against its neighbours, or touches the frame edge are rejected. One pixel of diameter error on a 40 px ball is 2.5% of the distance, so depth is far noisier than position across the image; the fit weights it accordingly, and every frame's depth error is reported. The three 3D projectile laws then go through the same held-out forecast and BIC rules as the 2D ones. The mode is opt-in (`depth_3d` and `focal_px` on `POST /api/runs`, with the object's size) and runs only for a ball fitted as a projectile; otherwise the 2D result stands and a note says why 3D was skipped. Phone videos record no focal length that ffprobe can read (none of our clips have one), so you measure it once: film an A4 sheet flat at a known distance and use f = d·Z/D (`physics/depth3d.py`, `focal_from_reference`).
 
+## Orbit mode: rediscovering Newton from an asteroid
+
+Can the same pipeline that measures a pendulum rediscover the law of gravity just by watching an asteroid? `scripts/orbit_demo.py` renders four years of 99942 Apophis (2022 to 2026, one frame per 2.5 days) from NASA/JPL Horizons positions, viewed top-down in Apophis's own orbital plane, and runs the normal pipeline on that video: Muse Spark Open reads the scene, SAM 3.1 tracks the dot, the agent writes laws of its own, and numerical verification decides. The JPL data are used only to draw the video and, afterwards, to check the answer.
+
+| | From the video | NASA/JPL | |
+|---|---|---|---|
+| Force law | exponent 2.99998 in the agent's free power-law form (force proportional to r^-2.00002) | inverse square | |
+| GM of the Sun | 2.95981e-4 AU³/day² | 2.95912e-4 AU³/day² (Horizons) | +0.023% |
+| 2029 closest approach, time | 2029-04-14 10:48 TDB | 2029-04-13 21:46 TDB (CNEOS close-approach API) | 13 h late, 3.3 years after the last frame |
+| 2029 closest approach, distance | 2.19 million km | 38,000 km | not resolved |
+
+What happened, in order: three independent proposals each wrote the inverse-square law (in different notation; verification now recognizes one law written twice). Verification accepted it over a free-exponent version and the controls. The referee then proposed a tiny velocity term (time scale about 11,000 years) that forecast the held-out motion better by 51 BIC: not air drag, but the data saying that Sun-only gravity is not the whole story (the planets pull on Apophis too). The video shows the law's force arrow pointing at the Sun in every frame.
+
+**Honest limits.** One pixel is about 340,000 km at this scale, and SAM's centroids carry about 2 px of error, so the position error is about 0.8 million km at the end of the video and grows to about 2.2 million km by 2029 (`var/orbit/prediction_error.png`). The prediction is Sun only (no planets, no relativity, no Yarkovsky effect) and lives in Apophis's orbital plane. It is a deterministic prediction compared with JPL's answer, not an impact probability: PhysicsLens does not propagate the uncertainty a "will it hit Earth" verdict needs. The units are AU and days (the expression language bounds parameters, and GM in SI is about 1e20).
+
+Reproduce: `python scripts/orbit_demo.py all` (fetch and render are free; analyze calls SAM 3.1 and Muse Spark Open, about $0.15; predict is local). Data sources and credits: `data/orbit/SOURCES.md`.
+
 ## Physics audit
 
 Every analysis also asks a sharper question: does this motion break a law that every real object obeys? That makes PhysicsLens a lie detector for AI-generated video and for world models: upload a clip on the **Physics audit** page (or `POST /api/audit`, the same upload as `POST /api/runs`; every result carries `result["audit"]`). The audit is local math on the tracked motion, with no extra model calls, and it reports one of three verdicts:
@@ -128,13 +145,13 @@ Each violation also needs at least 5 standard errors (8 for the frame-to-frame c
 
 ```mermaid
 flowchart LR
-    A[Phone video<br/>recorded or live] --> B[Scene understanding<br/>Muse Glimmer]
+    A[Phone video<br/>recorded or live] --> B[Scene understanding<br/>Muse Spark Open]
     B --> C[Tracking<br/>SAM 3.1]
-    C --> C2{Track check<br/>Muse Glimmer}
+    C --> C2{Track check<br/>Muse Spark Open}
     C2 -- off target --> C
     C2 -- ok --> D[Calibration<br/>pixels to meters]
     D --> E[Signal cleanup<br/>smoothing, impacts, regimes]
-    E --> F[Hypotheses<br/>Muse Glimmer]
+    E --> F[Hypotheses<br/>Muse Spark Open]
     F --> G[Fitting<br/>SciPy + PySINDy]
     G --> H{Verification<br/>forecast held-out data}
     H -- clear winner --> I[Equation + intervals<br/>+ ghost overlay]
@@ -151,16 +168,17 @@ flowchart LR
 
 | Model | Where it runs | What it does in PhysicsLens |
 |---|---|---|
-| **Muse Glimmer 30B** (open weights) | Self-hosted with llama.cpp on our own GPU server (two NVIDIA T4) | The agent's reasoning: scene understanding from keyframes (vision); checking SAM's track on annotated frames (vision) and re-prompting SAM by name; candidate equations and its own free-form laws; planning and reviewing multi-recording studies, with maintenance notes; experiment requests; explanations; turning spoken settings and what-if questions into parameters |
+| **Muse Spark Open** (open weights, `meta-models/muse-spark-open-1026`) | Served by Baseten (OpenAI-compatible Chat Completions) | The agent's reasoning, primary: scene understanding from keyframes (vision); checking SAM's track on annotated frames (vision) and re-prompting SAM by name; candidate equations and its own free-form laws; planning and reviewing multi-recording studies, with maintenance notes; experiment requests; explanations; turning spoken settings and what-if questions into parameters |
+| **Muse Glimmer 30B** (open weights) | Self-hosted with llama.cpp on our own GPU server (two NVIDIA T4) | The same reasoning roles on a second, fully offline open-weight path that anyone can reproduce from the pinned GGUF hashes; the fallback when Baseten is unavailable and a Glimmer server is configured. The published gallery results so far ran on it |
 | **SAM 3.1** | Meta Model API | Box-prompted segmentation and tracking of the moving object(s) and the reference object in one request; re-tracking by name when the first track is off target; in live mode, refinement of an on-server tracker in parallel chunks |
 | **Muse Voice Transcribe** | Meta Model API | Hands-free what-if questions and settings spoken while filming ("the string is 50 centimeters"), over the realtime endpoint with automatic end-of-speech detection |
 | **Muse Image** | Meta Model API | Draws the requested experiment setup onto the user's own frame; never measures anything. Judges and development only, on request ("Show me"), with its own small daily cap |
 | **Muse Wonder** | Meta Model API | Writes controller code for an identified system; the code is used only after it passes simulation on the identified model and its uncertainty range. Judges and development only |
 | **Muse Spark 1.3** | Meta Model API | Development convenience only, with the same prompts and schemas; demo and production refuse to reason on anything but the open-weight model |
 
-**Open-weight status, stated plainly:** all reasoning about the physics runs on Muse Glimmer; Muse Wonder only writes controller code for a model that is already verified, and simulation, not the model, decides whether that code is used. Every reasoning step behind the published gallery results ran on **Muse Glimmer 30B**, Meta's open-weight model, using the official `meta-models/Muse-Glimmer-30B-GGUF` weights (Q4_K_M plus the vision encoder) on llama.cpp, on hardware we control, with no per-call charge. Each result shows the model behind every step. In demo and production the app refuses to reason on any other model: if the open-weight server is down it shows a "busy" message instead of switching. During early development the same prompts ran on Muse Spark 1.3; those results are not in the gallery. Exact files, hashes and runtime: [OPEN_WEIGHTS.md](OPEN_WEIGHTS.md).
+**Open-weight status, stated plainly:** all reasoning about the physics runs on Meta's open-weight models: **Muse Spark Open served by Baseten** first, then **Muse Glimmer 30B** on our own server if Baseten fails and a Glimmer server is configured. Muse Wonder only writes controller code for a model that is already verified, and simulation, not the model, decides whether that code is used. Every reasoning step behind the published gallery results so far ran on **Muse Glimmer 30B**, using the official `meta-models/Muse-Glimmer-30B-GGUF` weights (Q4_K_M plus the vision encoder) on llama.cpp, on hardware we control. Each result shows the provider and model id behind every step, and any switch from one open-weight model to the other is written into the decision trail. In demo and production the app refuses to reason on any non open-weight model: if no open-weight model answers it shows a "busy" message instead of switching to the Meta API. During early development the same prompts ran on Muse Spark 1.3; those results are not in the gallery. Exact files, hashes and runtime: [OPEN_WEIGHTS.md](OPEN_WEIGHTS.md).
 
-All reasoning about physics runs on Muse Glimmer. Muse Image does no reasoning: Muse Glimmer plans where the marks of a setup guide go, code turns that plan into a fixed edit prompt containing no numbers, and Muse Image only draws. The drawing is shown only if math confirms the scene is unchanged outside the marks (structural similarity) and that something was drawn inside them; the labels and numbers on it are written by code from the simulated experiment design, and the written instruction always comes first.
+All reasoning about physics runs on the open-weight model. Muse Image does no reasoning: the open-weight model plans where the marks of a setup guide go, code turns that plan into a fixed edit prompt containing no numbers, and Muse Image only draws. The drawing is shown only if math confirms the scene is unchanged outside the marks (structural similarity) and that something was drawn inside them; the labels and numbers on it are written by code from the simulated experiment design, and the written instruction always comes first.
 
 **Serving details.** llama-server runs with the model's own chat template, `reasoning_strength: "low"` passed through `chat_template_kwargs`, the default sampling (temperature 1.0, top_p 0.95, top_k 64; temperature 0 makes this model loop), and a speculative-decoding drafter. On two T4s it generates about 14 tokens per second, so one full analysis takes about 5 to 15 minutes; this is why the gallery is precomputed and live mode lets you pick the motion family with one tap while the agent's proposal arrives in the background. llama-server binds to localhost only; the analysis server reaches it with a shared key, and only the analysis server is exposed.
 
@@ -208,6 +226,11 @@ Only code decides, never the language model:
 ## The agent
 
 - **Plain Python loop, no agent framework.** Every model call goes through `costguard.client`, with a JSON schema per step (`agent/schemas.py`) and Pydantic validation. Agent loops are capped at 4 turns.
+- **It looks twice.** The four-frame scene call names the object; a second call on one frame alone boxes it tightly for SAM (`pipeline.locate_precisely`). On a real pendulum clip the four-frame box sat on the stopwatch beside the bob; the single-frame box sat on the bob. If the object is not in view yet (a throw), later frames are tried and SAM starts there.
+- **Independent proposals.** The hypotheses step samples the model three times in parallel; the union of the majority family's candidates is fitted, and the result says how many samples proposed the law that won (`agent/reasoning.propose_hypotheses_sampled`).
+- **Tools before a decision.** Before its final action the agent may spend up to four steps testing models of its own choosing or inspecting part of the motion; each step records what it expected, what code measured and how the verdict moved (`test_models`, `inspect`). A step budget and a wall-clock limit are enforced in code, and a final action that does not match the verdict is shown, never acted on.
+- **A referee tries to break every accepted law.** A second call with a different brief proposes up to three alternatives; each is fitted and judged by the same rule (`agent/skeptic.py`). If one forecasts the held-out motion better, the verdict changes and the trail says so; otherwise the result carries "survived N challenges". On the real Rhetos pendulum clip the referee proposed linear damping, it won on held-out motion, and the verdict changed to it (g = 9.91 m/s² for a 0.5 m string).
+- **Reasoning effort per step.** Muse Spark Open thinks harder where it decides more: high for hypotheses and the referee, medium for locating and explaining, low for naming the scene (`config/limits.yaml`).
 - **Decision trail.** Every step records who decided (`model` with provider and model id, or `math`), what was decided and why. The UI shows it prominently: candidates proposed, rejections with their held-out error, the track check, the gravity-ruler assumption, experiment requests and study decisions.
 - **Spoken settings.** Muse Voice Transcribe turns speech into text; the reasoning model turns "the string is half a meter, film from the left" into validated settings (`agent/notes.py`), and out-of-range values are dropped rather than trusted.
 - **What-ifs.** A question ("what if it were on the Moon?") becomes a validated parameter change (`agent/whatif.py`), the fitted law is re-simulated from the same starting state, and a second ghost is drawn. For uncalibrated clips, only relative changes to length-dependent parameters are allowed.
@@ -222,6 +245,8 @@ A study turns a goal into a measurement campaign (`studies.py`, `physics/combine
 3. Recordings are combined in code: inverse-variance weighted means with a chi-squared agreement test (p < 0.01 means the recordings disagree, which is shown, not hidden).
 4. For wear and drift goals the machine-health comparison runs across the recordings, and the agent writes a maintenance note and when to check again.
 5. Deliverables: a study report (Markdown) and a MuJoCo model with the combined parameters.
+
+**Laws across recordings (`physics/scaling.py`).** For a goal like "how does the period depend on string length?" the agent plans a sweep: the settings, the response to compare, and the law it expects before any data. Code fits a closed set of laws (no dependence, square root, inverse square root, proportional, inverse, square, a fitted power, a straight line) to the verified recordings and keeps only laws that predict every recording from the others (leave one out within 3 sigma), then BIC; a fitted exponent that agrees with a fixed one counts as that law. The winner then predicts the next planned setting with a 95% interval before it is filmed, and that prediction is judged when the recording arrives. A tie comes with the setting that would separate the tied laws.
 
 **The closed experiment loop.** When a recording leaves two laws tied and the agent asks for a different experiment (a wider swing, a harder push), the new recording does not just get its own verdict: all recordings of that system are fitted together, sharing the physical parameters while each keeps its own starting state, and every recording must forecast its own held-out last quarter. The joint BIC then decides, by the same rules as one clip, and the trail says which law the new experiment ruled out and by how much.
 
@@ -365,7 +390,7 @@ Other rules: the language model never receives video, only up to four keyframes 
 
 - Python 3.11+, Node.js 20.17+ (or 22.9+), ffmpeg (`sudo apt install ffmpeg`)
 - A Meta Model API key ([dev.meta.ai](https://dev.meta.ai)) for SAM 3.1 and Muse Voice Transcribe
-- For open-weight reasoning: a GPU machine with about 20 GB of GPU memory (two 16 GB T4s work) running llama.cpp `llama-server` (b10353 or newer) with `meta-models/Muse-Glimmer-30B-GGUF`
+- For open-weight reasoning: a Baseten API key (Muse Spark Open), or a GPU machine with about 20 GB of GPU memory (two 16 GB T4s work) running llama.cpp `llama-server` (b10353 or newer) with `meta-models/Muse-Glimmer-30B-GGUF`
 
 ### Setup
 
@@ -407,18 +432,20 @@ Open `http://localhost:3000` for the gallery and uploads, `/live` for the camera
 make report                   # spend so far per provider/model/day and per audience, remaining budget
 make kill                     # instantly block every paid API call
 make unkill                   # re-enable
-make smoke                    # one cheap real call per model (asks before spending); checks Glimmer if configured
+make smoke                    # one cheap real call per model (asks before spending); Muse Spark Open on Baseten (text and image), Glimmer if configured
 ```
 
 Budget caps live in `config/budget.yaml` (created from `config/budget.example.yaml` by `make setup`); prices in `config/prices.yaml`.
 
 ### Hosted judging server
 
-During judging the full app (uploads, live mode, voice, studies) runs on our GPU server: `scripts/gpu_server/serve.py` starts Muse Glimmer on llama.cpp (bound to localhost, never exposed) and the backend in demo mode next to it, then exposes only the backend through a Cloudflare tunnel. `scripts/judging_session.py` deploys the committed code, waits for the tunnel and points the site's `/backend.json` at it; `stop` points the site back to gallery only. The site switches its analysis features on only when that server answers its health check. Each session has its own spending cap, and keys stay on the server. `judging_session.py connect --url <address>` points the site at a server whose address you read from its log, and `schedule <UTC time>` shows the next session's start on the home page while no server is running.
+During judging the full app (uploads, live mode, voice, studies) runs on a CPU machine; reasoning goes to Muse Spark Open on Baseten, so the server needs no GPU. Only the backend is exposed, through a Cloudflare tunnel, and the site switches its analysis features on only when that server answers its health check. The home page shows "Analysis server online, reasoning on Muse Spark Open (open weights)" when it does.
 
-### Always-on server (Modal plus hosted Glimmer)
+- **This machine:** `python scripts/serve_local.py` starts the backend in demo mode, opens the tunnel and points the site's `/backend.json` at it. It restarts a dead backend or tunnel and re-points the site on its own; Ctrl+C points the site back to gallery only. Keys stay in `.env`, and spending is capped by `config/budget.yaml` and the persistent ledger.
+- **Kaggle (backup):** `scripts/gpu_server/serve.py` runs the same backend on a Kaggle CPU session (up to 12 hours per run), with `BASETEN_API_KEY`, `MODEL_API_KEY` and `DEMO_ACCESS_CODE` as Kaggle Secrets and its own per-session cap. `scripts/judging_session.py start` uploads the committed code and starts it; `--gpu` also serves Muse Glimmer on llama.cpp (bound to localhost) as the open-weight fallback. `connect --url <address>` points the site at a server whose address you read from its log, `stop` points it back to gallery only, and `schedule <UTC time>` shows the next session's start while no server is running.
+- **Check it like a judge:** `python scripts/uptime_check.py` (or `--watch 300`) reads the site's `/backend.json` and the server's health, without any model call.
 
-`scripts/modal_app.py` runs the same backend on Modal: CPU only (fitting, MuJoCo and signal processing need no GPU), one container at most, scaled to zero when idle, with runs, the spend ledger and the response cache on a Modal volume. Reasoning goes to the same open Muse Glimmer weights on a hosted provider listed in Meta's deploy guide (`REASONING_PROVIDER=together`), so an analysis takes a minute or two instead of the 5 to 15 minutes on two T4s. Keys live in a Modal secret; `modal deploy scripts/modal_app.py` prints the address to point the site at.
+`scripts/modal_app.py` runs the same backend on Modal (CPU only, one container, scaled to zero) for when Modal credits are available.
 
 ### Static gallery site
 
@@ -432,7 +459,8 @@ The public gallery is a static export that needs no server: `python scripts/buil
 |---|---|
 | `APP_ENV` | `dev`, `demo` or `prod`. In demo and prod: reasoning only on the open-weight model, no development fallback, mocks refused at startup |
 | `MODEL_API_KEY` | Meta Model API key (SAM 3.1, Muse Voice Transcribe, development reasoning) |
-| `REASONING_PROVIDER` | `glimmer` to reason on self-hosted Muse Glimmer |
+| `REASONING_PROVIDER` | `baseten` (Muse Spark Open, primary), `glimmer` (self-hosted Muse Glimmer) or `together` (Muse Glimmer hosted by Together AI) |
+| `BASETEN_API_KEY` | Baseten key for Muse Spark Open |
 | `GLIMMER_BASE_URL`, `GLIMMER_API_KEY` | The llama-server running Muse Glimmer |
 | `USE_CONTRIBUTOR_MODEL` | Development only: use the contributor variant of Muse Spark for text calls |
 | `MOCK_MODELS` | `1` in tests only |
@@ -530,7 +558,7 @@ All code in this repository was written during the hackathon building period (Oc
 
 - [x] Cost guard: budgets, allowlist, rate limiting, caching, kill switch, persistent spend ledger
 - [x] Recorded mode: video → SAM 3.1 tracking → calibrated trajectory
-- [x] Hypothesis generation and agent decisions with validated structured outputs, running on Muse Glimmer (open weights, self-hosted)
+- [x] Hypothesis generation and agent decisions with validated structured outputs, running on open weights (Muse Spark Open on Baseten; Muse Glimmer self-hosted as the offline path and fallback)
 - [x] Equations the agent writes itself, parsed by a closed math grammar (no eval) and verified like any built-in model
 - [x] Scale from a known object size, slow-motion clips in real time, and a hint for what to track
 - [x] Goal-driven studies: agent-planned recordings, combined by weighted means with an agreement test, a wear verdict and maintenance note, a study report and a combined MuJoCo model
@@ -548,7 +576,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Agent-proposed fit windows (leave out the throw or the catch), refused below 70% of the clip, with the whole-clip verdict kept
 - [x] An MCP server, so AI agents can measure physics from video as a tool (measure, audit, export, what-if)
 - [x] An open dataset of verified physical parameters (Dataset page, JSON and CSV), with a quality gate and provenance per row
-- [x] Setup guides: the requested experiment drawn by Muse Image onto the user's own frame (planned by Muse Glimmer, checked by math, labeled by code), with a written-only fallback
+- [x] Setup guides: the requested experiment drawn by Muse Image onto the user's own frame (planned by the open-weight reasoning model, checked by math, labeled by code), with a written-only fallback
 - [x] Regime-change detection (live and recorded)
 - [x] Voice what-ifs with Muse Voice Transcribe (spoken question, parameter change, re-simulated ghost; typing works too)
 - [x] Shareable MP4 with the measured trail, the simulated ghost and the typeset equation burned in
@@ -566,6 +594,12 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] A static gallery site that finds the analysis server at runtime, and `llms.txt` for AI assistants
 - [x] Physics audit, a lie detector for AI-generated video and world models: gravity, energy, period drift, a forecasting law and frame-to-frame continuity, each violation reported with its size and significance, and "can't judge" when the clip can't support a verdict
 - [x] 3D from one phone for balls: depth from apparent size, blur and occlusion filters, per-frame depth error, 3D projectile laws verified like the 2D ones
+- [x] Muse Spark Open (open weights) on Baseten as the reasoning model, with Glimmer as the open-weight fallback, the model's reasoning one click away in the trail, and the provider of every step recorded
+- [x] A referee that tries to break every accepted law, three independent hypothesis samples, single-frame object locating, and agent tool steps (test models, inspect motion) with the verdict always recomputed by code
+- [x] Laws across recordings: sweep planning, leave-one-out law selection, and a prediction made before the next recording is filmed
+- [x] Orbit mode: the inverse-square law and the Sun's GM rediscovered from a video of Apophis rendered from JPL Horizons data, and its 2029 Earth flyby predicted and compared with JPL
+- [x] Force and velocity vectors and the law's own prediction drawn on the video, in the web player and the shareable MP4
+- [x] Faster analysis: SAM masks decoded in parallel (a 450-frame clip from about 280 s to 10 s), and a time budget per fitted model
 
 ## Limitations
 
@@ -588,7 +622,7 @@ All code in this repository was written during the hackathon building period (Oc
 
 ## Acknowledgements
 
-- Meta's Muse Glimmer, SAM 3.1, Muse Voice Transcribe and Muse Spark models, and the `meta-sam-parser` library.
+- Meta's Muse Spark Open (served by Baseten), Muse Glimmer, SAM 3.1, Muse Voice Transcribe and Muse Spark models, and the `meta-sam-parser` library.
 - llama.cpp for serving the open-weight model.
 - Gallery footage: credited per clip in `gallery/README.md` (Creative Commons licenses, via Wikimedia Commons).
 

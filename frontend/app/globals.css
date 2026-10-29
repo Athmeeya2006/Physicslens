@@ -170,6 +170,11 @@ td { padding: 8px 12px 8px 0; vertical-align: top; border-top: 1px solid var(--s
 .result-head h2.ambiguous { color: var(--tie); }
 .result-head h2.no_fit { color: var(--bad); }
 .result-head .reason { color: var(--ink-2); max-width: 80ch; }
+.prediction { padding: 8px 12px; border-left: 3px solid var(--model); background: var(--model-soft); font-weight: 600; }
+.check.ok { color: var(--ok); }
+.check.miss { color: var(--tie); }
+.survived-badge { display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: 999px; font-size: 0.86rem;
+  font-weight: 600; background: var(--model-soft); color: var(--model); }
 .provenance { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.8rem; color: var(--ink-3); align-items: center; }
 .model-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: var(--radius); background: var(--sunk); color: var(--ink-2); font-weight: 600; }
 .model-tag.open { background: var(--ok-soft); color: var(--ok); }
@@ -208,6 +213,14 @@ td { padding: 8px 12px 8px 0; vertical-align: top; border-top: 1px solid var(--s
 .who.open { color: var(--ok); }
 .who.math { color: var(--model); }
 .trail-step p { font-size: 0.92rem; color: var(--ink-2); margin-top: 4px; }
+.server-badge { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); margin-top: -4px; }
+.server-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.shell-foot { max-width: 1200px; margin: 32px auto 0; padding: 20px 16px 32px; border-top: 1px solid var(--sunk);
+  font-size: 0.82rem; color: var(--ink-3); line-height: 1.5; }
+.shell-foot a { color: inherit; text-decoration: underline; }
+.trail-step details.thought { margin-top: 6px; }
+.trail-step details.thought summary { cursor: pointer; font-size: 0.84rem; color: var(--ink-3); }
+.trail-step details.thought p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.84rem; max-height: 18rem; overflow-y: auto; }
 .trail-step.highlight p.lead { color: var(--ink); font-weight: 600; font-size: 0.96rem; }
 .trail-items { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: 0.86rem; }
 .trail-items li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }

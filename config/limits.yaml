@@ -3,6 +3,7 @@ requests_per_minute:
   muse-spark-1.3: 30
   muse-spark-1.3-contributor: 30
   sam-3.1: 60
+  meta-models/muse-spark-open-1026: 20
   muse-glimmer-30b: 10
   meta-models/Muse-Glimmer-30B: 20
   muse-image-1.0: 10
@@ -20,6 +21,7 @@ retries:
 timeouts_seconds:
   llm: 60
   sam_clip: 120
+  baseten: 120         # hosted 816B MoE; a small call took 2.7 s, images and long JSON take longer
   together: 300         # hosted, about 100 output tokens per second
   wonder: 180          # writing a controller takes longer than a short JSON answer
   glimmer: 900          # a 30B model on two T4s decodes slowly; still bounded
@@ -31,14 +33,41 @@ circuit_breaker:
 
 agent:
   max_turns: 4
+  hypothesis_samples: 3   # independent proposals per hypotheses step, fitted as one union (self-consistency)
+  max_tool_steps: 4       # test_models / inspect steps per run before the agent must give its final action
+  max_tool_seconds: 120   # wall clock for those steps; after it the verdict stands as it is
 
 reasoning:
   meta_effort_default: minimal     # Responses API; "none" is rejected
+  baseten_effort_default: low     # Muse Spark Open defaults to xhigh (most expensive), so effort is always sent
+  # Harder decisions think longer. Tokens grow with effort (all billed as output), so each level gets its own
+  # output budget below; per-run and daily caps still bound the total.
+  baseten_effort_by_task:
+    scene: low          # naming the object; its box is refined by locate
+    locate: medium      # box precision (medium boxed a pendulum bob exactly on a real clip)
+    track_check: medium  # low effort wrongly called a correct track "the stopwatch edge" on a real clip
+    hypotheses: high    # the step whose quality decides the result
+    agent: medium       # explains or picks among verdict-allowed actions
+    study_plan: high
+    study_turn: high
+    skeptic: high
+    setup_guide: low
+    voice_notes: low
+    whatif: low
   glimmer_strength_default: low    # Glimmer template default would be high
 
 output_token_limits:
   meta_max_output_tokens_default: 2000
+  baseten_max_tokens_default: 6000   # reasoning counts against it: a one-line answer used 450 reasoning tokens
+  # high: the longest real answer so far used 9,103 tokens; parallel samples each reserve this much up front
+  baseten_max_tokens_by_effort: {low: 6000, medium: 12000, high: 16000, xhigh: 32000}
   glimmer_max_tokens_default: 8000
+
+scene:
+  # After the four-frame scene call, the object is located again on one frame alone (tighter boxes); measured on a
+  # real pendulum clip where the four-frame box sat on the stopwatch next to the bob.
+  locate_single_image: true
+  locate_max_frames: 3      # keyframes tried in order when the object is not yet in view (a throw entering later)
 
 media:
   llm_keyframes_max: 4

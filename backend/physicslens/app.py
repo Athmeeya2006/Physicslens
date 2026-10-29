@@ -28,6 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 
 from .agent.llm import LLMError as StudyLLMError
+from .agent.llm import reasoning_provider
 from .agent.notes import interpret_notes
 from .agent.schemas import ControlTask
 from .agent.setup_guide import GUIDE_FRAME, GUIDE_JPG, SetupGuideError, make_setup_guide
@@ -53,7 +54,7 @@ from .physics.health import (
 from .pipeline import AnalysisError, RunOptions, trajectory_from_result
 from .public import PublicQuota, client_address, turnstile_ok
 from .runs import RunManager
-from .settings import load_settings
+from .settings import OPEN_WEIGHT_MODELS, load_settings
 from .studies import Studies, StudyError
 from .voice.events import final_turn, partial_text
 
@@ -99,7 +100,9 @@ def public_try_enabled() -> bool:
 def health(x_access_code: Annotated[str | None, Header()] = None) -> dict[str, object]:
     # mock_mode drives the red "MOCK MODE" banner; audience decides what the page offers (never any quota numbers).
     audience = audience_for(x_access_code)
+    provider = reasoning_provider()
     return {"status": "ok", "app_env": settings.app_env, "mock_mode": settings.mock_models, "audience": audience,
+            "reasoning": {"provider": provider, "model": OPEN_WEIGHT_MODELS[provider]} if provider else None,
             "can_upload": audience != "public" or public_try_enabled(), "can_go_live": audience != "public",
             "turnstile_site_key": os.environ.get("TURNSTILE_SITE_KEY", "") if audience == "public" else ""}
 
@@ -630,12 +633,13 @@ def add_study_run(
     object_size_m: Annotated[float | None, Form()] = None,
     slow_motion: Annotated[float, Form()] = 1.0,
     object_hint: Annotated[str | None, Form(max_length=60)] = None,
+    setting: Annotated[float | None, Form(gt=0)] = None,
     x_access_code: Annotated[str | None, Header()] = None,
 ) -> dict:
     _study_audience(x_access_code)
     _study_call(studies.get, study_id)  # fail before accepting the upload
     run = create_run(request, video, pendulum_length_m, object_size_m, slow_motion, object_hint, None, x_access_code, None)
-    study = _study_call(studies.attach, study_id, run["run_id"], label)
+    study = _study_call(studies.attach, study_id, run["run_id"], label, setting)
     return {"study": study, "run": run}
 
 

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .costguard import CostGuardClient, CostGuardError, ProviderCallFailed
 from .settings import (
+    BASETEN_MODEL,
     GLIMMER_MODEL,
     META_CONTRIBUTOR_MODEL,
     META_TEXT_MODEL,
@@ -83,21 +84,47 @@ def main() -> None:
     print(f"   {len(r.text.splitlines())} output lines, frames billed={r.usage.video_frames}, cost=${r.cost_usd:.5f}")
     print(f"   raw response saved to {FIXTURES / 'sam_smoke_response.json'}")
 
-    print("4) Muse Glimmer (open weights, self-hosted): free, only if a server is configured")
+    print("4) Baseten: Muse Spark Open (open weights), one text call and one image call")
+    if not os.environ.get("BASETEN_API_KEY", "").strip():
+        print("   skipped: BASETEN_API_KEY is not set.")
+    else:
+        try:
+            names = client.list_models("baseten")
+            print(f"   {BASETEN_MODEL}: {'available' if BASETEN_MODEL in names else 'NOT LISTED'}")
+            r = client.open_weight_chat(messages=[{"role": "user", "content": "Reply with the single word: ok"}],
+                                        provider="baseten", run_id=run_id, max_tokens=1500, use_cache=False,
+                                        run_cap_usd=cap)
+            total += r.cost_usd
+            print(f"   text: {r.text.strip()!r}  usage={r.usage.as_dict()}  cost=${r.cost_usd:.5f}")
+            print(f"   reasoning returned: {len(r.reasoning or '')} chars")
+            frame = subprocess.run(["ffmpeg", "-v", "error", "-i", str(SMOKE_CLIP), "-frames:v", "1", "-vf",
+                                    "scale=256:-2", "-f", "image2pipe", "-c:v", "mjpeg", "-"],
+                                   check=True, capture_output=True).stdout
+            from .agent.llm import image_b64
+            r = client.open_weight_chat(messages=[{"role": "user", "content": [
+                {"type": "text", "text": "Name the main object in this image in at most three words."},
+                {"type": "image_url", "image_url": {"url": image_b64(frame)}}]}],
+                provider="baseten", run_id=run_id, max_tokens=1500, use_cache=False, run_cap_usd=cap)
+            total += r.cost_usd
+            print(f"   image: {r.text.strip()!r}  usage={r.usage.as_dict()}  cost=${r.cost_usd:.5f}")
+        except CostGuardError as e:
+            print(f"   FAIL: {e}")
+
+    print("5) Muse Glimmer (open weights, self-hosted): free, only if a server is configured")
     if not os.environ.get("GLIMMER_BASE_URL", "").strip():
         print("   skipped: set GLIMMER_BASE_URL (and GLIMMER_API_KEY) to the llama-server serving it.")
     else:
         try:
             names = client.list_models("glimmer")
             print(f"   served models: {names}")
-            r = client.glimmer_chat(messages=[{"role": "user", "content": "Reply with the single word: ok"}],
-                                    run_id=run_id, max_tokens=1000, use_cache=False)
+            r = client.open_weight_chat(messages=[{"role": "user", "content": "Reply with the single word: ok"}],
+                                        provider="glimmer", run_id=run_id, max_tokens=1000, use_cache=False)
             print(f"   {GLIMMER_MODEL}: {r.text.strip()!r}  usage={r.usage.as_dict()}  cost=${r.cost_usd:.5f}")
         except CostGuardError as e:
             print(f"   FAIL: {e}")
 
     print(f"\nSmoke total (ledger estimate): ${total:.5f}  (cap ${cap:.2f})")
-    print("Now compare with the Meta dashboard Usage page; the dashboard is the truth.")
+    print("Now compare with the Meta and Baseten dashboard usage pages; the dashboards are the truth.")
 
 
 if __name__ == "__main__":

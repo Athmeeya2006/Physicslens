@@ -17,6 +17,8 @@ matplotlib.use("Agg")  # headless: render math to images, never open windows
 from matplotlib.mathtext import math_to_image
 
 GHOST_BGR = (238, 211, 34)  # same cyan as the web overlay
+VEL_BGR = (77, 216, 255)  # yellow: velocity
+FORCE_BGR = (80, 80, 245)  # red: net force direction (the fitted law's acceleration)
 TRAIL_BGR = (255, 255, 255)
 TRAIL_FRAMES = 20
 STATUS_TEXT = {"accepted": "Verified equation", "ambiguous": "More data needed", "no_fit": "No clean governing equation found"}
@@ -117,6 +119,9 @@ def build_panel(result: dict[str, Any], frame_width: int) -> Image.Image:
 
     rows.append(_text_row("Dashed ring: simulation of the fitted equation. White trail: measured by SAM 3.1.",
                           int(18 * s), int(900 * s), fill=(180, 190, 205)))
+    if result.get("ghosts"):
+        rows.append(_text_row("Red arrow: net force (the law's acceleration). Yellow: velocity. Dots: where the law says it goes next.",
+                              int(18 * s), int(900 * s), fill=(180, 190, 205)))
     rows.append(_text_row("PhysicsLens", int(18 * s), int(900 * s), fill=(34, 211, 238)))
 
     width = max(r.width for r in rows) + 2 * pad
@@ -161,6 +166,43 @@ def _quiet_corner(points: list[tuple[float, float]], w: int, h: int, pw: int, ph
     return max(0, x), max(0, y)
 
 
+def ghost_vectors(ghost: dict[int, tuple[float, float]]) -> dict[int, tuple[np.ndarray, np.ndarray]]:
+    """Velocity and acceleration of the simulated path, in pixels per frame, by central differences.
+
+    Taken from the fitted equation's own trajectory (smooth by construction), not from the noisy measurement, so the
+    arrows show what the verified law says: for an orbit the force arrow points at the Sun.
+    """
+    out = {}
+    for f, (x, y) in ghost.items():
+        if f - 1 in ghost and f + 1 in ghost:
+            p0, p1, p2 = np.array(ghost[f - 1]), np.array([x, y]), np.array(ghost[f + 1])
+            out[f] = ((p2 - p0) / 2, p2 - 2 * p1 + p0)
+    return out
+
+
+def _arrow_scales(vectors: dict[int, tuple[np.ndarray, np.ndarray]], target_px: float) -> tuple[float, float]:
+    """One scale per arrow kind for the whole video: the median magnitude maps to target_px, so lengths stay comparable."""
+    if not vectors:
+        return 0.0, 0.0
+    v = np.median([np.linalg.norm(a) for a, _ in vectors.values()])
+    acc = np.median([np.linalg.norm(b) for _, b in vectors.values()])
+    return (target_px / v if v > 0 else 0.0), (target_px / acc if acc > 0 else 0.0)
+
+
+def _arrow(frame: np.ndarray, start: tuple[float, float], vec: np.ndarray, scale: float, color: tuple[int, int, int],
+           thickness: int, max_len: float) -> None:
+    d = vec * scale
+    n = float(np.linalg.norm(d))
+    if n < 3:
+        return
+    if n > max_len:
+        d = d * (max_len / n)
+    a = (round(start[0]), round(start[1]))
+    b = (round(start[0] + d[0]), round(start[1] + d[1]))
+    cv2.arrowedLine(frame, a, b, (20, 20, 20), thickness + 2, cv2.LINE_AA, tipLength=0.25)
+    cv2.arrowedLine(frame, a, b, color, thickness, cv2.LINE_AA, tipLength=0.25)
+
+
 def render_share_video(result: dict[str, Any], clip: Path, out: Path) -> Path:
     cap = cv2.VideoCapture(str(clip))
     if not cap.isOpened():
@@ -173,7 +215,9 @@ def render_share_video(result: dict[str, Any], clip: Path, out: Path) -> Path:
     # About the object's size, but never so big that the ring hides what it is compared with.
     radius = int(min(max(4, (result.get("object_size_px") or min(w, h) / 20) / 2), max(w, h) * 0.03))
     thickness = max(2, w // 400)
-
+    vectors = ghost_vectors(ghost)
+    v_scale, a_scale = _arrow_scales(vectors, max(4 * radius, min(w, h) * 0.07))
+    ahead = max(2, round(fps))  # one second of the law's own prediction
     panel = build_panel(result, w)
     max_w = int(0.46 * w)
     if panel.width > max_w:  # keep the video, not the caption, the main thing
@@ -204,6 +248,14 @@ def render_share_video(result: dict[str, Any], clip: Path, out: Path) -> Path:
                 cv2.polylines(frame, [np.array(trail, np.int32)], False, TRAIL_BGR, max(1, thickness - 1), cv2.LINE_AA)
             if idx in ghost:
                 gx, gy = ghost[idx]
+                for f in range(idx + 2, idx + ahead, 2):
+                    if f in ghost:
+                        cv2.circle(frame, (round(ghost[f][0]), round(ghost[f][1])), max(1, thickness - 1), GHOST_BGR, -1, cv2.LINE_AA)
+                if idx in vectors:  # arrows under the ring, so the ghost's centre stays visible
+                    vel, acc = vectors[idx]
+                    cap_len = min(w, h) * 0.18
+                    _arrow(frame, (gx, gy), vel, v_scale, VEL_BGR, thickness, cap_len)
+                    _arrow(frame, (gx, gy), acc, a_scale, FORCE_BGR, thickness, cap_len)
                 _dashed_circle(frame, (round(gx), round(gy)), radius, thickness)
             region = frame[py:py + ph, px:px + pw].astype(np.float32)
             frame[py:py + ph, px:px + pw] = (pb * pa + region * (1 - pa)).astype(np.uint8)

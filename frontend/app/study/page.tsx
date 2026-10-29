@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { AgentTrail } from "@/components/AgentTrail";
 import { VoiceNotes } from "@/components/VoiceNotes";
 import { Tex } from "@/components/Equation";
-import type { GalleryItem, RunView, Study } from "@/lib/api";
+import type { GalleryItem, RunView, Study, Sweep } from "@/lib/api";
 import { addStudyRun, createStudy, formatUnit, getGallery, withUncertainty, getRun, getStudy, posterUrl, reviewStudy, studyFileUrl, useBackend } from "@/lib/api";
 
 const EXAMPLES = [
@@ -32,6 +32,7 @@ export default function StudyPage() {
   const [results, setResults] = useState<Record<string, RunView>>({});
   const [file, setFile] = useState<File | null>(null);
   const [label, setLabel] = useState("");
+  const [setting, setSetting] = useState("");
   const [lengthCm, setLengthCm] = useState("");
   const [sizeCm, setSizeCm] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -57,7 +58,7 @@ export default function StudyPage() {
   const plan = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setBusy("The agent is planning the study (Muse Glimmer, open weights: about a minute)");
+    setBusy("The agent is planning the study (open-weight reasoning model)");
     try {
       const s = await createStudy(goal);
       setStudy(s);
@@ -98,11 +99,12 @@ export default function StudyPage() {
     try {
       const out = await addStudyRun(study.id, file, label || next?.label || "", {
         pendulumLengthM: lengthCm ? Number(lengthCm) / 100 : null, objectSizeM: sizeCm ? Number(sizeCm) / 100 : null,
-        slowMotion: null, objectHint: null,
+        slowMotion: null, objectHint: null, setting: setting ? Number(setting) : null,
       });
       setStudy(out.study);
       setFile(null);
       setLabel("");
+      setSetting("");
       poll(out.run.run_id, study.id);
     } catch (err) {
       setError((err as Error).message);
@@ -226,6 +228,14 @@ export default function StudyPage() {
                       }} />
                       <div className="scale-fields">
                         <label className="field">Label<input value={label} placeholder={next?.label ?? "Recording"} onChange={(e) => setLabel(e.target.value)} /></label>
+                        {study.plan.sweep && (
+                          <label className="field">
+                            {study.plan.sweep.variable}{study.plan.sweep.unit ? `, ${study.plan.sweep.unit}` : ""}
+                            <input type="number" min="0" step="any" value={setting}
+                              placeholder={String(study.plan.sweep.values[study.recordings.length] ?? "")}
+                              onChange={(e) => setSetting(e.target.value)} />
+                          </label>
+                        )}
                         <label className="field">Pendulum length, cm<input type="number" min="0.5" step="0.1" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} /></label>
                         <label className="field">Object size, cm<input type="number" min="0.5" step="0.1" value={sizeCm} onChange={(e) => setSizeCm(e.target.value)} /></label>
                       </div>
@@ -252,6 +262,8 @@ export default function StudyPage() {
                   </ul>
                 )}
               </section>
+
+              {study.sweep && <SweepPanel sweep={study.sweep} />}
 
               {study.combined.length > 0 && (
                 <section className="panel">
@@ -329,4 +341,47 @@ function nextRecording(s: Study) {
 
 function lowerFirst(text: string): string {
   return text && /^[A-Z][a-z]/.test(text) ? text[0].toLowerCase() + text.slice(1) : text;
+}
+
+function SweepPanel({ sweep }: { sweep: Sweep }) {
+  const unit = sweep.unit ? ` ${sweep.unit}` : "";
+  const fmt = (v: number) => (Math.abs(v) >= 100 || Math.abs(v) < 0.01 ? v.toPrecision(3) : v.toFixed(3));
+  return (
+    <section className="panel stack">
+      <h3>{sweep.response} against {sweep.variable}</h3>
+      <p className="small muted">
+        The agent expected: <strong>{sweep.expected_law}</strong> ({sweep.why}). Code fits every candidate law and keeps
+        the one that predicts each recording from the others.
+      </p>
+      {sweep.points.length > 0 && (
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Recording</th><th>{sweep.variable}</th><th>{sweep.response}</th></tr></thead>
+            <tbody>
+              {sweep.points.map((p) => (
+                <tr key={p.run_id}><td><a href={`/?run=${p.run_id}`}>{p.label}</a></td><td>{fmt(p.x)}{unit}</td>
+                  <td>{fmt(p.y)} ± {fmt(p.std)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p><strong>{sweep.winner ? sweep.winner.title : sweep.status === "too_few" ? "Not enough settings yet" : "No single law yet"}</strong>: {sweep.reason}</p>
+      {sweep.next?.y !== undefined && (
+        <p className="prediction">
+          Prediction before filming: at {sweep.variable} = {fmt(sweep.next.x)}{unit}, {sweep.response} ={" "}
+          {fmt(sweep.next.y)} (95%: {fmt(sweep.next.low!)} to {fmt(sweep.next.high!)}).
+        </p>
+      )}
+      {sweep.next?.separates && (
+        <p className="prediction">Record at {sweep.variable} = {fmt(sweep.next.x)}{unit} to separate {sweep.next.separates.join(" and ")}.</p>
+      )}
+      {sweep.checks.map((c) => (
+        <p key={c.label} className={c.within_95 ? "check ok" : "check miss"}>
+          {c.label}: predicted {fmt(c.predicted)}, measured {fmt(c.measured)} ({c.z >= 0 ? "+" : ""}{c.z.toFixed(1)} sigma),{" "}
+          {c.within_95 ? "inside the 95% interval" : "outside the 95% interval"}.
+        </p>
+      ))}
+    </section>
+  );
 }

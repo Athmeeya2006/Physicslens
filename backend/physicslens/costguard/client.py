@@ -25,11 +25,10 @@ from openai import OpenAI
 from websockets.exceptions import ConnectionClosed
 
 from ..settings import (
-    GLIMMER_MODEL,
     IMAGE_MODEL,
     META_CONTRIBUTOR_MODEL,
+    OPEN_WEIGHT_MODELS,
     SAM_MODEL,
-    TOGETHER_GLIMMER_MODEL,
     VOICE_MODEL,
     Settings,
     load_budget,
@@ -56,6 +55,7 @@ log = logging.getLogger("physicslens.costguard")
 
 META_EFFORTS = ("minimal", "low", "medium")  # never high/xhigh/max; "none" is a 400
 GLIMMER_STRENGTHS = ("low", "medium")  # the chat template defaults to high, so it is always sent
+BASETEN_EFFORTS = ("low", "medium", "high", "xhigh")  # always sent: the model's own default is xhigh
 VOICE_URL = "wss://api.meta.ai/v1/asr/realtime"
 VOICE_BYTES_PER_SECOND = 24_000 * 2  # 24 kHz, 16-bit, mono
 VOICE_MAX_AHEAD_S = 5.0
@@ -155,6 +155,7 @@ class CostGuardClient:
         self.sam_timeout = float(timeouts.get("sam_clip", 120))
         self.glimmer_timeout = float(timeouts.get("glimmer", 900))
         self.together_timeout = float(timeouts.get("together", 300))
+        self.baseten_timeout = float(timeouts.get("baseten", 120))
         self.image_timeout = float(timeouts.get("image_edit", 120))
         self.wonder_timeout = float(timeouts.get("wonder", 180))
         retries = self.limits.get("retries") or {}
@@ -165,6 +166,11 @@ class CostGuardClient:
         out = self.limits.get("output_token_limits") or {}
         self.meta_max_output_default = int(out.get("meta_max_output_tokens_default", 2000))
         self.glimmer_max_tokens_default = int(out.get("glimmer_max_tokens_default", 8000))
+        self.baseten_max_tokens_default = int(out.get("baseten_max_tokens_default", 6000))
+        self.baseten_max_tokens_by_effort = {k: int(v) for k, v in (out.get("baseten_max_tokens_by_effort") or {}).items()}
+        reasoning = self.limits.get("reasoning") or {}
+        self.baseten_effort_default = str(reasoning.get("baseten_effort_default", "low"))
+        self.baseten_effort_by_task = {k: str(v) for k, v in (reasoning.get("baseten_effort_by_task") or {}).items()}
         # Providers listed in PHYSICSLENS_CACHE_ONLY answer from the cache or not at all. A GPU server
         # running the open-weight model replays SAM results this way and never holds a Meta key.
         self.cache_only = {p.strip() for p in os.environ.get("PHYSICSLENS_CACHE_ONLY", "").split(",") if p.strip()}
@@ -370,34 +376,49 @@ class CostGuardClient:
         resp = sdk.responses.input_tokens.count(**{k: body[k] for k in keys if k in body})
         return int(resp.input_tokens)
 
-    # ---------- Muse Glimmer: open weights on our own llama-server (Chat Completions) ----------
+    # ---------- Open-weight models over Chat Completions (Baseten, our llama-server, Together) ----------
 
-    def glimmer_chat(
+    def open_weight_chat(
         self,
         *,
         messages: list[dict[str, Any]],
         run_id: str,
-        strength: str = "low",
+        provider: str,
+        effort: str = "low",
         max_tokens: int | None = None,
         audience: str = "dev",
         use_cache: bool = True,
         run_cap_usd: float | None = None,
-        provider: str = "glimmer",
+        response_format: dict[str, Any] | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> CallResult:
-        """provider "glimmer" is our own llama-server; "together" is the same open weights on Together AI."""
-        if strength not in GLIMMER_STRENGTHS:
-            raise InvalidRequest(f"Glimmer reasoning strength must be one of {GLIMMER_STRENGTHS}, got {strength!r}.")
-        if provider not in ("glimmer", "together"):
-            raise InvalidRequest(f"Unknown Glimmer provider {provider!r}.")
-        model = GLIMMER_MODEL if provider == "glimmer" else TOGETHER_GLIMMER_MODEL
-        timeout = self.glimmer_timeout if provider == "glimmer" else self.together_timeout
+        """provider "baseten" is Muse Spark Open; "glimmer" is our own llama-server; "together" is Glimmer hosted.
+
+        `effort` is sent as reasoning_effort (Baseten) or the chat template's reasoning_strength (our llama-server).
+        """
+        if provider not in OPEN_WEIGHT_MODELS:
+            raise InvalidRequest(f"Unknown open-weight provider {provider!r}.")
+        allowed = BASETEN_EFFORTS if provider == "baseten" else GLIMMER_STRENGTHS
+        if effort not in allowed:
+            raise InvalidRequest(f"{provider} reasoning effort must be one of {allowed}, got {effort!r}.")
+        model = OPEN_WEIGHT_MODELS[provider]
+        timeout = {"baseten": self.baseten_timeout, "glimmer": self.glimmer_timeout}.get(provider, self.together_timeout)
         self.check_kill_switch()
         self._check_model(model, provider)
-        max_tok = max_tokens or self.glimmer_max_tokens_default
-        # Sampling stays at the model's defaults (temperature 1.0); temperature 0 makes it loop.
+        max_tok = max_tokens or (self.baseten_max_tokens_default if provider == "baseten" else self.glimmer_max_tokens_default)
+        # Sampling stays at the model's defaults; temperature 0 makes Glimmer loop.
         # TODO(verify): whether Together passes chat_template_kwargs through to the template; until a test call
         # shows it does, it is sent only to our own llama-server, and Together runs at its default strength.
-        extra = {"chat_template_kwargs": {"reasoning_strength": strength}} if provider == "glimmer" else {}
+        extra: dict[str, Any] = {}
+        if provider == "baseten":
+            extra = {"reasoning_effort": effort}
+        elif provider == "glimmer":
+            extra = {"chat_template_kwargs": {"reasoning_strength": effort}}
+        if response_format is not None:
+            extra["response_format"] = response_format
+        if tools is not None:
+            # One tool call per turn keeps the agent loop's order and its guards simple.
+            extra.update(tools=tools, tool_choice="auto", parallel_tool_calls=False)
         body = {"model": model, "messages": messages, "max_tokens": max_tok, **extra}
         est_cost = self.pricing.worst_case_tokens(provider, model, _estimate_input_tokens(messages), max_tok)
 
@@ -689,8 +710,25 @@ def _parse_chat(resp: Any) -> _Parsed:
     choice = (_get(resp, "choices") or [None])[0]
     message = _get(choice, "message")
     finish = _get(choice, "finish_reason")
-    return _Parsed(text=_get(message, "content") or "", usage=usage, reasoning=_get(message, "reasoning_content"),
-                   finish_reason=finish, truncated=finish == "length", raw=_dump(resp))
+    text, reasoning = split_reasoning(_get(message, "content") or "",
+                                      _get(message, "reasoning_content") or _get(message, "reasoning"))
+    return _Parsed(text=text, usage=usage, reasoning=reasoning, finish_reason=finish, truncated=finish == "length",
+                   raw=_dump(resp))
+
+
+def split_reasoning(content: str, reasoning: str | None) -> tuple[str, str | None]:
+    """Answer and reasoning from a chat message.
+
+    Baseten and llama-server put reasoning in its own field (reasoning_content; some servers call it reasoning).
+    A server without a reasoning parser leaves it inline as <think>...</think> before the answer; that is split
+    off here so the JSON validator never sees it.
+    """
+    stripped = content.lstrip()
+    if stripped.startswith("<think>") and "</think>" in stripped:
+        inline, answer = stripped[len("<think>"):].split("</think>", 1)
+        reasoning = "\n".join(r for r in (reasoning, inline.strip()) if r) or None
+        content = answer
+    return content.strip(), (reasoning or None)
 
 
 def _parse_sam(resp: Any) -> _Parsed:

@@ -81,12 +81,17 @@ def read_frame(path: Path, index: int) -> np.ndarray:
     return frame
 
 
+def keyframe_indices(frames: int, count: int) -> list[int]:
+    """Frame numbers of the keyframes, in order; the first is frame 0."""
+    idx = np.linspace(0, max(frames - 1, 0), num=min(count, max(frames, 1))).round().astype(int)
+    return list(dict.fromkeys(idx.tolist()))
+
+
 def keyframes(path: Path, count: int, long_side: int) -> list[bytes]:
     """Up to `count` JPEGs spread over the clip, the first being frame 0 (the frame SAM prompts refer to)."""
     info = probe(path)
-    idx = np.linspace(0, max(info.frames - 1, 0), num=min(count, max(info.frames, 1))).round().astype(int)
     out = []
-    for i in dict.fromkeys(idx.tolist()):
+    for i in keyframe_indices(info.frames, count):
         frame = read_frame(path, i)
         h, w = frame.shape[:2]
         s = min(1.0, long_side / max(h, w))

@@ -79,6 +79,12 @@ class Scene(Strict):
         return self
 
 
+class Located(Strict):
+    moving_object_box: Box1000 | None = Field(description="Tight box around the moving object, or null if it is not visible.")
+    second_object_box: Box1000 | None = Field(description="Only when asked for a second object: its box, or null.")
+    reference_box: Box1000 | None = Field(description="Only when asked for a reference object: its box, or null.")
+
+
 class Hypothesis(Strict):
     model_id: ModelId  # type: ignore[valid-type]
     rationale: str = Field(description="One sentence: which numbers in the summary point to this model.")
@@ -137,15 +143,65 @@ def _plain_dashes(text: str) -> str:
 
 
 class AgentTurn(Strict):
-    action: Literal["explain", "request_experiment", "try_family", "give_up"]
-    message: str = Field(description="Plain-language text for the user: explanation, experiment request, or why no equation fits.")
+    action: Literal["explain", "request_experiment", "try_family", "give_up", "test_models", "inspect"]
+    message: str = Field(description=(
+        "Plain-language text for the user: explanation, experiment request, or why no equation fits. For test_models "
+        "and inspect: one sentence on what you are checking."))
     next_family: Family | None = Field(description="Only for try_family; otherwise null.")
     reasoning_summary: str = Field(description="Two or three sentences summarizing your reasoning, shown in the UI.")
+    model_ids: list[str] = Field(default_factory=list, max_length=3, description=(
+        "Only for test_models: up to 3 untested listed model ids of the current family; otherwise []."))
+    free_model: FreeModelIn | None = Field(default=None, description=(
+        "Only for test_models in family line or plane: one law you write; otherwise null."))
+    window: FitWindow | None = Field(default=None, description="Only for inspect: the stretch of the clip to look at.")
+    expectation: str | None = Field(default=None, description=(
+        "Only for test_models and inspect: what you expect to see, and what result would change your mind."))
 
     @field_validator("message", "reasoning_summary")
     @classmethod
     def no_dashes(cls, v: str) -> str:
         return _plain_dashes(v)
+
+    @field_validator("expectation")
+    @classmethod
+    def no_dashes_opt(cls, v: str | None) -> str | None:
+        return None if v is None else _plain_dashes(v)
+
+
+class Challenge(Strict):
+    model_id: str | None = Field(description=(
+        "A listed model id from the SAME family as the accepted law, not already tested; null when you write a law."))
+    free_model: FreeModelIn | None = Field(description="Only for family line or plane: a law you write; otherwise null.")
+    why: str = Field(description="One sentence: what in the numbers this alternative could explain as well or better.")
+
+    @field_validator("why")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)
+
+    @model_validator(mode="after")
+    def one_kind(self) -> Challenge:
+        if (self.model_id is None) == (self.free_model is None):
+            raise ValueError("give exactly one of model_id or free_model")
+        return self
+
+
+class SkepticReview(Strict):
+    challenges: list[Challenge] = Field(max_length=3, description="Up to three alternative laws for code to fit and test.")
+    concerns: list[str] = Field(max_length=3, description=(
+        "Confounds a fit to this clip cannot test (camera tilt, a moving pivot, a scale reference out of the plane), "
+        "each one short sentence naming what in the numbers suggests it; [] if none."))
+    reasoning_summary: str = Field(description="Two sentences: how you tried to break the accepted law.")
+
+    @field_validator("reasoning_summary")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)
+
+    @field_validator("concerns")
+    @classmethod
+    def no_dashes_list(cls, v: list[str]) -> list[str]:
+        return [_plain_dashes(c) for c in v]
 
 
 class ParamChange(Strict):
@@ -182,6 +238,27 @@ class PlannedRecording(Strict):
     how_to_film: str = Field(description="One or two sentences the user can follow while filming.")
 
 
+ScalingLawId = Literal["constant", "power_0.5", "power_-0.5", "power_1", "power_-1", "power_2", "power", "linear"]
+
+
+class PlannedSweep(Strict):
+    variable: str = Field(description="The setting the user changes between recordings, e.g. 'string length'.")
+    unit: str = Field(description="SI unit of that setting, e.g. 'm' or 'kg'.")
+    response: str = Field(description=(
+        "What is compared across recordings: 'period' (from the fitted pendulum or spring), or the name of a fitted "
+        "parameter such as 'g', 'gamma', 'omega', 'zeta'."))
+    values: list[float] = Field(min_length=3, max_length=6, description="The settings to record, in recording order.")
+    expected_law: ScalingLawId = Field(description=(  # type: ignore[valid-type]
+        "The law you expect before any data: constant, power_0.5 (y proportional to sqrt(x)), power_-0.5, power_1, "
+        "power_-1, power_2, power (exponent unknown) or linear. Code tests all of them; yours is only shown."))
+    why: str = Field(description="One sentence: why you expect that law.")
+
+    @field_validator("why")
+    @classmethod
+    def no_dashes(cls, v: str) -> str:
+        return _plain_dashes(v)
+
+
 class StudyPlan(Strict):
     deliverable: Literal["simulation_model", "health_check", "parameter_sheet"] = Field(description=(
         "simulation_model: fitted dynamics exported to MuJoCo; health_check: compare recordings of one machine over "
@@ -190,6 +267,9 @@ class StudyPlan(Strict):
     recordings: list[PlannedRecording] = Field(min_length=1, max_length=4)
     done_when: str = Field(description="One sentence: what result ends the study.")
     reasoning_summary: str
+    sweep: PlannedSweep | None = Field(default=None, description=(
+        "Only when the goal is how one quantity depends on a setting the user can change (a scaling law): the sweep, "
+        "with one planned recording per value. Otherwise null."))
 
     @field_validator("done_when", "reasoning_summary")
     @classmethod

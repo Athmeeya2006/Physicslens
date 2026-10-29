@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,12 +14,16 @@ import numpy as np
 
 from .agent.llm import LLMError
 from .agent.reasoning import (
+    SampledHypotheses,
     agent_turn,
     check_track,
+    locate_objects,
     propose_hypotheses,
+    propose_hypotheses_sampled,
     understand_scene,
 )
-from .agent.schemas import Scene
+from .agent.schemas import AgentTurn, Scene
+from .agent.skeptic import challenge, fit_more, outcome_text
 from .costguard import CostGuardClient, CostGuardError
 from .costguard.cache import file_digest
 from .export.mjcf import MjcfError, calibrate_contact, check_against_fit
@@ -61,6 +66,7 @@ from .sound import audio_trail_step, listen
 
 log = logging.getLogger("physicslens.pipeline")
 
+REASONING_TRAIL_CHARS = 6000  # long thoughts are cut for the trail; llm_calls keeps the full text
 NOMINAL_PX_PER_M = 1000.0  # used only when nothing in the clip gives a scale
 SCALE_NOTE = ("No reference of known size was found, so lengths and g are in arbitrary units. Frequency, damping "
               "and friction rates don't depend on scale and are exact. For a calibrated result, put an A4 sheet "
@@ -90,6 +96,12 @@ class RunOptions:
     blade_count: int | None = None  # fan blades (or other sound sources per turn): turns a blade-pass tone into a spin rate
     depth_3d: bool = False  # also measure a ball's depth from its apparent size (needs object_size_m and focal_px)
     focal_px: float | None = None  # camera focal length in pixels at the uploaded video's resolution
+    # A rendered or instrument-calibrated video (orbit mode): the image scale and the fixed point the coordinates are
+    # measured from (the Sun) are part of the frame's geometry, given by whoever drew it. The law is still discovered.
+    known_px_per_unit: float | None = None
+    origin_px: tuple[float, float] | None = None
+    units: dict[str, str] | None = None  # display names when 1 m and 1 s stand for other units, e.g. AU and day
+    frame_note: str | None = None  # what the coordinates mean, passed to the reasoning model with the numbers
 
 
 Progress = Callable[[str], None]
@@ -124,9 +136,17 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     # What the agent and the verifier decided, in order, each tagged with who decided it (shown on screen).
     trail: list[dict[str, Any]] = []
 
-    def record(step: str, call, text: str, **extra: Any) -> None:
+    def record(step: str, call, text: str | None, **extra: Any) -> None:
+        """text None: the call is logged in llm_calls but adds no trail line (extra samples of one step)."""
         llm_calls.append({"step": step, "provider": call.provider, "model": call.model, "cached": call.cached,
-                          "reasoning": call.reasoning})
+                          "reasoning": call.reasoning, "fallbacks": list(call.fallbacks)})
+        if text is None:
+            return
+        if call.fallbacks:
+            extra = {**extra, "fallbacks": list(call.fallbacks)}
+        if call.reasoning:
+            # What the model thought before answering; the UI shows it collapsed under the step.
+            extra = {**extra, "reasoning": call.reasoning[:REASONING_TRAIL_CHARS]}
         trail.append({"step": step, "provider": call.provider, "model": call.model, "text": text, **extra})
 
     progress("Preparing video")
@@ -144,8 +164,10 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     record("scene", call, f"Sees {article(scene.moving_object)} {scene.moving_object} {MOTION_PHRASE[scene.motion_family]}; "
                           f"{ref}{told}.")
 
+    scene, prompt_frame = locate_precisely(client, scene, frames_jpeg, info, run_id, options.audience, record, limits, progress)
+
     progress(f"Tracking the {scene.moving_object} with SAM 3.1")
-    tracks = track_objects(client, clip, info, scene, run_id, options.audience)
+    tracks = track_objects(client, clip, info, scene, run_id, options.audience, prompt_frame)
     moving = tracks.get(MOVING_ID)
     if moving is None or len(moving.frames) < min_frames // 2:
         raise AnalysisError(f"SAM could not follow the {scene.moving_object} through the clip.")
@@ -157,7 +179,11 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         travel = float(np.ptp(moving.centers_px, axis=0).max())
         size = float(np.median(moving.long_px))
         # Generous on purpose: a jumping person rises a fifth of their height, a chalk mark doesn't move at all.
-        if travel < max(0.25 * size, 0.02 * max(info.width, info.height)):
+        moves_a_lot = travel >= max(0.25 * size, 0.02 * max(info.width, info.height))
+        # A big object can move a little and still be measured: a truck's body bounced 6 px on its springs with
+        # 0.1 to 0.2 px of frame-to-frame jitter (ratio 34 to 58), while a stopwatch rim SAM locked onto by mistake
+        # "moved" 5 px with 0.5 px of jitter (ratio 11). Smooth motion well above the jitter is real motion.
+        if not moves_a_lot and not smooth_motion(moving.centers_px, travel):
             # Fitting equations to a mark that never moved would only find patterns in noise.
             raise AnalysisError(
                 f"What SAM followed as the {scene.moving_object} barely moves ({travel:.0f} px). It may have locked on to "
@@ -167,7 +193,7 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     calibration = calibrate(scene, tracks.get(REFERENCE_ID), moving, options)
     # Physics runs in real time; drawing on the clip uses frame indices, so the video keeps its own rate.
     fps = info.fps * options.slow_motion
-    full, full_origin = full_track(moving, fps, calibration.px_per_m)
+    full, full_origin = full_track(moving, fps, calibration.px_per_m, options.origin_px)
     # The whole track until the family is known: splitting at "impacts" only makes sense for a thrown or
     # bouncing object, and would chop an oscillator at its turning points (found on a real spring clip).
     traj, origin_px = full, full_origin
@@ -177,9 +203,16 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         rotation, traj, origin_px = rotation_track(moving, fps, calibration.px_per_m)
 
     summary = rotation_summary(rotation) if rotation is not None else summarize(traj, calibration.source == "none")
-    progress("Proposing hypotheses")
-    hyp, call = propose_hypotheses(client, summary, scene, run_id, options.audience)
-    record("hypotheses", call, f"Proposes {len(hyp.candidates)} {hyp.family} models to test.", items=_hypothesis_items(hyp))
+    if options.frame_note:
+        # Every reasoning step that reads the numbers also reads what they mean (units, where the origin is).
+        summary = {**summary, "frame_note": options.frame_note}
+    n_samples = int((limits.get("agent") or {}).get("hypothesis_samples", 1))
+    progress("Proposing hypotheses" + (f" ({n_samples} independent proposals)" if n_samples > 1 else ""))
+    sampled = propose_hypotheses_sampled(client, summary, scene, run_id, options.audience, samples=n_samples)
+    hyp = sampled.merged
+    record("hypotheses", sampled.calls[0], _sampled_text(sampled), items=_hypothesis_items(hyp, sampled))
+    for extra_call in sampled.calls[1:]:
+        record("hypotheses", extra_call, None)
 
     if hyp.family == "double_pendulum":
         second = tracks.get(SECOND_ID)
@@ -220,6 +253,10 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     change: RegimeChange | None = None
     regimes: list[dict[str, Any]] = []
     bounces: dict[str, Any] | None = None
+    agent_cfg = limits.get("agent") or {}
+    tool_steps_left = int(agent_cfg.get("max_tool_steps", 4))
+    tool_deadline = time.monotonic() + float(agent_cfg.get("max_tool_seconds", 120))
+    notebook: list[dict[str, Any]] = []
     for _ in range(max_turns):
         tried.append(family)
         if rotation is None:
@@ -287,7 +324,51 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         if change is not None:
             context["regime_change"] = {"at_s": round(change.t_estimate, 2), "regimes": [
                 {k: r[k] for k in ("start_s", "end_s", "status", "title", "params")} for r in regimes]}
-        turn, call = agent_turn(client, context, run_id, options.audience)
+        # The agent may test more models or inspect part of the motion before deciding; code recomputes the verdict.
+        while True:
+            context.update(agent_context(verdict, family, summary, scene, tried))
+            context["tool_steps_left"] = tool_steps_left if coords is not None else 0
+            context["notebook"] = notebook
+            context["untested_models"] = [{"model_id": m.id, "title": m.title} for m in models_for(family)
+                                          if m.id not in {f.model_id for f in verdict.ranked} and not m.id.startswith("custom_")]
+            turn, call = agent_turn(client, context, run_id, options.audience)
+            if turn.action not in TOOL_ACTIONS:
+                break
+            if tool_steps_left <= 0 or coords is None or time.monotonic() > tool_deadline:
+                record("agent", call, "Wanted to test more, but its step budget is used up; the verdict stands.",
+                       action=turn.action, status="rejected", reasoning_summary=turn.reasoning_summary)
+                turn = AgentTurn(action=FINAL_FOR[verdict.status], message=verdict.reason, next_family=None,
+                                 reasoning_summary="Step budget used up; the verdict from numerical verification stands.")
+                break
+            tool_steps_left -= 1
+            if turn.action == "inspect":
+                note = inspect_window(traj, turn, calibration.source == "none")
+                record("agent", call, f"{turn.message} {note['text']}", action="inspect",
+                       reasoning_summary=turn.reasoning_summary, expectation=turn.expectation)
+                notebook.append(note["entry"])
+                continue
+            before = verdict
+            proposals = [(m, None, turn.expectation or turn.message) for m in turn.model_ids]
+            if turn.free_model is not None:
+                proposals.append((None, turn.free_model, turn.expectation or turn.message))
+            verdict, items, more = fit_more(coords, verdict, family, proposals, source="the agent")
+            rationales.update(more)
+            candidate_ids = list(dict.fromkeys([*candidate_ids, *(i["model_id"] for i in items if i["status"] != "untestable")]))
+            outcome = tool_outcome(before, verdict)
+            record("agent", call, f"{turn.message} {outcome}", action="test_models", items=items,
+                   status=verdict.status, reasoning_summary=turn.reasoning_summary, expectation=turn.expectation)
+            notebook.append({"tested": [i["model_id"] for i in items], "results": [
+                {k: i.get(k) for k in ("model_id", "status", "why", "heldout_nrmse")} for i in items],
+                "verdict_after": verdict.status, "winner_after": verdict.winner.model_id if verdict.winner else None})
+            if verdict.status == "ambiguous" and verdict is not before and len(verdict.contenders) >= 2:
+                design = design_experiment(coords, list(verdict.contenders))
+                if design is not None:
+                    trail.append(design_trail_step(design, calibration.source == "none"))
+                    context["experiment_design"] = {k: design[k] for k in ("recommended", "decisive", "noise_mm", "models")}
+        if turn.action != FINAL_FOR[verdict.status] and not (verdict.status == "no_fit" and turn.action in ("try_family", "give_up")):
+            # Wording is the model's; the verdict is not. A mismatch is shown, never acted on.
+            trail.append({"step": "verification", "provider": None, "model": "simulate-and-compare", "status": verdict.status,
+                          "text": f"The agent chose \"{turn.action}\", which does not match the verdict ({verdict.status}); the verdict stands."})
         record("agent", call, turn.message, action=turn.action, reasoning_summary=turn.reasoning_summary)
         if verdict.status != "no_fit" or turn.action != "try_family" or not turn.next_family or turn.next_family in tried:
             break
@@ -300,6 +381,32 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         rationales.update(more)
 
     assert verdict is not None and turn is not None
+    skeptic: dict[str, Any] | None = None
+    if verdict.status == "accepted" and verdict.winner is not None and coords is not None:
+        progress("A referee is trying to break the accepted law")
+        winner_title = MODELS[verdict.winner.model_id].title
+        try:
+            ch = challenge(client, coords, verdict, family, summary, scene, run_id, options.audience)
+        except (LLMError, CostGuardError) as e:
+            # The accepted law stands on its own verification; a referee that could not run is reported, not hidden.
+            log.warning("skeptic skipped: %s", e)
+            skeptic = {"skipped": str(e)}
+            trail.append({"step": "skeptic", "provider": None, "model": "simulate-and-compare", "status": "skipped",
+                          "text": "The referee could not run this time, so the law was not challenged."})
+        else:
+            skeptic = ch.info
+            record("skeptic", ch.call, outcome_text(ch.info, winner_title), status="accepted" if ch.info["survived"] else "rejected",
+                   items=ch.info["challenges"], reasoning_summary=ch.review.reasoning_summary)
+            if ch.info["concerns"]:
+                trail.append({"step": "skeptic", "provider": None, "model": "simulate-and-compare", "status": "untested",
+                              "text": "Raised but not testable from this clip: " + " ".join(ch.info["concerns"])})
+            if not ch.info["survived"]:
+                verdict = ch.verdict
+                rationales.update(ch.rationales)
+                context = agent_context(verdict, family, summary, scene, tried)
+                context["referee"] = outcome_text(ch.info, winner_title)
+                turn, call = agent_turn(client, context, run_id, options.audience)
+                record("agent", call, turn.message, action=turn.action, reasoning_summary=turn.reasoning_summary)
     result: dict[str, Any] = {
         "status": verdict.status,
         "reason": verdict.reason,
@@ -316,6 +423,9 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         "object_size_px": float(np.median(moving.long_px)) * (0.25 if rotation is not None else 1.0),
         "llm_calls": llm_calls,
         "full_clip_verdict": full_clip_verdict,
+        "skeptic": skeptic,
+        "hypothesis_votes": _winner_votes(sampled, verdict),
+        "units": options.units,
         "trail": trail,
         "summary": summary,
     }
@@ -690,14 +800,62 @@ def regime_trail_step(change: RegimeChange, regimes: list[dict[str, Any]]) -> di
     }
 
 
+MIN_TRAVEL_TO_JITTER = 20.0
+MIN_SMOOTH_TRAVEL_PX = 3.0
+
+
+def smooth_motion(centers_px: np.ndarray, travel: float) -> bool:
+    if len(centers_px) < 8 or travel < MIN_SMOOTH_TRAVEL_PX:
+        return False
+    jitter = float(np.median(np.abs(np.diff(centers_px, n=2, axis=0)), axis=0).max())
+    return travel / max(jitter, 1e-3) >= MIN_TRAVEL_TO_JITTER
+
+
+def locate_precisely(client: CostGuardClient, scene: Scene, frames_jpeg: list[bytes], info: media.VideoInfo, run_id: str,
+                     audience: str, record: Callable[..., None], limits: dict[str, Any],
+                     progress: Progress) -> tuple[Scene, int]:
+    """Boxes from one frame alone, and the frame SAM should start from (the first keyframe showing the object).
+
+    The four-frame scene call names the object well but can place its box off by an object's width (on a real
+    pendulum clip it sat on the stopwatch beside the bob); asked about a single frame, the same model boxes it tightly.
+    A thrown object may not be in view yet at frame 0, so later keyframes are tried. Any failure keeps the scene's boxes.
+    """
+    cfg = limits.get("scene") or {}
+    if not cfg.get("locate_single_image", False):
+        return scene, 0
+    progress(f"Locating the {scene.moving_object} precisely")
+    obj = scene.moving_object
+    reference = None if scene.reference_kind == "none" else scene.reference_kind.replace("_", " ")
+    indices = media.keyframe_indices(info.frames, len(frames_jpeg))
+    for frame_no, jpeg in list(zip(indices, frames_jpeg, strict=False))[: int(cfg.get("locate_max_frames", 3))]:
+        try:
+            loc, call = locate_objects(client, jpeg, obj, scene.second_object, reference, run_id, audience)
+        except (LLMError, CostGuardError) as e:
+            log.warning("locate skipped: %s", e)
+            return scene, 0
+        when = f"{frame_no / info.fps:.1f} s"
+        if loc.moving_object_box is None or (scene.second_object and loc.second_object_box is None):
+            record("locate", call, f"The {obj} is not in view at {when}; looks at a later frame.", status="rejected")
+            continue
+        update: dict[str, Any] = {"moving_object_box": loc.moving_object_box}
+        if scene.second_object:
+            update["second_object_box"] = loc.second_object_box
+        if scene.reference_box is not None and loc.reference_box is not None:
+            update["reference_box"] = loc.reference_box  # a reference that isn't found keeps its scene box: it doesn't move
+        record("locate", call, f"Boxes the {obj} on the frame at {when}, where SAM starts tracking.", status="accepted")
+        return scene.model_copy(update=update), frame_no
+    return scene, 0
+
+
 def track_objects(client: CostGuardClient, clip: Path, info: media.VideoInfo, scene: Scene, run_id: str,
-                  audience: str) -> dict[str, ObjectTrack]:
+                  audience: str, prompt_frame: int = 0) -> dict[str, ObjectTrack]:
     """Moving object (id 1) and reference (id 2) in ONE box-prompt request: half the SAM cost of two concept prompts."""
-    objects = [msp.PromptObject(id=int(MOVING_ID), prompts=[msp.FramePrompt(frame=0, box=_box(scene.moving_object_box, info))])]
+    f0 = prompt_frame
+    objects = [msp.PromptObject(id=int(MOVING_ID), prompts=[msp.FramePrompt(frame=f0, box=_box(scene.moving_object_box, info))])]
     if scene.reference_box is not None:
-        objects.append(msp.PromptObject(id=int(REFERENCE_ID), prompts=[msp.FramePrompt(frame=0, box=_box(scene.reference_box, info))]))
+        objects.append(msp.PromptObject(id=int(REFERENCE_ID), prompts=[msp.FramePrompt(frame=f0, box=_box(scene.reference_box, info))]))
     if scene.second_object_box is not None:
-        objects.append(msp.PromptObject(id=int(SECOND_ID), prompts=[msp.FramePrompt(frame=0, box=_box(scene.second_object_box, info))]))
+        objects.append(msp.PromptObject(id=int(SECOND_ID), prompts=[msp.FramePrompt(frame=f0, box=_box(scene.second_object_box, info))]))
     prompt = msp.build_object_prompt(size=(info.width, info.height), objects=objects)
     r = client.sam_video(prompt=prompt, video_path=clip, video_hash=file_digest(clip), est_frames=info.frames,
                          metadata=SAM_METADATA, run_id=run_id, audience=audience)
@@ -759,6 +917,8 @@ def _box(box, info: media.VideoInfo) -> msp.PromptBox:
 
 
 def calibrate(scene: Scene, reference: ObjectTrack | None, moving: ObjectTrack, options: RunOptions) -> Calibration:
+    if options.known_px_per_unit is not None:
+        return Calibration(options.known_px_per_unit, 0.0, "known_scale")
     if reference is not None and scene.reference_kind != "none":
         try:
             return from_reference(reference, scene.reference_kind)
@@ -789,9 +949,14 @@ def build_trajectory(moving: ObjectTrack, fps: float, px_per_m: float) -> tuple[
     return longest_flight(traj, origin, px_per_m)
 
 
-def full_track(moving: ObjectTrack, fps: float, px_per_m: float) -> tuple[Trajectory, np.ndarray]:
+def full_track(moving: ObjectTrack, fps: float, px_per_m: float,
+               origin_px: tuple[float, float] | None = None) -> tuple[Trajectory, np.ndarray]:
     segments = fill_short_gaps(moving.frames, moving.centers_px, max_gap=3)
     frames, centers = max(segments, key=lambda s: len(s[0]))
+    if origin_px is not None:
+        # Coordinates from a fixed point of the frame (the Sun in orbit mode) instead of the first sample.
+        origin = np.asarray(origin_px, float)
+        return from_pixels(frames, centers, fps, px_per_m, origin=origin), origin
     return from_pixels(frames, centers, fps, px_per_m), centers[0]
 
 
@@ -821,12 +986,65 @@ def fit_and_verify(traj: Trajectory, family: str, candidate_ids: list[str],
     return coords, assess(coords, fits)
 
 
-def _hypothesis_items(hyp) -> list[dict[str, Any]]:
-    items = [{"model_id": h.model_id, "title": MODELS[h.model_id].title, "why": h.rationale} for h in hyp.candidates]
+def _hypothesis_items(hyp, sampled: SampledHypotheses | None = None) -> list[dict[str, Any]]:
+    def votes(key: str) -> str:
+        if sampled is None or sampled.samples <= 1:
+            return ""
+        return f" Proposed by {sampled.votes.get(key, 0)} of {sampled.samples} independent samples."
+    items = [{"model_id": h.model_id, "title": MODELS[h.model_id].title, "why": h.rationale + votes(h.model_id)}
+             for h in hyp.candidates]
     for f in hyp.free_models:
         law = "; ".join(f.acceleration)
-        items.append({"model_id": f.title, "title": f.title, "why": f"{f.rationale} Written by the agent: acceleration = {law}."})
+        items.append({"model_id": f.title, "title": f.title,
+                      "why": f"{f.rationale} Written by the agent: acceleration = {law}.{votes(f.title)}"})
     return items
+
+
+TOOL_ACTIONS = ("test_models", "inspect")
+FINAL_FOR = {"accepted": "explain", "ambiguous": "request_experiment", "no_fit": "give_up"}
+
+
+def inspect_window(traj: Trajectory, turn: AgentTurn, uncalibrated: bool) -> dict[str, Any]:
+    """The agent's 'inspect' tool: the same trajectory numbers it already reads, for a stretch of the clip."""
+    w = turn.window
+    if w is None:
+        return {"text": "No window was given, so there was nothing to inspect.", "entry": {"error": "no window given"}}
+    span = window_indices(traj.t, w.start_s, w.end_s, min_fraction=0.0, min_samples=10)
+    if isinstance(span, str):
+        return {"text": f"The window {w.start_s:.2f} to {w.end_s:.2f} s could not be used: {span}.",
+                "entry": {"window": [w.start_s, w.end_s], "error": span}}
+    numbers = summarize(traj.slice(*span), uncalibrated)
+    return {"text": f"Inspects {w.start_s:.2f} to {w.end_s:.2f} s ({w.reason}).",
+            "entry": {"window": [w.start_s, w.end_s], "numbers": numbers}}
+
+
+def tool_outcome(before: Verdict, after: Verdict) -> str:
+    if after is before:
+        return "Nothing it named could be fitted to this motion, so the verdict is unchanged."
+    if after.status == before.status and (after.winner is None) == (before.winner is None) and \
+            (after.winner is None or after.winner.model_id == before.winner.model_id):
+        return f"Fitted and tested: the verdict is unchanged ({after.status})."
+    now = f"\"{MODELS[after.winner.model_id].title}\" accepted" if after.winner else after.status
+    return f"Fitted and tested: the verdict changes from {before.status} to {now}."
+
+
+def _winner_votes(s: SampledHypotheses, v: Verdict) -> dict[str, Any] | None:
+    """How many independent proposals named the law that verification accepted (None without sampling or a winner)."""
+    if s.samples <= 1 or v.winner is None:
+        return None
+    wid = v.winner.model_id
+    n = s.votes.get(wid, s.votes.get(MODELS[wid].title, 0))
+    return {"samples": s.samples, "winner": wid, "proposed_by": n, "families": s.families}
+
+
+def _sampled_text(s: SampledHypotheses) -> str:
+    h = s.merged
+    n = len(h.candidates) + len(h.free_models)
+    if s.samples <= 1:
+        return f"Proposes {n} {h.family} models to test."
+    agree = s.families.count(h.family)
+    return (f"{s.samples} independent proposals ({agree} of {s.samples} chose {h.family}); "
+            f"together they name {n} {h.family} models, all of which are tested.")
 
 
 def _candidates(hyp) -> tuple[list[str], dict[str, str]]:

@@ -8,7 +8,7 @@ meta_api:
   api_key_env: MODEL_API_KEY
   models:
     muse-spark-1.3:
-      use: development-only reasoning; demo and prod refuse it and reason on Muse Glimmer
+      use: development-only reasoning; demo and prod refuse it and reason on open weights (Muse Spark Open or Glimmer)
       api: responses
     muse-spark-1.3-contributor:
       use: same as muse-spark-1.3 in APP_ENV=dev only, if the account has access
@@ -30,6 +30,17 @@ meta_api:
       audiences: [dev, judge]       # costguard refuses it for public visitors
       requires_model_daily_cap: true
       note: preview model; no contributor mode
+
+# Muse Spark Open: Meta's open-weights model served by Baseten (OpenAI Chat Completions). The primary reasoning
+# model. The hackathon key only works with the "-1026" name (Baseten's general docs show meta-models/muse-spark-open).
+baseten:
+  base_url: https://inference.baseten.co/v1
+  api_key_env: BASETEN_API_KEY
+  models:
+    meta-models/muse-spark-open-1026:
+      use: open-weight reasoning (scene understanding, hypotheses, agent decisions, explanations); primary
+      api: chat_completions
+      note: always reasons; reasoning_effort low|medium|high|xhigh, defaults to xhigh, so low is always sent
 
 # Muse Glimmer: open weights, self-hosted with llama.cpp (llama-server, OpenAI Chat Completions).
 # Weights: meta-models/Muse-Glimmer-30B-GGUF, Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf + mmproj (vision).

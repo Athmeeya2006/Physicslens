@@ -3,6 +3,9 @@
 meta_api:
   hard_cap_usd: 10.00
   daily_cap_usd: 2.00
+baseten:
+  hard_cap_usd: 10.00
+  daily_cap_usd: 2.00
 glimmer:
   hard_cap_usd: 0.00
   daily_cap_usd: 0.00

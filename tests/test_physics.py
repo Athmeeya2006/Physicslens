@@ -185,3 +185,31 @@ def test_door_closer_is_a_damped_torsional_spring():
     v = assess(c, [fit_model(m, c) for m in models_for("rotation")])
     assert v.status == "accepted" and v.winner.model_id == "spin_spring"
     assert v.winner.params["kappa"] == pytest.approx(9.0, rel=0.03) and v.winner.params["k"] == pytest.approx(0.8, rel=0.1)
+
+
+def test_a_fit_past_its_time_budget_is_reported_not_fitted(monkeypatch):
+    from physicslens.physics import fit as fit_module
+    monkeypatch.setattr(fit_module, "MAX_FIT_SECONDS", 0.0)
+    c = to_coordinates(track(pendulum_xy(0.5, 0.0, 4)), "pendulum")
+    f = fit_module.fit_model(MODELS["pendulum"], c)
+    assert not f.success and "did not finish" in f.message
+    assert assess(c, [f]).status == "no_fit"  # never counted as evidence
+
+
+def test_one_law_written_twice_is_not_a_tie():
+    """Independent proposals wrote the inverse-square law in different notation; it must not tie with itself."""
+    from physicslens.physics.coords import Coordinates
+    from physicslens.physics.custom import FreeParam, build, register
+    gm = 2.959e-4  # AU^3/day^2
+    rp, e = 0.746, 0.19
+    t = np.arange(0, 1460, 2.5)
+    sol = solve_ivp(lambda _t, s: [s[2], s[3], *(-gm * s[:2] / np.hypot(*s[:2]) ** 3)], (0, t[-1]),
+                    [rp, 0, 0, np.sqrt(gm * (1 + e) / rp)], t_eval=t, rtol=1e-11, atol=1e-13)
+    c = Coordinates("plane", t, sol.y[:2].T + np.random.default_rng(0).normal(0, 2e-4, (len(t), 2)), ("x", "y"))
+    a = register(build("plane", "Newtonian gravity", ["-k*x/hypot(x,y)^3", "-k*y/hypot(x,y)^3"],
+                       [FreeParam("k", "AU^3/d^2", 1e-6, 1e-2, 1e-3)]))
+    b = register(build("plane", "Kepler central force", ["-GM*x/(x^2+y^2)^1.5", "-GM*y/(x^2+y^2)^1.5"],
+                       [FreeParam("GM", "AU^3/d^2", 1e-6, 1e-2, 5e-4)]))
+    v = assess(c, [fit_model(MODELS[m], c) for m in (a.id, b.id, "plane_constant_accel")])
+    assert v.status == "accepted" and v.winner.model_id == a.id
+    assert v.winner.params["k"] == pytest.approx(gm, rel=1e-3)

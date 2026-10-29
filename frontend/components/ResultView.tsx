@@ -52,6 +52,7 @@ function mujocoGap(m: number, uncalibrated: boolean): string {
 
 // Readable names for the tags; the exact model id stays in the tooltip for anyone verifying.
 function modelName(id: string): string {
+  if (id.startsWith("meta-models/muse-spark-open")) return "Muse Spark Open · open weights";
   if (id.startsWith("muse-glimmer")) return "Muse Glimmer 30B · open weights";
   if (id === "sam-3.1") return "SAM 3.1";
   if (id.startsWith("muse-spark")) return `Muse Spark 1.3${id.endsWith("contributor") ? " (development)" : ""}`;
@@ -88,6 +89,24 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
       <div className="result-head">
         <h2 id="result-title" className={r.status}>{STATUS_TEXT[r.status]}</h2>
         <p className="reason">{r.reason}</p>
+        {r.units && (
+          <p className="small muted">
+            Units for this clip: lengths are in {r.units.length} and times in {r.units.time} (shown where the page says m and s).
+          </p>
+        )}
+        {r.hypothesis_votes && (
+          <p className="small muted">
+            {r.hypothesis_votes.proposed_by > 0
+              ? `Proposed by ${r.hypothesis_votes.proposed_by} of ${r.hypothesis_votes.samples} independent samples of the reasoning model before the math checked it.`
+              : `None of ${r.hypothesis_votes.samples} independent samples proposed this law; it won as a baseline the math always tests.`}
+          </p>
+        )}
+        {r.skeptic && "tested" in r.skeptic && r.skeptic.survived && r.skeptic.tested > 0 && (
+          <p className="survived-badge">
+            Survived {r.skeptic.tested} challenge{r.skeptic.tested === 1 ? "" : "s"} from a referee model: no alternative law
+            forecast the held-out motion better.
+          </p>
+        )}
         <div className="provenance">
           <span>Models used:</span>
           {models.map((m) => (

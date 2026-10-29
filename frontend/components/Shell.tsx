@@ -52,6 +52,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       {children}
+      <footer className="shell-foot">
+        Reasoning on Meta&apos;s open-weight models: Muse Spark Open (served by Baseten) and Muse Glimmer 30B. Tracking by
+        SAM 3.1. Every result names the model or the numerical method behind each step.{" "}
+        <a href="https://github.com/Athmeeya2006/Physicslens/blob/main/OPEN_WEIGHTS.md">Open-weight evidence</a>
+      </footer>
     </>
   );
 }

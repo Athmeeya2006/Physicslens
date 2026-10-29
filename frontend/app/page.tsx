@@ -18,6 +18,11 @@ declare global {
 }
 
 const POLL_MS = 1000;
+const REASONING_NAME: Record<string, string> = {
+  baseten: "Muse Spark Open (open weights)",
+  glimmer: "Muse Glimmer 30B (open weights)",
+  together: "Muse Glimmer 30B (open weights)",
+};
 
 export default function Home() {
   const [health, setHealth] = useState<Health | null>(null);
@@ -148,14 +153,20 @@ export default function Home() {
         <div className="home-grid">
           <section className="panel stack" aria-labelledby="analyze-title">
             <h2 id="analyze-title">Analyze a recording</h2>
+            {health && !offline && (
+              <p className="server-badge small">
+                <span className="dot" aria-hidden="true" /> Analysis server online
+                {health.reasoning && <>, reasoning on {REASONING_NAME[health.reasoning.provider] ?? health.reasoning.model}</>}
+              </p>
+            )}
             {online === null ? (
               <p className="muted"><Loader2 size={14} className="spin" aria-hidden="true" /> Looking for the analysis server...</p>
             ) : offline ? (
               <div className="stack" style={{ gap: 14 }}>
                 <ol className="how">
                   <li><strong>Film it.</strong> Anything that moves, from a phone held still: a swing, a bounce, a spin-down.</li>
-                  <li><strong>Meta&apos;s models measure and propose.</strong> SAM 3.1 tracks the object; Muse Glimmer, an open-weight
-                    model, reads the scene and proposes equations, even ones it writes itself.</li>
+                  <li><strong>Meta&apos;s models measure and propose.</strong> SAM 3.1 tracks the object; Muse Spark Open, Meta&apos;s
+                    open-weight model, reads the scene and proposes equations, even ones it writes itself.</li>
                   <li><strong>Math decides.</strong> Each equation must forecast motion it never saw; the winner comes with
                     uncertainties, a ghost on the video and a MuJoCo model.</li>
                 </ol>

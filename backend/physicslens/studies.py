@@ -8,6 +8,7 @@ the combination (a weighted mean and an agreement test) and any wear verdict are
 from __future__ import annotations
 
 import json
+import math
 import threading
 import time
 import uuid
@@ -21,6 +22,7 @@ from .export.mjcf import build_mjcf
 from .physics.combine import combine
 from .physics.joint import decide_joint, fit_joint
 from .physics.models import MODELS
+from .physics.scaling import LAWS, Z95, assess_scaling, check_prediction, next_setting
 
 ResultOf = Callable[[str], "dict[str, Any] | None"]
 HealthOf = Callable[[list[str]], "dict[str, Any] | None"]
@@ -76,14 +78,17 @@ class Studies:
         }
         return self._save(study)
 
-    def attach(self, study_id: str, run_id: str, label: str) -> dict[str, Any]:
+    def attach(self, study_id: str, run_id: str, label: str, x_value: float | None = None) -> dict[str, Any]:
         with self._lock:
             study = self.get(study_id)
             if study["status"] == "finished":
                 raise StudyError("This study is finished; start a new one.")
             if len(study["recordings"]) >= 12:
                 raise StudyError("A study holds at most 12 recordings.")
-            study["recordings"].append({"run_id": run_id, "label": label.strip()[:60] or f"Recording {len(study['recordings']) + 1}"})
+            entry: dict[str, Any] = {"run_id": run_id, "label": label.strip()[:60] or f"Recording {len(study['recordings']) + 1}"}
+            if x_value is not None:
+                entry["x"] = float(x_value)  # the swept setting for this recording, as the user gave it
+            study["recordings"].append(entry)
             return self._save(study)
 
     def review(self, study_id: str, result_of: ResultOf, health_of: HealthOf, audience: str) -> dict[str, Any]:
@@ -100,6 +105,13 @@ class Studies:
             study["trail"].append({"step": "joint_fit", "provider": None, "model": "joint fit across recordings",
                                    "status": joint["status"], "text": joint["text"]})
         accepted = [(label, rid, res) for label, rid, res in done if res.get("status") == "accepted"]
+        if study["plan"].get("sweep"):
+            before = study.get("sweep") or {}
+            study["sweep"] = sweep_state(study, before, {rid: res for _, rid, res in done})
+            sw = study["sweep"]
+            if sw.get("status") != before.get("status") or len(sw.get("points", [])) != len(before.get("points", [])):
+                study["trail"].append({"step": "scaling", "provider": None, "model": "law across recordings",
+                                       "status": sw["status"], "text": sweep_text(sw)})
         study["health"] = None
         if (study["plan"]["deliverable"] == "health_check" and len(accepted) >= 2
                 and len({res.get("family") for _, _, res in accepted}) == 1 and accepted[0][2].get("family") in HEALTH_FAMILIES):
@@ -115,6 +127,8 @@ class Studies:
             "health": study["health"] and {k: study["health"].get(k) for k in ("drift", "summary")},
             "earlier_decisions": [t["message"] for t in study["turns"]],
             "joint_fit": study.get("joint") and {k: study["joint"][k] for k in ("status", "text")},
+            "sweep": study.get("sweep") and {k: study["sweep"].get(k) for k in
+                                             ("status", "reason", "winner", "expected_law", "next", "checks", "points")},
         }
         turn, call = study_turn(self.client, context, f"study-{study_id}-{len(study['turns'])}", audience)
         entry = {**turn.model_dump(), "model": call.model, "provider": call.provider, "after_recordings": len(done)}
@@ -227,3 +241,105 @@ def joint_verdict(done: list[tuple[str, str, dict[str, Any] | None]]) -> dict[st
     else:
         text = "No single law forecasts every recording when they are fitted together."
     return {"status": verdict["status"], "text": text, "models": models, "recordings": labels}
+
+
+def observable(res: dict[str, Any], response: str) -> tuple[float, float] | None:
+    """The swept response from one verified recording: a fitted parameter, or the period derived from one."""
+    params = {p["name"].lower(): p for p in res.get("parameters", [])}
+
+    def val(name: str) -> tuple[float, float] | None:
+        p = params.get(name.lower())
+        if p is None or "assumed" in (p.get("derived") or ""):
+            return None  # an assumed value (g as the ruler) is not a measurement
+        return float(p["value"]), float(p.get("std") or 0.0)
+
+    if response.strip().lower() != "period":
+        return val(response.strip())
+    if res.get("family") == "pendulum" and (g := val("g")) and (length := val("L")):
+        t = 2 * math.pi * math.sqrt(length[0] / g[0])
+        return t, 0.5 * t * math.hypot(g[1] / g[0], length[1] / length[0])
+    if res.get("family") == "oscillator" and (w := val("omega")):
+        t = 2 * math.pi / w[0]
+        return t, t * w[1] / w[0]
+    return None
+
+
+def _setting(rec: dict[str, Any], res: dict[str, Any], variable: str) -> float | None:
+    if rec.get("x") is not None:
+        return float(rec["x"])
+    # A pendulum length typed in for the analysis is the setting itself.
+    if "length" in variable.lower():
+        p = next((p for p in res.get("parameters", []) if p["name"] == "L" and "given" in (p.get("derived") or "")), None)
+        return float(p["value"]) if p else None
+    return None
+
+
+def sweep_state(study: dict[str, Any], before: dict[str, Any], results: dict[str, dict[str, Any] | None]) -> dict[str, Any]:
+    """Points from verified recordings, the law code accepts across them, and the next prediction made before filming."""
+    plan = study["plan"]["sweep"]
+    points = []
+    for rec in study["recordings"]:
+        res = results.get(rec["run_id"]) or {}
+        if not res or res.get("status") != "accepted":
+            continue
+        x = _setting(rec, res, plan["variable"])
+        y = observable(res, plan["response"])
+        if x is None or y is None or y[1] <= 0:
+            continue
+        points.append({"label": rec["label"], "run_id": rec["run_id"], "x": x, "y": y[0], "std": y[1]})
+    state: dict[str, Any] = {k: plan[k] for k in ("variable", "unit", "response", "expected_law", "why")}
+    state["points"] = points
+    # A prediction made earlier is judged by the first recording at that setting that arrived after it.
+    checks = list(before.get("checks", []))
+    pred = before.get("prediction")
+    if pred:
+        known = {p["run_id"] for p in before.get("points", [])}
+        hit = next((p for p in points if p["run_id"] not in known and math.isclose(p["x"], pred["x"], rel_tol=0.02)), None)
+        if hit is not None:
+            checks.append({"x": hit["x"], "label": hit["label"], "predicted": pred["y"], "predicted_std": pred["std"],
+                           "measured": hit["y"], "measured_std": hit["std"],
+                           **check_prediction(pred["y"], pred["std"], hit["y"], hit["std"])})
+            pred = None
+    state["checks"] = checks
+    v = assess_scaling([p["x"] for p in points], [p["y"] for p in points], [p["std"] for p in points])
+    state["status"], state["reason"] = v.status, v.reason
+    state["winner"] = None if v.winner is None else {
+        "law": v.winner.law, "title": LAWS[v.winner.law].title, "latex": LAWS[v.winner.law].latex,
+        "params": v.winner.params, "loo_z": v.winner.loo_z, "matches_expectation": v.winner.law == plan["expected_law"]}
+    state["ranked"] = [{"law": f.law, "title": LAWS[f.law].title, "bic": f.bic, "worst_loo_z": max(abs(z) for z in f.loo_z)}
+                       for f in v.ranked]
+    recorded = [p["x"] for p in points]
+    planned_left = [x for x in plan["values"] if not any(math.isclose(x, r, rel_tol=0.02) for r in recorded)]
+    x_next = planned_left[0] if planned_left else next_setting(v, recorded)
+    state["next"] = None
+    if v.winner is not None and x_next is not None:
+        y, sd = v.winner.predict(x_next)
+        state["next"] = {"x": x_next, "y": y, "std": sd, "low": y - Z95 * sd, "high": y + Z95 * sd}
+        pred = {"x": x_next, "y": y, "std": sd}
+    elif v.status == "ambiguous" and x_next is not None:
+        state["next"] = {"x": x_next, "separates": [LAWS[f.law].title for f in v.contenders[:2]]}
+    state["prediction"] = pred
+    return state
+
+
+def sweep_text(sw: dict[str, Any]) -> str:
+    n = len(sw["points"])
+    unit = f" {sw['unit']}" if sw.get("unit") else ""
+    if sw["status"] == "too_few":
+        text = f"{n} verified recording(s) of {sw['response']} against {sw['variable']}; a law needs at least three settings."
+    elif sw["status"] == "accepted":
+        w = sw["winner"]
+        expect = "as the agent expected" if w["matches_expectation"] else f"not the {sw['expected_law']} the agent expected"
+        text = f"Across {n} recordings: {w['title']} ({expect}). {sw['reason']}"
+    else:
+        text = f"Across {n} recordings: {sw['reason']}"
+    nxt = sw.get("next")
+    if nxt and "y" in nxt:
+        text += (f" Prediction before filming, at {sw['variable']} = {nxt['x']:.3g}{unit}: {sw['response']} = "
+                 f"{nxt['y']:.4g} (95%: {nxt['low']:.4g} to {nxt['high']:.4g}).")
+    elif nxt:
+        text += f" Recording at {sw['variable']} = {nxt['x']:.3g}{unit} would separate {' and '.join(nxt['separates'])}."
+    for c in sw.get("checks", [])[-1:]:
+        text += (f" The earlier prediction for {c['label']} was {'confirmed' if c['within_95'] else 'missed'}: "
+                 f"predicted {c['predicted']:.4g}, measured {c['measured']:.4g} ({c['z']:+.1f} sigma).")
+    return text

@@ -22,6 +22,12 @@ meta_api:
     cached_input: 0.20
     output: 20.00         # reasoning tokens are billed as output
 
+baseten:
+  meta-models/muse-spark-open-1026:   # Baseten model page and /v1/models pricing, Oct 29 2026
+    input: 1.25
+    cached_input: 0.15
+    output: 4.25          # reasoning tokens are billed as output (counted in completion_tokens)
+
 glimmer:
   muse-glimmer-30b:       # self-hosted on our own GPU server: no per-token charge
     input: 0.0

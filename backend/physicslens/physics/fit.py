@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import time
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -96,11 +97,47 @@ def _unpack(spec: ModelSpec, theta: np.ndarray) -> tuple[dict[str, float], np.nd
     return dict(zip(spec.param_names, theta[:k], strict=True)), theta[k:]
 
 
+class FitTimeout(RuntimeError):
+    pass
+
+
+# A law with a sign() or abs() (dry friction, drag written by the agent) can make the solver crawl through its
+# corners: one such fit took minutes on a real clip. Past this budget the model is reported as not fitted.
+MAX_FIT_SECONDS = 45.0
+
+
+def derivative_match(spec: ModelSpec, c: Coordinates, kin, guess: dict[str, float]) -> dict[str, float]:
+    """Parameters that best make the law's acceleration match the smoothed measured acceleration."""
+    d = c.q.shape[1]
+    idx = np.unique(np.linspace(2, len(c.q) - 3, min(400, len(c.q) - 4)).astype(int))
+    states = np.column_stack([kin.pos, kin.vel])[idx]
+    acc = kin.acc[idx]
+    scale = float(np.std(acc)) + 1e-30
+    lower = np.array([p.lower for p in spec.params])
+    upper = np.array([p.upper for p in spec.params])
+    p0 = np.clip([guess[n] for n in spec.param_names], lower, upper)
+
+    def residual(theta: np.ndarray) -> np.ndarray:
+        params = dict(zip(spec.param_names, theta, strict=True))
+        with np.errstate(all="ignore"):
+            pred = np.array([spec.rhs(s, params, c.ctx)[d:] for s in states])
+        r = ((pred - acc) / scale).ravel()
+        return np.where(np.isfinite(r), r, FAILED_RESIDUAL)
+
+    try:
+        theta = least_squares(residual, p0, bounds=(lower, upper), x_scale="jac", max_nfev=200).x
+    except (ValueError, FloatingPointError):
+        return guess
+    return {**guess, **dict(zip(spec.param_names, (float(v) for v in theta), strict=True))}
+
+
 def fit_window(spec: ModelSpec, c: Coordinates, stop: int, theta0: np.ndarray, lower: np.ndarray, upper: np.ndarray,
-               max_nfev: int | None = None) -> np.ndarray:
+               max_nfev: int | None = None, deadline: float | None = None) -> np.ndarray:
     t, q = c.t[:stop], c.q[:stop]
 
     def residual(theta: np.ndarray) -> np.ndarray:
+        if deadline is not None and time.monotonic() > deadline:
+            raise FitTimeout
         params, y0 = _unpack(spec, theta)
         sim = simulate(spec, params, y0, t, c.ctx)
         if sim is None:
@@ -119,6 +156,11 @@ def fit_model(spec: ModelSpec, c: Coordinates, warm: dict[str, float] | None = N
     kin = differentiate(c.q, 1.0 / (c.t[1] - c.t[0]))
     noise = noise_sigma(c.q, kin.pos, 1.0 / (c.t[1] - c.t[0]))
     guess = {**initial_guess(spec, c), **(warm or {})}
+    if spec.id.startswith("custom_") and not warm:
+        # A law the agent wrote comes with only its own rough guesses. Matching the law to the measured accelerations
+        # first (no simulation needed) puts the parameters near the right basin; without it, an orbit fit started
+        # 3x off locked onto a wrong period and missed GM by half.
+        guess = derivative_match(spec, c, kin, guess)
     theta = np.concatenate([[guess[p] for p in spec.param_names], kin.pos[0], kin.vel[0]])
     span = np.ptp(c.q, axis=0).max() + 1e-9
     vspan = np.abs(kin.vel).max() + 1e-9
@@ -126,12 +168,17 @@ def fit_model(spec: ModelSpec, c: Coordinates, warm: dict[str, float] | None = N
     upper = np.concatenate([[p.upper for p in spec.params], c.q.max(axis=0) + span, 3 * vspan * np.ones(d)])
 
     n_train = int(n_samples * TRAIN_FRACTION)
-    for frac in (1.0,) if warm else CONTINUATION:
-        theta = fit_window(spec, c, max(8, int(n_train * frac)), theta, lower, upper)
-    params_train, y0_train = _unpack(spec, theta)
-    sim_train = simulate(spec, params_train, y0_train, c.t, c.ctx)
-
-    theta = fit_window(spec, c, n_samples, theta, lower, upper)
+    deadline = time.monotonic() + MAX_FIT_SECONDS
+    try:
+        for frac in (1.0,) if warm else CONTINUATION:
+            theta = fit_window(spec, c, max(8, int(n_train * frac)), theta, lower, upper, deadline=deadline)
+        params_train, y0_train = _unpack(spec, theta)
+        sim_train = simulate(spec, params_train, y0_train, c.t, c.ctx)
+        theta = fit_window(spec, c, n_samples, theta, lower, upper, deadline=deadline)
+    except FitTimeout:
+        params, y0 = _unpack(spec, theta)
+        return FitResult(spec.id, params, y0, n_samples * d, len(theta), math.inf, math.inf, math.inf, math.inf, math.inf,
+                         noise, success=False, message=f"the fit did not finish within {MAX_FIT_SECONDS:.0f} s")
     params, y0 = _unpack(spec, theta)
     sim = simulate(spec, params, y0, c.t, c.ctx)
     if sim is None or sim_train is None:

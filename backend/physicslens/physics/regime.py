@@ -50,10 +50,14 @@ def prediction_errors(spec, params: dict[str, float], c: Coordinates, fps: float
     return out
 
 
+MIN_REGIME_SAMPLES = 15
+
+
 def detect_change(traj: Trajectory, family: str, model_id: str, min_regime_s: float = MIN_REGIME_S) -> RegimeChange | None:
     fps = traj.fps
     n0 = int(min_regime_s * fps)
-    if len(traj) < 2 * n0:
+    # Too few samples per regime to fit anything: a time-lapse (an orbit at days per frame) or a very short clip.
+    if n0 < MIN_REGIME_SAMPLES or len(traj) < 2 * n0:
         return None
     try:
         # Geometry (pivot, axis) from the early stretch only: after a change, e.g. a shorter string,
