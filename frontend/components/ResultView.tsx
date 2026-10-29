@@ -50,6 +50,11 @@ function mujocoGap(m: number, uncalibrated: boolean): string {
   return v < 0.001 ? `less than 0.001 ${unit}` : `${v.toFixed(v < 1 ? 3 : 1)} ${unit}`;
 }
 
+function refereeWon(r: AnalysisResult): boolean {
+  const sk = r.skeptic;
+  return !!sk && "tested" in sk && !sk.survived && sk.verdict_after?.winner === r.hypothesis_votes?.winner;
+}
+
 // Readable names for the tags; the exact model id stays in the tooltip for anyone verifying.
 function modelName(id: string): string {
   if (id.startsWith("meta-models/muse-spark-open")) return "Muse Spark Open · open weights";
@@ -98,7 +103,9 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <p className="small muted">
             {r.hypothesis_votes.proposed_by > 0
               ? `Proposed by ${r.hypothesis_votes.proposed_by} of ${r.hypothesis_votes.samples} independent samples of the reasoning model before the math checked it.`
-              : `None of ${r.hypothesis_votes.samples} independent samples proposed this law; it won as a baseline the math always tests.`}
+              : refereeWon(r)
+                ? `None of ${r.hypothesis_votes.samples} independent samples proposed this law: the referee did, and it beat their best on held-out motion.`
+                : `None of ${r.hypothesis_votes.samples} independent samples proposed this law; the agent tested it later or it is a baseline the math always tests.`}
           </p>
         )}
         {r.skeptic && "tested" in r.skeptic && r.skeptic.survived && r.skeptic.tested > 0 && (

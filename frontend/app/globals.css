@@ -201,7 +201,7 @@ td { padding: 8px 12px 8px 0; vertical-align: top; border-top: 1px solid var(--s
 
 /* Decision trail: the agent's reasoning as a numbered-free sequence of steps with clear owners. */
 .trail { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
-.trail-step { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 12px 0; border-top: 1px solid var(--sunk); }
+.trail-step { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 12px 0; border-top: 1px solid var(--sunk); }
 .trail-step:first-child { border-top: 0; padding-top: 0; }
 .trail-icon { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--sunk); color: var(--ink-2); margin-top: 1px; }
 .trail-step.verification .trail-icon, .trail-step.design .trail-icon, .trail-step.regime .trail-icon,
@@ -223,7 +223,9 @@ td { padding: 8px 12px 8px 0; vertical-align: top; border-top: 1px solid var(--s
 .trail-step details.thought p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.84rem; max-height: 18rem; overflow-y: auto; }
 .trail-step.highlight p.lead { color: var(--ink); font-weight: 600; font-size: 0.96rem; }
 .trail-items { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: 0.86rem; }
-.trail-items li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }
+.trail-items li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: baseline; }
+/* Agent-written laws are long strings with no spaces: they must wrap, never widen the page on a phone. */
+.trail-step p, .trail-items li > span { overflow-wrap: anywhere; }
 .trail-items .item-title { font-weight: 600; color: var(--ink); }
 .trail-items li.rejected .item-title { text-decoration: line-through; text-decoration-thickness: 1.5px; color: var(--ink-3); }
 .trail-items .why { color: var(--ink-3); }

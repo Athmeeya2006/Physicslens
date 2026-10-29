@@ -110,7 +110,8 @@ export interface AnalysisResult {
   full_clip_verdict?: { status: string; reason: string; winner: string | null } | null;
   units?: { length: string; time: string } | null;
   hypothesis_votes?: { samples: number; winner: string; proposed_by: number; families: string[] } | null;
-  skeptic?: { tested: number; survived: boolean; accepted_before: string; concerns: string[] } | { skipped: string } | null;
+  skeptic?: { tested: number; survived: boolean; accepted_before: string; concerns: string[];
+             verdict_after?: { status: string; winner: string | null } } | { skipped: string } | null;
   equation?: { model_id: string; title: string; latex: string };
   parameters?: Parameter[];
   llm_calls: { step: string; provider: string; model: string; cached: boolean }[];

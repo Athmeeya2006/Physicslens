@@ -33,3 +33,19 @@ def test_one_sample_is_the_plain_call(harness):
     s = propose_hypotheses_sampled(harness.client, {"n": 1}, Scene(**SCENE), "r", samples=1)
     assert s.samples == 1 and s.votes == {"pendulum": 1}
     assert "independent_proposal" not in harness.sdk().calls[0]["input"][0]["content"][0]["text"]
+
+
+def test_a_failed_sample_is_left_out_not_fatal(harness):
+    """Real runs: one sample ran out of tokens, another wrote laws the grammar rejects; the others still count."""
+    # Two good answers; whichever thread asks third gets the mock's default (not JSON) twice: order cannot matter.
+    harness.sdk().script.extend([hyp("pendulum", "pendulum"), hyp("pendulum", "pendulum_linear_damping")])
+    s = propose_hypotheses_sampled(harness.client, {"n": 1}, Scene(**SCENE), "r", samples=3)
+    assert s.samples == 2 and s.failed == 1 and s.merged.family == "pendulum"
+
+
+def test_all_samples_failing_still_fails_clearly(harness):
+    import pytest
+    from physicslens.agent.llm import LLMError
+    harness.sdk().script.extend([responses_result(text="no")] * 6)
+    with pytest.raises(LLMError):
+        propose_hypotheses_sampled(harness.client, {"n": 1}, Scene(**SCENE), "r", samples=3)

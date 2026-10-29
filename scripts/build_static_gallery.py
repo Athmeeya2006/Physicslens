@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from physicslens.export.dataset import entries as dataset_entries
 from physicslens.export.dataset import to_csv
-from physicslens.export.mjcf import bounce_mjcf, build_mjcf
+from physicslens.export.mjcf import MjcfError, bounce_mjcf, build_mjcf
 from physicslens.export.report import report_markdown
 from physicslens.export.script import parameters_json, python_script
 from physicslens.export.sim2real import Sim2RealError, sim2real
@@ -57,12 +57,16 @@ def main() -> None:
         if "fit_state" in result:
             (dst / f"physicslens-{gid}.json").write_text(parameters_json(result))
             (dst / f"physicslens-{gid}.py").write_text(python_script(result))
-            xml, notes = build_mjcf(result["fit_state"])
-            if result.get("scale_note"):
-                notes = [*notes, "No scale reference in the clip: lengths in this model are in arbitrary units."]
-            if notes:
-                xml = xml.replace("<worldbody>", "<!-- " + " ".join(notes).replace("--", "-") + " -->\n  <worldbody>", 1)
-            (dst / f"physicslens-{gid}.xml").write_text(xml)
+            try:
+                xml, notes = build_mjcf(result["fit_state"])
+            except MjcfError as e:  # e.g. a law the agent wrote for free planar motion: no MuJoCo body to map it to
+                print(f"{gid}: no MuJoCo export ({e})")
+            else:
+                if result.get("scale_note"):
+                    notes = [*notes, "No scale reference in the clip: lengths in this model are in arbitrary units."]
+                if notes:
+                    xml = xml.replace("<worldbody>", "<!-- " + " ".join(notes).replace("--", "-") + " -->\n  <worldbody>", 1)
+                (dst / f"physicslens-{gid}.xml").write_text(xml)
             if result.get("status") == "accepted":
                 try:
                     (dst / "sim2real.json").write_text(json.dumps(sim2real(result)))

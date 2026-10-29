@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
-from ..costguard import CostGuardClient
+from ..costguard import BudgetExceeded, CostGuardClient, KillSwitchActive
 from ..physics.models import MODELS
 from .llm import LLMCall, ask_json
 from .schemas import (
@@ -20,6 +21,8 @@ from .schemas import (
     StudyTurn,
     TrackCheck,
 )
+
+log = logging.getLogger("physicslens.agent")
 
 SCENE_SYSTEM = """You look at up to four frames from a short phone video of something moving, for a physics measurement tool.
 Identify the single object whose motion should be measured and a reference object of known size in the same plane.
@@ -104,8 +107,9 @@ class SampledHypotheses:
     merged: Hypotheses  # the majority family's samples, candidates and laws in first-seen order
     calls: list[LLMCall]
     votes: dict[str, int]  # model id or law title -> how many samples proposed it
-    samples: int
+    samples: int  # samples that answered usably (the vote denominator)
     families: list[str]
+    failed: int = 0  # samples left out: no usable answer
 
 
 def propose_hypotheses_sampled(client: CostGuardClient, summary: dict[str, Any], scene: Scene, run_id: str,
@@ -123,7 +127,15 @@ def propose_hypotheses_sampled(client: CostGuardClient, summary: dict[str, Any],
         # A distinct note per sample keeps them independent: identical prompts would just replay one cached answer.
         futures = [pool.submit(propose_hypotheses, client, summary, scene, run_id, audience, exclude_families,
                                sample=(i + 1, samples)) for i in range(samples)]
-        results = [f.result() for f in futures]
+        outcomes = [(f.exception(), None if f.exception() else f.result()) for f in futures]
+    # One sample that ran out of tokens or wrote laws the grammar rejects must not sink the others' good answers
+    # (both happened on real clips). Budget and kill-switch stops are never swallowed.
+    errors = [err for err, _ in outcomes if err is not None]
+    if any(isinstance(err, BudgetExceeded | KillSwitchActive) for err in errors) or len(errors) == samples:
+        raise errors[0]
+    results = [r for err, r in outcomes if err is None]
+    for err in errors:
+        log.warning("hypotheses: one sample failed and is left out: %s", err)
     hyps = [h for h, _ in results]
     families = [h.family for h in hyps]
     family = max(families, key=lambda f: (families.count(f), -families.index(f)))
@@ -133,7 +145,7 @@ def propose_hypotheses_sampled(client: CostGuardClient, summary: dict[str, Any],
     window = next((h.fit_window for h in chosen if h.fit_window is not None), None)
     # Built without re-validating the list lengths: the union may hold more than one sample is allowed to propose.
     merged = Hypotheses.model_construct(family=family, candidates=candidates, free_models=laws, fit_window=window)
-    return SampledHypotheses(merged, [c for _, c in results], _votes(chosen), samples, families)
+    return SampledHypotheses(merged, [c for _, c in results], _votes(chosen), len(results), families, len(errors))
 
 
 MAX_FREE_LAWS = 4

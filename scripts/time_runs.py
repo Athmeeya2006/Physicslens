@@ -87,11 +87,16 @@ def main() -> None:
             if spent_now >= a.max_usd:
                 print(f"stopping: ${spent_now:.3f} spent, limit ${a.max_usd:.2f}", flush=True)
                 break
-            path_s, _, length = spec.partition(":")
+            # "clip.mp4:0.5" (a pendulum length) or "clip.mp4|object_hint=the ball|slow_motion=8"
+            path_s, *opts = spec.split("|")
+            path_s, _, length = path_s.partition(":")
+            fields = dict(o.split("=", 1) for o in opts)
+            if length:
+                fields["pendulum_length_m"] = length
             path = ROOT / path_s
             before = spent_by_provider()
             t0 = time.time()
-            run_id = post_clip(path, code, {"pendulum_length_m": length} if length else {})
+            run_id = post_clip(path, code, fields)
             while True:
                 state = get(f"/api/runs/{run_id}")
                 if state["status"] not in ("queued", "running"):

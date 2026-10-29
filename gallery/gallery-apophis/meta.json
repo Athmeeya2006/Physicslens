@@ -1,0 +1,6 @@
+{
+  "title": "Asteroid Apophis: Newton's law of gravity from a video",
+  "description": "Four years of 99942 Apophis, rendered from NASA/JPL Horizons positions. Watching only the dot, PhysicsLens found the inverse-square law (fitted exponent 2.99998) and the Sun's GM within 0.023% of JPL's value. Extrapolated 3.3 years, the law puts the 2029 Earth flyby 13 hours after JPL's time; the distance (38,000 km) is far below what one pixel (340,000 km) can resolve. Units: AU and days.",
+  "credit": "Rendered by PhysicsLens from NASA/JPL Horizons data (JPL Solar System Dynamics); close-approach reference from the JPL CNEOS API",
+  "order": 1
+}

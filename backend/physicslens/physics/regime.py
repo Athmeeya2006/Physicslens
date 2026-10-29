@@ -9,6 +9,7 @@ found by comparing fits of whole recordings instead (machine-health drift).
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 
 import numpy as np
@@ -36,12 +37,22 @@ class RegimeChange:
     model_id: str
 
 
-def prediction_errors(spec, params: dict[str, float], c: Coordinates, fps: float) -> list[tuple[int, float]]:
+class RegimeTimeout(RuntimeError):
+    pass
+
+
+MAX_DETECT_SECONDS = 30.0  # an optional check: past this it is skipped and the result says so
+
+
+def prediction_errors(spec, params: dict[str, float], c: Coordinates, fps: float,
+                      deadline: float | None = None) -> list[tuple[int, float]]:
     kin = differentiate(c.q, fps)
     horizon = max(2, int(HORIZON_S * fps))
     step = max(1, int(STEP_S * fps))
     out = []
     for i in range(0, len(c.q) - horizon, step):
+        if deadline is not None and time.monotonic() > deadline:
+            raise RegimeTimeout
         y0 = np.concatenate([kin.pos[i], kin.vel[i]])
         t = c.t[i:i + horizon + 1]
         sim = simulate(spec, params, y0, t, c.ctx)
@@ -70,7 +81,10 @@ def detect_change(traj: Trajectory, family: str, model_id: str, min_regime_s: fl
     fit = fit_model(spec, early)
     if not fit.success:
         return None
-    errors = prediction_errors(spec, fit.params, c, fps)
+    try:
+        errors = prediction_errors(spec, fit.params, c, fps, deadline=time.monotonic() + MAX_DETECT_SECONDS)
+    except RegimeTimeout:
+        return None
     horizon = int(HORIZON_S * fps)
     baseline = [e for i, e in errors if i + horizon <= n0]
     if not baseline:

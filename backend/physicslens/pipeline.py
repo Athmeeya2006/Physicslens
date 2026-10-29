@@ -754,17 +754,28 @@ def bounce_trail_step(b: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+MAX_REGIME_SECONDS = 60.0
+
+
 def find_regimes(traj: Trajectory, family: str, candidate_ids: list[str], origin_px: np.ndarray,
                  ppm: float) -> tuple[RegimeChange | None, list[dict[str, Any]]]:
     """Detect a change in dynamics and fit each side separately (e.g. a string shortened mid-clip)."""
-    # The richest candidate, so ordinary damping or drag isn't mistaken for a change.
-    detector = max(candidate_ids, key=lambda m: len(MODELS[m].params))
+    # The richest library candidate, so ordinary damping or drag isn't mistaken for a change. Agent-written laws are
+    # left out: one with a sign() made this optional check run for many minutes on a real clip.
+    library = [m for m in candidate_ids if not m.startswith("custom_")]
+    if not library:
+        return None, []
+    started = time.monotonic()
+    detector = max(library, key=lambda m: len(MODELS[m].params))
     change = detect_change(traj, family, detector)
     if change is None:
         return None, []
     # A few samples from the wrong side would bend a circle fit badly, so each side keeps only certain data.
     regimes = []
     for part in (traj.slice(0, change.pre_end), traj.slice(change.index, len(traj))):
+        if time.monotonic() - started > MAX_REGIME_SECONDS:
+            log.warning("Regime refits skipped: over %.0f s.", MAX_REGIME_SECONDS)
+            return None, []
         if len(part) < 2 * traj.fps:
             continue
         coords, v = fit_and_verify(part, family, candidate_ids)
@@ -1043,7 +1054,8 @@ def _sampled_text(s: SampledHypotheses) -> str:
     if s.samples <= 1:
         return f"Proposes {n} {h.family} models to test."
     agree = s.families.count(h.family)
-    return (f"{s.samples} independent proposals ({agree} of {s.samples} chose {h.family}); "
+    left_out = f" ({s.failed} more gave no usable answer and were left out)" if s.failed else ""
+    return (f"{s.samples} independent proposals{left_out} ({agree} of {s.samples} chose {h.family}); "
             f"together they name {n} {h.family} models, all of which are tested.")
 
 
