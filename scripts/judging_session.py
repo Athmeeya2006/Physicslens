@@ -156,8 +156,8 @@ def main() -> None:
     if a.cmd == "pointer":
         if a.gist_id != "none" and not re.fullmatch(r"[0-9a-f]{20,40}", a.gist_id):
             sys.exit("Expected a gist id (the hex string at the end of its URL).")
-        # api_base empty: the gist decides; a fixed address set with connect would win over it.
-        point_site("", pointer_gist="" if a.gist_id == "none" else a.gist_id)
+        # The fixed address (if any) stays: the site tries it first and follows the gist once it stops answering.
+        point_site(None, pointer_gist="" if a.gist_id == "none" else a.gist_id)
         print("the site now follows the gist" if a.gist_id != "none" else "gist pointer removed")
         return
     if a.cmd == "schedule":

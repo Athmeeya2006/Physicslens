@@ -20,14 +20,21 @@ export function connectBackend(): Promise<boolean> {
       const cfg = await fetch("/backend.json", { cache: "no-store" })
         .then((r) => r.json() as Promise<{ api_base?: string; next_session_utc?: string; pointer_gist?: string }>);
       NEXT_SESSION_UTC = cfg.next_session_utc && !Number.isNaN(Date.parse(cfg.next_session_utc)) ? cfg.next_session_utc : null;
-      // A server that restarts on its own (a scheduled Kaggle session) publishes its new address to a public gist.
-      const base = ((cfg.api_base || (cfg.pointer_gist ? await gistAddress(cfg.pointer_gist) : "")) ?? "").replace(/\/$/, "");
-      if (!base) return false;
-      // Only switch the analysis features on if the server really answers; a stale tunnel means gallery only.
-      const ok = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(6000) }).then((r) => r.ok);
-      if (ok) {
-        API_BASE = base;
-        HAS_BACKEND = true;
+      // A fixed address (set by hand) is tried first; a server that restarts on its own (a scheduled Kaggle session)
+      // publishes its address to a public gist, used when the fixed one is empty or no longer answers.
+      const candidates = [cfg.api_base ?? ""];
+      if (cfg.pointer_gist) candidates.push(await gistAddress(cfg.pointer_gist).catch(() => ""));
+      let ok = false;
+      for (const raw of candidates) {
+        const base = raw.replace(/\/$/, "");
+        if (!base) continue;
+        // Only switch the analysis features on if the server really answers; a stale tunnel means gallery only.
+        ok = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(6000) }).then((r) => r.ok).catch(() => false);
+        if (ok) {
+          API_BASE = base;
+          HAS_BACKEND = true;
+          break;
+        }
       }
       return ok;
     } catch {
