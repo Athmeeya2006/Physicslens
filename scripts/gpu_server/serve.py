@@ -13,6 +13,7 @@
 #   public visitors get the gallery only. Spending is capped per session by the budget below.
 # - scripts/judging_session.py pushes this script, reads the tunnel address from its log and points the site at it.
 import glob
+import json
 import os
 import re
 import secrets
@@ -58,6 +59,36 @@ def wait_http(url: str, seconds: int, proc: subprocess.Popen | None = None, head
             return False
         time.sleep(2)
     return False
+
+
+# The site finds a server that restarts on a schedule through a public gist holding its current address. The token
+# (Kaggle Secret GIST_TOKEN, a GitHub token limited to gists) can only edit gists; GIST_ID names the one to write.
+POINTER_FILE = "physicslens-backend.json"
+
+
+def announce(api_base: str, only_if_mine: str | None = None) -> None:
+    token, gist_id = secret("GIST_TOKEN"), secret("GIST_ID")
+    if not token or not gist_id:
+        print("pointer: GIST_TOKEN/GIST_ID not set; point the site with judging_session.py connect", flush=True)
+        return
+    api = f"https://api.github.com/gists/{gist_id}"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "User-Agent": "physicslens-server"}
+    try:
+        if only_if_mine is not None:
+            # At shutdown, clear the pointer only if it still names this session (a newer one may have taken over).
+            with urllib.request.urlopen(urllib.request.Request(api, headers=headers), timeout=20) as r:
+                current = json.loads(json.loads(r.read())["files"].get(POINTER_FILE, {}).get("content") or "{}")
+            if current.get("api_base") != only_if_mine:
+                return
+        until = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(T0 + SERVE_HOURS * 3600))
+        body = {"files": {POINTER_FILE: {"content": json.dumps({"api_base": api_base, "until_utc": until if api_base else None,
+                                                                 "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})}}}
+        req = urllib.request.Request(api, data=json.dumps(body).encode(), method="PATCH",
+                                     headers={**headers, "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            print(f"pointer: published {'address' if api_base else 'gallery only'} (HTTP {r.status})", flush=True)
+    except Exception as e:
+        print(f"pointer: could not update the gist ({type(e).__name__})", flush=True)  # never the token
 
 
 def secret(name: str) -> str:
@@ -164,6 +195,7 @@ for _ in range(90):
 if url is None or not wait_http(f"{url}/api/health", 120):
     sys.exit("The tunnel did not come up; see logs/tunnel.log")
 print(f"PHYSICSLENS_URL={url}", flush=True)
+announce(url)
 
 # ---------- Serve until the time is up, checking every few minutes ----------
 while time.time() - T0 < SERVE_HOURS * 3600:
@@ -174,5 +206,6 @@ while time.time() - T0 < SERVE_HOURS * 3600:
         break
     print(f"alive {(time.time() - T0) / 3600:.1f} h", flush=True)
 print("PHYSICSLENS_STOPPING", flush=True)
+announce("", only_if_mine=url)
 for p in procs.values():
     p.terminate()

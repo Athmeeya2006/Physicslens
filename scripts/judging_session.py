@@ -13,6 +13,11 @@
                                                        CLI after the run ends)
   python scripts/judging_session.py stop                 point the site back to gallery only (the server ends
                                                        itself after --hours)
+  python scripts/judging_session.py pointer GIST_ID  the site finds the server through a public gist that each server
+                                                       updates itself (Kaggle Secrets GIST_TOKEN and GIST_ID): needed
+                                                       for unattended, scheduled sessions
+  python scripts/judging_session.py start --slot b      a second notebook (physicslens-judging-server-b), scheduled
+                                                       12 hours after the first so the two cover the whole day
   python scripts/judging_session.py schedule 2026-11-05T14:00Z
                                                        show the next session's start on the site meanwhile
 
@@ -71,7 +76,8 @@ def upload_code() -> None:
     sys.exit("The Kaggle dataset did not become ready.")
 
 
-def push_kernel(hours: float, gpu: bool) -> None:
+def push_kernel(hours: float, gpu: bool, slot: str = "") -> None:
+    kernel = KERNEL + (f"-{slot}" if slot else "")
     with tempfile.TemporaryDirectory() as d:
         k = Path(d)
         code = (ROOT / "scripts" / "gpu_server" / "serve.py").read_text()
@@ -79,7 +85,7 @@ def push_kernel(hours: float, gpu: bool) -> None:
         code = re.sub(r"^SERVE_GPU = .*$", f"SERVE_GPU = {gpu}", code, count=1, flags=re.MULTILINE)
         (k / "serve.py").write_text(code)
         (k / "kernel-metadata.json").write_text(json.dumps({
-            "id": KERNEL, "title": "physicslens-judging-server", "code_file": "serve.py", "language": "python",
+            "id": kernel, "title": kernel.split("/", 1)[1], "code_file": "serve.py", "language": "python",
             "kernel_type": "script", "is_private": True, "enable_gpu": gpu, "enable_tpu": False,
             "enable_internet": True, "dataset_sources": [DATASET], "kernel_sources": [], "competition_sources": [],
             "model_sources": []}))
@@ -87,9 +93,9 @@ def push_kernel(hours: float, gpu: bool) -> None:
         print(run(KAGGLE, "kernels", "push", "-p", str(k), *accel).strip())
 
 
-def wait_for_url(minutes: float = 30) -> str:
+def wait_for_url(minutes: float = 30, kernel: str = KERNEL) -> str:
     """Follow the server's log until it prints its tunnel address (setup takes about 5 to 8 minutes)."""
-    proc = subprocess.Popen([KAGGLE, "kernels", "logs", "-f", KERNEL], stdout=subprocess.PIPE,
+    proc = subprocess.Popen([KAGGLE, "kernels", "logs", "-f", kernel], stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True)
     deadline = time.time() + minutes * 60
     try:
@@ -107,7 +113,7 @@ def wait_for_url(minutes: float = 30) -> str:
     sys.exit("No tunnel address yet; check the server's log on Kaggle.")
 
 
-def point_site(api_base: str | None = None, next_session_utc: str | None = None) -> None:
+def point_site(api_base: str | None = None, next_session_utc: str | None = None, pointer_gist: str | None = None) -> None:
     """Change what the site's /backend.json says; None keeps the current value of that field."""
     if not (SITE_DIR / ".vercel").is_dir():
         sys.exit(f"{SITE_DIR} is not linked to the Vercel project.")
@@ -117,6 +123,8 @@ def point_site(api_base: str | None = None, next_session_utc: str | None = None)
         cfg["api_base"] = api_base
     if next_session_utc is not None:
         cfg["next_session_utc"] = next_session_utc
+    if pointer_gist is not None:
+        cfg["pointer_gist"] = pointer_gist
     cfg.setdefault("api_base", "")
     path.write_text(json.dumps({k: v for k, v in cfg.items() if v != "" or k == "api_base"}))
     api_base = cfg["api_base"]
@@ -131,16 +139,26 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("start")
     s.add_argument("--hours", type=float, default=11.5, help="Kaggle stops any run at 12 h")
+    s.add_argument("--slot", default="", help="a second notebook, e.g. b, for back-to-back scheduled sessions")
     s.add_argument("--gpu", action="store_true", help="also serve Muse Glimmer as the open-weight fallback (uses GPU quota)")
     s.add_argument("--skip-upload", action="store_true", help="reuse the code already uploaded")
     sub.add_parser("stop")
     cn = sub.add_parser("connect")
     cn.add_argument("--url", help="the server's https://...trycloudflare.com address, if already known")
+    pt = sub.add_parser("pointer", help="let the site read the server address from a gist the server updates itself")
+    pt.add_argument("gist_id", help='the gist id, or "none" to stop using it')
     sc = sub.add_parser("schedule", help="show the next session's start time on the site while no server runs")
     sc.add_argument("when", help='ISO time in UTC, e.g. 2026-11-05T14:00Z, or "none" to clear it')
     a = ap.parse_args()
     if a.cmd == "stop":
         point_site("")
+        return
+    if a.cmd == "pointer":
+        if a.gist_id != "none" and not re.fullmatch(r"[0-9a-f]{20,40}", a.gist_id):
+            sys.exit("Expected a gist id (the hex string at the end of its URL).")
+        # api_base empty: the gist decides; a fixed address set with connect would win over it.
+        point_site("", pointer_gist="" if a.gist_id == "none" else a.gist_id)
+        print("the site now follows the gist" if a.gist_id != "none" else "gist pointer removed")
         return
     if a.cmd == "schedule":
         when = "" if a.when == "none" else datetime.fromisoformat(a.when).astimezone(UTC).strftime("%Y-%m-%dT%H:%MZ")
@@ -156,8 +174,8 @@ def main() -> None:
         return
     if not a.skip_upload:
         upload_code()
-    push_kernel(min(a.hours, 11.75), a.gpu)
-    url = wait_for_url()
+    push_kernel(min(a.hours, 11.75), a.gpu, a.slot)
+    url = wait_for_url(kernel=KERNEL + (f"-{a.slot}" if a.slot else ""))
     print(f"server: {url}")
     point_site(url)
 

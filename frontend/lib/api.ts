@@ -18,9 +18,10 @@ export function connectBackend(): Promise<boolean> {
   connecting ??= (async () => {
     try {
       const cfg = await fetch("/backend.json", { cache: "no-store" })
-        .then((r) => r.json() as Promise<{ api_base?: string; next_session_utc?: string }>);
+        .then((r) => r.json() as Promise<{ api_base?: string; next_session_utc?: string; pointer_gist?: string }>);
       NEXT_SESSION_UTC = cfg.next_session_utc && !Number.isNaN(Date.parse(cfg.next_session_utc)) ? cfg.next_session_utc : null;
-      const base = (cfg.api_base ?? "").replace(/\/$/, "");
+      // A server that restarts on its own (a scheduled Kaggle session) publishes its new address to a public gist.
+      const base = ((cfg.api_base || (cfg.pointer_gist ? await gistAddress(cfg.pointer_gist) : "")) ?? "").replace(/\/$/, "");
       if (!base) return false;
       // Only switch the analysis features on if the server really answers; a stale tunnel means gallery only.
       const ok = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(6000) }).then((r) => r.ok);
@@ -34,6 +35,19 @@ export function connectBackend(): Promise<boolean> {
     }
   })();
   return connecting;
+}
+
+const POINTER_FILE = "physicslens-backend.json";
+
+async function gistAddress(gistId: string): Promise<string> {
+  // The API (not the raw URL) answers with the current content: raw gist files are cached for minutes.
+  const gist = await fetch(`https://api.github.com/gists/${encodeURIComponent(gistId)}`, { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null)) as { files?: Record<string, { content?: string }> } | null;
+  const content = gist?.files?.[POINTER_FILE]?.content;
+  if (!content) return "";
+  const p = JSON.parse(content) as { api_base?: string; until_utc?: string };
+  if (p.until_utc && Date.parse(p.until_utc) < Date.now()) return ""; // that session has ended
+  return p.api_base ?? "";
 }
 
 /** null while looking for the analysis server, then whether it is there. */
