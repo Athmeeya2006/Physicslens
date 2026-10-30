@@ -61,9 +61,17 @@ MAX_SECONDS = 10.0
 PROFILES = {"full": {}, "light": {"hypothesis_samples": 1, "max_tool_steps": 1, "referee": False}}
 
 
-def fetch(url: str, timeout: float = 120) -> bytes:
-    with urllib.request.urlopen(url, timeout=timeout) as r:
-        return r.read()
+def fetch(url: str, timeout: float = 120, attempts: int = 4) -> bytes:
+    """Retries with a growing pause: a network or DNS blip once failed hundreds of downloads in a row."""
+    for k in range(attempts):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as r:
+                return r.read()
+        except OSError:
+            if k == attempts - 1:
+                raise
+            time.sleep(30 * (k + 1))
+    raise AssertionError("unreachable")
 
 
 def quote_url(url: str) -> str:
@@ -200,9 +208,11 @@ def rows_of(path: Path) -> list[dict[str, Any]]:
 
 def done_ids(path: Path, retry_errors: bool = False) -> set[str]:
     # A clip refused for budget (a daily cap reached mid-batch) is not a result: it always runs again.
+    def retry(err: str) -> bool:  # refused for budget, or the network was down: not a result, run it again
+        err = err.lower()
+        return any(k in err for k in ("busy", "budget", "urlopen error", "name or service", "timed out", "connection"))
     return {r["id"] for r in rows_of(path)
-            if not ("busy" in (r.get("error") or "").lower() or "budget" in (r.get("error") or "").lower()
-                    or (retry_errors and r.get("status") == "error"))}
+            if not (retry(r.get("error") or "") or (retry_errors and r.get("status") == "error"))}
 
 
 def run(limit: int, workers: int, max_usd: float, only: str | None, profile: str, retry_errors: bool = False) -> None:

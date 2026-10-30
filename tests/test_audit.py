@@ -322,3 +322,14 @@ def test_an_object_going_behind_something_is_not_a_morph():
     assert any(c["title"] == "No morphing" and c["status"] == "skipped" and "partly hidden" in c["text"] for c in r["checks"])
     shrunk = np.column_stack([np.where(half, 15.0, 30.0), np.where(half, 15.0, 30.0)])  # the whole object shrinks
     assert "No morphing" in violated(run(tr, "pendulum", areas_px=shrunk[:, 0] * shrunk[:, 1], outline_px=shrunk))
+
+
+def test_shrinking_out_of_the_frame_is_not_a_morph():
+    """Real footage: a ball rolls out of shot and the frame's edge cuts it to nothing just before the track ends."""
+    tr = pendulum()
+    n = len(tr.t)
+    area = np.full(n, 900.0)
+    area[-6:] = np.linspace(700, 60, 6)
+    side = np.sqrt(area)
+    r = run(tr, "pendulum", areas_px=area, outline_px=np.column_stack([side, side]))
+    assert "No morphing" not in violated(r)

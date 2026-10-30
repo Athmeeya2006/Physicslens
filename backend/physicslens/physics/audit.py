@@ -746,6 +746,14 @@ def check_morph(a: AuditInput, sigma: float = 0.0) -> Check:
                      f"At {a.traj.t[i + m]:.2f} s the mask area changes {max(factor, 1 / factor):.1f} times, but at a contact "
                      "(the velocity changes there too): spray, splash or a second object touching it does the same, so it "
                      "isn't counted.", factor, None, 1.0, "", float(z[i]))
+    edge = i + m >= len(la) - 2 * m and factor < 1 or i + m <= 2 * m and factor > 1
+    if z[i] >= Z_KINEMATIC and abs(steps[i]) > np.log(MORPH_FACTOR) and edge:
+        # Shrinking just before the track ends, or growing just after it starts: the object leaving or entering the
+        # view, cut off by the frame's edge (a real ball rolling out of shot was accused before this).
+        return Check("kinematics", title, "skipped",
+                     f"At {a.traj.t[i + m]:.2f} s the mask area changes {max(factor, 1 / factor):.1f} times, but as the object "
+                     f"{'leaves' if factor < 1 else 'enters'} the view, where the frame's edge cuts it off, so it isn't "
+                     "counted.", factor, None, 1.0, "", float(z[i]))
     if z[i] >= Z_KINEMATIC and abs(steps[i]) > np.log(MORPH_FACTOR) and a.outline_px is not None \
             and len(a.outline_px) == len(la):
         o = np.log(np.clip(np.asarray(a.outline_px, dtype=float), 1e-6, None))
