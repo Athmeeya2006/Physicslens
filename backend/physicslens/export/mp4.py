@@ -203,7 +203,8 @@ def _arrow(frame: np.ndarray, start: tuple[float, float], vec: np.ndarray, scale
     cv2.arrowedLine(frame, a, b, color, thickness, cv2.LINE_AA, tipLength=0.25)
 
 
-def render_share_video(result: dict[str, Any], clip: Path, out: Path) -> Path:
+def render_share_video(result: dict[str, Any], clip: Path, out: Path, panel: bool = True) -> Path:
+    """panel=False leaves out the equation box: for pages that typeset the law themselves, large."""
     cap = cv2.VideoCapture(str(clip))
     if not cap.isOpened():
         raise ExportError(f"Cannot open {clip.name}.")
@@ -218,6 +219,7 @@ def render_share_video(result: dict[str, Any], clip: Path, out: Path) -> Path:
     vectors = ghost_vectors(ghost)
     v_scale, a_scale = _arrow_scales(vectors, max(4 * radius, min(w, h) * 0.07))
     ahead = max(2, round(fps))  # one second of the law's own prediction
+    show_panel = panel
     panel = build_panel(result, w)
     max_w = int(0.46 * w)
     if panel.width > max_w:  # keep the video, not the caption, the main thing
@@ -257,8 +259,9 @@ def render_share_video(result: dict[str, Any], clip: Path, out: Path) -> Path:
                     _arrow(frame, (gx, gy), vel, v_scale, VEL_BGR, thickness, cap_len)
                     _arrow(frame, (gx, gy), acc, a_scale, FORCE_BGR, thickness, cap_len)
                 _dashed_circle(frame, (round(gx), round(gy)), radius, thickness)
-            region = frame[py:py + ph, px:px + pw].astype(np.float32)
-            frame[py:py + ph, px:px + pw] = (pb * pa + region * (1 - pa)).astype(np.uint8)
+            if show_panel:
+                region = frame[py:py + ph, px:px + pw].astype(np.float32)
+                frame[py:py + ph, px:px + pw] = (pb * pa + region * (1 - pa)).astype(np.uint8)
             if change_frame is not None and change_frame <= idx < change_frame + int(1.5 * fps):
                 label_y = py + ph + int(30 * w / 1280) if py < h // 2 else py - int(12 * w / 1280)
                 cv2.putText(frame, "Dynamics changed", (px, label_y),

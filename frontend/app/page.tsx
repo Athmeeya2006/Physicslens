@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Loader2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Gallery } from "@/components/Gallery";
 import { VoiceNotes } from "@/components/VoiceNotes";
+import { Discoveries } from "@/components/Discoveries";
 import { Hero } from "@/components/Hero";
 import { ResultView } from "@/components/ResultView";
 import type { Budget, GalleryItem, Health, RunView } from "@/lib/api";
@@ -142,7 +143,10 @@ export default function Home() {
             <ResultView runId={run.run_id} result={run.result!} />
           </div>
         ) : (
-          <Hero />
+          <>
+            <Hero />
+            <Discoveries />
+          </>
         )}
 
         <div className="home-grid">

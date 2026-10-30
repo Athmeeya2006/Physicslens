@@ -411,3 +411,36 @@ a.gallery-item { text-decoration: none; }
   .hero-stats li { grid-template-columns: auto 1fr; align-items: baseline; gap: 10px; }
   .hero-number { font-size: 1.35rem; }
 }
+
+/* Home showcase: what it found, one discovery per row on a dark, full-width band. */
+.discoveries { margin-inline: calc(50% - 50vw); background: #070a0e; color: #e9eef3; padding: 56px 16px 64px; }
+.discoveries-inner { max-width: 1180px; margin: 0 auto; display: grid; gap: 56px; }
+.discoveries-head { display: grid; gap: 8px; max-width: 760px; }
+.discoveries-head h2 { margin: 0; font-size: clamp(1.4rem, 2.6vw, 2rem); line-height: 1.2; letter-spacing: -0.01em; color: #fff; }
+.discoveries .hero-eyebrow { color: #6fd3a0; }
+.story { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 36px; align-items: center; }
+.story.flip .story-media { order: 2; }
+.story-media video { width: 100%; display: block; border-radius: var(--radius); background: #000; box-shadow: 0 0 0 1px #1d2630; }
+.story-text { display: grid; gap: 10px; }
+.story-eyebrow { margin: 0; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8fa1b3; }
+.story h3 { margin: 0; font-size: clamp(1.25rem, 2.1vw, 1.6rem); line-height: 1.2; color: #fff; }
+.story-text > p { margin: 0; color: #b7c3ce; line-height: 1.55; }
+.story .law { font-size: 1.22em; margin: 4px 0; }
+.story .law .katex-display { margin: 14px 0; text-align: left; }
+.story-stats { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.story-stats li { display: grid; gap: 3px; padding: 10px 12px; border-radius: var(--radius); background: #0f151c; box-shadow: inset 0 0 0 1px #1d2630; }
+.story-number { font-size: 1.3rem; font-weight: 700; color: #fff; white-space: nowrap; }
+.story-stats li span:last-child { font-size: 0.8rem; color: #8fa1b3; line-height: 1.35; }
+.story-note { margin: 0; font-size: 0.84rem; color: #8fa1b3; line-height: 1.5; border-left: 2px solid #2b3946; padding-left: 10px; }
+.story-link { display: inline-flex; align-items: center; gap: 6px; color: #7cc4ff; font-weight: 600; text-decoration: none; width: fit-content; }
+.story-link:hover { color: #b5dcff; text-decoration: underline; }
+@media (max-width: 900px) {
+  .story { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .story.flip .story-media { order: 0; }
+  .discoveries { padding: 40px 16px 48px; }
+  .discoveries-inner { gap: 44px; }
+}
+@media (max-width: 520px) {
+  .story-stats { grid-template-columns: minmax(0, 1fr); }
+  .story .law { font-size: 1.05em; }
+}

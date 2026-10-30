@@ -1,0 +1,6 @@
+{
+  "title": "Halley's comet: the inverse-square law from its 1986 passage",
+  "description": "Halley's 1986 swing around the Sun, rendered from NASA/JPL Horizons positions. Its orbit is a long ellipse, so over the video the Sun's pull grows about 80-fold in a year: a hard test. Watching only the dot, PhysicsLens accepted inverse-square gravity on held-out motion (a free power law fits the exponent at 1.9998) and measured the Sun's GM within 0.1% of JPL's value. Carried 75 years forward with the Sun alone, the law brings Halley back in late 2063, not JPL's July 2061: a 76-year period hinges on the speed at perihelion to a few parts in ten thousand, finer than a video can measure, and the planets' pull is left out. Units: AU and days.",
+  "credit": "Rendered by PhysicsLens from NASA/JPL Horizons data (JPL Solar System Dynamics), comet 1P/Halley record 90000030",
+  "order": 3
+}
