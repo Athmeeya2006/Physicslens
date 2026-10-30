@@ -1,7 +1,12 @@
 import { Activity, Camera, Route, Upload } from "lucide-react";
+import { Law, Tex } from "./Equation";
 
 // The first screen: what PhysicsLens found, shown working, before any form. Every number is from a stored gallery
 // run (gallery-apophis, gallery-jupiter) checked against NASA/JPL values fetched at run time.
+
+// The accepted law of gallery-apophis (exponent 1.5 written as 3/2), typeset large: the video's own overlay is too
+// small to read at this size.
+const LAW = "\\ddot x = -\\frac{\\mu\\,x}{(x^2+y^2)^{3/2}} - b\\,\\dot x,\\quad \\ddot y = -\\frac{\\mu\\,y}{(x^2+y^2)^{3/2}} - b\\,\\dot y";
 
 const STATS = [
   { value: "0.023%", label: "the Sun's mass (GM), measured from pixels, against NASA/JPL" },
@@ -37,10 +42,20 @@ export function Hero() {
         </div>
       </div>
       <figure className="hero-media">
-        <video src="/gallery/gallery-apophis/share.mp4" poster="/gallery/gallery-apophis/poster.jpg" autoPlay muted loop
-               playsInline preload="metadata" aria-label="Asteroid Apophis around the Sun, with the law PhysicsLens found: the force arrow points at the Sun in every frame" />
+        <video src="/hero/apophis-orbit.mp4" poster="/hero/apophis-orbit.jpg" autoPlay muted loop playsInline
+               preload="metadata" aria-label="Asteroid Apophis around the Sun, with the law PhysicsLens found: the force arrow points at the Sun in every frame" />
+        <div className="hero-law">
+          <p className="hero-law-title">The law it wrote, then verified</p>
+          <Law tex={LAW} />
+          <ul className="hero-law-values">
+            <li><Tex tex={"\\mu = (2.9598 \\pm 0.0010) \\times 10^{-4}\\ \\mathrm{AU^3/day^2}"} />
+              <span>the Sun&apos;s GM: 0.023% from NASA/JPL</span></li>
+            <li><Tex tex={"b = (2.4 \\pm 0.2) \\times 10^{-7}\\ \\mathrm{day^{-1}}"} />
+              <span>a tiny extra term: the Sun alone is not quite the whole story (the planets pull too)</span></li>
+          </ul>
+        </div>
         <figcaption>
-          Asteroid Apophis over four years, rendered from NASA/JPL positions. Red: the force from the law it found,
+          Asteroid Apophis over four years, rendered from NASA/JPL positions. Red arrow: the force the law gives,
           pointing at the Sun in every frame; yellow: velocity. Carried 3.3 years forward, the law puts the 2029 Earth
           flyby 13 hours from JPL&apos;s time.
         </figcaption>
