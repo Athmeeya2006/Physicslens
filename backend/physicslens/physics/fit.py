@@ -143,9 +143,10 @@ def derivative_match(spec: ModelSpec, c: Coordinates, kin, guess: dict[str, floa
     states = np.column_stack([kin.pos, kin.vel])[idx]
     acc = kin.acc[idx]
     scale = float(np.std(acc)) + 1e-30
-    lower = np.array([p.lower for p in spec.params])
-    upper = np.array([p.upper for p in spec.params])
-    p0 = np.clip([guess[n] for n in spec.param_names], lower, upper)
+    lower = np.array([p.lower for p in spec.params], dtype=float)
+    upper = np.array([p.upper for p in spec.params], dtype=float)
+    # dtype=float throughout: one guess arriving as true/false made the whole vector boolean and the fitter crashed.
+    p0 = np.clip(np.array([guess[n] for n in spec.param_names], dtype=float), lower, upper)
 
     def residual(theta: np.ndarray) -> np.ndarray:
         params = dict(zip(spec.param_names, theta, strict=True))
@@ -156,7 +157,7 @@ def derivative_match(spec: ModelSpec, c: Coordinates, kin, guess: dict[str, floa
 
     try:
         theta = least_squares(residual, p0, bounds=(lower, upper), x_scale="jac", max_nfev=200).x
-    except (ValueError, FloatingPointError):
+    except (ValueError, FloatingPointError, TypeError):  # only a better start: failing it keeps the law's own guesses
         return guess
     return {**guess, **dict(zip(spec.param_names, (float(v) for v in theta), strict=True))}
 
@@ -202,7 +203,7 @@ def fit_model(spec: ModelSpec, c: Coordinates, warm: dict[str, float] | None = N
 def _fit_from(spec: ModelSpec, c: Coordinates, kin, noise: float, guess: dict[str, float],
               warm: dict[str, float] | None) -> FitResult:
     n_samples, d = c.q.shape
-    theta = np.concatenate([[guess[p] for p in spec.param_names], kin.pos[0], kin.vel[0]])
+    theta = np.concatenate([np.array([guess[p] for p in spec.param_names], dtype=float), kin.pos[0], kin.vel[0]])
     span = np.ptp(c.q, axis=0).max() + 1e-9
     vspan = np.abs(kin.vel).max() + 1e-9
     lower = np.concatenate([[p.lower for p in spec.params], c.q.min(axis=0) - span, -3 * vspan * np.ones(d)])

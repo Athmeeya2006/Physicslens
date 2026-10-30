@@ -114,7 +114,8 @@ def build(family: str, title: str, acceleration: list[str], params: list[FreePar
     def rhs(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
         env = dict(p)
         env.update(zip(state, (float(v) for v in s), strict=True))
-        return np.array([*s[d:], *(safe_eval(f, env) for f in fns)])
+        # Always numbers: a term that evaluates to true/false would make the fitter subtract booleans and crash.
+        return np.array([*s[d:], *(safe_eval(f, env) for f in fns)], dtype=float)
 
     symbols = {**STATE_LATEX, **{n: param_latex(n) for n in names}}
     latex = r",\quad ".join(f"{lhs} = {to_latex(t, symbols)}" for lhs, t in zip(ACCEL_LATEX[family], trees, strict=True))

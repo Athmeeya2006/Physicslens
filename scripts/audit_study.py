@@ -166,7 +166,8 @@ def run_one(clip: dict[str, Any], profile: str = "full") -> dict[str, Any]:
         video = prepare(clip)
         client = CostGuardClient(load_settings())
         client.limits["agent"] = {**(client.limits.get("agent") or {}), **PROFILES[profile]}
-        run_id = f"study-{clip['id']}"
+        # One name per attempt: the per-run cap is for one analysis, not every retry of the same clip added up.
+        run_id = f"study-{clip['id']}-{int(time.time())}"
         run_dir = WORK / "runs" / clip["id"]
         run_dir.mkdir(parents=True, exist_ok=True)
         result = analyze(client, video, run_dir, run_id, RunOptions(audience="dev"))

@@ -197,3 +197,12 @@ def test_answer_inside_a_leaked_chat_template_is_still_read():
     raw = ('<|start|>assistant to=commentary<|message|>I will take a closer look.<|eom|>'
            '{"family": "line", "candidates": [{"model_id": "line_constant_accel", "rationale": "drifts"}], "free_models": []}')
     assert _validate(Hypotheses, raw).family == "line"
+
+
+def test_sign_works_on_numpy_numbers():
+    """The simulator passes numpy floats; a written law with sign() (dry friction) crashed a real run."""
+    import numpy as np
+    from physicslens.physics.expr import _sign
+    assert [_sign(np.float64(v)) for v in (-2.5, 0.0, 3.0)] == [-1.0, 0.0, 1.0]
+    law = build("line", "Dry friction", ["-mu*9.81*sign(v)"], [FreeParam("mu", "", 0.0, 1.0, 0.2)])
+    assert law.spec.rhs(np.array([0.1, np.float64(-0.4)]), {"mu": 0.5}, {})[1] == pytest.approx(4.905)

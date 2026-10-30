@@ -164,7 +164,8 @@ def names_used(node: Node) -> set[str]:
 
 
 def _sign(a: float) -> float:
-    return float((a > 0) - (a < 0))
+    # int() first: with a numpy number the comparisons are numpy booleans, which numpy refuses to subtract.
+    return float(int(a > 0) - int(a < 0))
 
 
 def _pow(a: float, b: float) -> float:
