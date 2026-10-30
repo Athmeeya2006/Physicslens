@@ -13,7 +13,7 @@ type Row = {
 // How a length scale was set, in words: a parameter that needs no scale says so instead of naming a source.
 const SCALE: Record<string, string> = {
   none: "no scale needed", user: "length given by the person filming", object_size: "object size given",
-  gravity: "Earth's gravity assumed as the ruler",
+  gravity: "Earth's gravity assumed as the ruler", known_scale: "scale known from how the video was drawn",
 };
 const scaleText = (basis: string) => SCALE[basis] ?? `reference in view (${basis.replaceAll("_", " ")})`;
 
@@ -49,13 +49,13 @@ export default function DatasetPage() {
       <section className="panel stack">
         <div className="row" style={{ gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <input type="search" placeholder="Filter: damping, cart, pendulum..." value={q} onChange={(e) => setQ(e.target.value)}
-            aria-label="Filter the dataset" style={{ flex: "1 1 220px" }} />
+            aria-label="Filter the dataset" className="filter" style={{ flex: "1 1 220px" }} />
           <a className="button secondary" href="/gallery/dataset.json" download><Download size={16} aria-hidden="true" /> JSON</a>
           <a className="button secondary" href="/gallery/dataset.csv" download><Download size={16} aria-hidden="true" /> CSV</a>
         </div>
         {error && <p className="error">The dataset could not be loaded ({error}).</p>}
         {rows && (
-          <div className="table-wrap"><table>
+          <div className="table-wrap"><table className="cards">
             <thead>
               <tr><th>Object</th><th>Property</th><th>Value</th><th>Held-out error</th><th>Scale</th><th>Source</th></tr>
             </thead>
@@ -65,12 +65,12 @@ export default function DatasetPage() {
                 const unit = formatUnit(r.units);
                 return (
                   <tr key={r.id}>
-                    <td>{r.object ?? ""}</td>
-                    <td>{r.meaning}</td>
-                    <td className="num">{v} ± {s}{unit ? ` ${unit}` : ""}</td>
-                    <td className="num">{(r.heldout_error * 100).toFixed(1)}%</td>
-                    <td className="small">{scaleText(r.scale_basis)}</td>
-                    <td className="small"><a href={`/?run=${r.run_id}`}>{r.clip}</a><br /><span className="muted">{r.license}</span></td>
+                    <td data-label="Object">{r.object ?? ""}</td>
+                    <td data-label="Property">{r.meaning}</td>
+                    <td data-label="Value" className="num">{v} ± {s}{unit ? ` ${unit}` : ""}</td>
+                    <td data-label="Held-out error" className="num">{(r.heldout_error * 100).toFixed(1)}%</td>
+                    <td data-label="Scale" className="small">{scaleText(r.scale_basis)}</td>
+                    <td data-label="Source" className="small"><a href={`/?run=${r.run_id}`}>{r.clip}</a><br /><span className="muted">{r.license}</span></td>
                   </tr>
                 );
               })}

@@ -67,9 +67,10 @@ p { margin: 0; }
 
 .shell-bar { background: var(--shell); color: var(--shell-ink); }
 .shell-inner { max-width: 1280px; margin: 0 auto; padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 28px; }
-.wordmark { display: flex; align-items: center; gap: 10px; color: var(--shell-ink); text-decoration: none; font-weight: 750; font-size: 1.08rem; letter-spacing: -0.01em; }
+.wordmark { flex: none; display: flex; align-items: center; gap: 10px; color: var(--shell-ink); text-decoration: none; font-weight: 750; font-size: 1.08rem; letter-spacing: -0.01em; }
 .wordmark svg { color: #7fb6ff; }
-.shell-nav { display: flex; gap: 4px; height: 100%; }
+.shell-nav { display: flex; gap: 4px; height: 100%; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.shell-nav::-webkit-scrollbar { display: none; }
 .shell-nav a { display: flex; align-items: center; gap: 7px; padding: 0 12px; color: #b9c2c9; text-decoration: none; font-size: 0.93rem; border-bottom: 2px solid transparent; }
 .shell-nav a:hover { color: var(--shell-ink); }
 .shell-nav a[aria-current="page"] { color: var(--shell-ink); border-bottom-color: #7fb6ff; }
@@ -81,7 +82,10 @@ main { max-width: 1280px; margin: 0 auto; padding: 32px 24px 80px; }
 
 @media (max-width: 720px) {
   .shell-inner { padding: 0 16px; gap: 12px; }
-  .shell-nav a span { display: none; }
+  /* Icons only, but the names stay for screen readers (display: none would hide them from everyone). */
+  .shell-nav { gap: 0; }
+  .shell-nav a { padding: 0 9px; }
+  .shell-nav a span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .shell-note { display: none; }
   main { padding: 20px 16px 64px; }
   h1 { font-size: 1.65rem; }
@@ -104,9 +108,9 @@ button:hover:not(:disabled), .button:hover { background: #26313c; }
 button:disabled { opacity: 0.45; cursor: default; }
 button.secondary, .button.secondary { background: var(--sunk); color: var(--ink); }
 button.secondary:hover:not(:disabled), .button.secondary:hover { background: #d1d6d0; }
-button.listening { background: var(--whatif); }
+button.listening, button.listening:hover:not(:disabled) { background: var(--whatif); color: #fff; }
 
-input[type="text"], input[type="number"], input:not([type]), textarea {
+input[type="text"], input[type="number"], input[type="search"], input:not([type]), textarea {
   font: 400 1rem/1.4 var(--font); color: var(--ink); background: var(--surface-2);
   border: 0; box-shadow: inset 0 0 0 1px #c4cbc3; border-radius: var(--radius); padding: 10px 12px; width: 100%;
 }
@@ -316,7 +320,8 @@ td.fitted .uncal { margin-left: 6px; }
 /* ---------- studies ---------- */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { background: var(--surface-2); color: var(--ink-2); font-weight: 500; font-size: 0.86rem; padding: 6px 10px; }
-.chip:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--model); }
+/* Light buttons must out-rank the global dark hover, or a hovered chip turns into dark text on a dark block. */
+.chip:hover:not(:disabled), .chip:active:not(:disabled) { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--model); }
 textarea { font: inherit; padding: 10px; border-radius: var(--radius); border: 1px solid #c4cbc3; background: var(--surface-2); color: var(--ink); resize: vertical; }
 .checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .checklist li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; align-items: baseline; }
@@ -340,3 +345,33 @@ a.gallery-item { text-decoration: none; }
 .setup-pair img { width: 100%; height: auto; border-radius: var(--radius); display: block; }
 .setup-guide button { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 560px) { .setup-pair { grid-template-columns: minmax(0, 1fr); } }
+
+/* Wide tables become label/value cards on phones instead of squeezing six columns into 390 px. */
+@media (max-width: 720px) {
+  table.cards thead { display: none; }
+  table.cards, table.cards tbody, table.cards tr, table.cards td { display: block; width: 100%; }
+  table.cards tr { border-top: 1px solid var(--sunk); padding: 10px 0; }
+  table.cards td { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 8px; padding: 3px 0; border: 0; text-align: left; }
+  table.cards td::before { content: attr(data-label); color: var(--ink-3); font-size: 0.8rem; font-weight: 600; }
+  table.cards td { overflow-wrap: anywhere; white-space: normal; }
+}
+
+/* A law the agent wrote, typeset under its name; long laws scroll inside their own box on a phone. */
+.law { display: block; margin: 6px 0 2px; max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+.law .katex-display { margin: 2px 0; text-align: left; }
+.law .katex-display > .katex { text-align: left; }
+
+/* Physics audit at scale: dot-and-interval rows; the real-footage control is the neutral reference. */
+.study-chart svg { display: block; max-width: 100%; }
+.study-chart .row-label { font-size: 12px; fill: var(--ink-2); }
+.study-chart .value { font-size: 12px; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+.study-chart .value.muted { fill: var(--ink-3); }
+.study-chart .ci { stroke-width: 2; stroke-linecap: round; }
+.study-chart .gen .ci { stroke: #0b63ce; opacity: 0.45; }
+.study-chart .gen .mark { fill: #0b63ce; stroke: var(--surface); stroke-width: 2; }
+.study-chart .ref .ci { stroke: #56616d; opacity: 0.55; }
+.study-chart .ref .mark { fill: #56616d; stroke: var(--surface); stroke-width: 2; }
+.study-chart .axis { stroke: #c4cbc3; }
+.study-chart .tick { font-size: 11px; fill: var(--ink-3); }
+.study-chart .tip rect { fill: var(--ink); }
+.study-chart .tip text { fill: var(--surface-2); font-size: 11.5px; }

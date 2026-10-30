@@ -8,7 +8,7 @@ import { AgentTrail } from "./AgentTrail";
 import { AudioPanel } from "./AudioPanel";
 import { ControlPanel } from "./ControlPanel";
 import { DepthPanel } from "./DepthPanel";
-import { Tex } from "./Equation";
+import { Law, Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
 import { GhostPlayer } from "./GhostPlayer";
 import { SimToReal } from "./SimToReal";
@@ -20,10 +20,26 @@ const STATUS_TEXT: Record<AnalysisResult["status"], string> = {
   no_fit: "No clean governing equation",
 };
 
+const SUPERSCRIPT: Record<string, string> = {
+  "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+};
+const pow10 = (e: number) => `× 10${[...String(e)].map((c) => SUPERSCRIPT[c] ?? c).join("")}`;
+
 function fmt(v: number): string {
   if (v === 0) return "0";
   const a = Math.abs(v);
-  return a >= 1000 || a < 0.01 ? v.toExponential(2) : v.toPrecision(4);
+  if (a >= 1000 || a < 0.01) {
+    // 2.96 × 10⁻⁴ rather than 2.96e-4: the page is read by people, not parsers.
+    const e = Math.floor(Math.log10(a));
+    return `${(v / 10 ** e).toFixed(2)} ${pow10(e)}`;
+  }
+  return v.toPrecision(4);
+}
+
+/** Shared power of ten for a value, its uncertainty and interval: 0 unless the value is tiny or huge. */
+function sciExponent(v: number): number {
+  const a = Math.abs(v);
+  return a !== 0 && (a < 1e-3 || a >= 1e5) ? Math.floor(Math.log10(a)) : 0;
 }
 
 // Two significant figures of the uncertainty decide how many decimals the value deserves.
@@ -66,6 +82,7 @@ function modelName(id: string): string {
 
 const SCALE_SOURCE: Record<string, string> = {
   user: "the length you gave", object_size: "the object's size you gave", gravity: "Earth's gravity (assumed)",
+  known_scale: "how the video was drawn",
 };
 
 function prettyModel(id: string, titles: Record<string, string>): string {
@@ -104,14 +121,14 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
             {r.hypothesis_votes.proposed_by > 0
               ? `Proposed by ${r.hypothesis_votes.proposed_by} of ${r.hypothesis_votes.samples} independent samples of the reasoning model before the math checked it.`
               : refereeWon(r)
-                ? `None of ${r.hypothesis_votes.samples} independent samples proposed this law: the referee did, and it beat their best on held-out motion.`
+                ? `None of ${r.hypothesis_votes.samples} independent samples proposed this law: the referee did, and it passed the held-out test and fit better by BIC.`
                 : `None of ${r.hypothesis_votes.samples} independent samples proposed this law; the agent tested it later or it is a baseline the math always tests.`}
           </p>
         )}
         {r.skeptic && "tested" in r.skeptic && r.skeptic.survived && r.skeptic.tested > 0 && (
           <p className="survived-badge">
             Survived {r.skeptic.tested} challenge{r.skeptic.tested === 1 ? "" : "s"} from a referee model: no alternative law
-            forecast the held-out motion better.
+            did better by the same rule (forecast the held-out motion, then the best BIC).
           </p>
         )}
         <div className="provenance">
@@ -147,11 +164,14 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
       {r.forecast && (
         <div className="panel forecast">
           <h3>Forecast check: does the model predict motion it never saw?</h3>
-          <ForecastChart f={r.forecast} uncalibrated={!!r.scale_note} />
+          <ForecastChart f={r.forecast} uncalibrated={!!r.scale_note} units={r.units} />
         </div>
       )}
 
-      {r.status === "accepted" && r.fit_state && <SimToReal runId={runId} />}
+      {/* No textbook baseline for scaled units (an orbit in AU and days) or for a law the agent wrote for free planar
+          motion: the server builds none, so none is asked for. */}
+      {r.status === "accepted" && r.fit_state && !r.units && !(r.family === "plane" && String(r.fit_state.model_id ?? "").startsWith("custom_")) &&
+        <SimToReal runId={runId} />}
 
       {r.status === "accepted" && r.fit_state && online === true && (
         <ControlPanel runId={runId} family={r.family} params={(r.fit_state.params ?? {}) as Record<string, number>}
@@ -167,14 +187,19 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
               <thead><tr><th>Parameter</th><th>Value</th><th className="ci-col">95% interval</th></tr></thead>
               <tbody>
                 {r.parameters?.map((p) => {
-                  const d = decimalsFor(p.std);
+                  const ex = sciExponent(p.value);
+                  const k = 10 ** ex;
+                  const d = decimalsFor(p.std / k);
+                  const sci = ex ? ` ${pow10(ex)}` : "";
+                  const at = (v: number) => (ex ? (v / k).toFixed(d ?? 3) : fmtAt(v, d));
+                  const ci = `${at(p.ci95[0])} to ${at(p.ci95[1])}${sci}`;
                   return (
                     <tr key={p.name}>
                       <td><Tex tex={p.latex} /> {p.derived && <span className="muted small">{p.derived}</span>}</td>
-                      <td className="num"><span className="param-value">{fmtAt(p.value, d)}</span> ± {fmtAt(p.std, d)} {formatUnit(p.unit)}{" "}
+                      <td className="num"><span className="param-value">{at(p.value)}</span> ± {at(p.std)}{sci} {formatUnit(p.unit)}{" "}
                         {p.uncalibrated && <span className="uncal">uncalibrated</span>}
-                        <div className="ci-inline muted small">95%: {fmtAt(p.ci95[0], d)} to {fmtAt(p.ci95[1], d)}</div></td>
-                      <td className="num ci-col">{fmtAt(p.ci95[0], d)} to {fmtAt(p.ci95[1], d)}</td>
+                        <div className="ci-inline muted small">95%: {ci}</div></td>
+                      <td className="num ci-col">{ci}</td>
                     </tr>
                   );
                 })}
@@ -296,7 +321,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
             <tbody>
               {r.ranking.map((f) => (
                 <tr key={f.model_id}>
-                  <td>{f.title}<div className="muted small">{f.rationale ?? "Baseline, always tested as a control."}</div></td>
+                  <td>{f.title}{f.latex && <Law tex={f.latex} />}<div className="muted small">{f.rationale ?? "Baseline, always tested as a control."}</div></td>
                   <td className="fitted">
                     {(f.param_meta ?? Object.keys(f.params).map((name) => ({ name, latex: name, unit: "" }))).map((p) => (
                       <div key={p.name}>
@@ -324,9 +349,11 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         <ul>
           <li>Object: {r.scene.moving_object}. {r.scene.observations}</li>
           <li>Scale: {r.calibration.source === "none" ? "no reference in view (nominal scale)"
-            : `${r.calibration.px_per_m.toFixed(1)} px/m from ${SCALE_SOURCE[r.calibration.source] ?? r.calibration.source.replaceAll("_", " ")}`}</li>
+            : `${r.calibration.px_per_m.toFixed(1)} px per ${r.units?.length ?? "m"} from ${SCALE_SOURCE[r.calibration.source] ?? r.calibration.source.replaceAll("_", " ")}`}</li>
           <li>Clip: {r.clip.width} by {r.clip.height} px at {r.clip.fps.toFixed(1)} fps, {r.clip.frames} frames
-            {r.clip.slow_motion && r.clip.slow_motion > 1 ? `, slow motion ${r.clip.slow_motion} times (times are real time)` : ""}</li>
+            {r.clip.slow_motion && r.clip.slow_motion > 1 ? `, slow motion ${r.clip.slow_motion} times (times are real time)` : ""}
+            {r.clip.slow_motion && r.clip.slow_motion < 1
+              ? `, time-lapse: one frame is ${(1 / (r.clip.slow_motion * r.clip.fps)).toPrecision(3)} ${r.units?.time ?? "s"}` : ""}</li>
           {r.sindy && (
             <li>
               Model-free regression (PySINDy), not verified and not used to decide: a sparse fit to noisy derivatives,

@@ -57,6 +57,19 @@ async function gistAddress(gistId: string): Promise<string> {
   return p.api_base ?? "";
 }
 
+/** What this visitor may do on the analysis server: null while asking, undefined when there is no server. */
+export function useHealth(): Health | null | undefined {
+  const [health, setHealth] = useState<Health | null | undefined>(null);
+  useEffect(() => {
+    let live = true;
+    getHealth().then((h) => live && setHealth(h)).catch(() => live && setHealth(undefined));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return health;
+}
+
 /** null while looking for the analysis server, then whether it is there. */
 export function useBackend(): boolean | null {
   const [online, setOnline] = useState<boolean | null>(STATIC_SITE ? null : true);
@@ -95,6 +108,7 @@ export interface RankedFit {
   bic: number;
   heldout_nrmse: number;
   rationale: string | null;
+  latex?: string;
   param_meta?: { name: string; latex: string; unit: string }[];
 }
 
@@ -110,7 +124,8 @@ export interface TrailStep {
   fallbacks?: string[];
   expectation?: string | null;
   label?: string;
-  items?: { model_id: string; title: string; why: string; status?: "accepted" | "tied" | "rejected" }[];
+  // latex: a law the agent wrote, typeset (it has no familiar name to go by)
+  items?: { model_id: string; title: string; why: string; latex?: string | null; status?: "accepted" | "tied" | "rejected" }[];
 }
 
 export interface AnalysisResult {
@@ -489,8 +504,18 @@ export const studyFileUrl = (id: string, kind: "report" | "mjcf") =>
   id.startsWith("gallery-") ? `/gallery/${id}/physicslens-${id}.${kind === "report" ? "md" : "xml"}` : `${API_BASE}/api/studies/${id}/${kind}`;
 
 // A value rounded to the precision its uncertainty supports: two significant figures of the uncertainty.
+const SUPERSCRIPT_DIGITS: Record<string, string> = {
+  "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+};
+
+/** Value and uncertainty as text with matching decimals; tiny or huge values share one power of ten (shown after
+ *  the uncertainty, so "2.9598 ± 0.0010 × 10⁻⁴" reads as both numbers times 10⁻⁴). */
 export function withUncertainty(value: number, std: number): [string, string] {
-  if (!(std > 0) || !Number.isFinite(std)) return [value.toPrecision(4), ""];
-  const d = Math.min(8, Math.max(0, 1 - Math.floor(Math.log10(std))));
-  return [value.toFixed(d), std.toFixed(d)];
+  const a = Math.abs(value);
+  const e = a !== 0 && Number.isFinite(a) && (a < 1e-3 || a >= 1e5) ? Math.floor(Math.log10(a)) : 0;
+  const k = 10 ** e;
+  const tail = e ? ` × 10${[...String(e)].map((c) => SUPERSCRIPT_DIGITS[c] ?? c).join("")}` : "";
+  if (!(std > 0) || !Number.isFinite(std)) return [e ? `${(value / k).toPrecision(4)}${tail}` : value.toPrecision(4), ""];
+  const d = Math.min(8, Math.max(0, 1 - Math.floor(Math.log10(std / k))));
+  return [(value / k).toFixed(d), `${(std / k).toFixed(d)}${tail}`];
 }

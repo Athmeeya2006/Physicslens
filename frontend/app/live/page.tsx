@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Tex } from "@/components/Equation";
 import { VoiceNotes } from "@/components/VoiceNotes";
-import { accessCode, API_BASE, useBackend, formatUnit } from "@/lib/api";
+import { accessCode, API_BASE, useBackend, useHealth, formatUnit } from "@/lib/api";
 
 const FPS = 25;
 const MAX_WIDTH = 640; // SAM bills per frame, not per pixel; smaller frames just keep the upload light
@@ -34,6 +34,9 @@ const LIVE_FAMILIES: [string, string][] = [
 
 export default function LivePage() {
   const online = useBackend();
+  const health = useHealth();
+  // Live sessions cost money per minute, so they are open to judges (access code) only; say so before anyone tries.
+  const judgesOnly = !!health && !health.can_go_live;
   const video = useRef<HTMLVideoElement>(null);
   const overlay = useRef<HTMLCanvasElement>(null);
   const socket = useRef<WebSocket | null>(null);
@@ -50,6 +53,7 @@ export default function LivePage() {
   const [fit, setFit] = useState<FitMsg | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [lengthCm, setLengthCm] = useState("");
+  const [sizeCm, setSizeCm] = useState("");
   const [live, setLive] = useState(false);
   const [regime, setRegime] = useState<string | null>(null);
   const [forecast, setForecast] = useState<Forecast | null>(null);
@@ -138,6 +142,11 @@ export default function LivePage() {
     }
     if (msg.type === "selected") setStatus("Locked on. Keep the camera still while it moves.");
     if (msg.type === "notice") setNotices((n) => [{ level: msg.level, message: msg.message }, ...n].slice(0, 4));
+    if (msg.type === "choose_family") {
+      // The model could not settle what kind of motion this is: the type buttons come back for the user to choose.
+      setPicked(null);
+      setNotices((n) => [{ level: "info", message: msg.message }, ...n].slice(0, 4));
+    }
   };
 
   const start = async () => {
@@ -170,7 +179,8 @@ export default function LivePage() {
     ws.onmessage = onMessage;
     ws.onclose = () => { running.current = false; setLive(false); setStatus("Session ended."); };
     ws.onopen = () => {
-      ws.send(JSON.stringify({ fps: FPS, pendulum_length_m: lengthCm ? Number(lengthCm) / 100 : null, access_code: accessCode() }));
+      ws.send(JSON.stringify({ fps: FPS, pendulum_length_m: lengthCm ? Number(lengthCm) / 100 : null,
+                               object_size_m: sizeCm ? Number(sizeCm) / 100 : null, access_code: accessCode() }));
       running.current = true;
       setLive(true);
       setStatus("Streaming. Tap the moving object to lock on (or wait a moment for it to be found).");
@@ -276,12 +286,28 @@ export default function LivePage() {
 
         <div className="panel">
           {!live && (
-            <div className="upload">
-              <label>
-                Pendulum length in cm (optional, if no A4 sheet is in view)
+            <div className="upload stack" style={{ gap: 10 }}>
+              <p className="small">
+                Works live for anything that <strong>swings</strong>, bounces <strong>on a spring</strong>, is
+                <strong> thrown or falls</strong>, or <strong>rolls or slides</strong>. Spinning objects and double pendulums
+                need a recorded clip (Analyze page).
+              </p>
+              <p className="small muted">Scale, optional: an A4 sheet in view is read automatically; otherwise give one of these.</p>
+              <label className="field">
+                Pendulum length, cm
                 <input type="number" inputMode="decimal" min="1" step="0.1" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
               </label>
-              <button onClick={start} disabled={!online}>Start live analysis</button>
+              <label className="field">
+                Or the moving object&apos;s longest side, cm
+                <input type="number" inputMode="decimal" min="0.5" step="0.1" value={sizeCm} onChange={(e) => setSizeCm(e.target.value)} />
+              </label>
+              {judgesOnly && (
+                <p className="small muted">
+                  Live mode is open to judges with the access code. Every recording on the Analyze page is a complete,
+                  real analysis.
+                </p>
+              )}
+              <button onClick={start} disabled={!online || judgesOnly}>Start live analysis</button>
             </div>
           )}
           {live && <button onClick={stop}>Stop</button>}

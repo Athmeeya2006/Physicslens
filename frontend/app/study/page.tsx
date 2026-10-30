@@ -6,7 +6,7 @@ import { AgentTrail } from "@/components/AgentTrail";
 import { VoiceNotes } from "@/components/VoiceNotes";
 import { Tex } from "@/components/Equation";
 import type { GalleryItem, RunView, Study, Sweep } from "@/lib/api";
-import { addStudyRun, createStudy, formatUnit, getGallery, withUncertainty, getRun, getStudy, posterUrl, reviewStudy, studyFileUrl, useBackend } from "@/lib/api";
+import { addStudyRun, createStudy, formatUnit, getGallery, withUncertainty, getRun, getStudy, posterUrl, reviewStudy, studyFileUrl, useBackend, useHealth } from "@/lib/api";
 
 const EXAMPLES = [
   "Are the front shock absorbers on my car worn out?",
@@ -24,6 +24,8 @@ function setStudyParam(id: string) {
 
 export default function StudyPage() {
   const online = useBackend();
+  const health = useHealth();
+  const judgesOnly = !!health && health.audience === "public"; // the server refuses studies without the access code
   const [goal, setGoal] = useState("");
   const [study, setStudy] = useState<Study | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -132,6 +134,11 @@ export default function StudyPage() {
             <p className="muted">
               The analysis server isn&apos;t running right now (it runs during judging sessions), so a new
               study can&apos;t start at the moment.
+            </p>
+          ) : judgesOnly ? (
+            <p className="muted">
+              Starting a study is open to judges with the access code: each one plans recordings and calls the models.
+              The finished results on the Analyze page show the same agent at work.
             </p>
           ) : (
             <form className="stack" onSubmit={plan}>

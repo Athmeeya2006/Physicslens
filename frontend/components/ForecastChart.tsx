@@ -28,7 +28,11 @@ function fmt(v: number): string {
   return a >= 100 ? v.toFixed(0) : a >= 1 ? v.toFixed(2) : v.toFixed(3);
 }
 
-export function ForecastChart({ f, uncalibrated = false }: { f: Forecast; uncalibrated?: boolean }) {
+export function ForecastChart({ f, uncalibrated = false, units = null }: {
+  f: Forecast; uncalibrated?: boolean; units?: { length: string; time: string } | null;
+}) {
+  // A time-lapse result (an orbit in AU and days) is labelled in its own units, not metres and seconds.
+  const timeUnit = units?.time ?? "s";
   const [hover, setHover] = useState<number | null>(null);
   // Laid out at the container's real width, so text stays 11px on a phone instead of shrinking with a viewBox.
   const box = useRef<HTMLElement>(null);
@@ -67,7 +71,8 @@ export function ForecastChart({ f, uncalibrated = false }: { f: Forecast; uncali
   const bandX = x(f.heldout_start);
   const h = hover;
   // Without a scale reference lengths are in arbitrary units; angles never need one.
-  const unitText = uncalibrated && f.unit === "m" ? "uncalibrated units" : formatUnit(f.unit);
+  const unitText = uncalibrated && f.unit === "m" ? "uncalibrated units"
+    : units && f.unit === "m" ? units.length : formatUnit(f.unit);
   const unit = unitText ? ` (${unitText})` : "";
   const narrowBand = W - PAD.right - bandX < 250;
   const bandLabel = W < 520 ? "Held out" : "Held out: the model never saw this";
@@ -87,7 +92,7 @@ export function ForecastChart({ f, uncalibrated = false }: { f: Forecast; uncali
           </g>
         ))}
         {xTicks.map((t) => (
-          <text key={`x${t}`} className="tick" x={x(t)} y={H - 12} textAnchor="middle">{fmt(t)} s</text>
+          <text key={`x${t}`} className="tick" x={x(t)} y={H - 12} textAnchor="middle">{fmt(t)} {timeUnit}</text>
         ))}
         {f.measured.map((v, i) => (
           <circle key={i} className="measured" cx={x(f.t[i])} cy={y(v)} r={2.1} opacity={0.75} />
@@ -98,7 +103,7 @@ export function ForecastChart({ f, uncalibrated = false }: { f: Forecast; uncali
             <line className="cursor" x1={x(f.t[h])} x2={x(f.t[h])} y1={PAD.top} y2={H - PAD.bottom} />
             <g className="tip" transform={`translate(${x(f.t[h]) + 10 + tipW > W ? x(f.t[h]) - 10 - tipW : x(f.t[h]) + 10},${PAD.top + 6})`}>
               <rect width={tipW} height={52} rx={3} />
-              <text x={10} y={18}>t = {fmt(f.t[h])} s{f.t[h] >= f.heldout_start ? ", held out" : ""}</text>
+              <text x={10} y={18}>t = {fmt(f.t[h])} {timeUnit}{f.t[h] >= f.heldout_start ? ", held out" : ""}</text>
               <text x={10} y={34}>measured {fmt(f.measured[h])}{unitText ? ` ${unitText}` : ""}</text>
               <text x={10} y={48}>forecast {fmt(f.forecast[h])}{unitText ? ` ${unitText}` : ""}</text>
             </g>

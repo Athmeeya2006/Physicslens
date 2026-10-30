@@ -164,6 +164,10 @@ export default function HealthPage() {
       )}
 
       {online && <form className="panel upload" onSubmit={run}>
+        <p className="small muted">
+          First analyze the same part twice on the Analyze page (for example a door closer, weeks apart). Each finished
+          analysis has a link ending in ?run=...; paste the two links, or just the ids, here. Comparing costs nothing.
+        </p>
         <label>
           Baseline recording (result link or id)
           <input value={baseline} onChange={(e) => setBaseline(e.target.value)} placeholder="e.g. the analysis from last month" />

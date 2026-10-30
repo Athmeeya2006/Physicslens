@@ -4,6 +4,7 @@ import { Check, Loader2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AuditCheck, Health, PhysicsAudit, RunView } from "@/lib/api";
 import { formatUnit, getHealth, getRun, startRun, useBackend, withUncertainty } from "@/lib/api";
+import { AuditStudy } from "@/components/AuditStudy";
 
 const POLL_MS = 1000;
 
@@ -152,6 +153,8 @@ export default function AuditPage() {
         </p>
       </header>
 
+      <AuditStudy />
+
       {online === null && (
         <p className="muted"><Loader2 size={14} className="spin" aria-hidden="true" /> Looking for the analysis server...</p>
       )}
@@ -189,7 +192,12 @@ export default function AuditPage() {
           <button type="submit" disabled={!file || busy || (health !== null && !health.can_upload)}>
             {busy ? <><Loader2 size={16} className="spin" aria-hidden="true" />Auditing</> : "Audit the motion"}
           </button>
-          {health && !health.can_upload && <p className="muted small">Uploads are closed right now.</p>}
+          {health && !health.can_upload && (
+            <p className="muted small">
+              Uploading is open to judges with the access code. Every recording on the Analyze page already carries its
+              own physics audit: open one to read it.
+            </p>
+          )}
         </form>
       )}
 

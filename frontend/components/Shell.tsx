@@ -41,7 +41,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </a>
           <nav className="shell-nav" aria-label="Main">
             {NAV.map(({ href, label, icon: Icon }) => (
-              <a key={href} href={href} aria-current={path === href ? "page" : undefined}>
+              <a key={href} href={href} title={label} aria-current={path === href ? "page" : undefined}>
                 <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
                 <span>{label}</span>
               </a>

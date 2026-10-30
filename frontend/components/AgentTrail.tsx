@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type { TrailStep } from "@/lib/api";
 import { SetupGuide } from "./SetupGuide";
+import { Law } from "./Equation";
 
 const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
   plan: { label: "Plans the study", icon: ClipboardList },
@@ -93,7 +94,10 @@ export function AgentTrail({ steps, runId }: { steps: TrailStep[]; runId?: strin
                       {it.status
                         ? <span className={`verdict ${it.status}`}>{(s.step === "design" ? DESIGN_STATUS : s.step === "skeptic" ? SKEPTIC_STATUS : ITEM_STATUS)[it.status] ?? it.status}</span>
                         : <span className="verdict">Proposed</span>}
-                      <span><span className="item-title">{it.title}</span> <span className="why">{it.why}</span></span>
+                      <span>
+                        <span className="item-title">{it.title}</span> <span className="why">{it.why}</span>
+                        {it.latex && <Law tex={it.latex} />}
+                      </span>
                     </li>
                   ))}
                 </ul>
