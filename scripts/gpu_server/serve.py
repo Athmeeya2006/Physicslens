@@ -228,7 +228,8 @@ env = dict(os.environ, PYTHONPATH=f"{src}/backend", APP_ENV="demo", MOCK_MODELS=
            JUDGE_SPENT_BEFORE=json.dumps(private.get("judge_spent", {})),
            # "open_access": true in the private gist gives every visitor the full site with no code; TRUST_PROXY lets
            # the per-visitor allowance read Cloudflare's visitor address (through the tunnel, everyone is 127.0.0.1).
-           OPEN_ACCESS="1" if private.get("open_access") else "0", TRUST_PROXY="1")
+           OPEN_ACCESS="1" if private.get("open_access") or private["session_budget"].get("open_access") else "0",
+           TRUST_PROXY="1")
 procs["backend"] = backend = subprocess.Popen([sys.executable, "-m", "uvicorn", "physicslens.app:app", "--host", "127.0.0.1", "--port", "8000"],
                            cwd=src, env=env, stdout=open("/kaggle/working/logs/backend.log", "w"), stderr=subprocess.STDOUT)
 if not wait_http("http://127.0.0.1:8000/api/health", 180, backend):
