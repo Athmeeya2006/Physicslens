@@ -2,86 +2,92 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Physics audit at scale: the share of clips the audit flags, per source, with a 95% interval. The real-footage
-// control is the reference (neutral grey, hollow diamond, its own row above a divider); generated clips carry the
-// model hue (#0b63ce, validated on the #f5f6f3 surface). Identity never rests on colour alone.
+// Physics audit at scale (scripts/audit_study.py report): AI-generated clips (VideoPhy-2) against real footage
+// (Physics-IQ), every verdict replayed under the current rules. The real-footage control is the neutral reference
+// (grey, hollow diamond, its own row); generated clips carry the model hue. Identity never rests on colour alone.
 
-interface Group {
-  n: number; judged: number; flagged: number; consistent: number; cant_judge: number; error: number;
-  rate: number | null; lo: number; hi: number;
+interface Share { k: number; n: number; rate: number | null; lo: number; hi: number }
+interface SetStats {
+  clips: number; verdicts: Record<string, number>; errors: Record<string, number>;
+  judged: Share; flagged_among_judged: Share; tracked: Share; verified_law_among_tracked: Share;
+  heldout_error_median: number | null; heldout_errors: number[]; model_alone: Record<string, number>;
 }
-interface Source extends Group { key: string; label: string }
+interface Analysis {
+  sets: Record<string, SetStats>;
+  generators: Record<string, Record<string, number> & { flagged_among_judged: Share }>;
+  forecast_error_auc_generated_vs_real: number | null;
+  false_accusation?: { accused: number; judged_real: number; upper_95: number | null };
+}
 interface Example { id: string; generator: string; caption: string; human_pc: number; headline: string; url: string }
-export interface StudySummary {
-  clips: number;
-  sources: Source[];
-  by_human_score: (Group & { pc: number })[];
-  examples: Example[];
-  model_alone: Record<string, number> | null;
-}
+interface Summary { clips: number; examples: Example[]; analysis?: Analysis }
 
-const PAD = { left: 150, right: 56, top: 26, bottom: 30 };
-const ROW = 30;
+const NAMES: Record<string, string> = { cogvideo: "CogVideoX", cosmos: "Cosmos", hunyuan: "HunyuanVideo", ray2: "Ray2",
+  sora: "Sora", videocrafter: "VideoCrafter", wan: "Wan" };
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
-function IntervalChart({ rows, caption }: { rows: { label: string; g: Group; reference?: boolean }[]; caption: string }) {
-  const box = useRef<HTMLElement>(null);
-  const [W, setW] = useState(720);
-  const [hover, setHover] = useState<number | null>(null);
+function useWidth(min = 300): [React.RefObject<HTMLElement | null>, number] {
+  const ref = useRef<HTMLElement>(null);
+  const [w, setW] = useState(720);
   useEffect(() => {
-    const el = box.current;
+    const el = ref.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setW(Math.max(300, Math.round(e.contentRect.width))));
+    const ro = new ResizeObserver(([e]) => setW(Math.max(min, Math.round(e.contentRect.width))));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
-  const narrow = W < 520;
-  const left = narrow ? 112 : PAD.left;
+  }, [min]);
+  return [ref, w];
+}
+
+/** One row per source: the share with its 95% interval. */
+function IntervalChart({ rows, caption, unit }: { rows: { label: string; s: Share; reference?: boolean }[]; caption: string; unit: string }) {
+  const [box, W] = useWidth();
+  const [hover, setHover] = useState<number | null>(null);
+  const left = W < 520 ? 112 : 150;
+  const right = 56;
+  const ROW = 30;
   const gap = rows.some((r) => r.reference) ? 12 : 0;
-  const H = PAD.top + rows.length * ROW + gap + PAD.bottom;
-  const x = (v: number) => left + v * (W - left - PAD.right);
-  const y = (i: number) => PAD.top + i * ROW + ROW / 2 + (rows[i].reference ? 0 : gap);
+  const H = 26 + rows.length * ROW + gap + 30;
+  const x = (v: number) => left + v * (W - left - right);
+  const y = (i: number) => 26 + i * ROW + ROW / 2 + (rows[i].reference ? 0 : gap);
   return (
-    <figure ref={box} className="study-chart">
+    <figure ref={box as React.RefObject<HTMLElement>} className="study-chart">
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" onPointerLeave={() => setHover(null)}
-           aria-label={`${caption}: ${rows.map((r) => `${r.label} ${r.g.rate === null ? "not judged" : pct(r.g.rate)}`).join(", ")}`}>
+           aria-label={`${caption}: ${rows.map((r) => `${r.label} ${r.s.rate === null ? "none" : pct(r.s.rate)}`).join(", ")}`}>
         {[0, 0.25, 0.5, 0.75, 1].map((t) => (
           <g key={t}>
-            <line className="axis" x1={x(t)} x2={x(t)} y1={PAD.top - 6} y2={H - PAD.bottom + 4} opacity={t === 0 ? 0.9 : 0.35} />
+            <line className="axis" x1={x(t)} x2={x(t)} y1={20} y2={H - 26} opacity={t === 0 ? 0.9 : 0.35} />
             <text className="tick" x={x(t)} y={H - 10} textAnchor="middle">{pct(t)}</text>
           </g>
         ))}
-        {gap > 0 && <line className="axis" x1={8} x2={W - 8} y1={PAD.top + ROW + gap / 2} y2={PAD.top + ROW + gap / 2} opacity={0.6} />}
+        {gap > 0 && <line className="axis" x1={8} x2={W - 8} y1={26 + ROW + gap / 2} y2={26 + ROW + gap / 2} opacity={0.6} />}
         {rows.map((r, i) => {
           const cy = y(i);
-          const judged = r.g.rate !== null;
           return (
             <g key={r.label} onPointerEnter={() => setHover(i)} className={r.reference ? "ref" : "gen"}>
               <rect x={0} y={cy - ROW / 2} width={W} height={ROW} fill="transparent" />
               <text className="row-label" x={left - 10} y={cy + 4} textAnchor="end">{r.label}</text>
-              {judged ? (
+              {r.s.rate !== null && r.s.n > 0 ? (
                 <>
-                  <line className="ci" x1={x(r.g.lo)} x2={x(r.g.hi)} y1={cy} y2={cy} />
+                  <line className="ci" x1={x(r.s.lo)} x2={x(r.s.hi)} y1={cy} y2={cy} />
                   {r.reference
-                    ? <rect className="mark" x={x(r.g.rate!) - 5} y={cy - 5} width={10} height={10} transform={`rotate(45 ${x(r.g.rate!)} ${cy})`} />
-                    : <circle className="mark" cx={x(r.g.rate!)} cy={cy} r={5} />}
-                  <text className="value" x={W - PAD.right + 8} y={cy + 4}>{pct(r.g.rate!)}</text>
+                    ? <rect className="mark" x={x(r.s.rate) - 5} y={cy - 5} width={10} height={10} transform={`rotate(45 ${x(r.s.rate)} ${cy})`} />
+                    : <circle className="mark" cx={x(r.s.rate)} cy={cy} r={5} />}
+                  <text className="value" x={W - right + 8} y={cy + 4}>{pct(r.s.rate)}</text>
                 </>
-              ) : <text className="value muted" x={x(0) + 6} y={cy + 4}>none judged yet</text>}
+              ) : <text className="value muted" x={x(0) + 6} y={cy + 4}>no clips yet</text>}
             </g>
           );
         })}
-        {hover !== null && rows[hover].g.rate !== null && (() => {
+        {hover !== null && rows[hover].s.rate !== null && rows[hover].s.n > 0 && (() => {
           const r = rows[hover];
-          const tipW = 230;
-          const tx = Math.min(Math.max(x(r.g.rate!) - tipW / 2, 4), W - tipW - 4);
-          const ty = y(hover) + (hover < rows.length - 2 ? 12 : -64);
+          const tipW = 240;
+          const tx = Math.min(Math.max(x(r.s.rate!) - tipW / 2, 4), W - tipW - 4);
+          const ty = y(hover) + (hover < rows.length - 2 ? 12 : -50);
           return (
             <g className="tip" transform={`translate(${tx},${ty})`} pointerEvents="none">
-              <rect width={tipW} height={52} rx={3} />
-              <text x={10} y={18}>{r.label}: {r.g.flagged} of {r.g.judged} judged flagged</text>
-              <text x={10} y={34}>95% interval {pct(r.g.lo)} to {pct(r.g.hi)}</text>
-              <text x={10} y={48}>{r.g.cant_judge} can&apos;t judge, {r.g.error} not trackable</text>
+              <rect width={tipW} height={38} rx={3} />
+              <text x={10} y={16}>{r.label}: {r.s.k} of {r.s.n} {unit}</text>
+              <text x={10} y={31}>95% interval {pct(r.s.lo)} to {pct(r.s.hi)}</text>
             </g>
           );
         })()}
@@ -98,71 +104,132 @@ function IntervalChart({ rows, caption }: { rows: { label: string; g: Group; ref
   );
 }
 
+/** Every clip's held-out forecast error as a dot, real against generated, on a log scale; the line is the median. */
+function ErrorStrip({ real, gen }: { real: number[]; gen: number[] }) {
+  const [box, W] = useWidth();
+  const left = W < 520 ? 112 : 150;
+  const right = 24;
+  const lo = Math.log10(0.001);
+  const hi = Math.log10(3);
+  const x = (v: number) => left + ((Math.log10(Math.min(Math.max(v, 0.001), 3)) - lo) / (hi - lo)) * (W - left - right);
+  const rows = [{ label: "Real footage", values: real, cls: "ref", y: 34 }, { label: "AI-generated", values: gen, cls: "gen", y: 78 }];
+  const median = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)];
+  return (
+    <figure ref={box as React.RefObject<HTMLElement>} className="study-chart">
+      <svg width={W} height={124} viewBox={`0 0 ${W} 124`} role="img"
+           aria-label={`Forecast error of the best law per clip: real median ${median(real)?.toFixed(2)}, AI median ${median(gen)?.toFixed(2)}`}>
+        {[0.001, 0.01, 0.1, 1].map((t) => (
+          <g key={t}>
+            <line className="axis" x1={x(t)} x2={x(t)} y1={14} y2={100} opacity={0.35} />
+            <text className="tick" x={x(t)} y={116} textAnchor="middle">{t >= 0.01 ? `${t * 100}%` : "0.1%"}</text>
+          </g>
+        ))}
+        {rows.map((r) => (
+          <g key={r.label} className={r.cls}>
+            <text className="row-label" x={left - 10} y={r.y + 4} textAnchor="end">{r.label}</text>
+            {r.values.map((v, i) => (
+              <circle key={i} className="strip" cx={x(v)} cy={r.y + ((i * 7) % 15) - 7} r={3.2} />
+            ))}
+            {r.values.length > 0 && <line className="median" x1={x(median(r.values))} x2={x(median(r.values))} y1={r.y - 14} y2={r.y + 14} />}
+          </g>
+        ))}
+      </svg>
+      <figcaption className="forecast-caption">
+        <span>Each dot is one clip: how far the best law&apos;s forecast misses the motion it never saw, as a share of the
+          motion&apos;s spread (log scale). The bar is the median.</span>
+      </figcaption>
+    </figure>
+  );
+}
+
 export function AuditStudy() {
-  const [s, setS] = useState<StudySummary | null>(null);
+  const [s, setS] = useState<Summary | null>(null);
   useEffect(() => {
     fetch("/audit_study.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then(setS).catch(() => setS(null));
   }, []);
-  if (!s || !s.sources.length) return null;
-  const real = s.sources.find((x) => x.key === "real");
-  const gens = s.sources.filter((x) => x.key !== "real");
+  const a = s?.analysis;
+  if (!a || !a.sets.real || !a.sets.generated) return null;
+  const real = a.sets.real;
+  const gen = a.sets.generated;
+  const gens = Object.keys(a.generators).filter((g) => a.generators[g] && g !== "ray2").sort();
+  const lawRows = [{ label: "Real footage", s: real.verified_law_among_tracked, reference: true },
+                   { label: "AI-generated", s: gen.verified_law_among_tracked }];
+  const flagRows = [{ label: "Real footage", s: real.flagged_among_judged, reference: true },
+                    ...gens.map((g) => ({ label: NAMES[g] ?? g, s: a.generators[g].flagged_among_judged }))];
+  const fa = a.false_accusation;
+  const alone = (set: SetStats) => {
+    const m = set.model_alone;
+    const n = Object.values(m).reduce((x, y) => x + y, 0);
+    return n ? `${m.violates_physics ?? 0} of ${n} called fake` : "not run";
+  };
   return (
-    <section className="panel stack" style={{ gap: 14 }}>
+    <section className="panel stack" style={{ gap: 16 }}>
       <h2>Measured at scale: AI-generated video against real footage</h2>
       <p>
-        The same audit, with the same settings, on {s.clips} public clips: AI-generated video from seven generators
-        (VideoPhy-2, MIT licence) and real footage of the same kinds of motion (Physics-IQ, CC BY 4.0) as the control.
-        Real objects can&apos;t break physics, so the control row is the audit&apos;s own false-accusation rate.
-        Clips it can&apos;t judge (too short, poorly tracked, no dynamics check applies) are counted separately, never as
-        a pass or a fail.
+        The same pipeline, with the same settings, on {real.clips + gen.clips} public clips: AI-generated video from
+        public benchmarks (VideoPhy-2, MIT licence) and real footage of the same kinds of motion (Physics-IQ, CC BY 4.0)
+        as the control. Every verdict below is from the current rules, replayed on each clip&apos;s saved measurements.
       </p>
-      <IntervalChart caption="Share of judged clips flagged as breaking physics"
-                     rows={[...(real ? [{ label: "Real footage", g: real, reference: true }] : []),
-                            ...gens.map((g) => ({ label: g.label, g }))]} />
-      {s.by_human_score.length > 0 && (
-        <>
-          <h3>Against people&apos;s own ratings</h3>
-          <p className="small muted">
-            VideoPhy-2 asked people to rate each generated clip&apos;s physical commonsense from 1 (breaks it) to 5
-            (looks right). If the audit measures something real, its flags should fall as the human score rises.
-          </p>
-          <IntervalChart caption="Share flagged, by the human physical-commonsense score"
-                         rows={s.by_human_score.map((g) => ({ label: `Human score ${g.pc}`, g }))} />
-        </>
-      )}
-      {s.examples.length > 0 && (
-        <details>
-          <summary>Flagged AI-generated clips, with the reason</summary>
-          <ul className="stack" style={{ gap: 8, paddingLeft: 18, margin: "8px 0 0" }}>
-            {s.examples.map((e) => (
-              <li key={e.id} className="small">
-                <strong>{e.generator}</strong> (human score {e.human_pc}): <a href={e.url} rel="noopener">{e.caption}</a>
-                <div className="muted">{e.headline}</div>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-      <details>
-        <summary>Table view</summary>
-        <div className="table-wrap">
-          <table className="cards">
-            <thead><tr><th>Source</th><th>Clips</th><th>Judged</th><th>Flagged</th><th>Consistent</th><th>Can&apos;t judge</th><th>Not trackable</th></tr></thead>
-            <tbody>
-              {s.sources.map((g) => (
-                <tr key={g.key}>
-                  <td data-label="Source">{g.label}</td><td data-label="Clips">{g.n}</td><td data-label="Judged">{g.judged}</td>
-                  <td data-label="Flagged">{g.flagged}{g.rate !== null ? ` (${pct(g.rate)})` : ""}</td>
-                  <td data-label="Consistent">{g.consistent}</td><td data-label="Can't judge">{g.cant_judge}</td>
-                  <td data-label="Not trackable">{g.error}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
+      <ul className="hero-stats">
+        <li><span className="hero-number">{pct(real.verified_law_among_tracked.rate ?? 0)} vs {pct(gen.verified_law_among_tracked.rate ?? 0)}</span>
+          <span className="hero-label">real vs AI motion with a law that forecasts what the model never saw</span></li>
+        <li><span className="hero-number">{(real.heldout_error_median ?? 0).toFixed(2)} vs {(gen.heldout_error_median ?? 0).toFixed(2)}</span>
+          <span className="hero-label">median forecast error of the best law, real vs AI (lower is more law-like)</span></li>
+        {fa && <li><span className="hero-number">{fa.accused} of {fa.judged_real}</span>
+          <span className="hero-label">real clips accused of breaking physics{fa.upper_95 !== null ? ` (at most ${pct(fa.upper_95)} at 95%)` : ""}</span></li>}
+      </ul>
+      <h3>Is there a law at all?</h3>
       <p className="small muted">
-        Every clip, its source, licence and verdict: <a href="https://github.com/Athmeeya2006/Physicslens/tree/main/data/audit_study">data/audit_study</a>.
+        Real objects obey physics, so a law fitted to the first part of the motion should forecast the rest. Among the
+        clips SAM could follow, how often one did:
+      </p>
+      <IntervalChart rows={lawRows} unit="tracked clips" caption="Share of tracked clips with a verified law" />
+      <ErrorStrip real={real.heldout_errors} gen={gen.heldout_errors} />
+      {a.forecast_error_auc_generated_vs_real !== null && (
+        <p className="small muted">
+          Pick one real and one AI clip at random: the AI clip&apos;s motion is the harder to forecast{" "}
+          {pct(a.forecast_error_auc_generated_vs_real)} of the time (50% would mean no difference).
+        </p>
+      )}
+      <h3>Clear violations</h3>
+      <p className="small muted">
+        The audit accuses only an impossible event it can measure (an object teleporting, changing size with nothing to
+        explain it, gaining energy in free flight) and says &ldquo;can&apos;t judge&rdquo; whenever the clip can&apos;t
+        settle it. False accusations are worse than misses, so the real footage is the test of the rules.
+      </p>
+      <IntervalChart rows={flagRows} unit="judged clips flagged" caption="Share of judged clips flagged as breaking physics" />
+      {s!.examples.length > 0 && (
+        <div className="stack" style={{ gap: 8 }}>
+          {s!.examples.map((e) => (
+            <p key={e.id} className="small"><strong>{e.generator}:</strong> <a href={e.url} rel="noopener">{e.caption}</a>
+              <span className="muted"> {e.headline}</span></p>
+          ))}
+        </div>
+      )}
+      <div className="table-wrap">
+        <table className="cards">
+          <thead><tr><th>Source</th><th>Clips</th><th>Tracked</th><th>Verified law</th><th>Judged</th><th>Flagged</th><th>Model alone, from 4 frames</th></tr></thead>
+          <tbody>
+            {[["Real footage", real], ["AI-generated", gen]].map(([label, x]) => {
+              const st = x as SetStats;
+              return (
+                <tr key={label as string}>
+                  <td data-label="Source">{label as string}</td><td data-label="Clips">{st.clips}</td>
+                  <td data-label="Tracked">{st.tracked.k} of {st.tracked.n}</td>
+                  <td data-label="Verified law">{st.verified_law_among_tracked.k} of {st.verified_law_among_tracked.n}</td>
+                  <td data-label="Judged">{st.judged.k}</td><td data-label="Flagged">{st.flagged_among_judged.k}</td>
+                  <td data-label="Model alone">{alone(st)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="small muted">
+        Limits, stated plainly: clips run on the lighter profile (one hypothesis sample, no referee) to fit the study&apos;s
+        budget; Ray2&apos;s links in the benchmark no longer serve video; many clips are short or leave the frame, so
+        &ldquo;can&apos;t judge&rdquo; is common by design. Every clip, its source, licence and verdict:{" "}
+        <a href="https://github.com/Athmeeya2006/Physicslens/tree/main/data/audit_study">data/audit_study</a>.
       </p>
     </section>
   );

@@ -77,7 +77,8 @@ def fetch(url: str, timeout: float = 120, attempts: int = 4) -> bytes:
 
 def quote_url(url: str) -> str:
     parts = urllib.parse.urlsplit(url)
-    return urllib.parse.urlunsplit(parts._replace(path=urllib.parse.quote(parts.path)))
+    # "+" stays as it is: the dataset's links use it for spaces in the stored file names (Sora's clips 403 otherwise).
+    return urllib.parse.urlunsplit(parts._replace(path=urllib.parse.quote(parts.path, safe="/+")))
 
 
 def select(n_generated: int, n_real: int, seed: int) -> None:
@@ -217,10 +218,12 @@ def done_ids(path: Path, retry_errors: bool = False) -> set[str]:
             if not (retry(r.get("error") or "") or (retry_errors and r.get("status") == "error"))}
 
 
-def run(limit: int, workers: int, max_usd: float, only: str | None, profile: str, retry_errors: bool = False) -> None:
+def run(limit: int, workers: int, max_usd: float, only: str | None, profile: str, retry_errors: bool = False,
+        generator: str | None = None) -> None:
     clips = json.loads(MANIFEST.read_text())["clips"]
     done = done_ids(RESULTS, retry_errors)
-    todo = [c for c in clips if c["id"] not in done and (only is None or c["set"] == only)]
+    todo = [c for c in clips if c["id"] not in done and (only is None or c["set"] == only)
+            and (generator is None or c["generator"] == generator)]
     # Interleave the sets, and the generators within the generated set, so that stopping anywhere (a pilot, a
     # spending limit) leaves a balanced sample rather than one generator's clips.
     by_gen: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -331,9 +334,113 @@ def replay() -> None:
     print(f"replayed; {changed} verdicts changed")
 
 
+def _error_kind(err: str) -> str:
+    e = err.lower()
+    if "http error" in e or "urlopen" in e or "name or service" in e:
+        return "download"
+    if "open-weight" in e or "busy" in e or "budget" in e:
+        return "model service"
+    return "tracking"
+
+
+def _auc(pos: list[float], neg: list[float]) -> float | None:
+    """Probability that a random value from pos exceeds one from neg (ties count half): the Mann-Whitney AUC."""
+    if not pos or not neg:
+        return None
+    wins = sum((p > n) + 0.5 * (p == n) for p in pos for n in neg)
+    return wins / (len(pos) * len(neg))
+
+
+def final_rows() -> list[dict[str, Any]]:
+    """Every clip's row under the current audit rules (replayed from its saved input, free), with the best law's
+    held-out error and the model-alone verdict."""
+    sys.path.insert(0, str(ROOT / "backend"))
+    from physicslens.physics.audit import audit, load_input
+
+    base = {r["id"]: r for r in rows_of(BASELINE)} if BASELINE.exists() else {}
+    out = []
+    for r in rows_of(RESULTS):
+        row = dict(r)
+        saved = WORK / "runs" / r["id"] / "audit_input.npz"
+        if saved.exists():
+            a = audit(load_input(saved))
+            row.update(audit=a["verdict"], headline=a["headline"], violations=sorted({v["check"] for v in a["violations"]}))
+        res_path = WORK / "runs" / r["id"] / "result.json"
+        if res_path.exists() and row.get("status") != "error":
+            res = json.loads(res_path.read_text())
+            best = (res.get("ranking") or [{}])[0]
+            row["heldout_nrmse"] = best.get("heldout_nrmse")
+        row["model_alone"] = (base.get(r["id"]) or {}).get("verdict")
+        out.append(row)
+    return out
+
+
+def analysis() -> dict[str, Any]:
+    """Every metric of the study, from the stored runs, under the current audit rules (replayed, free)."""
+
+    per: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in final_rows():
+        per[row["set"]].append(row)
+
+    def share(k: int, n: int) -> dict[str, Any]:
+        lo, hi = wilson(k, n)
+        return {"k": k, "n": n, "rate": k / n if n else None, "lo": lo, "hi": hi}
+
+    out: dict[str, Any] = {"sets": {}, "generators": {}, "human_score": {}}
+    for name, rows in per.items():
+        c = Counter(r["audit"] for r in rows)
+        judged = c["violates_physics"] + c["consistent"]
+        kinds = Counter(_error_kind(r.get("error") or "") for r in rows if r["audit"] == "error")
+        # A clip that never downloaded, or that a model service failed on, says nothing about tracking.
+        analysed = [r for r in rows if r["audit"] != "error" or _error_kind(r.get("error") or "") == "tracking"]
+        tracked = [r for r in rows if r["audit"] != "error"]
+        laws = Counter(r.get("status") for r in tracked)
+        nrmse = sorted(float(r["heldout_nrmse"]) for r in tracked if r.get("heldout_nrmse") is not None)
+        spend = [float(r["spend_usd"]) for r in rows if r.get("spend_usd")]
+        secs = [float(r["seconds"]) for r in rows if r.get("seconds") and r.get("status") != "error"]
+        out["sets"][name] = {
+            "clips": len(rows), "verdicts": dict(c),
+            "judged": share(judged, len(rows)),
+            "flagged_among_judged": share(c["violates_physics"], judged),
+            "errors": dict(kinds),
+            "tracked": share(len(tracked), len(analysed)),
+            "verified_law_among_tracked": share(laws["accepted"], len(tracked)),
+            "heldout_error_median": nrmse[len(nrmse) // 2] if nrmse else None,
+            "heldout_errors": nrmse,
+            "cost_per_clip_usd": sum(spend) / len(spend) if spend else None,
+            "seconds_per_clip_median": sorted(secs)[len(secs) // 2] if secs else None,
+            "model_alone": dict(Counter(r["model_alone"] for r in rows if r["model_alone"])),
+        }
+    for r in per.get("generated", []):
+        g = out["generators"].setdefault(r["generator"], Counter())
+        g[r["audit"]] += 1
+    out["generators"] = {g: {**dict(c), "flagged_among_judged": share(c["violates_physics"], c["violates_physics"] + c["consistent"])}
+                         for g, c in out["generators"].items()}
+    gen = per.get("generated", [])
+    for pc in sorted({r["human_pc"] for r in gen if r["human_pc"] is not None}):
+        c = Counter(r["audit"] for r in gen if r["human_pc"] == pc)
+        out["human_score"][pc] = {**dict(c), "flagged_among_judged": share(c["violates_physics"], c["violates_physics"] + c["consistent"])}
+    judged_gen = [r for r in gen if r["audit"] in ("violates_physics", "consistent")]
+    flagged_pc = [6 - r["human_pc"] for r in judged_gen if r["audit"] == "violates_physics"]
+    passed_pc = [6 - r["human_pc"] for r in judged_gen if r["audit"] == "consistent"]
+    # Do flagged clips have worse human physics scores? (6 - score, so higher means people saw it as less physical.)
+    out["flags_vs_human_auc"] = _auc(flagged_pc, passed_pc)
+    real_err = out["sets"].get("real", {}).get("heldout_errors", [])
+    gen_err = out["sets"].get("generated", {}).get("heldout_errors", [])
+    # Does the best law forecast generated motion worse than real motion? AUC over the held-out errors.
+    out["forecast_error_auc_generated_vs_real"] = _auc(gen_err, real_err)
+    real = out["sets"].get("real")
+    if real:
+        n = real["judged"]["k"]
+        out["false_accusation"] = {"accused": real["verdicts"].get("violates_physics", 0), "judged_real": n,
+                                   "upper_95": wilson(real["verdicts"].get("violates_physics", 0), n)[1] if n else None}
+    (DATA / "analysis.json").write_text(json.dumps(out, indent=1, default=float) + "\n")
+    return out
+
+
 def report() -> None:
     clips = {c["id"]: c for c in json.loads(MANIFEST.read_text())["clips"]}
-    rows = rows_of(RESULTS)
+    rows = final_rows()
     base = {r["id"]: r for r in (json.loads(x) for x in BASELINE.read_text().splitlines() if x.strip())} \
         if BASELINE.exists() else {}
     table: dict[str, Counter] = defaultdict(Counter)
@@ -365,7 +472,7 @@ def report() -> None:
                         r.get("equation"), r.get("audit"), ";".join(r.get("violations") or []), r.get("headline") or r.get("error"),
                         (base.get(r["id"]) or {}).get("verdict"), c.get("license"), c.get("url")])
     print(f"\nwrote {DATA / 'results.csv'} ({len(rows)} clips)")
-    summary = summarize(rows, clips, base)
+    summary = {**summarize(rows, clips, base), "analysis": analysis()}
     for path in (DATA / "summary.json", ROOT / "frontend" / "public" / "audit_study.json"):
         path.write_text(json.dumps(summary, indent=1) + "\n")
     print(f"wrote {DATA / 'summary.json'} and the site's copy")
@@ -433,10 +540,12 @@ def main() -> None:
     r.add_argument("--only", choices=("generated", "real"))
     r.add_argument("--profile", choices=tuple(PROFILES), default="full")
     r.add_argument("--retry-errors", action="store_true", help="run clips that failed before once more")
+    r.add_argument("--generator", help="only this generator's clips (e.g. sora), or real")
     b = sub.add_parser("baseline")
     b.add_argument("--max-usd", type=float, required=True)
     sub.add_parser("report")
     sub.add_parser("replay", help="apply the current audit rules to every stored run (free)")
+    sub.add_parser("analysis", help="every metric of the study, under the current rules (free)")
     a = ap.parse_args()
     os.environ.setdefault("APP_ENV", "demo")  # open-weight reasoning only, as judges get it
     # A batch shares the machine with its owner: few threads per process, and the lowest CPU priority, so the
@@ -448,11 +557,13 @@ def main() -> None:
     if a.cmd == "select":
         select(a.generated, a.real, a.seed)
     elif a.cmd == "run":
-        run(a.limit, a.workers, a.max_usd, a.only, a.profile, a.retry_errors)
+        run(a.limit, a.workers, a.max_usd, a.only, a.profile, a.retry_errors, a.generator)
     elif a.cmd == "baseline":
         baseline(a.max_usd)
     elif a.cmd == "replay":
         replay()
+    elif a.cmd == "analysis":
+        print(json.dumps({k: v for k, v in analysis().items()}, indent=1, default=float)[:6000])
     else:
         report()
 
