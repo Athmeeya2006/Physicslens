@@ -1,6 +1,6 @@
 {
   "title": "Pendulum: the referee overturns the first answer",
-  "description": "A 0.5 m pendulum swinging for 6.5 s. Three independent proposals and verification first accepted the undamped pendulum; a referee model then proposed linear damping, which forecast the held-out motion better, so the verdict changed. g = 9.91 \u00b1 0.04 m/s\u00b2 from the period, 1% above 9.81 (the length is the uploader's stated 0.5 m).",
+  "description": "A 0.5 m pendulum swinging for 6.5 s. Three independent proposals and verification first accepted the undamped pendulum; a referee model then proposed linear damping, which also forecast the held-out motion and fit the whole swing better by BIC, so the verdict changed. g = 9.91 \u00b1 0.04 m/s\u00b2 from the period, 1% above 9.81 (the length is the uploader's stated 0.5 m).",
   "credit": "Video: Rhetos / Mathe-AC Lernwerkstatt, Wikimedia Commons, CC BY-SA 4.0 (trimmed and downscaled)",
   "order": 3
 }

@@ -7,7 +7,7 @@ PhysicsLens reasons only on Meta's open-weight models. This page lists exactly w
 | 1 (primary) | **Muse Spark Open** (816B mixture of experts, 42B active) | Baseten, OpenAI-compatible Chat Completions | `"provider": "baseten", "model": "meta-models/muse-spark-open-1026"` |
 | 2 (fallback, and fully offline path) | **Muse Glimmer 30B** (Apache 2.0) | our own llama.cpp server | `"provider": "glimmer", "model": "muse-glimmer-30b"` |
 
-The published gallery results so far ran on Muse Glimmer 30B (second section below). Results made on Muse Spark Open carry its label instead.
+Every entry in the published gallery (Apophis, Jupiter, the pendulum, the paper bag and the spring cart) ran on Muse Spark Open. The first version of the spring cart entry ran on Muse Glimmer 30B (second section below); it is kept in the git history. Each result names the provider and model behind every step.
 
 ## Muse Spark Open on Baseten
 
@@ -39,7 +39,7 @@ To check a local copy: `sha256sum Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf`.
 
 ## How to see it in the results
 
-- Every step of every result records who made it. In each `result.json`, the `trail` items and the `llm_calls` list carry the provider and model id from the table above for reasoning steps (the current gallery shows `"provider": "glimmer", "model": "muse-glimmer-30b"`) (scene, hypotheses, track check, agent decision). Verification steps carry `"model": "simulate-and-compare"`: numerical code, not a language model.
+- Every step of every result records who made it. In each `result.json`, the `trail` items and the `llm_calls` list carry the provider and model id from the table above for reasoning steps (for example `"provider": "baseten", "model": "meta-models/muse-spark-open-1026"` in the pendulum; a step answered by the offline path carries `"provider": "glimmer", "model": "muse-glimmer-30b"`) (scene, hypotheses, track check, agent decision). Verification steps carry `"model": "simulate-and-compare"`: numerical code, not a language model.
 - `llm_calls` also keeps each step's reasoning text as the model returned it, plus any provider switch (`fallbacks`).
 - The app shows the same labels on screen: every step of the decision trail names "Muse Spark Open (open weights, served by Baseten)", "Muse Glimmer 30B (open weights)" or the numerical method, with the model's reasoning one click away.
 

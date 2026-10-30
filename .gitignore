@@ -78,3 +78,6 @@ Thumbs.db
 
 # Generated from gallery/ by scripts/build_static_gallery.py
 frontend/public/gallery/
+
+# Private handoff notes between work sessions
+CONTEXT.md
