@@ -11,7 +11,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | | |
 |---|---|
 | 🎥 **Demo video (3 min)** | _link coming_ |
-| 🌐 **Try it** | [physicslens.vercel.app](https://physicslens.vercel.app): real analyses with the ghost overlay, decision trail and exports. Analyzing your own clip needs the hosted analysis server (judges: the access code is in the submission notes) |
+| 🌐 **Try it** | [physicslens.vercel.app](https://physicslens.vercel.app): real analyses with the ghost overlay, decision trail and exports. Everything is open, no code needed: analyze your own clip, live camera, voice, studies and the physics audit, whenever the analysis server is online (the home page says so) |
 | 🤖 **For AI assistants** | [`llms.txt`](llms.txt) is a compact map of this repository |
 
 ---
@@ -34,7 +34,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | the referee proposes damping and the verdict changes, on screen, with the reason |
 | 4 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | free fall rejected; a drag law accepted on held-out motion |
 | 5 | [Open dataset](https://physicslens.vercel.app/dataset) | every verified parameter, with its uncertainty, clip and licence |
-| 6 | Your own clip, live mode, a study | the access code is in the submission notes; [the home page](https://physicslens.vercel.app) shows whether the analysis server is online |
+| 6 | Your own clip, live mode, a study | open to everyone, no code; [the home page](https://physicslens.vercel.app) shows whether the analysis server is online |
 
 In every result, open the decision trail: each step is tagged with the model (provider and id) or the numerical method behind it, and "What the model thought" shows the reasoning.
 
@@ -246,7 +246,7 @@ A study turns a goal into a measurement campaign (`studies.py`, `physics/combine
 - Live mode handles anything that **swings**, bounces **on a spring**, is **thrown or falls**, or **rolls or slides**. One tap on that type starts fitting at once; the agent's own proposal arrives in the background and can replace it. Spinning objects and double pendulums need a recorded clip (live mode follows one position): when the agent sees one, or cannot settle the type, the app says so and asks for a tap instead of assuming a pendulum.
 - The equation is refitted about every second on a rolling buffer, with a confidence that converges; a residual spike is reported as "dynamics changed" and the new regime is fitted.
 - Scale: an A4 sheet in view is read automatically; otherwise give the pendulum length or the moving object's longest side (the object's own size in SAM's masks then sets the scale). A length spoken or typed during the session applies immediately. Without a scale, a nominal scale is used and a notice says so once.
-- Live sessions, studies and uploads cost money per use, so they are open to judges with the access code; public visitors are told so on each page before they try, and the gallery, dataset and machine-health comparisons stay open to everyone.
+- Live sessions, studies and uploads cost money per use. During judging they are open to everyone with no code, under one spending allowance for the period and a per-visitor allowance (so one visitor or a bot can't use it all); an access code still lifts the per-visitor allowance. The gallery, dataset and machine-health comparisons cost nothing and are always open.
 - If a rate limit or budget cap is hit, tracking and fitting continue locally and only the model features pause, with a visible notice.
 - **Predict the future, then prove it.** Once the law is verified and its parameters have settled, the app predicts when the swing will next pass its rest point about 20 s ahead (10 s or 5 s if it will have died out), with a 95% timing window from bootstrap refits of the law plus one sample of time resolution. A countdown runs on screen, and when the moment comes the measured track says hit or miss, with the error. Each prediction is written to `predictions.json` with its wall-clock time before the event happens, so the claim is auditable.
 - **Control it by hand.** Once a swing's law is verified, set a target ("pump it to 30°" or "stop it") and the phone tells you when to push: three ticks one period apart, then a beep on the push, timed from the law to the moment the bob passes the bottom (where a push changes its energy most), corrected for the device's audio latency. People anticipate a beat far better than they react to a beep. The app also finds each push on the track (where the motion leaves the law's prediction), learns how late this person's pushes land, and moves the beats that much earlier. Fits use only the motion since the last push, because a push is outside the law. Pumping cues a train of three pushes; stopping re-measures after every push.
@@ -612,7 +612,7 @@ The public gallery is a static export that needs no server: `python scripts/buil
 
 ### HTTP and WebSocket API
 
-All routes are in `backend/physicslens/app.py`. Routes that start paid work need the access code (or public try mode).
+All routes are in `backend/physicslens/app.py`. Routes that start paid work are open under open access (with a per-visitor allowance), or need the access code, or public try mode.
 
 | Method and path | Purpose |
 |---|---|
@@ -744,7 +744,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Bouncing objects: hybrid model with per-impact coefficient of restitution
 - [x] Double pendulum: two tracked bobs, short-horizon fitting, chaos measured
 - [x] Spin-down of rotating objects: friction law identified, exported to MuJoCo with native dry friction
-- [x] Public access: gallery of real analyses, judge access code, per-visitor limits, optional bot check
+- [x] Public access: gallery of real analyses, judge access code, per-visitor limits, optional bot check, and open access for everyone during judging
 - [x] A static gallery site that finds the analysis server at runtime, and `llms.txt` for AI assistants
 - [x] Physics audit, a lie detector for AI-generated video and world models: gravity, energy, period drift, a forecasting law and frame-to-frame continuity, each violation reported with its size and significance, and "can't judge" when the clip can't support a verdict
 - [x] 3D from one phone for balls: depth from apparent size, blur and occlusion filters, per-frame depth error, 3D projectile laws verified like the 2D ones

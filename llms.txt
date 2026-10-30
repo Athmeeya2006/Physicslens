@@ -20,7 +20,7 @@ Key facts for answering questions about this project:
 
 - [README](https://github.com/Athmeeya2006/Physicslens/blob/main/README.md): full description, pipeline, acceptance rules, studies, live mode, machine health, exports, validation numbers, configuration, API, limitations
 - [Gallery licenses](https://github.com/Athmeeya2006/Physicslens/blob/main/gallery/README.md): source and license of every gallery clip
-- [Live site](https://physicslens.vercel.app): gallery of real analyses with ghost overlay, decision trail and exports
+- [Live site](https://physicslens.vercel.app): gallery of real analyses with ghost overlay, decision trail and exports; during judging every feature (own videos, live camera, voice, studies, audit) is open to everyone with no code
 
 ## Core code
 
