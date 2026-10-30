@@ -72,7 +72,8 @@ MORPH_FACTOR = 1.5  # mask area stepping up or down by 50% between neighbouring 
 # Preconditions: below these the audit says "can't judge" rather than risk an accusation.
 MIN_DURATION_S = 1.5
 MIN_SAMPLES = 30
-MIN_COVERAGE = 0.7  # share of the clip's frames in which the object was tracked
+MIN_COVERAGE = 0.7  # share of frames tracked between the first and last frame the object is seen: an object that
+# rolls into view halfway is not a gap (real footage in the control set does), a gap inside the motion is
 MIN_CONFIDENCE = 0.5  # SAM's median confidence on the object
 MIN_MOTION_SNR = 20.0  # extent of the motion over the tracking noise
 CAMERA_DRIFT_FRACTION = 0.15  # a still reference may wander this share of its own size (mask jitter) ...
@@ -236,7 +237,7 @@ def preconditions(a: AuditInput, sigma: float) -> list[str]:
                        f"and {MIN_SAMPLES} samples are needed to judge it.")
         return reasons
     if a.coverage < MIN_COVERAGE:
-        reasons.append(f"The object was tracked in only {a.coverage:.0%} of the frames, so gaps could hide or fake a violation.")
+        reasons.append(f"The object was tracked in only {a.coverage:.0%} of the frames while in view, so gaps could hide or fake a violation.")
     if a.confidence is not None and len(a.confidence) and np.any(a.confidence > 0):
         conf = float(np.median(a.confidence))
         if conf < MIN_CONFIDENCE:

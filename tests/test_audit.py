@@ -300,3 +300,11 @@ def test_lookalikes_skip_the_identity_checks():
     assert "No teleporting" in violated(run(hop, "pendulum"))
     r = run(hop, "pendulum", lookalikes=True)
     assert "No teleporting" not in violated(r) and r["verdict"] != "violates_physics"
+
+
+def test_coverage_counts_only_frames_while_in_view():
+    """Real footage: a ball rolls into view halfway through; the frames before it appears are not gaps."""
+    from physicslens.pipeline import coverage_in_view
+    assert coverage_in_view(np.arange(120, 240)) == 1.0
+    assert coverage_in_view(np.r_[np.arange(0, 50), np.arange(90, 100)]) == pytest.approx(0.6)
+    assert coverage_in_view(np.array([], dtype=int)) == 0.0

@@ -535,6 +535,14 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     return result
 
 
+def coverage_in_view(frames: np.ndarray) -> float:
+    """Share of frames tracked between the first and last frame the object is seen: an object that rolls into view
+    halfway through is not a gap; a frame lost in the middle of the motion is."""
+    if not len(frames):
+        return 0.0
+    return len(frames) / (int(frames[-1]) - int(frames[0]) + 1)
+
+
 def audit_clip(full: Trajectory, family: str, calibration: Calibration, verdict: Verdict, moving: ObjectTrack,
                reference: ObjectTrack | None, info: media.VideoInfo, change: RegimeChange | None,
                result: dict[str, Any], video: Path, save_to: Path | None = None, lookalikes: bool = False) -> dict[str, Any]:
@@ -560,7 +568,7 @@ def audit_clip(full: Trajectory, family: str, calibration: Calibration, verdict:
             traj=full, family=family, calibration_source=calibration.source,
             px_per_m=NOMINAL_PX_PER_M if calibration.source == "gravity" else calibration.px_per_m,
             scale_rel_std=calibration.rel_std, law=law, object_size_px=float(np.median(moving.long_px)), areas_px=areas,
-            confidence=moving.confidence, coverage=len(moving.frames) / max(info.frames, 1), frame_rate_varies=varies,
+            confidence=moving.confidence, coverage=coverage_in_view(moving.frames), frame_rate_varies=varies,
             reference_px=reference.centers_px if reference is not None else None,
             reference_size_px=float(np.median(reference.long_px)) if reference is not None else None,
             regime_change_s=change.t_estimate if change is not None else None, lookalikes=lookalikes)
