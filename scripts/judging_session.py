@@ -16,8 +16,10 @@
   python scripts/judging_session.py pointer GIST_ID  the site finds the server through a public gist that each server
                                                        updates itself (Kaggle Secrets GIST_TOKEN and GIST_ID): needed
                                                        for unattended, scheduled sessions
-  python scripts/judging_session.py start --slot b      a second notebook (physicslens-judging-server-b), scheduled
-                                                       12 hours after the first so the two cover the whole day
+  python scripts/judging_session.py start --slot b      more notebooks (physicslens-judging-server-b, -c): three
+                                                       11.5-hour sessions scheduled 8 hours apart cover the whole day
+                                                       with 3.5 hours of overlap at every handover (two cannot: Kaggle
+                                                       stops any run at 12 hours)
   python scripts/judging_session.py schedule 2026-11-05T14:00Z
                                                        show the next session's start on the site meanwhile
 
@@ -139,7 +141,7 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("start")
     s.add_argument("--hours", type=float, default=11.5, help="Kaggle stops any run at 12 h")
-    s.add_argument("--slot", default="", help="a second notebook, e.g. b, for back-to-back scheduled sessions")
+    s.add_argument("--slot", default="", help="another notebook, e.g. b or c, for overlapping scheduled sessions")
     s.add_argument("--gpu", action="store_true", help="also serve Muse Glimmer as the open-weight fallback (uses GPU quota)")
     s.add_argument("--skip-upload", action="store_true", help="reuse the code already uploaded")
     sub.add_parser("stop")
