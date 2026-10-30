@@ -35,6 +35,7 @@ import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from itertools import zip_longest
 from pathlib import Path
 from typing import Any
 
@@ -219,8 +220,14 @@ def run(limit: int, workers: int, max_usd: float, only: str | None, profile: str
     clips = json.loads(MANIFEST.read_text())["clips"]
     done = done_ids(RESULTS, retry_errors)
     todo = [c for c in clips if c["id"] not in done and (only is None or c["set"] == only)]
-    # Interleave the sets so a pilot sees both kinds of clip.
-    gen, real = [c for c in todo if c["set"] == "generated"], [c for c in todo if c["set"] == "real"]
+    # Interleave the sets, and the generators within the generated set, so that stopping anywhere (a pilot, a
+    # spending limit) leaves a balanced sample rather than one generator's clips.
+    by_gen: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for c in todo:
+        if c["set"] == "generated":
+            by_gen[c["generator"]].append(c)
+    gen = [c for group in zip_longest(*by_gen.values()) for c in group if c is not None]
+    real = [c for c in todo if c["set"] == "real"]
     order = [c for pair in zip(gen, real) for c in pair] + gen[len(real):] + real[len(gen):]
     order = order[:limit]
     start = spent()
