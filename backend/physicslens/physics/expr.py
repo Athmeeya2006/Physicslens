@@ -31,6 +31,7 @@ FUNCTIONS: dict[str, tuple[int, str]] = {
     "abs": (1, ""),
     "sign": (1, r"\operatorname{sgn}"),
     "hypot": (2, ""),
+    "pow": (2, ""),  # pow(a, b) is a^b: models write it either way
 }
 CONSTANTS = {"pi": math.pi}
 
@@ -136,6 +137,8 @@ class _Parser:
             self.take(")")
             if len(args) != arity:
                 raise ExprError(f"{tok} takes {arity} argument(s), got {len(args)}")
+            if tok == "pow":  # the same tree as a^b, so printing, export and evaluation need nothing new
+                return self.node("pow", None, tuple(args), depth=d)
             return self.node("call", tok, tuple(args), depth=d)
         if tok in CONSTANTS:
             return self.node("num", CONSTANTS[tok], depth=d)

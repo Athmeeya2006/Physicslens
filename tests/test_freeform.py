@@ -206,3 +206,11 @@ def test_sign_works_on_numpy_numbers():
     assert [_sign(np.float64(v)) for v in (-2.5, 0.0, 3.0)] == [-1.0, 0.0, 1.0]
     law = build("line", "Dry friction", ["-mu*9.81*sign(v)"], [FreeParam("mu", "", 0.0, 1.0, 0.2)])
     assert law.spec.rhs(np.array([0.1, np.float64(-0.4)]), {"mu": 0.5}, {})[1] == pytest.approx(4.905)
+
+
+def test_pow_is_the_same_as_the_caret():
+    """The referee wrote pow(x*x + y*y, 1.5) for a comet; all three of its laws were refused before pow existed."""
+    from physicslens.physics.expr import parse
+    assert parse("pow(x, 1.5)", {"x"}) == parse("x^1.5", {"x"})
+    with pytest.raises(ExprError):
+        parse("pow(x)", {"x"})
