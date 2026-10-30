@@ -2,5 +2,5 @@
   "title": "Spring cart: damping measured with no ruler in sight",
   "description": "A glider on a track between two springs, filmed for 15 s with nothing of known size in view. Frequency and damping don't need a scale, so PhysicsLens identifies a lightly damped oscillator and rejects the undamped one.",
   "credit": "Video: Pieter Kuiper, Linnaeus University, Wikimedia Commons, Attribution license (trimmed)",
-  "order": 3
+  "order": 4
 }

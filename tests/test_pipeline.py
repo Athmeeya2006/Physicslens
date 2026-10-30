@@ -334,3 +334,16 @@ def test_window_guard():
     assert window_indices(t, 1.0, 9.0) == (30, 271)
     assert "below the 70%" in window_indices(t, 3.0, 7.0)
     assert "ends before" in window_indices(t, 5.0, 4.0)
+
+
+def test_a_lost_box_track_falls_back_to_finding_the_object_by_name(harness, tmp_path):
+    """A plain dot was dropped by SAM's tracker after 3 frames on a real run; a search by name found it everywhere."""
+    lost = "\n".join(sam_text_as_object_1().splitlines()[:3])
+    script(harness, responses_result(text=json.dumps(SCENE)), sam_result(frames=60, text=lost),
+           sam_result(frames=60, text=sam_text_as_object_1()), responses_result(text=json.dumps(TRACK_OK)),
+           responses_result(text=json.dumps(HYPOTHESES)), responses_result(text=json.dumps(AGENT)),
+           responses_result(text=json.dumps(SKEPTIC_NONE)))
+    result = analyze(harness.client, CLIP, tmp_path / "run", "run-lost", RunOptions(pendulum_length_m=0.6))
+    assert len(result["real_track_px"]) == 60
+    notes = [t["text"] for t in result["trail"] if t["step"] == "tracking"]
+    assert any("lost the red ball after 3 frames; found by name in 60" in n for n in notes)

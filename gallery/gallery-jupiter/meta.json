@@ -1,0 +1,6 @@
+{
+  "title": "Weighing Jupiter from a video of Io",
+  "description": "Io's orbit, rendered from NASA/JPL Horizons positions. From the moving dot alone, PhysicsLens found Keplerian gravity and Jupiter's GM within 0.018% of JPL's value. Europa, Ganymede and Callisto weigh Jupiter the same way (combined: 0.012%), and their measured periods and distances follow Kepler's third law with exponent 1.4991. Units: Jupiter radii and hours.",
+  "credit": "Rendered by PhysicsLens from NASA/JPL Horizons data (JPL Solar System Dynamics)",
+  "order": 2
+}

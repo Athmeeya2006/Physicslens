@@ -167,10 +167,23 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     scene, prompt_frame = locate_precisely(client, scene, frames_jpeg, info, run_id, options.audience, record, limits, progress)
 
     progress(f"Tracking the {scene.moving_object} with SAM 3.1")
-    tracks = track_objects(client, clip, info, scene, run_id, options.audience, prompt_frame)
+    try:
+        tracks = track_objects(client, clip, info, scene, run_id, options.audience, prompt_frame)
+    except AnalysisError:
+        tracks = {}  # nothing followed from the box: the search by name below still gets its turn
     moving = tracks.get(MOVING_ID)
     if moving is None or len(moving.frames) < min_frames // 2:
-        raise AnalysisError(f"SAM could not follow the {scene.moving_object} through the clip.")
+        # Following an object from one box can lose it (a plain dot was dropped after 3 frames on a real run);
+        # finding it by name in every frame on its own often still works, so that is tried before giving up.
+        kept = 0 if moving is None else len(moving.frames)
+        progress(f"Finding the {scene.moving_object} by name in every frame with SAM 3.1")
+        named = track_by_name(client, clip, info, scene, run_id, options.audience)
+        if named is None or len(named.frames) < min_frames // 2:
+            raise AnalysisError(f"SAM could not follow the {scene.moving_object} through the clip.")
+        trail.append({"step": "tracking", "provider": "meta_api", "model": "sam-3.1",
+                      "text": f"Following the box lost the {scene.moving_object} after {kept} frames; found by name in "
+                              f"{len(named.frames)} of {info.frames} frames instead."})
+        moving = named
     trail.append({"step": "tracking", "provider": "meta_api", "model": "sam-3.1",
                   "text": f"Tracked the {scene.moving_object} in {len(moving.frames)} of {info.frames} frames."})
     moving = check_and_repair_track(client, clip, info, scene, moving, run_id, options.audience, record, trail, progress)

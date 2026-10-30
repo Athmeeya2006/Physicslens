@@ -11,6 +11,8 @@ The code in this repository is MIT licensed. The video clips are not covered by 
 
 - `gallery-apophis`: rendered by PhysicsLens (`scripts/orbit_demo.py`) from NASA/JPL Horizons state vectors of
   99942 Apophis and Earth; no third-party footage. Data credit: NASA/JPL Solar System Dynamics (Horizons, CNEOS).
+- `gallery-jupiter`: rendered by PhysicsLens (`scripts/jupiter_demo.py`) from NASA/JPL Horizons state vectors of
+  Io around Jupiter; no third-party footage. Data credit: NASA/JPL Solar System Dynamics (Horizons).
 - `gallery-pendulum`: "Schwingung (Definition)" by Rhetos / Mathe-AC Lernwerkstatt, from
   [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Schwingung_(Definition).webm), licensed
   [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Changes: trimmed to 16.0 to 22.5 s and

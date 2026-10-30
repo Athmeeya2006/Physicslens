@@ -123,6 +123,20 @@ What happened, in order: three independent proposals each wrote the inverse-squa
 
 Reproduce: `python scripts/orbit_demo.py all` (fetch and render are free; analyze calls SAM 3.1 and Muse Spark Open, about $0.15; predict is local). Data sources and credits: `data/orbit/SOURCES.md`.
 
+## Weighing Jupiter from video
+
+`scripts/jupiter_demo.py` does the same for the four Galilean moons: one rendered video per moon (1.25 orbits, top-down in its own orbital plane, from JPL Horizons positions), the normal pipeline on each, and the agent writing its own laws. Lengths are in Jupiter radii (R_J) and time in hours.
+
+| Moon | Law accepted by verification | GM of Jupiter (R_J³/h²) | vs JPL (4.49328) |
+|---|---|---|---|
+| Io | Keplerian point-mass gravity | 4.4941 ± 0.0011 | +0.018% |
+| Europa | point-mass gravity, centre fitted (1.2 px from the drawn centre) | 4.4927 ± 0.0006 | -0.013% |
+| Ganymede | Newtonian central gravity | 4.4916 ± 0.0011 | -0.036% |
+| Callisto | power-law central gravity, exponent 1.989 ± 0.009 | 4.34 ± 0.12 | -3.5% (within its interval) |
+| **Combined** | | **4.49272 ± 0.00047** | **-0.012%** |
+
+Then, across the moons and without any fitted force law: the period and mean distance of each orbit, measured straight from the track, follow **period proportional to distance^1.4991 ± 0.0032** (Kepler's third law is 1.5), with every moon predicted from the other three within 0.7 sigma; its prefactor weighs Jupiter a third way, 0.35% below JPL. The distance carries one pixel of systematic uncertainty in that test. SAM's tracker dropped a plain dot on two of the moons; the pipeline now finds the object by name in every frame before giving up, and that is how Europa was tracked. Data credits: `data/jupiter/SOURCES.md`.
+
 ## Physics audit
 
 Every analysis also asks a sharper question: does this motion break a law that every real object obeys? That makes PhysicsLens a lie detector for AI-generated video and for world models: upload a clip on the **Physics audit** page (or `POST /api/audit`, the same upload as `POST /api/runs`; every result carries `result["audit"]`). The audit is local math on the tracked motion, with no extra model calls, and it reports one of three verdicts:
@@ -598,6 +612,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] A referee that tries to break every accepted law, three independent hypothesis samples, single-frame object locating, and agent tool steps (test models, inspect motion) with the verdict always recomputed by code
 - [x] Laws across recordings: sweep planning, leave-one-out law selection, and a prediction made before the next recording is filmed
 - [x] Orbit mode: the inverse-square law and the Sun's GM rediscovered from a video of Apophis rendered from JPL Horizons data, and its 2029 Earth flyby predicted and compared with JPL
+- [x] Weighing Jupiter: four moons, each video giving Jupiter's GM on its own (combined within 0.012% of JPL), and Kepler's third law (exponent 1.4991) found from the measured periods and distances
 - [x] Force and velocity vectors and the law's own prediction drawn on the video, in the web player and the shareable MP4
 - [x] Faster analysis: SAM masks decoded in parallel (a 450-frame clip from about 280 s to 10 s), and a time budget per fitted model
 
