@@ -68,11 +68,12 @@ PERIOD_DRIFT = 0.04  # relative change of frequency over the clip; pendulum anha
 NO_LAW_NRMSE = 0.5  # the best law misses the held-out motion by half its spread (verification rejects at 0.15 to 0.3)
 JUMP_SPAN_FRACTION = 0.05  # a teleport must move at least this share of the motion's extent ...
 JUMP_OBJECT_FRACTION = 0.5  # ... or half the object's own size, when that is known
-MORPH_FACTOR = 1.5  # mask area stepping up or down by 50% between neighbouring stretches of frames
+MORPH_FACTOR = 2.0  # mask area doubling or halving between neighbouring stretches of frames: a quick move toward or away
+# from the camera changes it by up to about 1.6 times in a third of a second (a generated disc swung at the lens did)
 
 # Preconditions: below these the audit says "can't judge" rather than risk an accusation.
 MIN_DURATION_S = 1.5
-MIN_SAMPLES = 30
+MIN_SAMPLES = 24
 MIN_COVERAGE = 0.7  # share of frames tracked between the first and last frame the object is seen: an object that
 # rolls into view halfway is not a gap (real footage in the control set does), a gap inside the motion is
 MIN_CONFIDENCE = 0.5  # SAM's median confidence on the object

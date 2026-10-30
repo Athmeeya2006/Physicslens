@@ -109,6 +109,7 @@ Progress = Callable[[str], None]
 
 
 MIN_CLIP_SECONDS = 2.0
+MIN_TRACK_SAMPLES = 12
 MIN_CLIP_FRAMES = 30
 
 
@@ -216,6 +217,11 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     # Physics runs in real time; drawing on the clip uses frame indices, so the video keeps its own rate.
     fps = info.fps * options.slow_motion
     full, full_origin = full_track(moving, fps, calibration.px_per_m, options.origin_px)
+    if len(full) < MIN_TRACK_SAMPLES:
+        # SAM found the object here and there but never for long in a row: nothing to fit, and the numbers below
+        # (derivatives, the summary) need a run of frames.
+        raise AnalysisError(f"SAM followed the {scene.moving_object} for only {len(full)} frames in a row; a fit needs at "
+                            f"least {MIN_TRACK_SAMPLES}. A clip where it stays in view and in focus works best.")
     # The whole track until the family is known: splitting at "impacts" only makes sense for a thrown or
     # bouncing object, and would chop an oscillator at its turning points (found on a real spring clip).
     traj, origin_px = full, full_origin
