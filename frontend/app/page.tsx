@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Loader2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Gallery } from "@/components/Gallery";
 import { VoiceNotes } from "@/components/VoiceNotes";
+import { Hero } from "@/components/Hero";
 import { ResultView } from "@/components/ResultView";
 import type { Budget, GalleryItem, Health, RunView } from "@/lib/api";
 import { getBudget, getGallery, getHealth, getRun, NEXT_SESSION_UTC, startRun, useBackend } from "@/lib/api";
@@ -141,13 +142,7 @@ export default function Home() {
             <ResultView runId={run.run_id} result={run.result!} />
           </div>
         ) : (
-          <div className="home-head">
-            <h1>Film something moving. Get its equation, verified.</h1>
-            <p>
-              SAM 3.1 tracks the object, an agent proposes candidate equations, and numerical simulation keeps only the one that
-              forecasts motion it never saw. Export the result to MuJoCo, or compare recordings over weeks to catch wear.
-            </p>
-          </div>
+          <Hero />
         )}
 
         <div className="home-grid">
