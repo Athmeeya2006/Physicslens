@@ -163,7 +163,7 @@ export default function AuditPage() {
         <section className="panel">
           <h2>Needs the analysis server</h2>
           <p className="muted">
-            The analysis server isn&apos;t running right now (it runs on a GPU notebook during judging sessions), so clips
+            The analysis server is between sessions right now (it restarts on its own within minutes), so clips
             can&apos;t be audited at the moment. With the server, you upload a clip; SAM 3.1 tracks the moving object and the
             audit checks the track with plain numerical tests: g against 9.81 m/s² when something of known size is in view
             (or one g shared by every flight when nothing is), bounces that gain energy, a swing that grows or drifts in

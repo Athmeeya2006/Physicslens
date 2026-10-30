@@ -133,9 +133,9 @@ function OverlayChart({ v }: { v: SimToRealData["video"] }) {
       </svg>
       <figcaption className="forecast-caption">
         <span>
-          <span className="key"><svg width="14" height="8" aria-hidden="true"><circle cx="7" cy="4" r="3" fill="#56616d" /></svg>Measured{unitText ? ` (${unitText})` : ""}</span>
-          <span className="key"><svg width="18" height="8" aria-hidden="true"><line x1="0" x2="18" y1="4" y2="4" stroke="#8f5b00" strokeWidth="2" strokeDasharray="6 4" /></svg>Textbook: {v.textbook.description}</span>
-          <span className="key"><svg width="18" height="8" aria-hidden="true"><line x1="0" x2="18" y1="4" y2="4" stroke="#0b63ce" strokeWidth="2" /></svg>PhysicsLens: {v.physicslens.title}</span>
+          <span className="key"><svg width="14" height="8" aria-hidden="true"><circle cx="7" cy="4" r="3" style={{ fill: "var(--ref)" }} /></svg>Measured{unitText ? ` (${unitText})` : ""}</span>
+          <span className="key"><svg width="18" height="8" aria-hidden="true"><line x1="0" x2="18" y1="4" y2="4" style={{ stroke: "var(--tie)" }} strokeWidth="2" strokeDasharray="6 4" /></svg>Textbook: {v.textbook.description}</span>
+          <span className="key"><svg width="18" height="8" aria-hidden="true"><line x1="0" x2="18" y1="4" y2="4" style={{ stroke: "var(--model)" }} strokeWidth="2" /></svg>PhysicsLens: {v.physicslens.title}</span>
         </span>
       </figcaption>
     </figure>

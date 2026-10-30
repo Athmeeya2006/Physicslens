@@ -18,11 +18,17 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#121820" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#000000" };
+
+// Applied before the first paint, so a visitor who chose light never sees a dark flash (dark is the default).
+const THEME_SCRIPT = `try{if(localStorage.getItem("physicslens-theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={ui.variable}>
+    <html lang="en" className={ui.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>
         <Shell>{children}</Shell>
       </body>

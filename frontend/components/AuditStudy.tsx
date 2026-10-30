@@ -88,9 +88,9 @@ function IntervalChart({ rows, caption }: { rows: { label: string; g: Group; ref
       </svg>
       <figcaption className="forecast-caption">
         <span>
-          <span className="key"><svg width="12" height="12" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="7" transform="rotate(45 6 6)" fill="#56616d" /></svg>Real footage, the control</span>
-          <span className="key"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="#0b63ce" /></svg>AI-generated</span>
-          <span className="key"><svg width="18" height="8" aria-hidden="true"><line x1="0" x2="18" y1="4" y2="4" stroke="#56616d" strokeWidth="2" /></svg>95% interval</span>
+          <span className="key"><svg width="12" height="12" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="7" transform="rotate(45 6 6)" style={{ fill: "var(--ref)" }} /></svg>Real footage, the control</span>
+          <span className="key"><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" style={{ fill: "var(--model)" }} /></svg>AI-generated</span>
+          <span className="key"><svg width="18" height="8" aria-hidden="true"><line x1="0" x2="18" y1="4" y2="4" style={{ stroke: "var(--ref)" }} strokeWidth="2" /></svg>95% interval</span>
         </span>
         <span>{caption}</span>
       </figcaption>

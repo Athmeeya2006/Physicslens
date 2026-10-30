@@ -112,8 +112,8 @@ export function ForecastChart({ f, uncalibrated = false, units = null }: {
       </svg>
       <figcaption className="forecast-caption">
         <span>
-          <span className="key"><svg width="14" height="8" aria-hidden="true"><circle cx="7" cy="4" r="3" fill="#56616d" /></svg>Measured{unit}</span>
-          <span className="key"><svg width="18" height="8" aria-hidden="true"><line x1="0" x2="18" y1="4" y2="4" stroke="#0b63ce" strokeWidth="2" /></svg>{f.title}, fitted on the first part only</span>
+          <span className="key"><svg width="14" height="8" aria-hidden="true"><circle cx="7" cy="4" r="3" style={{ fill: "var(--ref)" }} /></svg>Measured{unit}</span>
+          <span className="key"><svg width="18" height="8" aria-hidden="true"><line x1="0" x2="18" y1="4" y2="4" style={{ stroke: "var(--model)" }} strokeWidth="2" /></svg>{f.title}, fitted on the first part only</span>
         </span>
         <span>Held-out forecast error: <strong className="num">{(f.heldout_nrmse * 100).toFixed(1)}%</strong> of the motion&apos;s spread (RMS over standard deviation)</span>
       </figcaption>

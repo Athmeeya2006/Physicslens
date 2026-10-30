@@ -1,8 +1,8 @@
 "use client";
 
-import { Activity, Camera, ClipboardList, Database, ScanSearch, ShieldCheck } from "lucide-react";
+import { Activity, Camera, ClipboardList, Database, Moon, ScanSearch, ShieldCheck, Sun } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { accessCode } from "@/lib/api";
 
 // The mark: a lens with a swing arc and a bob, drawn once in the shell's stroke weight.
@@ -25,6 +25,29 @@ const NAV = [
   { href: "/audit", label: "Physics audit", icon: ShieldCheck },
   { href: "/dataset", label: "Dataset", icon: Database },
 ];
+
+function ThemeToggle() {
+  // Dark by default; light is the one alternative, remembered on this device. The whole site follows it.
+  const [light, setLight] = useState(false);
+  useEffect(() => setLight(document.documentElement.dataset.theme === "light"), []);
+  const flip = () => {
+    const next = !light;
+    setLight(next);
+    if (next) document.documentElement.dataset.theme = "light";
+    else delete document.documentElement.dataset.theme;
+    try {
+      localStorage.setItem("physicslens-theme", next ? "light" : "dark");
+    } catch {
+      /* storage blocked: the choice lasts for this page only */
+    }
+  };
+  return (
+    <button type="button" className="theme-toggle" onClick={flip} aria-pressed={light}
+            title={light ? "Switch to dark" : "Switch to light"} aria-label={light ? "Switch to dark theme" : "Switch to light theme"}>
+      {light ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
+    </button>
+  );
+}
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
@@ -49,6 +72,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </nav>
           <div className="shell-spacer" />
           <span className="shell-note">System identification from a phone camera</span>
+          <ThemeToggle />
         </div>
       </header>
       {children}

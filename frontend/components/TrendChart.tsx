@@ -6,8 +6,8 @@ import { useState } from "react";
 
 // One metric per chart (never two y-scales). Colors validated on the light panel surface (#f5f6f3):
 // series and flagged pass the lightness band, colorblind separation and contrast checks.
-const SERIES = "#0b63ce";
-const FLAGGED = "#b3261e";
+const SERIES = "var(--model)";
+const FLAGGED = "var(--bad)";
 
 export interface TrendPoint {
   label: string;
@@ -57,16 +57,16 @@ export function TrendChart({ title, unit, points }: { title: string; unit: strin
         {points.map((p, i) => (
           <text key={`x${i}`} x={x(i)} y={H - 8} textAnchor="middle" className="tick">{p.label}</text>
         ))}
-        <path d={path} fill="none" stroke={SERIES} strokeWidth={2} />
+        <path d={path} fill="none" style={{ stroke: SERIES }} strokeWidth={2} />
         {points.map((p, i) => {
           const color = p.flagged ? FLAGGED : SERIES;
           return (
             <g key={i}>
-              <line x1={x(i)} x2={x(i)} y1={y(p.value - p.std)} y2={y(p.value + p.std)} stroke={color} strokeWidth={1.5} />
-              <line x1={x(i) - 4} x2={x(i) + 4} y1={y(p.value - p.std)} y2={y(p.value - p.std)} stroke={color} strokeWidth={1.5} />
-              <line x1={x(i) - 4} x2={x(i) + 4} y1={y(p.value + p.std)} y2={y(p.value + p.std)} stroke={color} strokeWidth={1.5} />
+              <line x1={x(i)} x2={x(i)} y1={y(p.value - p.std)} y2={y(p.value + p.std)} style={{ stroke: color }} strokeWidth={1.5} />
+              <line x1={x(i) - 4} x2={x(i) + 4} y1={y(p.value - p.std)} y2={y(p.value - p.std)} style={{ stroke: color }} strokeWidth={1.5} />
+              <line x1={x(i) - 4} x2={x(i) + 4} y1={y(p.value + p.std)} y2={y(p.value + p.std)} style={{ stroke: color }} strokeWidth={1.5} />
               {/* 2px surface ring keeps the marker readable where it overlaps the line */}
-              <circle cx={x(i)} cy={y(p.value)} r={5} fill={color} stroke="#f5f6f3" strokeWidth={2} />
+              <circle cx={x(i)} cy={y(p.value)} r={5} style={{ fill: color, stroke: "var(--surface)" }} strokeWidth={2} />
               {p.flagged && (
                 <text x={x(i)} y={y(p.value + p.std) - 6} textAnchor="middle" className="flag-label">drift</text>
               )}

@@ -74,7 +74,7 @@ export function DepthPanel({ d }: { d: Depth3d }) {
           ))}
           {rows.map((r, i) => (
             <g key={i} opacity={r[7] ? 0.35 : 0.75}>
-              <line stroke="#56616d" strokeWidth={1} x1={x(t[i])} x2={x(t[i])} y1={y(z[i] - err[i])} y2={y(z[i] + err[i])} />
+              <line style={{ stroke: "var(--ref)" }} strokeWidth={1} x1={x(t[i])} x2={x(t[i])} y1={y(z[i] - err[i])} y2={y(z[i] + err[i])} />
               <circle className="measured" cx={x(t[i])} cy={y(z[i])} r={2.1} />
             </g>
           ))}
@@ -82,8 +82,8 @@ export function DepthPanel({ d }: { d: Depth3d }) {
         </svg>
         <figcaption className="forecast-caption">
           <span>
-            <span className="key"><svg width="14" height="10" aria-hidden="true"><line x1="7" x2="7" y1="0" y2="10" stroke="#56616d" /><circle cx="7" cy="5" r="3" fill="#56616d" /></svg>Distance from the camera (m), with its error</span>
-            {path && <span className="key"><svg width="18" height="8" aria-hidden="true"><line x1="0" x2="18" y1="4" y2="4" stroke="#0b63ce" strokeWidth="2" /></svg>{d.equation?.title}</span>}
+            <span className="key"><svg width="14" height="10" aria-hidden="true"><line x1="7" x2="7" y1="0" y2="10" style={{ stroke: "var(--ref)" }} /><circle cx="7" cy="5" r="3" style={{ fill: "var(--ref)" }} /></svg>Distance from the camera (m), with its error</span>
+            {path && <span className="key"><svg width="18" height="8" aria-hidden="true"><line x1="0" x2="18" y1="4" y2="4" style={{ stroke: "var(--model)" }} strokeWidth="2" /></svg>{d.equation?.title}</span>}
           </span>
         </figcaption>
       </figure>
