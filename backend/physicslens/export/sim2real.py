@@ -342,8 +342,13 @@ def sim2real(result: dict[str, Any], reps: int = 20) -> dict[str, Any]:
     """Both parts for a stored, accepted result; the control study only for pendulums."""
     if result.get("status") != "accepted" or "fit_state" not in result:
         raise Sim2RealError("The sim-to-real comparison needs an accepted model.")
+    if result.get("units"):
+        # Scaled units (AU and days for an orbit): Earth's textbook g in these units would be a meaningless baseline.
+        raise Sim2RealError("The textbook comparison assumes metres and seconds; this result uses other units.")
     fs = result["fit_state"]
     spec = spec_for(fs)
+    if spec.family == "plane" and spec.id.startswith("custom_"):
+        raise Sim2RealError("No textbook law to compare with: the agent wrote this law for free planar motion.")
     calibrated = (result.get("calibration") or {}).get("source", "none") != "none"
     c = measured_coordinates(result)
     out: dict[str, Any] = {"video": compare_to_video(c, fs, calibrated)}

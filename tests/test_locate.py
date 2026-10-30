@@ -92,3 +92,26 @@ def test_small_smooth_motion_counts_but_jitter_does_not():
     assert smooth_motion(truck, float(np.ptp(truck, axis=0).max()))
     assert not smooth_motion(rim, float(np.ptp(rim, axis=0).max()))
     assert not smooth_motion(truck * 0.2 + 100, 1.0)  # too little travel to measure at all
+
+
+def test_keyframes_follow_brief_motion_and_stay_even_otherwise(tmp_path):
+    """A ball crossing for one second of an eight-second clip is what the keyframes show; steady motion keeps even spacing."""
+    import cv2
+    import numpy as np
+    from physicslens.perception.media import clip_keyframe_indices
+
+    def write(path, x_of):
+        out = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), 30, (160, 120))
+        for i in range(240):
+            frame = np.full((120, 160, 3), 200, np.uint8)
+            cv2.circle(frame, (int(x_of(i)), 60), 8, (0, 0, 255), -1)
+            out.write(frame)
+        out.release()
+
+    brief = tmp_path / "brief.mp4"
+    write(brief, lambda i: 20 + min(max(i - 90, 0), 30) * 4)  # still, rolls across between frames 90 and 120, still
+    idx = clip_keyframe_indices(brief, 4)
+    assert idx[0] == 0 and all(80 <= i <= 130 for i in idx[1:])
+    steady = tmp_path / "steady.mp4"
+    write(steady, lambda i: 80 + 60 * np.sin(i / 10))
+    assert clip_keyframe_indices(steady, 4) == keyframe_indices(240, 4)

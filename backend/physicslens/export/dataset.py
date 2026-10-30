@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from typing import Any
 
 from ..physics.verify import MAX_HELDOUT_NRMSE
@@ -19,6 +20,8 @@ PROPERTIES: dict[tuple[str, str], tuple[str, str]] = {
     ("damped_harmonic", "omega"): ("natural_frequency", "undamped angular frequency"),
     ("harmonic", "omega"): ("natural_frequency", "angular frequency"),
     ("oscillator_dry", "omega"): ("natural_frequency", "undamped angular frequency"),
+    ("oscillator_mixed", "omega"): ("natural_frequency", "undamped angular frequency"),
+    ("oscillator_mixed", "zeta"): ("damping_ratio", "viscous damping ratio, alongside dry friction"),
     ("pendulum", "g"): ("gravity", "gravitational acceleration from the swing period and the given length"),
     ("pendulum_linear_damping", "gamma"): ("joint_damping", "viscous damping rate of the swing"),
     ("pendulum_quadratic_damping", "beta"): ("drag_coefficient", "air-drag coefficient of the swing"),
@@ -44,17 +47,29 @@ def entries(run_id: str, result: dict[str, Any], meta: dict[str, Any]) -> list[d
     cal = result.get("calibration") or {}
     rows = []
     for p in result.get("parameters", []):
-        prop = PROPERTIES.get((model, p.get("name", "")))
+        prop = PROPERTIES.get((model, p.get("name", ""))) or _free_law_property(model, p)
         if prop is None or p.get("uncalibrated") or p.get("derived") or p.get("std") is None:
             continue
         rows.append({
-            "id": f"{run_id}-{prop[0]}", "object": (result.get("scene") or {}).get("moving_object"),
+            # GM belongs to the body being orbited, not to the dot that was tracked; the source column names it.
+            "id": f"{run_id}-{prop[0]}",
+            "object": "central body" if prop[0] == "gravitational_parameter" else (result.get("scene") or {}).get("moving_object"),
             "property": prop[0], "meaning": prop[1], "value": p["value"], "std": p["std"], "units": p.get("unit", ""),
             "family": result.get("family"), "model": model, "heldout_error": held,
             "scale_basis": cal.get("source"), "conditions": meta.get("description", ""), "run_id": run_id,
             "clip": meta.get("title", ""), "license": meta.get("credit", ""),
         })
     return rows
+
+
+def _free_law_property(model: str, p: dict[str, Any]) -> tuple[str, str] | None:
+    """A law the agent wrote has no fixed parameter names; its GM is recognised by units of length^3 per time^2."""
+    if not model.startswith("custom_"):
+        return None
+    unit = (p.get("unit") or "").replace(" ", "")
+    if re.fullmatch(r"[A-Za-z_]+\^3/[A-Za-z]+\^2", unit):
+        return ("gravitational_parameter", "gravitational parameter GM of the body at the centre of the orbit")
+    return None
 
 
 def to_csv(rows: list[dict[str, Any]]) -> str:

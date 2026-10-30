@@ -19,14 +19,16 @@ camera), and a violation needs BOTH a large z-score AND a practically large magn
 still be a real-world effect the noise model doesn't know about (a reference sheet not quite in the plane of
 motion, air drag on a light object), and a large deviation measured on noise is no evidence at all.
 
-Pure functions: no network, no I/O.
+Pure functions: no network; save_input and load_input are the only file access (replaying a changed rule on stored runs).
 """
 
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import asdict, dataclass, field
 from itertools import pairwise
+from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
@@ -82,6 +84,12 @@ EDGE_TRIM = 1  # samples dropped each side of an impact, as in the bounce model
 MIN_CYCLES_PER_WINDOW = 1.5
 MIN_WINDOWS = 3
 MORPH_WINDOW = 5
+# Contact: the velocity just after an event differs from just before by more than this share of the faster one.
+# A teleport keeps its velocity (only the position breaks); a tracker hopping to a lookalike at a collision (a
+# Newton's cradle) or a mask swelling with sand spray on impact happens at a velocity break, a contact. Real
+# footage in the control set raised both, so a jump or morph at a contact is not counted against the video.
+CONTACT_VELOCITY_CHANGE = 0.6
+CONTACT_WINDOW = 4  # frames on each side used for the velocities
 BOOTSTRAP_REPS = 100
 
 Verdict = Literal["consistent", "violates_physics", "cant_judge"]
@@ -121,6 +129,7 @@ class AuditInput:
     reference_px: np.ndarray | None = None  # (N, 2) centers of the scale reference, which should not move
     reference_size_px: float | None = None
     regime_change_s: float | None = None
+    lookalikes: bool = False  # the scene shows objects like the tracked one (a Newton's cradle): identity can't be followed
 
 
 @dataclass
@@ -591,7 +600,10 @@ def check_oscillator(a: AuditInput) -> list[Check]:
 
 # ---------- the law, and kinematics ----------
 
-def check_law(a: AuditInput) -> Check | None:
+def check_law(a: AuditInput, family_seen: bool = True) -> Check | None:
+    """family_seen: the motion itself shows the family (a clean free flight, a steady swing). The family is the agent's
+    reading of the scene; when it is wrong (a ball that falls, hits a block and stops, read as an oscillator), no law
+    of that family fits real footage either, and "no law fits" would accuse a real video."""
     law = a.law
     if law is None:
         return None
@@ -600,15 +612,23 @@ def check_law(a: AuditInput) -> Check | None:
         what = "A verified law" if law.status == "accepted" else "More than one law"
         return Check("law", title, "pass", f"{what} forecasts the held-out motion.", law.heldout_nrmse, None, None, "", None)
     nrmse, ratio = law.heldout_nrmse, law.heldout_vs_noise
-    if (a.family in PASSIVE_FAMILIES and nrmse is not None and ratio is not None
+    if (a.family in PASSIVE_FAMILIES and family_seen and nrmse is not None and ratio is not None
             and nrmse > NO_LAW_NRMSE and ratio >= Z_VIOLATION):
         return Check("law", title, "violation",
                      f"It moves like a {a.family}, yet no law (the agent's own included) forecasts its held-out motion: the "
                      f"best misses by {nrmse:.0%} of the motion's spread, {ratio:.0f} times the tracking noise.",
                      nrmse, None, 0.0, "", ratio)
+    if a.family in PASSIVE_FAMILIES and not family_seen:
+        return Check("law", title, "skipped",
+                     f"No law forecasts the motion, but the motion itself doesn't show {_FAMILY_SIGN[a.family]}, so the "
+                     f"{a.family} reading may be wrong: not evidence of a violation.", nrmse, None, None, "", ratio)
     return Check("law", title, "skipped",
                  "No law forecasts the motion, but that alone isn't a violation: pushed, driven or deformable motion has "
                  "no single law either.", nrmse, None, None, "", ratio)
+
+
+_FAMILY_SIGN = {"projectile": "a clean free-fall flight", "pendulum": "a steady back-and-forth swing",
+                "oscillator": "a steady back-and-forth swing"}
 
 
 def jump_sizes(xy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -637,11 +657,41 @@ def jump_sizes(xy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return out, size
 
 
+def at_contact(xy: np.ndarray, t: np.ndarray, before: int, after: int, sigma: float) -> bool:
+    """Is there an impact between frame `before` and frame `after`: the object slows sharply or turns back?
+
+    The motion just before is fitted with steady acceleration and carried forward. An impact is a velocity after
+    the event far below that forecast, or pointing back against it (a ball landing in sand, a bob stopped by its
+    neighbour). A swing turning round keeps its acceleration, so it is no impact; and speeding up from nowhere,
+    as an object in a generated video may, is not excused either.
+    """
+    w = min(2 * CONTACT_WINDOW, before, len(xy) - 1 - after)
+    if w < 3:
+        return True  # too close to an end to fit either side: give the video the benefit of the doubt
+    tb, ta = t[before - w:before + 1], t[after:after + w + 1]
+    pre = [np.polyfit(tb - t[after], xy[before - w:before + 1, d], 2) for d in range(xy.shape[1])]
+    post = [np.polyfit(ta - t[after], xy[after:after + w + 1, d], 2) for d in range(xy.shape[1])]
+    v_pred = np.array([c[1] for c in pre])  # derivative at t[after] of the curve fitted before the event
+    v_seen = np.array([c[1] for c in post])
+    floor = 4 * sigma / (ta[-1] - ta[0])  # velocities below the noise mean nothing
+    speed_pred, speed_seen = float(np.hypot(*v_pred)), float(np.hypot(*v_seen))
+    if max(speed_pred, speed_seen) <= floor:
+        return False
+    if float(np.hypot(*(v_seen - v_pred))) <= CONTACT_VELOCITY_CHANGE * max(speed_pred, speed_seen, floor):
+        return False  # the velocity carries on
+    slowed = speed_seen < 0.5 * speed_pred
+    turned = speed_pred > floor and float(np.dot(v_seen, v_pred)) < 0
+    return slowed or turned
+
+
 def check_jumps(a: AuditInput, sigma: float) -> Check:
     """Teleporting: a break in position between two frames, judged against the noise and the size of the motion."""
     _, k, unit = _units(a)
     gaps, sizes = jump_sizes(a.traj.xy)
     title = "No teleporting"
+    if a.lookalikes:
+        return Check("kinematics", title, "skipped", "Not checked: objects like this one are in view, and a tracker can "
+                     "follow the wrong one (in a Newton's cradle the motion really does pass from ball to ball).")
     if not len(gaps):
         return Check("kinematics", title, "skipped", "Not checked: the track is too short.")
     scale = max(_robust_scale(gaps), 0.5 * sigma, 1e-12)
@@ -652,6 +702,11 @@ def check_jumps(a: AuditInput, sigma: float) -> Check:
     if a.object_size_px:
         practical = max(practical, JUMP_OBJECT_FRACTION * a.object_size_px / a.px_per_m)
     jump = float(sizes[i])
+    if z[i] >= Z_KINEMATIC and gaps[i] > practical and at_contact(a.traj.xy, a.traj.t, i, i + 1, sigma):
+        return Check("kinematics", title, "skipped",
+                     f"At {a.traj.t[i + 1]:.2f} s the track jumps {jump * k:.3g} {unit}, but at a contact (the velocity changes "
+                     "there too): a tracker moving to another object at a collision does the same, so it isn't counted.",
+                     jump * k, scale * k, 0.0, unit, float(z[i]))
     if z[i] >= Z_KINEMATIC and gaps[i] > practical:
         size = f" ({jump * a.px_per_m / a.object_size_px:.1f} object sizes)" if a.object_size_px else ""
         return Check("kinematics", title, "violation",
@@ -661,8 +716,11 @@ def check_jumps(a: AuditInput, sigma: float) -> Check:
     return Check("kinematics", title, "pass", "No jump beyond the noise between frames.", jump * k, scale * k, 0.0, unit, float(z[i]))
 
 
-def check_morph(a: AuditInput) -> Check:
+def check_morph(a: AuditInput, sigma: float = 0.0) -> Check:
     title = "No morphing"
+    if a.lookalikes:
+        return Check("kinematics", title, "skipped", "Not checked: objects like this one are in view, and touching "
+                     "lookalikes merge into one mask.")
     if a.areas_px is None or len(a.areas_px) != len(a.traj) or np.any(np.asarray(a.areas_px) <= 0):
         return Check("kinematics", title, "skipped", "Not checked: mask areas aren't available for this track.")
     la = np.log(np.asarray(a.areas_px, dtype=float))
@@ -676,6 +734,12 @@ def check_morph(a: AuditInput) -> Check:
     z = np.abs(steps - np.median(steps)) / scale
     i = int(np.argmax(z))
     factor = float(np.exp(steps[i]))
+    if z[i] >= Z_KINEMATIC and abs(steps[i]) > np.log(MORPH_FACTOR) and \
+            at_contact(a.traj.xy, a.traj.t, i + m - 1, i + m, sigma):
+        return Check("kinematics", title, "skipped",
+                     f"At {a.traj.t[i + m]:.2f} s the mask area changes {max(factor, 1 / factor):.1f} times, but at a contact "
+                     "(the velocity changes there too): spray, splash or a second object touching it does the same, so it "
+                     "isn't counted.", factor, None, 1.0, "", float(z[i]))
     if z[i] >= Z_KINEMATIC and abs(steps[i]) > np.log(MORPH_FACTOR):
         return Check("kinematics", title, "violation",
                      f"At {a.traj.t[i + m]:.2f} s the object's mask area {'grows' if factor > 1 else 'shrinks'} {max(factor, 1 / factor):.1f} "
@@ -685,6 +749,30 @@ def check_morph(a: AuditInput) -> Check:
 
 
 # ---------- the verdict ----------
+
+def save_input(a: AuditInput, path: Path) -> None:
+    """Everything the audit read, so a changed rule can be replayed on stored runs without another paid call."""
+    arrays: dict[str, np.ndarray] = {"t": a.traj.t, "xy": a.traj.xy, "frames": a.traj.frames}
+    for name in ("areas_px", "confidence", "reference_px"):
+        value = getattr(a, name)
+        if value is not None:
+            arrays[name] = np.asarray(value)
+    meta = {k: getattr(a, k) for k in ("family", "calibration_source", "px_per_m", "scale_rel_std", "object_size_px",
+                                       "coverage", "frame_rate_varies", "reference_size_px", "regime_change_s", "lookalikes")}
+    meta["fps"] = a.traj.fps
+    meta["law"] = asdict(a.law) if a.law is not None else None
+    np.savez_compressed(path, meta=np.array(json.dumps(meta)), **arrays)
+
+
+def load_input(path: Path) -> AuditInput:
+    z = np.load(path, allow_pickle=False)
+    meta = json.loads(str(z["meta"]))
+    law = meta.pop("law")
+    fps = meta.pop("fps")
+    get = lambda k: z[k] if k in z.files else None  # noqa: E731
+    return AuditInput(traj=Trajectory(z["t"], z["xy"], z["frames"], fps), law=LawEvidence(**law) if law else None,
+                      areas_px=get("areas_px"), confidence=get("confidence"), reference_px=get("reference_px"), **meta)
+
 
 def cant_judge(reason: str) -> dict[str, Any]:
     return {"verdict": "cant_judge", "headline": f"Can't judge: {reason}", "reasons": [reason], "checks": [],
@@ -702,8 +790,10 @@ def audit(a: AuditInput) -> dict[str, Any]:
                 "checks": [], "violations": [], "thresholds": thresholds()}
 
     checks: list[Check] = []
+    family_seen = True
     if a.family == "projectile":
         flights = find_flights(a.traj, sigma)
+        family_seen = bool(flights)
         checks.append(check_gravity_scale(a, flights))
         checks += check_gravity_consistency(a, flights)
         for c in (check_restitution(a, flights), check_flight_energy(a, flights)):
@@ -715,11 +805,20 @@ def audit(a: AuditInput) -> dict[str, Any]:
         if a.family == "pendulum":
             checks.append(check_gravity_scale(a, []))
         checks += check_oscillator(a)
-    law = check_law(a)
+        family_seen = not isinstance(oscillation_windows(a.traj, a.family), str)
+    law = check_law(a, family_seen)
     if law is not None:
         checks.append(law)
-    checks += [check_jumps(a, sigma), check_morph(a)]
+    checks += [check_jumps(a, sigma), check_morph(a, sigma)]
 
+    others = [c for c in checks if c.status == "violation" and c.check != "law"]
+    for k, c in enumerate(checks):
+        if c.check == "law" and c.status == "violation" and not others:
+            # No law fitting is evidence about the model list as much as the video: several bodies colliding (a
+            # Newton's cradle in the real control set) have no single law either. It accuses only alongside a
+            # measured violation.
+            checks[k] = Check("law", c.title, "skipped", c.text + " On its own that isn't proof: colliding or driven "
+                              "objects have no single law either.", c.value, c.std, c.expected, c.unit, c.z)
     violations = [c for c in checks if c.status == "violation"]
     dynamic_passes = [c for c in checks if c.status == "pass" and c.check in DYNAMIC_CHECKS]
     if violations:

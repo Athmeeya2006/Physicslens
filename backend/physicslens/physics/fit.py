@@ -41,12 +41,35 @@ class FitResult:
     n_train: int = 0
 
 
+# One simulation's own limits. The fit's time budget is checked between simulations, but a stiff law (an agent's
+# written law with a huge coefficient) makes the integrator take ever smaller steps inside one: on a real clip a
+# single simulation ran for over an hour. A clip of a few seconds needs a few thousand evaluations.
+MAX_RHS_CALLS = 200_000
+MAX_SIM_SECONDS = 5.0
+
+
+class _TooSlow(Exception):
+    pass
+
+
 def simulate(spec: ModelSpec, params: dict[str, float], y0: np.ndarray, t: np.ndarray, ctx: dict[str, float]) -> np.ndarray | None:
-    """(N, d) positions, or None if the integration blew up."""
+    """(N, d) positions, or None if the integration blew up or would not finish (treated the same by every fit)."""
     d = len(y0) // 2
-    with np.errstate(all="ignore"):
-        sol = solve_ivp(lambda _t, s: spec.rhs(s, params, ctx), (t[0], t[-1]), y0, t_eval=t,
-                        method="DOP853", rtol=1e-7, atol=1e-9)
+    calls = 0
+    stop = time.monotonic() + MAX_SIM_SECONDS
+
+    def rhs(_t: float, s: np.ndarray) -> np.ndarray:
+        nonlocal calls
+        calls += 1
+        if calls > MAX_RHS_CALLS or (calls % 2000 == 0 and time.monotonic() > stop):
+            raise _TooSlow
+        return spec.rhs(s, params, ctx)
+
+    try:
+        with np.errstate(all="ignore"):
+            sol = solve_ivp(rhs, (t[0], t[-1]), y0, t_eval=t, method="DOP853", rtol=1e-7, atol=1e-9)
+    except _TooSlow:
+        return None
     if not sol.success or sol.y.shape[1] != len(t) or not np.all(np.isfinite(sol.y)):
         return None
     return sol.y[:d].T
@@ -106,6 +129,13 @@ class FitTimeout(RuntimeError):
 MAX_FIT_SECONDS = 45.0
 
 
+# Library models with two terms that can stand in for each other (viscous and dry friction both shrink a swing):
+# from a single start the fit settles on whichever term it grows first and can end up worse than the simpler model
+# it contains. Starting it again from each simpler model's corner (one term switched off) and keeping the best fit
+# guarantees it never loses to its own special case.
+NESTED_STARTS: dict[str, tuple[dict[str, float], ...]] = {"oscillator_mixed": ({"f": 0.0}, {"zeta": 0.0})}
+
+
 def derivative_match(spec: ModelSpec, c: Coordinates, kin, guess: dict[str, float]) -> dict[str, float]:
     """Parameters that best make the law's acceleration match the smoothed measured acceleration."""
     d = c.q.shape[1]
@@ -156,11 +186,22 @@ def fit_model(spec: ModelSpec, c: Coordinates, warm: dict[str, float] | None = N
     kin = differentiate(c.q, 1.0 / (c.t[1] - c.t[0]))
     noise = noise_sigma(c.q, kin.pos, 1.0 / (c.t[1] - c.t[0]))
     guess = {**initial_guess(spec, c), **(warm or {})}
-    if spec.id.startswith("custom_") and not warm:
+    if (spec.id.startswith("custom_") or spec.id in NESTED_STARTS) and not warm:
         # A law the agent wrote comes with only its own rough guesses. Matching the law to the measured accelerations
         # first (no simulation needed) puts the parameters near the right basin; without it, an orbit fit started
         # 3x off locked onto a wrong period and missed GM by half.
         guess = derivative_match(spec, c, kin, guess)
+    if spec.id in NESTED_STARTS and not warm:
+        fits = [_fit_from(spec, c, kin, noise, start, None)
+                for start in (guess, *({**guess, **off} for off in NESTED_STARTS[spec.id]))]
+        done = [f for f in fits if f.success]
+        return min(done, key=lambda f: f.rss) if done else fits[0]
+    return _fit_from(spec, c, kin, noise, guess, warm)
+
+
+def _fit_from(spec: ModelSpec, c: Coordinates, kin, noise: float, guess: dict[str, float],
+              warm: dict[str, float] | None) -> FitResult:
+    n_samples, d = c.q.shape
     theta = np.concatenate([[guess[p] for p in spec.param_names], kin.pos[0], kin.vel[0]])
     span = np.ptp(c.q, axis=0).max() + 1e-9
     vspan = np.abs(kin.vel).max() + 1e-9

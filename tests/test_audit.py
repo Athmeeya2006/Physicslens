@@ -164,7 +164,13 @@ def test_morphing_mask():
 
 def test_no_law_for_a_named_system():
     law = LawEvidence("no_fit", None, 0.9, 40.0)
-    assert "A law forecasts the motion" in violated(run(pendulum(), "pendulum", law=law))
+    # On its own, no law fitting is not proof (several colliding bodies have no single law either) ...
+    alone = run(pendulum(), "pendulum", law=law)
+    assert alone["verdict"] != "violates_physics" and any(c["check"] == "law" and c["status"] == "skipped" for c in alone["checks"])
+    # ... but alongside a measured violation (here the object suddenly triples in size) it is reported as one too.
+    tr = pendulum()
+    morphing = run(tr, "pendulum", law=law, areas_px=np.where(tr.t < tr.t[len(tr.t) // 2], 900.0, 2700.0))
+    assert {"A law forecasts the motion", "No morphing"} <= violated(morphing)
     # Free-form motion without a law is not an accusation: a push or a walk has none either.
     r = run(spring(), "line", law=law)
     assert r["verdict"] == "cant_judge" and not r["violations"]
@@ -237,3 +243,60 @@ def test_audit_endpoint_is_the_runs_endpoint():
 
     routes = {r.path: r for r in app_module.app.routes if hasattr(r, "methods")}
     assert routes["/api/audit"].endpoint is routes["/api/runs"].endpoint
+
+
+def test_no_law_is_no_accusation_when_the_motion_does_not_show_its_family():
+    """Real footage: a ball falls, hits a block and stops; read as an oscillator, no oscillator law fits. The motion
+    never swings, so the reading is what failed, not physics."""
+    t = np.arange(0, 4, 1 / 30)
+    fall = np.where(t < 1.0, 0.8 - 0.5 * 9.81 * np.minimum(t, 1.0) ** 2 / 10, 0.8 - 9.81 / 20)
+    tr = traj_of(t, np.column_stack([0.2 + 0.05 * np.minimum(t, 1.0), fall]), 0.002, 3, 30)
+    r = run(tr, "oscillator", law=LawEvidence("no_fit", None, 1.45, 60.0))
+    assert r["verdict"] != "violates_physics" and not r["violations"]
+    law = next(c for c in r["checks"] if c["check"] == "law")
+    assert law["status"] == "skipped" and "doesn't show a steady back-and-forth swing" in law["text"]
+
+
+def test_a_jump_at_a_collision_is_not_a_teleport():
+    """Position breaks while the velocity carries on: a teleport. A break where the velocity also changes (a tracker
+    moving to another object at a collision, real footage) is not counted."""
+    from physicslens.physics.audit import at_contact
+    t = np.arange(0, 2, 1 / 30)
+    x = 0.5 * t
+    teleport = np.column_stack([np.where(t < 1, x, x + 0.4), 0.3 + 0 * t])
+    assert not at_contact(teleport, t, 29, 30, 0.002)
+    stop_and_hop = np.column_stack([np.where(t < 1, x, 0.9 + 0 * t), 0.3 + 0 * t])  # moving, then a still object elsewhere
+    assert at_contact(stop_and_hop, t, 29, 30, 0.002)
+    swing = np.column_stack([0.3 * np.sin(2 * t), 0.3 + 0 * t])  # turning round smoothly is not a contact
+    assert not any(at_contact(swing, t, i, i + 1, 0.002) for i in range(9, 50))
+
+
+def test_audit_input_replays_exactly(tmp_path):
+    from physicslens.physics.audit import AuditInput, load_input, save_input
+    tr = bouncing()
+    a = AuditInput(traj=tr, family="projectile", calibration_source="sheet", px_per_m=1000.0,
+                   law=LawEvidence("accepted", "free_fall", 0.05, 2.0, g=9.8, g_std=0.1),
+                   areas_px=900 + 0 * tr.t, object_size_px=30.0)
+    save_input(a, tmp_path / "a.npz")
+    assert audit(load_input(tmp_path / "a.npz")) == audit(a)
+
+
+def test_speeding_up_from_nowhere_is_not_an_impact():
+    """Generated video: an object drifting slowly suddenly races off. Only slowing sharply or turning back is an impact."""
+    from physicslens.physics.audit import at_contact
+    t = np.arange(0, 2, 1 / 30)
+    x = np.where(t < 1, 0.02 * t, 0.02 + 0.6 * (t - 1))
+    assert not at_contact(np.column_stack([x, 0.3 + 0 * t]), t, 29, 30, 0.002)
+    bounce = np.column_stack([np.where(t < 1, 0.5 * t, 0.5 - 0.4 * (t - 1)), 0.3 + 0 * t])  # turns back: an impact
+    assert at_contact(bounce, t, 29, 30, 0.002)
+
+
+def test_lookalikes_skip_the_identity_checks():
+    """A Newton's cradle: the motion passes from ball to identical ball, so a tracker hop is not a teleport."""
+    tr = pendulum()
+    xy = tr.xy.copy()
+    xy[len(xy) // 2:, 0] += 0.3  # what a tracker hopping to a neighbouring ball looks like
+    hop = Trajectory(tr.t, xy, tr.frames, tr.fps)
+    assert "No teleporting" in violated(run(hop, "pendulum"))
+    r = run(hop, "pendulum", lookalikes=True)
+    assert "No teleporting" not in violated(r) and r["verdict"] != "violates_physics"

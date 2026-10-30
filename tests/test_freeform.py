@@ -158,3 +158,42 @@ def test_known_object_size_sets_the_scale():
     scene = Scene.model_validate({**SCENE, "reference_kind": "none", "reference_box": None})
     cal = calibrate(scene, None, moving, RunOptions(object_size_m=1.8))
     assert cal.source == "object_size" and cal.px_per_m == pytest.approx(50.0, rel=0.01) and cal.rel_std < 0.02
+
+
+def test_written_law_is_shown_typeset_not_as_code():
+    """The site shows an agent's law as an equation; the text the model typed never reaches the page."""
+    tex = custom.law_latex("plane", ["-mu*x/(hypot(x,y)^3)", "-mu*y/(hypot(x,y)^3)"], ["mu"])
+    assert tex is not None and tex.startswith(r"\ddot x = ") and r"\mu" in tex and r"\quad \ddot y = " in tex
+    assert "hypot" not in tex and "*" not in tex
+    assert custom.law_latex("plane", ["-mu*x"], ["mu"]) is None           # one expression for two axes
+    assert custom.law_latex("oscillator", ["-k*s"], ["k"]) is None        # not a family written laws exist for
+    assert custom.law_latex("line", ["import os"], []) is None            # does not parse
+
+
+def test_trail_shows_the_agents_law_as_an_equation():
+    from physicslens.pipeline import _hypothesis_items
+
+    hyp = Hypotheses.model_validate({
+        "family": "line", "candidates": [{"model_id": "line_constant_accel", "rationale": "slows down"}],
+        "free_models": [{"title": "Air drag", "acceleration": ["-c*v*abs(v)"], "rationale": "deceleration fades.",
+                         "params": [{"name": "c", "unit": "1/m", "lower": 0, "upper": 10, "guess": 1}]}]})
+    item = _hypothesis_items(hyp)[1]
+    assert item["why"] == "deceleration fades. Written by the agent." and "*" not in item["why"]
+    assert item["latex"] == r"\ddot s = -c\,\dot s\,\left|\dot s\right|"
+
+
+def test_out_of_range_bounds_are_clipped_not_rejected():
+    """The pilot lost a whole proposal (three laws, one paid call) to one upper bound of 50000."""
+    ok = {"family": "line", "candidates": [{"model_id": "line_constant_accel", "rationale": "drifts"}],
+          "free_models": [{"title": "Stiffening", "acceleration": ["-k*s - k3*s^3"], "rationale": "r",
+                           "params": [{"name": "k", "unit": "1/s^2", "lower": 0.1, "upper": 80, "guess": 5},
+                                      {"name": "k3", "unit": "1/(m^2 s^2)", "lower": 0, "upper": 50000, "guess": 20000}]}]}
+    k3 = Hypotheses.model_validate(ok).free_models[0].params[1]
+    assert (k3.lower, k3.upper, k3.guess) == (0, 1e4, 1e4)
+
+
+def test_answer_inside_a_leaked_chat_template_is_still_read():
+    from physicslens.agent.llm import _validate
+    raw = ('<|start|>assistant to=commentary<|message|>I will take a closer look.<|eom|>'
+           '{"family": "line", "candidates": [{"model_id": "line_constant_accel", "rationale": "drifts"}], "free_models": []}')
+    assert _validate(Hypotheses, raw).family == "line"

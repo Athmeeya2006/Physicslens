@@ -24,3 +24,14 @@ def test_the_quality_gate_keeps_out_what_was_not_measured():
     assert entries("r1", result(uncalibrated=True), META) == []  # arbitrary units
     assert entries("r1", result(derived="given by you"), META) == []  # not measured
     assert entries("r1", result(name="s0"), META) == []  # no named physical property for it
+
+
+def test_gm_from_a_law_the_agent_wrote_enters_as_the_central_body():
+    from physicslens.export.dataset import entries
+    result = {"status": "accepted", "fit_state": {"model_id": "custom_abc"}, "family": "plane",
+              "ranking": [{"model_id": "custom_abc", "heldout_nrmse": 0.001}], "calibration": {"source": "known_scale"},
+              "scene": {"moving_object": "white dot"},
+              "parameters": [{"name": "mu", "value": 4.494, "std": 0.001, "unit": "R_J^3/hour^2"},
+                             {"name": "b", "value": 1e-7, "std": 1e-8, "unit": "1/day"}]}
+    rows = entries("gallery-jupiter", result, {"title": "Weighing Jupiter", "credit": "JPL", "description": "d"})
+    assert [(r["property"], r["object"]) for r in rows] == [("gravitational_parameter", "central body")]

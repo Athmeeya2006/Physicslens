@@ -174,6 +174,24 @@ def test_dry_friction_spring_is_told_from_viscous_damping():
     assert v.winner.params["f"] == pytest.approx(0.12, rel=0.1)
 
 
+def test_spring_with_both_frictions_needs_both_terms():
+    """Exponential early decay that turns linear late: neither friction alone forecasts it."""
+    from physicslens.physics.models import MODELS as M
+
+    p = {"omega": 6.0, "s0": 0.0, "zeta": 0.04, "f": 0.06}
+    t = np.arange(0, 6, 1 / FPS)
+    y = solve_ivp(lambda _t, s: M["oscillator_mixed"].rhs(s, p, {}), (0, 6), [0.12, 0.0],
+                  t_eval=t, rtol=1e-9, atol=1e-11, max_step=0.005).y[0]
+    _, v = run(track(np.column_stack([0.01 * y, y + 0.3])), "oscillator")
+    assert v.status == "accepted" and v.winner.model_id == "oscillator_mixed"
+    # Over a few swings the two terms partly trade off, so only their presence and the frequency are pinned down.
+    assert v.winner.params["zeta"] > 0.01 and v.winner.params["f"] > 0.02
+    assert v.winner.params["omega"] == pytest.approx(6.0, rel=0.01)
+    # Never worse than the simpler model it contains: it is also started from each one's corner.
+    by_id = {f.model_id: f for f in v.ranked}
+    assert by_id["oscillator_mixed"].rss <= min(by_id["damped_harmonic"].rss, by_id["oscillator_dry"].rss)
+
+
 def test_door_closer_is_a_damped_torsional_spring():
     from physicslens.physics.coords import Coordinates
 
@@ -213,3 +231,15 @@ def test_one_law_written_twice_is_not_a_tie():
     v = assess(c, [fit_model(MODELS[m], c) for m in (a.id, b.id, "plane_constant_accel")])
     assert v.status == "accepted" and v.winner.model_id == a.id
     assert v.winner.params["k"] == pytest.approx(gm, rel=1e-3)
+
+
+def test_a_stiff_law_gives_up_instead_of_hanging():
+    """A real clip hung a batch for an hour inside one simulation of a stiff written law."""
+    import time as _time
+
+    from physicslens.physics.fit import simulate
+    from physicslens.physics.models import ModelSpec
+    stiff = ModelSpec("stiff_test", "line", "Stiff", "", (), lambda s, p, c: np.array([s[1], -1e12 * s[0]]))
+    t0 = _time.monotonic()
+    assert simulate(stiff, {}, np.array([0.1, 0.0]), np.linspace(0, 5, 150), {}) is None
+    assert _time.monotonic() - t0 < 10

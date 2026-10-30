@@ -168,6 +168,11 @@ def _oscillator_dry(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -
     return np.array([v, -p["omega"] ** 2 * (x - p["s0"]) - p["f"] * np.tanh(v / V_EPS)])
 
 
+def _oscillator_mixed(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
+    x, v = s
+    return np.array([v, -p["omega"] ** 2 * (x - p["s0"]) - 2 * p["zeta"] * p["omega"] * v - p["f"] * np.tanh(v / V_EPS)])
+
+
 def _duffing(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
     x, v = s
     d = x - p["s0"]
@@ -186,6 +191,11 @@ for _m in [
     ModelSpec("oscillator_dry", "oscillator", "Spring with dry friction",
               r"\ddot s = -\omega^2 (s - s_0) - f\,\mathrm{sgn}(\dot s)",
               (OMEGA, S0, Param("f", "f", "m/s^2", 0.0, 50.0)), _oscillator_dry),
+    # A cart on a track loses amplitude both ways at once: air and bearings (in proportion to speed) and rubbing
+    # (a fixed amount per swing). Fast early decay that turns linear late is the signature of the pair.
+    ModelSpec("oscillator_mixed", "oscillator", "Spring with viscous and dry friction",
+              r"\ddot s = -\omega^2 (s - s_0) - 2\zeta\omega\dot s - f\,\mathrm{sgn}(\dot s)",
+              (OMEGA, S0, Param("zeta", r"\zeta", "", 0.0, 2.0), Param("f", "f", "m/s^2", 0.0, 50.0)), _oscillator_mixed),
     ModelSpec("duffing", "oscillator", "Stiffening spring (Duffing)",
               r"\ddot s = -\omega^2 (s - s_0) - \beta (s - s_0)^3 - 2\zeta\omega\dot s",
               (OMEGA, S0, Param("beta", r"\beta", "1/(m^2 s^2)", -1e5, 1e5, 0.0), Param("zeta", r"\zeta", "", 0.0, 2.0)), _duffing),

@@ -70,6 +70,18 @@ def param_latex(name: str) -> str:
     return f"{head}_{{{sub}}}" if sub else head
 
 
+def law_latex(family: str, acceleration: list[str] | tuple[str, ...], param_names: list[str]) -> str | None:
+    """A written law as typeset math, for showing it before (or without) fitting it. None when it does not parse."""
+    if family not in STATE_VARS or len(acceleration) != len(ACCEL_LATEX[family]):
+        return None
+    try:
+        trees = [parse(a, set(STATE_VARS[family]) | set(param_names)) for a in acceleration]
+    except ExprError:
+        return None
+    symbols = {**STATE_LATEX, **{n: param_latex(n) for n in param_names}}
+    return r",\quad ".join(f"{lhs} = {to_latex(t, symbols)}" for lhs, t in zip(ACCEL_LATEX[family], trees, strict=True))
+
+
 def build(family: str, title: str, acceleration: list[str], params: list[FreeParam]) -> FreeModel:
     """Validate and compile a proposal. Raises ExprError with a message the agent can act on."""
     if family not in STATE_VARS:

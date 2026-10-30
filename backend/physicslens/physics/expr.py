@@ -236,6 +236,24 @@ def to_latex(node: Node, symbols: dict[str, str]) -> str:
     if k == "sub":
         return f"{to_latex(node.args[0], symbols)} - {wrap(node.args[1], 2)}"
     if k == "mul":
+        # hypot(x,y)*hypot(x,y)*hypot(x,y) reads as a cube, not three roots in a row that overflow a phone screen.
+        factors: list[Node] = []
+        stack = [node]
+        while stack:
+            n = stack.pop()
+            if n.kind == "mul":
+                stack.extend(reversed(n.args))
+            else:
+                factors.append(n)
+        groups: list[tuple[Node, int]] = []
+        for f in factors:
+            if groups and groups[-1][0] == f:
+                groups[-1] = (f, groups[-1][1] + 1)
+            else:
+                groups.append((f, 1))
+        if len(groups) < len(factors):
+            return "\\,".join(wrap(f, 3 if i else 2) if c == 1 else f"{{{wrap(f, 5)}}}^{{{c}}}"
+                               for i, (f, c) in enumerate(groups))
         return f"{wrap(node.args[0], 2)}\\,{wrap(node.args[1], 3)}"
     if k == "div":
         return f"\\frac{{{to_latex(node.args[0], symbols)}}}{{{to_latex(node.args[1], symbols)}}}"

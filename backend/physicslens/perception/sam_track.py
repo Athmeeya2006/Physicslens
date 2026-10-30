@@ -109,9 +109,18 @@ def _mask_shape(job: tuple[str, str, int, int, int, int]) -> tuple[tuple[float, 
     return _shape(raster, left, top), float(np.count_nonzero(raster))
 
 
+def decode_workers() -> int:
+    """Processes for decoding masks. Each is a full Python process (hundreds of MB), so on a 16-thread laptop with
+    several analyses at once, one per thread ran it out of memory; PHYSICSLENS_DECODE_WORKERS overrides."""
+    env = os.environ.get("PHYSICSLENS_DECODE_WORKERS", "").strip()
+    if env.isdigit():
+        return max(1, int(env))
+    return max(1, min((os.cpu_count() or 1) // 2, 4))
+
+
 def _measure_all(records: list[msp.SegmentationMaskRecord]) -> list[tuple[tuple[float, ...] | None, float]]:
     jobs = [(r.mask.encoding, r.mask.payload, r.mask.width, r.mask.height, r.bounds.left, r.bounds.top) for r in records]
-    workers = min(os.cpu_count() or 1, 16)
+    workers = decode_workers()
     if sum(j[2] * j[3] for j in jobs) < PARALLEL_MIN_PIXELS or workers < 2:
         return [_mask_shape(j) for j in jobs]
     # spawn, not fork: the server process has threads, and forking a threaded process can deadlock.

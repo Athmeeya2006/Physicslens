@@ -25,6 +25,7 @@ _RHS = {
     "linear_drag": "ax, ay = -p['k'] * vx, -p['g'] - p['k'] * vy",
     "quadratic_drag": "speed = np.hypot(vx, vy)\n    ax, ay = -p['c'] * speed * vx, -p['g'] - p['c'] * speed * vy",
     "oscillator_dry": "dv = -p['omega'] ** 2 * (s - p['s0']) - p['f'] * np.tanh(v / 0.01)",
+    "oscillator_mixed": "dv = -p['omega'] ** 2 * (s - p['s0']) - 2 * p['zeta'] * p['omega'] * v - p['f'] * np.tanh(v / 0.01)",
     "duffing": "d = s - p['s0']\n    dv = -p['omega'] ** 2 * d - p['beta'] * d ** 3 - 2 * p['zeta'] * p['omega'] * v",
     "spin_spring": "dw = -p['kappa'] * (ph - p['phi0']) - p['k'] * w",
     "line_constant_velocity": "dv = 0.0",

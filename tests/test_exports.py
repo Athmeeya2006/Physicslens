@@ -134,6 +134,7 @@ def test_report_covers_every_verdict():
 
 @pytest.mark.parametrize("model_id, params, y0, ctx", [
     ("oscillator_dry", {"omega": 6.0, "s0": 0.0, "f": 0.12}, [0.08, 0.0], {"origin_x": 0, "origin_y": 0, "axis_x": 0, "axis_y": 1}),
+    ("oscillator_mixed", {"omega": 6.0, "s0": 0.0, "zeta": 0.03, "f": 0.06}, [0.08, 0.0], {"origin_x": 0, "origin_y": 0, "axis_x": 0, "axis_y": 1}),
     ("spin_spring", {"kappa": 9.0, "phi0": 0.2, "k": 0.8}, [1.4, 0.0], {"arm_m": 0.3, "center_x": 0, "center_y": 0}),
 ])
 def test_mujoco_replays_dry_friction_and_torsional_springs(model_id, params, y0, ctx):
