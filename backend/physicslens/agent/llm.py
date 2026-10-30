@@ -112,8 +112,25 @@ def _strip_fences(text: str) -> str:
 _SCHEMA_ECHO = {"type", "required", "additionalProperties", "properties", "$schema", "title"}
 
 
+def _first_json_object(text: str) -> str | None:
+    """The first complete JSON object inside text. Muse Spark Open sometimes leaks its chat template around a correct
+    answer ('<|start|>assistant to=commentary<|message|>...<|eom|>{"action": ...}'); the answer itself is fine."""
+    decoder = json.JSONDecoder()
+    for i, ch in enumerate(text):
+        if ch == "{":
+            try:
+                obj, end = decoder.raw_decode(text, i)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                return text[i:end]
+    return None
+
+
 def _validate(schema_model: type[T], raw_text: str) -> T:
     text = _strip_fences(raw_text)
+    if not text.startswith("{") and "{" in text:
+        text = _first_json_object(text) or text
     try:
         return schema_model.model_validate_json(text)
     except ValidationError as first:

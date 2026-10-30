@@ -311,3 +311,26 @@ def test_control_cues_a_push_train_then_waits_for_it(harness, tmp_path):
     assert len([m for m in sent if m["type"] == "cue"]) == 1
     session.set_control("off", 0)
     assert session.control is None and sent[-1] == {"type": "cue", "action": "off"}
+
+
+def test_object_size_sets_the_scale_for_anything_that_is_not_a_pendulum(harness, tmp_path):
+    session = LiveSession(harness.client, tmp_path / "live", "live-size", LiveConfig(fps=FPS, object_size_m=0.05),
+                          lambda m: None, sam_fn=FakeSam(), synchronous=True)
+    session.object_size = 40.0  # the ball's size in SAM's masks, in pixels
+    assert session._scale(np.zeros((10, 2))) == 40.0 / 0.05
+
+
+def test_no_hypotheses_and_no_scene_family_asks_instead_of_assuming_a_pendulum(harness, tmp_path):
+    from physicslens.agent.schemas import Scene
+    sent: list[dict] = []
+    session = LiveSession(harness.client, tmp_path / "live", "live-ask", LiveConfig(fps=FPS), sent.append,
+                          sam_fn=FakeSam(), synchronous=True)
+    session.scene = Scene(**{**SCENE, "motion_family": "other"})
+    harness.sdk("meta_api").script.extend([responses_result(text="not json")] * 2)  # hypotheses fail twice
+    t = np.arange(60) / FPS
+    from physicslens.sigproc.trajectory import Trajectory
+    session._choose_family(Trajectory(t=t, xy=np.column_stack([t, 0 * t]), frames=np.arange(60), fps=FPS))
+    assert session.family is None and session.awaiting_family
+    assert any(m["type"] == "choose_family" for m in sent)
+    session.choose_family_now("line")  # the user's tap starts fitting, and the model is not asked again
+    assert session.family == "line" and not session.awaiting_family and session._agent_consulted

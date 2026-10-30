@@ -49,7 +49,8 @@ def _listen(video: Path, work_dir: Path, seconds: float, slow_motion: float, fam
             fps: float | None) -> dict[str, Any]:
     if slow_motion != 1.0:
         # Phones slow the soundtrack down with the picture, or drop it; either way its clock is not real time.
-        return unavailable("Slow-motion clip: its soundtrack does not run in real time, so it was not used.")
+        kind = "Slow-motion" if slow_motion > 1 else "Time-lapse"
+        return unavailable(f"{kind} clip: its soundtrack does not run in real time, so it was not used.")
     audio = read_audio(video, work_dir, 0.0, seconds)
     if audio is None:
         return unavailable("The clip has no sound track.")

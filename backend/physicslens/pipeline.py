@@ -38,10 +38,11 @@ from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
 from .perception.track_quality import assess_track, overlay_frames
 from .physics import depth3d
 from .physics.audit import AuditInput, LawEvidence, audit
+from .physics.audit import save_input as save_audit_input
 from .physics.audit import cant_judge as audit_cant_judge
 from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
-from .physics.custom import FREE_MODELS, FreeParam, build, register, spec_for
+from .physics.custom import FREE_MODELS, FreeParam, build, law_latex, register, spec_for
 from .physics.design import design_experiment
 from .physics.double import HORIZON_S as DOUBLE_HORIZON_S
 from .physics.double import (
@@ -107,6 +108,10 @@ class RunOptions:
 Progress = Callable[[str], None]
 
 
+MIN_CLIP_SECONDS = 2.0
+MIN_CLIP_FRAMES = 30
+
+
 def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, options: RunOptions | None = None,
             progress: Progress = lambda _msg: None) -> dict[str, Any]:
     return finite(_analyze(client, video, run_dir, run_id, options, progress))
@@ -153,8 +158,11 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     clip, info, frames_jpeg = (media.load_prepared(options.prepared, run_dir) if options.prepared is not None
                                else prepare(video, run_dir, options, media_cfg))
     min_frames = int(media_cfg.get("sam_min_frames_per_request", 50))
-    if info.frames < min_frames:
-        raise AnalysisError(f"The clip is too short: at least {min_frames} frames (about 2 seconds) are needed.")
+    # What a fit needs is time and enough samples, not SAM's billing minimum: a 6 s clip at 8 fps (49 frames, as some
+    # video generators write) is tracked fine and simply billed as 50 frames.
+    if info.frames / info.fps < MIN_CLIP_SECONDS or info.frames < MIN_CLIP_FRAMES:
+        raise AnalysisError(f"The clip is too short: at least {MIN_CLIP_SECONDS:g} seconds and {MIN_CLIP_FRAMES} frames "
+                            "are needed.")
 
     progress("Understanding the scene")
     hint = (options.object_hint or "").strip()[:60] or None
@@ -164,7 +172,8 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     record("scene", call, f"Sees {article(scene.moving_object)} {scene.moving_object} {MOTION_PHRASE[scene.motion_family]}; "
                           f"{ref}{told}.")
 
-    scene, prompt_frame = locate_precisely(client, scene, frames_jpeg, info, run_id, options.audience, record, limits, progress)
+    scene, prompt_frame = locate_precisely(client, scene, frames_jpeg, info, run_id, options.audience, record, limits, progress,
+                                           clip=clip)
 
     progress(f"Tracking the {scene.moving_object} with SAM 3.1")
     try:
@@ -395,7 +404,11 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
 
     assert verdict is not None and turn is not None
     skeptic: dict[str, Any] | None = None
-    if verdict.status == "accepted" and verdict.winner is not None and coords is not None:
+    if not agent_cfg.get("referee", True) and verdict.status == "accepted":
+        # A batch study can turn the referee off to halve the reasoning per clip; the result says so.
+        trail.append({"step": "skeptic", "provider": None, "model": "simulate-and-compare", "status": "skipped",
+                      "text": "No referee on this run: the batch's settings turned it off."})
+    elif verdict.status == "accepted" and verdict.winner is not None and coords is not None:
         progress("A referee is trying to break the accepted law")
         winner_title = MODELS[verdict.winner.model_id].title
         try:
@@ -513,7 +526,8 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     if (step := audio_trail_step(result["audio"])) is not None:
         trail.append(step)
     progress("Auditing the motion for physics violations")
-    result["audit"] = audit_clip(full, family, calibration, verdict, moving, tracks.get(REFERENCE_ID), info, change, result, video)
+    result["audit"] = audit_clip(full, family, calibration, verdict, moving, tracks.get(REFERENCE_ID), info, change, result, video,
+                                 save_to=run_dir / "audit_input.npz", lookalikes=scene.lookalikes)
     if options.depth_3d:
         progress("Measuring the ball's depth from its apparent size")
         result["depth3d"] = depth_for_run(moving, traj, fps, info, video, options, scene.moving_object, family)
@@ -523,7 +537,7 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
 
 def audit_clip(full: Trajectory, family: str, calibration: Calibration, verdict: Verdict, moving: ObjectTrack,
                reference: ObjectTrack | None, info: media.VideoInfo, change: RegimeChange | None,
-               result: dict[str, Any], video: Path) -> dict[str, Any]:
+               result: dict[str, Any], video: Path, save_to: Path | None = None, lookalikes: bool = False) -> dict[str, Any]:
     """The physics audit on the whole track, with what the rest of the analysis found. Local math only."""
     real_scale = calibration.source not in ("none", "gravity")
     g = next((p for p in result.get("parameters", []) if p["name"] == "g"), None) if real_scale else None
@@ -542,14 +556,20 @@ def audit_clip(full: Trajectory, family: str, calibration: Calibration, verdict:
         log.warning("Frame-rate check skipped: %s", e)
         varies = None
     try:
-        return audit(AuditInput(
+        a = AuditInput(
             traj=full, family=family, calibration_source=calibration.source,
             px_per_m=NOMINAL_PX_PER_M if calibration.source == "gravity" else calibration.px_per_m,
             scale_rel_std=calibration.rel_std, law=law, object_size_px=float(np.median(moving.long_px)), areas_px=areas,
             confidence=moving.confidence, coverage=len(moving.frames) / max(info.frames, 1), frame_rate_varies=varies,
             reference_px=reference.centers_px if reference is not None else None,
             reference_size_px=float(np.median(reference.long_px)) if reference is not None else None,
-            regime_change_s=change.t_estimate if change is not None else None))
+            regime_change_s=change.t_estimate if change is not None else None, lookalikes=lookalikes)
+        try:
+            if save_to is not None:
+                save_audit_input(a, save_to)
+        except (OSError, ValueError, TypeError) as e:  # a replay aid only
+            log.warning("Audit input not saved: %s", e)
+        return audit(a)
     except (ValueError, np.linalg.LinAlgError) as e:  # the audit is a second opinion; it must not sink the result
         log.warning("Physics audit failed: %s", e)
         return audit_cant_judge(f"the audit's own measurement failed on this track ({e}).")
@@ -837,7 +857,7 @@ def smooth_motion(centers_px: np.ndarray, travel: float) -> bool:
 
 def locate_precisely(client: CostGuardClient, scene: Scene, frames_jpeg: list[bytes], info: media.VideoInfo, run_id: str,
                      audience: str, record: Callable[..., None], limits: dict[str, Any],
-                     progress: Progress) -> tuple[Scene, int]:
+                     progress: Progress, clip: Path | None = None) -> tuple[Scene, int]:
     """Boxes from one frame alone, and the frame SAM should start from (the first keyframe showing the object).
 
     The four-frame scene call names the object well but can place its box off by an object's width (on a real
@@ -850,7 +870,9 @@ def locate_precisely(client: CostGuardClient, scene: Scene, frames_jpeg: list[by
     progress(f"Locating the {scene.moving_object} precisely")
     obj = scene.moving_object
     reference = None if scene.reference_kind == "none" else scene.reference_kind.replace("_", " ")
-    indices = media.keyframe_indices(info.frames, len(frames_jpeg))
+    # The same frames the keyframes were cut from (they follow the motion when it is brief).
+    indices = (media.clip_keyframe_indices(clip, len(frames_jpeg)) if clip is not None and clip.is_file()
+               else media.keyframe_indices(info.frames, len(frames_jpeg)))
     for frame_no, jpeg in list(zip(indices, frames_jpeg, strict=False))[: int(cfg.get("locate_max_frames", 3))]:
         try:
             loc, call = locate_objects(client, jpeg, obj, scene.second_object, reference, run_id, audience)
@@ -1018,9 +1040,8 @@ def _hypothesis_items(hyp, sampled: SampledHypotheses | None = None) -> list[dic
     items = [{"model_id": h.model_id, "title": MODELS[h.model_id].title, "why": h.rationale + votes(h.model_id)}
              for h in hyp.candidates]
     for f in hyp.free_models:
-        law = "; ".join(f.acceleration)
-        items.append({"model_id": f.title, "title": f.title,
-                      "why": f"{f.rationale} Written by the agent: acceleration = {law}.{votes(f.title)}"})
+        items.append({"model_id": f.title, "title": f.title, "why": f"{f.rationale} Written by the agent.{votes(f.title)}",
+                      "latex": law_latex(hyp.family, f.acceleration, [p.name for p in f.params])})
     return items
 
 
@@ -1111,7 +1132,9 @@ def fit_summary(f: FitResult, rationale: str | None = None) -> dict[str, Any]:
     spec = MODELS[f.model_id]
     return {"model_id": f.model_id, "title": spec.title, "params": f.params, "bic": f.bic,
             "heldout_nrmse": f.heldout_nrmse, "rmse": f.rmse, "rationale": rationale,
-            "param_meta": [{"name": p.name, "latex": p.latex, "unit": p.unit} for p in spec.params]}
+            "param_meta": [{"name": p.name, "latex": p.latex, "unit": p.unit} for p in spec.params],
+            # A law the agent wrote has no familiar name, so its equation is shown with it.
+            **({"latex": spec.latex} if f.model_id.startswith("custom_") else {})}
 
 
 EARTH_G = 9.81

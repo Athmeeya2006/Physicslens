@@ -105,7 +105,7 @@ def fit_more(coords: Coordinates, verdict: Verdict, family: str, proposals: list
             items.append({"model_id": free.title, "title": free.title, "status": "untestable", "why": f"{why} It does not parse: {e}"})
             continue
         new_ids.append(spec.id)
-        rationales[spec.id] = f"{why} Written by {source}: acceleration = {'; '.join(free.acceleration)}."
+        rationales[spec.id] = f"{why} Written by {source}."
     if not new_ids:
         return verdict, items, rationales
     new_verdict = assess(coords, [*verdict.ranked, *(fit_model(MODELS[m], coords) for m in new_ids)])
@@ -114,7 +114,8 @@ def fit_more(coords: Coordinates, verdict: Verdict, family: str, proposals: list
     for m in new_ids:
         status, why = judged.get(m, ("rejected", "the fit did not converge"))
         items.append({"model_id": m, "title": MODELS[m].title, "status": status, "why": f"{rationales[m]} Result: {why}",
-                      "heldout_nrmse": by_id[m].heldout_nrmse if m in by_id else None})
+                      "heldout_nrmse": by_id[m].heldout_nrmse if m in by_id else None,
+                      **({"latex": MODELS[m].latex} if m.startswith("custom_") else {})})
     return new_verdict, items, rationales
 
 
@@ -123,8 +124,10 @@ def outcome_text(info: dict[str, Any], winner_title: str) -> str:
     if n == 0:
         return f"Tried to break \"{winner_title}\" but proposed nothing code could test."
     if info["survived"]:
-        return f"\"{winner_title}\" survived {n} challenge{'s' if n != 1 else ''}: no alternative forecast the held-out motion better."
+        return (f"\"{winner_title}\" survived {n} challenge{'s' if n != 1 else ''}: no alternative did better by the same rule "
+                "(forecast the held-out motion, then the best BIC).")
     after = info["verdict_after"]
     if after["status"] == "accepted":
-        return f"A challenger won on held-out motion: the verdict changes to \"{MODELS[after['winner']].title}\"."
+        return (f"A challenger also forecast the held-out motion and fits the whole motion better (BIC): the verdict changes "
+                f"to \"{MODELS[after['winner']].title}\".")
     return f"A challenger did as well as \"{winner_title}\" on held-out motion: the verdict is now {after['status']}."

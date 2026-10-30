@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..perception.calibration import REFERENCE_SIZES
-from ..physics.custom import FreeParam, build
+from ..physics.custom import MAX_BOUND, FreeParam, build
 from ..physics.expr import ExprError
 from ..physics.models import MODELS
 
@@ -55,6 +55,8 @@ class Scene(Strict):
     reference_kind: ReferenceKind = Field(description="Known-size object visible in the plane of motion, or 'none'.")  # type: ignore[valid-type]
     reference_box: Box1000 | None = Field(description="Box around the reference object in the FIRST image, or null.")
     observations: str = Field(description="One or two sentences on what is happening.")
+    lookalikes: bool = Field(description="True if other objects that look like the moving object are in view (the balls "
+                             "of a Newton's cradle, a row of dominoes, several identical balls): a tracker can confuse them.")
 
     @field_validator("moving_object")
     @classmethod
@@ -96,6 +98,15 @@ class FreeParamIn(Strict):
     lower: float
     upper: float
     guess: float = Field(description="Physically sensible starting value inside [lower, upper].")
+
+    @model_validator(mode="after")
+    def _within_range(self) -> FreeParamIn:
+        # A bound past the fitter's range (an upper bound of 50000 on a stiffening term) is clipped, not a reason to
+        # throw away the whole proposal and pay for another; the guess is kept inside the clipped range.
+        lo, hi = max(self.lower, -MAX_BOUND), min(self.upper, MAX_BOUND)
+        if lo < hi:
+            self.lower, self.upper, self.guess = lo, hi, min(max(self.guess, lo), hi)
+        return self
 
 
 class FreeModelIn(Strict):

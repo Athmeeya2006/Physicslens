@@ -18,7 +18,7 @@ FIXTURE = ROOT / "tests" / "fixtures" / "sam_smoke_response.json"
 SCENE = {
     "moving_object": "red ball", "moving_object_box": {"x1": 650, "y1": 650, "x2": 725, "y2": 785},
     "motion_family": "pendulum", "reference_kind": "none", "reference_box": None,
-    "observations": "A red ball swings on a string.", "second_object": None, "second_object_box": None,
+    "observations": "A red ball swings on a string.", "lookalikes": False, "second_object": None, "second_object_box": None,
 }
 HYPOTHESES = {"family": "pendulum", "candidates": [
     {"model_id": "pendulum", "rationale": "Arc-shaped path with a steady period."},
@@ -347,3 +347,17 @@ def test_a_lost_box_track_falls_back_to_finding_the_object_by_name(harness, tmp_
     assert len(result["real_track_px"]) == 60
     notes = [t["text"] for t in result["trail"] if t["step"] == "tracking"]
     assert any("lost the red ball after 3 frames; found by name in 60" in n for n in notes)
+
+
+def test_a_long_low_frame_rate_clip_is_not_too_short(harness, tmp_path):
+    """49 frames at 8 fps is 6 s of motion: under SAM's billing minimum, but plenty to fit (billed as 50 frames)."""
+    import subprocess
+    slow = tmp_path / "slow.mp4"
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-stream_loop", "3", "-i", str(CLIP), "-vf", "fps=8", "-frames:v", "49",
+                    "-c:v", "libx264", "-pix_fmt", "yuv420p", str(slow)], check=True)
+    try:
+        analyze(harness.client, slow, tmp_path / "run", "run-slow")
+    except AnalysisError as e:
+        assert "too short" not in str(e)
+    except Exception:  # the mock harness has no scripted answers; only the length rule is under test here
+        pass

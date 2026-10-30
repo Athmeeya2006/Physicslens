@@ -88,6 +88,7 @@ SamFn = Callable[[Path, str, list[int]], str]  # (chunk mp4, prompt, global fram
 class LiveConfig:
     fps: float = 25.0
     pendulum_length_m: float | None = None
+    object_size_m: float | None = None  # the moving object's longest side, for anything that isn't a pendulum
     audience: str = "dev"
     chunk_frames: int = 50  # frames per SAM request (its billing minimum)
     sam_stride: int = 2  # SAM sees every n-th frame: halves cost, plenty of samples for the fit
@@ -128,6 +129,7 @@ class LiveSession:
         self.use_data_url = True
         self.family: str | None = None
         self.family_from_user = False  # tapped "what is it?": fit now, let the agent's hypotheses refine it later
+        self.awaiting_family = False  # the model could not settle the family: fitting waits for the user's tap
         self._agent_consulted = False
         self.candidates: list[str] = []
         self.warm: dict[str, dict[str, float]] = {}
@@ -187,12 +189,15 @@ class LiveSession:
         """The user says what it is, so fitting starts at once instead of after the reasoning model's first answers."""
         if family not in USER_FAMILIES or self.family is not None:
             return
+        answered = self.awaiting_family  # the model was already asked and could not settle it: don't ask again
         with self.lock:
             self.family = family
             self.family_from_user = True
+            self.awaiting_family = False
+            self._agent_consulted = self._agent_consulted or answered
             self.candidates = _with_control(family, [m.id for m in models_for(family)])
         self.send({"type": "notice", "level": "info",
-                   "message": f"Fitting {USER_FAMILIES[family]} now; the agent's own hypotheses will refine them when ready."})
+                   "message": f"Fitting {USER_FAMILIES[family]} now" + ("." if answered else "; the agent's own hypotheses will refine them when ready.")})
 
     def _consult_agent(self, traj) -> None:
         """After a tapped family: the agent still proposes; its candidates join if it agrees, and it says so if not."""
@@ -516,9 +521,11 @@ class LiveSession:
         even = np.column_stack([np.interp(grid, ts, seg_centers[:, 0]), np.interp(grid, ts, seg_centers[:, 1])])
         traj = from_pixels(np.arange(len(grid)), even, rate, ppm)
         if self.family is None:
-            if self.scene is None:
-                return None  # tracking started from a tap; the scene model hasn't answered yet
+            if self.scene is None or self.awaiting_family:
+                return None  # tracking started from a tap and the scene model hasn't answered, or we wait for a tap
             self._choose_family(traj)
+            if self.family is None:
+                return None
         elif self.family_from_user and self.scene is not None and not self._agent_consulted:
             self._agent_consulted = True
             self._run(lambda t=traj: self._consult_agent(t))  # in the background: refits keep running meanwhile
@@ -662,6 +669,9 @@ class LiveSession:
             if len(centers) >= 2 * MIN_FIT_S * self.cfg.fps:
                 self.calibration = cal  # frozen once the arc is measured over a long stretch
             return cal.px_per_m
+        if self.cfg.object_size_m and self.object_size:
+            # The object's own size in SAM's masks (median over the track so far) against the size the user gave.
+            return self.object_size / self.cfg.object_size_m
         return None
 
     def _choose_family(self, traj) -> None:
@@ -675,19 +685,31 @@ class LiveSession:
             self.family = hyp.family
             ids, _ = _candidates(hyp)
             if self.family in ("double_pendulum", "rotation"):
-                # Live mode follows one object's position; both bobs, or a spin angle, need recorded mode.
+                # Live mode follows one object's position; both bobs, or a spin angle, need recorded mode. Guessing a
+                # one-position family here would fit the wrong physics, so the user is asked instead.
                 what = "Double pendulum" if self.family == "double_pendulum" else "Spinning object"
-                self.send({"type": "notice", "level": "info",
-                           "message": f"{what} detected: record a clip for the full analysis (live mode follows one position)."})
-                self.family, ids = ("pendulum" if self.family == "double_pendulum" else self.scene.motion_family
-                                    if self.scene.motion_family in ("pendulum", "oscillator", "projectile") else "pendulum"), []
+                self.send({"type": "hypotheses", "family": hyp.family, "model": call.model, "provider": call.provider,
+                           "items": _hypothesis_items(hyp)})
+                self._ask_for_family(f"{what} detected: live mode follows one position, so record a clip on the Analyze "
+                                     "page for the full analysis, or tap what the tracked point does.")
+                return
             self.send({"type": "hypotheses", "family": hyp.family, "model": call.model, "provider": call.provider,
                        "items": _hypothesis_items(hyp)})
         except (CostGuardError, LLMError) as e:
-            # No usable hypotheses (budget, or invalid output twice): test the whole library of the scene's family.
-            self.family = self.scene.motion_family if self.scene.motion_family != "other" else "pendulum"
+            # No usable hypotheses (budget, or invalid output twice): test the whole library of the scene's family, or
+            # ask, rather than assume a pendulum, when the scene gave no family either.
+            if self.scene.motion_family not in USER_FAMILIES:
+                self._ask_for_family(f"Hypotheses unavailable ({e}). Tap what the object does to start fitting.")
+                return
+            self.family = self.scene.motion_family
             self.send({"type": "notice", "level": "warning", "message": f"Hypotheses unavailable ({e}); testing every {self.family} model."})
         self.candidates = _with_control(self.family, ids or [m.id for m in models_for(self.family)])
+
+    def _ask_for_family(self, message: str) -> None:
+        """No family to fit: stop asking the model (one call per session) and wait for the user's tap."""
+        self.family = None
+        self.awaiting_family = True
+        self.send({"type": "choose_family", "message": message})
 
     def _prediction(self, spec, lead: FitResult, coords, frames: np.ndarray, ts: np.ndarray, rate: float,
                     origin: np.ndarray, ppm: float) -> list[list[float]]:

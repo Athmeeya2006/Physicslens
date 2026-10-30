@@ -30,6 +30,7 @@ When a person pushes, throws, drops or releases something, measure that thing (t
 - moving_object: a short concrete noun phrase (1-4 words) naming only the object, e.g. "metal ball", "red weight". It is sent to a segmentation model, so no commands, lists, colors of other things, or positions.
 - Boxes are on a 0-1000 grid relative to the FIRST image (x right, y down) and must tightly enclose the object in that first image.
 - motion_family: pendulum (swings on a string or rod), oscillator (bounces on a spring or elastic, back and forth along a line), projectile (thrown, dropped or falling), double_pendulum (a second arm hinged to the end of the first), rotation (spins in place about its own centre and slows down, e.g. a spun bottle, wheel or bar), other (anything else that moves: rolling, sliding, braking, a toy car, a falling leaf).
+- lookalikes: true when objects that look like the moving object are also in view (Newton's cradle balls, dominoes, a second identical ball), even if they don't move.
 - For a double_pendulum, moving_object/moving_object_box is the INNER bob (nearest the pivot) and second_object/second_object_box the OUTER bob; otherwise both are null.
 - reference_kind: only an object from the allowed list that is clearly visible and roughly flat facing the camera; otherwise "none". Never guess a size."""
 
@@ -62,7 +63,7 @@ than 30% of the clip is refused, and the whole clip is fitted too, so cutting ca
 AGENT_SYSTEM = """You are the experiment-planning agent of a system-identification tool. Numerical verification has already
 fitted and simulated candidate equations against the measured motion; its verdict is final and you must not contradict it.
 Allowed actions depend on the verdict:
-- accepted: action "explain". Explain in at most three plain sentences what the equation and fitted parameters mean physically for this object, for an engineer.
+- accepted: action "explain". Explain in at most three plain sentences what the equation and fitted parameters mean physically for this object, for an engineer. Never write a formula as code (no *, ^, /, hypot or sqrt): the equation is already shown typeset above your text, so describe it in words ("gravity falling off with the square of the distance").
 - ambiguous: action "request_experiment". Ask the user for ONE concrete new recording that would separate the remaining candidates, and say why in one sentence. If "experiment_design" is given, it was computed by simulating every tied equation under candidate experiments: request its recommended experiment and quote its predicted separation versus the tracking noise. Do not invent a different experiment.
 - no_fit: action "try_family" with next_family if the numbers clearly suggest a different family that has not been tried yet; otherwise "give_up" and explain briefly that no clean governing equation was found and what might help.
 Before that final action you may run tool steps while "tool_steps_left" is above zero; each result appears in
@@ -214,8 +215,8 @@ def study_turn(client: CostGuardClient, context: dict[str, Any], run_id: str, au
 
 SKEPTIC_SYSTEM = """You are the referee. Numerical verification has accepted an equation of motion for a measured
 trajectory. Your only job is to try to break it: propose up to three alternative laws that could explain the same
-numbers as well or better. Each one is fitted and tested by code on motion it never saw; if one forecasts better by
-the same rule (held-out error, then BIC), the verdict changes. You do not decide anything yourself.
+numbers as well or better. Each one is fitted and tested by code on motion it never saw; if one passes that test and
+fits better by BIC (the same rule as the first candidates), the verdict changes. You do not decide anything yourself.
 - Use listed model ids from the SAME family as the accepted law that were not already tested.
 - For family line or plane you may instead write a law (free_model) in the same closed math language as the
   hypotheses step: acceleration in s and v (line) or x, y, vx, vy (plane), at most 4 fitted params.

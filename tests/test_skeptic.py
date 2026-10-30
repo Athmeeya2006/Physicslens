@@ -98,3 +98,19 @@ def test_pipeline_records_the_referee_in_the_trail_and_result(harness, tmp_path)
     assert ref["provider"] == "meta_api" and ref["items"] and ref["status"] in ("accepted", "rejected")
     assert result["skeptic"]["accepted_before"] and "survived" in result["skeptic"]
     assert "skeptic" in [c["step"] for c in result["llm_calls"]]
+
+
+def test_a_batch_can_turn_the_referee_off_and_the_trail_says_so(harness, tmp_path):
+    from physicslens.pipeline import RunOptions, analyze
+
+    from .test_pipeline import AGENT, CLIP, HYPOTHESES, TRACK_OK, sam_result, sam_text_as_object_1, script
+    script(harness, responses_result(text=json.dumps(SCENE)), sam_result(frames=60, text=sam_text_as_object_1()),
+           responses_result(text=json.dumps(TRACK_OK)), responses_result(text=json.dumps(HYPOTHESES)),
+           responses_result(text=json.dumps(AGENT)))
+    harness.client.limits["agent"] = {**(harness.client.limits.get("agent") or {}), "referee": False}
+    result = analyze(harness.client, CLIP, tmp_path / "run", "run-noref", RunOptions(pendulum_length_m=0.6))
+    if result["status"] != "accepted":
+        pytest.skip("the referee runs only after an accepted law")
+    ref = [t for t in result["trail"] if t["step"] == "skeptic"]
+    assert len(ref) == 1 and ref[0]["status"] == "skipped" and "turned it off" in ref[0]["text"]
+    assert result.get("skeptic") is None and "skeptic" not in [c["step"] for c in result["llm_calls"]]
