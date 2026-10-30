@@ -29,6 +29,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 
 | Step | Open | What you will see |
 |---|---|---|
+| 0 | [Home page](https://physicslens.vercel.app) | the discovery playing: Apophis around the Sun with the law it wrote, typeset, and the numbers it measured |
 | 1 | [Asteroid Apophis](https://physicslens.vercel.app/?run=gallery-apophis) | a dot moving around the Sun becomes the inverse-square law; the force arrow points at the Sun in every frame |
 | 2 | [Weighing Jupiter](https://physicslens.vercel.app/?run=gallery-jupiter) | Jupiter's GM from Io's orbit, within 0.018% of JPL |
 | 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | the referee proposes damping and the verdict changes, on screen, with the reason |
@@ -36,7 +37,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | 5 | [Open dataset](https://physicslens.vercel.app/dataset) | every verified parameter, with its uncertainty, clip and licence |
 | 6 | Your own clip, live mode, a study | open to everyone, no code; [the home page](https://physicslens.vercel.app) shows whether the analysis server is online |
 
-In every result, open the decision trail: each step is tagged with the model (provider and id) or the numerical method behind it, and "What the model thought" shows the reasoning.
+In every result, read the decision trail beside the video: each step is tagged with the model (provider and id) or the numerical method behind it, and "What the model thought" shows the reasoning.
 
 ## Contents
 
