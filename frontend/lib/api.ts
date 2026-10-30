@@ -13,6 +13,33 @@ let connecting: Promise<boolean> | null = null;
 // When the next judging session starts (ISO time in UTC), if one is scheduled: shown while no server is running.
 export let NEXT_SESSION_UTC: string | null = null;
 
+// The server found on an earlier page of this visit, reused for a few minutes so moving between pages asks nothing
+// of GitHub (its API allows 60 unauthenticated requests an hour per visitor).
+const REMEMBER_KEY = "physicslens-server";
+const REMEMBER_MS = 10 * 60 * 1000;
+
+function remembered(): string {
+  try {
+    const r = JSON.parse(sessionStorage.getItem(REMEMBER_KEY) ?? "null") as { base?: string; at?: number } | null;
+    return r?.base && r.at && Date.now() - r.at < REMEMBER_MS ? r.base : "";
+  } catch {
+    return "";
+  }
+}
+
+function remember(base: string): void {
+  try {
+    sessionStorage.setItem(REMEMBER_KEY, JSON.stringify({ base, at: Date.now() }));
+  } catch {
+    /* storage blocked: the next page simply looks again */
+  }
+}
+
+async function answers(base: string): Promise<boolean> {
+  // Only switch the analysis features on if the server really answers; a stale tunnel means gallery only.
+  return fetch(`${base}/api/health`, { signal: AbortSignal.timeout(6000) }).then((r) => r.ok).catch(() => false);
+}
+
 export function connectBackend(): Promise<boolean> {
   if (!STATIC_SITE) return Promise.resolve(true);
   connecting ??= (async () => {
@@ -20,23 +47,23 @@ export function connectBackend(): Promise<boolean> {
       const cfg = await fetch("/backend.json", { cache: "no-store" })
         .then((r) => r.json() as Promise<{ api_base?: string; next_session_utc?: string; pointer_gist?: string }>);
       NEXT_SESSION_UTC = cfg.next_session_utc && !Number.isNaN(Date.parse(cfg.next_session_utc)) ? cfg.next_session_utc : null;
-      // A fixed address (set by hand) is tried first; a server that restarts on its own (a scheduled Kaggle session)
-      // publishes its address to a public gist, used when the fixed one is empty or no longer answers.
-      const candidates = [cfg.api_base ?? ""];
-      if (cfg.pointer_gist) candidates.push(await gistAddress(cfg.pointer_gist).catch(() => ""));
-      let ok = false;
-      for (const raw of candidates) {
+      // In order: the server this visit already found, the fixed address (set by hand), and only if neither answers
+      // the address a self-restarting server (a scheduled Kaggle session) published to a public gist.
+      const tried = new Set<string>();
+      const attempt = async (raw: string): Promise<boolean> => {
         const base = raw.replace(/\/$/, "");
-        if (!base) continue;
-        // Only switch the analysis features on if the server really answers; a stale tunnel means gallery only.
-        ok = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(6000) }).then((r) => r.ok).catch(() => false);
-        if (ok) {
-          API_BASE = base;
-          HAS_BACKEND = true;
-          break;
-        }
-      }
-      return ok;
+        if (!base || tried.has(base)) return false;
+        tried.add(base);
+        if (!(await answers(base))) return false;
+        API_BASE = base;
+        HAS_BACKEND = true;
+        remember(base);
+        return true;
+      };
+      if (await attempt(remembered())) return true;
+      if (await attempt(cfg.api_base ?? "")) return true;
+      if (cfg.pointer_gist) return attempt(await gistAddress(cfg.pointer_gist).catch(() => ""));
+      return false;
     } catch {
       return false;
     }
@@ -47,10 +74,15 @@ export function connectBackend(): Promise<boolean> {
 const POINTER_FILE = "physicslens-backend.json";
 
 async function gistAddress(gistId: string): Promise<string> {
-  // The API (not the raw URL) answers with the current content: raw gist files are cached for minutes.
-  const gist = await fetch(`https://api.github.com/gists/${encodeURIComponent(gistId)}`, { cache: "no-store" })
-    .then((r) => (r.ok ? r.json() : null)) as { files?: Record<string, { content?: string }> } | null;
-  const content = gist?.files?.[POINTER_FILE]?.content;
+  // The API answers with the current content; when it refuses (its hourly limit per visitor), the raw file, which
+  // has no such limit but may be up to five minutes old.
+  const id = encodeURIComponent(gistId);
+  let content = await fetch(`https://api.github.com/gists/${id}`, { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((g: { files?: Record<string, { content?: string }> } | null) => g?.files?.[POINTER_FILE]?.content)
+    .catch(() => undefined);
+  content ??= await fetch(`https://gist.githubusercontent.com/raw/${id}/${POINTER_FILE}`, { cache: "no-store" })
+    .then((r) => (r.ok ? r.text() : undefined)).catch(() => undefined);
   if (!content) return "";
   const p = JSON.parse(content) as { api_base?: string; until_utc?: string };
   if (p.until_utc && Date.parse(p.until_utc) < Date.now()) return ""; // that session has ended
