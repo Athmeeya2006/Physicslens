@@ -333,3 +333,17 @@ def test_shrinking_out_of_the_frame_is_not_a_morph():
     side = np.sqrt(area)
     r = run(tr, "pendulum", areas_px=area, outline_px=np.column_stack([side, side]))
     assert "No morphing" not in violated(r)
+
+
+def test_free_flight_checks_for_motion_not_read_as_a_projectile():
+    """A throw the agent called general motion still has its free flights checked, but only straight-down ones: a
+    ball rolling down a ramp is a tilted parabola and must not be judged as a fall."""
+    t = np.arange(0, 1.6, 1 / 60)
+    ramp = traj_of(t, np.column_stack([0.2 + 0.5 * t + 0.5 * 3.0 * t**2 * np.cos(0.6),
+                                       1.0 - 0.5 * 3.0 * t**2 * np.sin(0.6)]), 0.002, 1, 60)
+    r = run(ramp, "plane")
+    assert r["verdict"] != "violates_physics" and not any(c["check"] == "gravity" for c in r["checks"])
+    throw = bouncing()  # two bounces: free flights straight down, with one gravity
+    r = run(throw, "plane")
+    assert r["verdict"] == "consistent" and any(c["title"] == "One gravity for every flight" and c["status"] == "pass"
+                                                for c in r["checks"])

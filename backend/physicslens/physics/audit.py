@@ -58,6 +58,7 @@ G_REL_TOL = 0.25
 # Flights of one clip share one g; drag on a fast throw versus a slow hop shifts the apparent curvature by a few
 # percent, and short flights measure it poorly.
 FLIGHT_G_REL_TOL = 0.25
+FREE_FALL_ANGLE_DEG = 15.0  # for motion not read as a projectile: how far from straight down free fall may point
 FLIGHT_ANGLE_TOL_DEG = 10.0  # camera lens distortion bends a parabola near the frame edge by a few degrees at most
 # Real balls keep at most about 0.9 of their speed; 1.1 leaves room for an impact time misplaced by a frame.
 MAX_RESTITUTION = 1.1
@@ -825,6 +826,16 @@ def audit(a: AuditInput) -> dict[str, Any]:
                 checks.append(c)
         if not flights:
             checks.append(Check("energy", "Energy in free flight", "skipped", "Not checked: no clean free-fall flight was found."))
+    elif a.family in ("plane", "line"):
+        # Motion the agent didn't call a projectile can still hold free flights (a throw read as general motion).
+        # Only stretches whose acceleration points straight down count as free fall (a ramp or a table tilts or
+        # flattens it), and only the checks that need no scale apply: one gravity for every flight, and no energy
+        # gained in flight. An absolute g is never asserted here.
+        flights = [f for f in find_flights(a.traj, sigma) if abs(_angle_of(f)[0]) <= FREE_FALL_ANGLE_DEG]
+        checks += check_gravity_consistency(a, flights)
+        energy = check_flight_energy(a, flights) if flights else None
+        if energy is not None:
+            checks.append(energy)
     elif a.family in ("pendulum", "oscillator"):
         if a.family == "pendulum":
             checks.append(check_gravity_scale(a, []))
