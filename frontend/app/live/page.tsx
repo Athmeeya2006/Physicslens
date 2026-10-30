@@ -35,7 +35,7 @@ const LIVE_FAMILIES: [string, string][] = [
 export default function LivePage() {
   const online = useBackend();
   const health = useHealth();
-  // Live sessions cost money per minute, so they are open to judges (access code) only; say so before anyone tries.
+  // Live sessions cost money per minute: when the server doesn't offer them, say so before anyone tries.
   const judgesOnly = !!health && !health.can_go_live;
   const video = useRef<HTMLVideoElement>(null);
   const overlay = useRef<HTMLCanvasElement>(null);
@@ -303,8 +303,7 @@ export default function LivePage() {
               </label>
               {judgesOnly && (
                 <p className="small muted">
-                  Live mode is open to judges with the access code. Every recording on the Analyze page is a complete,
-                  real analysis.
+                  Live mode is paused right now. Every recording on the Analyze page is a complete, real analysis.
                 </p>
               )}
               <button onClick={start} disabled={!online || judgesOnly}>Start live analysis</button>

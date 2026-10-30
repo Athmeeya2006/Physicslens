@@ -274,7 +274,7 @@ async def live(ws: WebSocket) -> None:
     init = await ws.receive_json()
     audience = audience_for(init.get("access_code"))
     if audience == "public":
-        await ws.send_json({"type": "notice", "level": "error", "message": "Live mode needs the access code; the gallery is open to everyone."})
+        await ws.send_json({"type": "notice", "level": "error", "message": "Live mode is paused right now; the gallery is open to everyone."})
         await ws.close()
         return
     try:
@@ -352,7 +352,7 @@ def whatif(
     """Typed what-if (the voice path ends here too). Judges and development only, like voice."""
     audience = audience_for(x_access_code)
     if audience == "public":
-        raise HTTPException(status_code=403, detail="What-if questions need the access code.")
+        raise HTTPException(status_code=403, detail="What-if questions are paused right now.")
     result = _finished_result(run_id)
     try:
         # One budget "run" per question: a shared id would fill the lifetime per-run cap and lock everyone out.
@@ -372,7 +372,7 @@ def setup_guide(
     """The requested experiment drawn on this clip's own frame. Paid (Muse Image): judges and development only."""
     audience = audience_for(x_access_code)
     if audience == "public":
-        raise HTTPException(status_code=403, detail="Picture guides need the access code.")
+        raise HTTPException(status_code=403, detail="Picture guides are paused right now.")
     allow_visitor("picture", x_access_code, request.headers, request.client.host if request.client else None)
     result = _finished_result(run_id)
     run_dir = _run_file(run_id, "")
@@ -421,7 +421,7 @@ async def voice(ws: WebSocket) -> None:
     state = runs.get(run_id) if run_id.replace("-", "").isalnum() else None
     if audience == "public" or state is None or state.result is None:
         await ws.send_json({"type": "notice", "level": "error",
-                            "message": "Voice questions need a finished analysis and the access code."})
+                            "message": "Voice questions need a finished analysis, and are paused right now."})
         await ws.close()
         return
     result = state.result
@@ -542,7 +542,7 @@ def start_control(run_id: str, task: ControlTask, request: Request,
     """Muse Wonder writes a controller for the identified system; MuJoCo decides whether it works. Judges and dev only."""
     audience = audience_for(x_access_code)
     if audience == "public":
-        raise HTTPException(status_code=403, detail="Controller design needs the access code.")
+        raise HTTPException(status_code=403, detail="Controller design is paused right now.")
     allow_visitor("controller", x_access_code, request.headers, request.client.host if request.client else None)
     _run_file(run_id, "result.json")  # rejects malformed ids
     result = _finished_result(run_id)
@@ -555,7 +555,7 @@ def start_control(run_id: str, task: ControlTask, request: Request,
 @app.get("/api/runs/{run_id}/control/{task_id}")
 def get_control(run_id: str, task_id: str, x_access_code: Annotated[str | None, Header()] = None) -> dict:
     if audience_for(x_access_code) == "public":
-        raise HTTPException(status_code=403, detail="Controller design needs the access code.")
+        raise HTTPException(status_code=403, detail="Controller design is paused right now.")
     _run_file(run_id, "result.json")
     state = controls.get(run_id, task_id)
     if state is None:
@@ -620,7 +620,7 @@ def health_trend(runs: Annotated[list[str], Body(embed=True)]) -> dict:
 def _study_audience(x_access_code: str | None) -> str:
     audience = audience_for(x_access_code)
     if audience == "public":
-        raise HTTPException(status_code=403, detail="Studies need the access code.")
+        raise HTTPException(status_code=403, detail="Studies are paused right now.")
     return audience
 
 
@@ -719,7 +719,7 @@ async def voice_notes(ws: WebSocket) -> None:
     init = await ws.receive_json()
     audience = audience_for(init.get("access_code"))
     if audience == "public":
-        await ws.send_json({"type": "notice", "level": "error", "message": "Voice needs the access code."})
+        await ws.send_json({"type": "notice", "level": "error", "message": "Voice is paused right now."})
         await ws.close()
         return
     chunks: asyncio.Queue[bytes | None] = asyncio.Queue()

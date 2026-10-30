@@ -419,7 +419,7 @@ export function requestSetupGuide(id: string, stepRef: number): Promise<SetupGui
   }));
 }
 
-// Muse Wonder writes a controller in the background; MuJoCo simulation decides whether it is used. Access code only.
+// Muse Wonder writes a controller in the background; MuJoCo simulation decides whether it is used.
 export function startControl(id: string, task: import("@/components/ControlPanel").ControlTask) {
   return fetch(`${API_BASE}/api/runs/${id}/control`, {
     method: "POST",

@@ -25,7 +25,7 @@ function setStudyParam(id: string) {
 export default function StudyPage() {
   const online = useBackend();
   const health = useHealth();
-  const judgesOnly = !!health && health.audience === "public"; // the server refuses studies without the access code
+  const judgesOnly = !!health && health.audience === "public"; // the server isn't offering studies to this visitor
   const [goal, setGoal] = useState("");
   const [study, setStudy] = useState<Study | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -137,8 +137,8 @@ export default function StudyPage() {
             </p>
           ) : judgesOnly ? (
             <p className="muted">
-              Starting a study is open to judges with the access code: each one plans recordings and calls the models.
-              The finished results on the Analyze page show the same agent at work.
+              Starting new studies is paused right now (each one plans recordings and calls the models). The finished
+              results on the Analyze page show the same agent at work.
             </p>
           ) : (
             <form className="stack" onSubmit={plan}>

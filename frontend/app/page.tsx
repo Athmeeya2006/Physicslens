@@ -177,8 +177,8 @@ export default function Home() {
               </div>
             ) : health && !health.can_upload ? (
               <p className="muted">
-                Analyzing your own clip is open to judges with the access code (each analysis calls the models). Every
-                recording in the list is a complete, real analysis: open one to see the agent&apos;s decision trail.
+                Analyzing new clips is paused right now (each analysis calls the models). Every recording in the list is a
+                complete, real analysis: open one to see the agent&apos;s decision trail.
               </p>
             ) : (
               <form className="stack" onSubmit={submit}>

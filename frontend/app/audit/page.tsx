@@ -194,8 +194,8 @@ export default function AuditPage() {
           </button>
           {health && !health.can_upload && (
             <p className="muted small">
-              Uploading is open to judges with the access code. Every recording on the Analyze page already carries its
-              own physics audit: open one to read it.
+              Uploading is paused right now. Every recording on the Analyze page already carries its own physics audit:
+              open one to read it.
             </p>
           )}
         </form>

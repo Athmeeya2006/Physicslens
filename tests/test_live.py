@@ -158,7 +158,7 @@ def test_public_visitors_get_no_live_mode(monkeypatch):
     with client.websocket_connect("/ws/live") as ws:
         ws.send_json({"fps": 25})
         msg = ws.receive_json()
-        assert msg["type"] == "notice" and "access code" in msg["message"]
+        assert msg["type"] == "notice" and "paused" in msg["message"]
 
 
 def test_live_session_uses_its_own_cap(harness, tmp_path, monkeypatch):
