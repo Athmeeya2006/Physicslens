@@ -589,7 +589,8 @@ The public gallery is a static export that needs no server: `python scripts/buil
 | `MOCK_MODELS` | `1` in tests only |
 | `PHYSICSLENS_KILL` | `1` blocks every paid call |
 | `PHYSICSLENS_CACHE_ONLY` | Comma-separated providers that may answer only from the cache (offline replay) |
-| `DEMO_ACCESS_CODE` | Judges append `?code=...` to the URL for uploads, live mode, voice and studies |
+| `DEMO_ACCESS_CODE` | Optional. With `OPEN_ACCESS=1` (as during judging) nobody needs it; a visitor who has it (`?code=...`) skips the per-visitor allowance |
+| `OPEN_ACCESS` | `1` gives every visitor uploads, live mode, voice and studies, under the period's spending allowance and a per-visitor allowance |
 | `PUBLIC_TRY_ENABLED` | `1` lets visitors without a code analyze a few short clips per day under their own cap; otherwise gallery only |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Optional Cloudflare Turnstile check on public uploads |
 | `FRONTEND_ORIGINS` | Allowed CORS origins for the backend |
