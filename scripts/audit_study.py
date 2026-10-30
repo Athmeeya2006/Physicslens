@@ -149,11 +149,17 @@ def prepare(clip: dict[str, Any]) -> Path:
         return out
     raw.parent.mkdir(parents=True, exist_ok=True)
     out.parent.mkdir(parents=True, exist_ok=True)
+    # Write to a temporary name and rename when complete: a run stopped mid-download or mid-encode once left a
+    # half-written file that every later run tripped over ("moov atom not found").
     if not raw.exists():
-        raw.write_bytes(fetch(clip["url"]))
+        part = raw.with_suffix(".part")
+        part.write_bytes(fetch(clip["url"]))
+        part.replace(raw)
+    tmp = out.with_suffix(".tmp.mp4")
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-t", str(MAX_SECONDS), "-an", "-c:v", "libx264",
                     "-threads", os.environ.get("FFMPEG_THREADS", "2"),
-                    "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)], check=True)
+                    "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(tmp)], check=True)
+    tmp.replace(out)
     return out
 
 
