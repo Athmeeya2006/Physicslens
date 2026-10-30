@@ -71,7 +71,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
           <div className="shell-spacer" />
-          <span className="shell-note">System identification from a phone camera</span>
           <ThemeToggle />
         </div>
       </header>
