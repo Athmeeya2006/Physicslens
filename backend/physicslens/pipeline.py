@@ -558,6 +558,8 @@ def audit_clip(full: Trajectory, family: str, calibration: Calibration, verdict:
                       g["value"] if g else None, g["std"] if g else None)
     # Mask size per sample of the track (its fitted rectangle), interpolated over the short gaps the track fills.
     areas = np.interp(full.frames, moving.frames, moving.long_px * moving.short_px)
+    outline = np.column_stack([np.interp(full.frames, moving.frames, moving.long_px),
+                               np.interp(full.frames, moving.frames, moving.short_px)])
     try:
         varies = media.frame_rate_varies(video) if video.is_file() else None
     except media.MediaError as e:
@@ -567,7 +569,7 @@ def audit_clip(full: Trajectory, family: str, calibration: Calibration, verdict:
         a = AuditInput(
             traj=full, family=family, calibration_source=calibration.source,
             px_per_m=NOMINAL_PX_PER_M if calibration.source == "gravity" else calibration.px_per_m,
-            scale_rel_std=calibration.rel_std, law=law, object_size_px=float(np.median(moving.long_px)), areas_px=areas,
+            scale_rel_std=calibration.rel_std, law=law, object_size_px=float(np.median(moving.long_px)), areas_px=areas, outline_px=outline,
             confidence=moving.confidence, coverage=coverage_in_view(moving.frames), frame_rate_varies=varies,
             reference_px=reference.centers_px if reference is not None else None,
             reference_size_px=float(np.median(reference.long_px)) if reference is not None else None,

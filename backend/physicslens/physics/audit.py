@@ -91,6 +91,10 @@ MORPH_WINDOW = 5
 # footage in the control set raised both, so a jump or morph at a contact is not counted against the video.
 CONTACT_VELOCITY_CHANGE = 0.6
 CONTACT_WINDOW = 4  # frames on each side used for the velocities
+# Occlusion: an edge cutting an object off shrinks one side of its outline and leaves the other, so the outline's
+# proportions change; an object that really grows or shrinks (a generated morph) scales as a whole. Real footage of
+# a ball rolling into a box was accused before this.
+OCCLUSION_ASPECT = 1.35
 BOOTSTRAP_REPS = 100
 
 Verdict = Literal["consistent", "violates_physics", "cant_judge"]
@@ -124,6 +128,7 @@ class AuditInput:
     law: LawEvidence | None = None
     object_size_px: float | None = None
     areas_px: np.ndarray | None = None  # mask area per sample, aligned with traj
+    outline_px: np.ndarray | None = None  # (N, 2) long and short side of the mask's fitted rectangle per sample
     confidence: np.ndarray | None = None
     coverage: float = 1.0
     frame_rate_varies: bool | None = None  # None: not checked
@@ -741,6 +746,16 @@ def check_morph(a: AuditInput, sigma: float = 0.0) -> Check:
                      f"At {a.traj.t[i + m]:.2f} s the mask area changes {max(factor, 1 / factor):.1f} times, but at a contact "
                      "(the velocity changes there too): spray, splash or a second object touching it does the same, so it "
                      "isn't counted.", factor, None, 1.0, "", float(z[i]))
+    if z[i] >= Z_KINEMATIC and abs(steps[i]) > np.log(MORPH_FACTOR) and a.outline_px is not None \
+            and len(a.outline_px) == len(la):
+        o = np.log(np.clip(np.asarray(a.outline_px, dtype=float), 1e-6, None))
+        aspect = o[:, 0] - o[:, 1]
+        turned = abs(float(np.median(aspect[i + m:i + 2 * m]) - np.median(aspect[i:i + m])))
+        if turned > np.log(OCCLUSION_ASPECT):
+            return Check("kinematics", title, "skipped",
+                         f"At {a.traj.t[i + m]:.2f} s the mask area changes {max(factor, 1 / factor):.1f} times, but its "
+                         "outline changes shape the way an edge cutting it off does (one side shrinks, the other stays): "
+                         "the object is partly hidden, so it isn't counted.", factor, None, 1.0, "", float(z[i]))
     if z[i] >= Z_KINEMATIC and abs(steps[i]) > np.log(MORPH_FACTOR):
         return Check("kinematics", title, "violation",
                      f"At {a.traj.t[i + m]:.2f} s the object's mask area {'grows' if factor > 1 else 'shrinks'} {max(factor, 1 / factor):.1f} "
@@ -754,7 +769,7 @@ def check_morph(a: AuditInput, sigma: float = 0.0) -> Check:
 def save_input(a: AuditInput, path: Path) -> None:
     """Everything the audit read, so a changed rule can be replayed on stored runs without another paid call."""
     arrays: dict[str, np.ndarray] = {"t": a.traj.t, "xy": a.traj.xy, "frames": a.traj.frames}
-    for name in ("areas_px", "confidence", "reference_px"):
+    for name in ("areas_px", "outline_px", "confidence", "reference_px"):
         value = getattr(a, name)
         if value is not None:
             arrays[name] = np.asarray(value)
@@ -772,7 +787,7 @@ def load_input(path: Path) -> AuditInput:
     fps = meta.pop("fps")
     get = lambda k: z[k] if k in z.files else None  # noqa: E731
     return AuditInput(traj=Trajectory(z["t"], z["xy"], z["frames"], fps), law=LawEvidence(**law) if law else None,
-                      areas_px=get("areas_px"), confidence=get("confidence"), reference_px=get("reference_px"), **meta)
+                      areas_px=get("areas_px"), outline_px=get("outline_px"), confidence=get("confidence"), reference_px=get("reference_px"), **meta)
 
 
 def cant_judge(reason: str) -> dict[str, Any]:

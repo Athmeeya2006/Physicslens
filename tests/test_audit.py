@@ -308,3 +308,17 @@ def test_coverage_counts_only_frames_while_in_view():
     assert coverage_in_view(np.arange(120, 240)) == 1.0
     assert coverage_in_view(np.r_[np.arange(0, 50), np.arange(90, 100)]) == pytest.approx(0.6)
     assert coverage_in_view(np.array([], dtype=int)) == 0.0
+
+
+def test_an_object_going_behind_something_is_not_a_morph():
+    """Real footage: a ball rolls into a box and the wall hides half of it. The outline loses one side (its
+    proportions change); a generated object that shrinks keeps its proportions."""
+    tr = pendulum()
+    half = tr.t >= tr.t[len(tr.t) // 2]
+    long_side = np.full(len(tr.t), 30.0)
+    hidden = np.column_stack([long_side, np.where(half, 10.0, 30.0)])  # one side cut by an edge
+    r = run(tr, "pendulum", areas_px=hidden[:, 0] * hidden[:, 1], outline_px=hidden)
+    assert "No morphing" not in violated(r)
+    assert any(c["title"] == "No morphing" and c["status"] == "skipped" and "partly hidden" in c["text"] for c in r["checks"])
+    shrunk = np.column_stack([np.where(half, 15.0, 30.0), np.where(half, 15.0, 30.0)])  # the whole object shrinks
+    assert "No morphing" in violated(run(tr, "pendulum", areas_px=shrunk[:, 0] * shrunk[:, 1], outline_px=shrunk))
