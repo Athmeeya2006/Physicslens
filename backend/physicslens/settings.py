@@ -41,7 +41,8 @@ class Settings:
     mock_models: bool = False
     use_contributor_model: bool = False
     repo_root: Path = REPO_ROOT
-    config_dir: Path = field(default=REPO_ROOT / "config")
+    # PHYSICSLENS_CONFIG_DIR lets the test suite run on its own caps (a fresh clone has no budget.yaml yet).
+    config_dir: Path = field(default_factory=lambda: Path(os.environ.get("PHYSICSLENS_CONFIG_DIR") or REPO_ROOT / "config"))
     var_dir: Path = field(default=REPO_ROOT / "var")
 
     @property

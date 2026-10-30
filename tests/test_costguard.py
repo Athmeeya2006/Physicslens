@@ -407,3 +407,49 @@ def test_cached_sam_result_never_uploads(harness, tmp_path):
     r = harness.client.sam_video(**kw)
     assert r.cached
     assert len([c for c in harness.sdk().calls if c["kind"] == "files"]) == 1
+
+
+def _judge_guard(tmp_path, carried=None, day=1):
+    from datetime import UTC, datetime
+
+    from physicslens.costguard.guard import Guard
+    from tests.conftest import TEST_BUDGET
+    clock = {"day": day}
+    g = Guard(Ledger(tmp_path / "ledger.db"), {**TEST_BUDGET, "per_run_cap_usd": 5.0},
+              now=lambda: datetime(2026, 11, 4 + clock["day"], 12, tzinfo=UTC), carried=carried)
+    return g, clock
+
+
+def test_judge_total_is_for_the_whole_period_not_per_day(tmp_path):
+    """One pot per provider: a busy day doesn't reset overnight, and Baseten spend doesn't use up Meta's."""
+    g, clock = _judge_guard(tmp_path)
+    g.check_and_reserve("meta_api", "sam-3.1", 0.25, "j1", audience="judge").commit(0.25)
+    clock["day"] = 2
+    with pytest.raises(BudgetExceeded) as e:
+        g.check_and_reserve("meta_api", "sam-3.1", 0.10, "j2", audience="judge")
+    assert str(e.value) == BUSY_MESSAGE
+    g.check_and_reserve("baseten", "meta-models/muse-spark-open-1026", 0.10, "j3", audience="judge").commit(0.10)
+    g.check_and_reserve("meta_api", "sam-3.1", 0.10, "d1", audience="dev").commit(0.10)  # development is not judging
+
+
+def test_judge_spend_from_earlier_sessions_counts(tmp_path, monkeypatch):
+    g, _ = _judge_guard(tmp_path, carried={"judge": {"baseten": 0.25}})
+    with pytest.raises(BudgetExceeded):
+        g.check_and_reserve("baseten", "meta-models/muse-spark-open-1026", 0.10, "j1", audience="judge")
+    g.check_and_reserve("meta_api", "sam-3.1", 0.10, "j2", audience="judge").commit(0.10)
+    from physicslens.costguard.guard import carried_spend
+    monkeypatch.setenv("JUDGE_SPENT_BEFORE", '{"baseten": 1.5, "meta_api": 0.25}')
+    assert carried_spend() == {"baseten": 1.5, "meta_api": 0.25}
+    monkeypatch.setenv("JUDGE_SPENT_BEFORE", "not json")
+    unreadable, _ = _judge_guard(tmp_path / "b", carried={"judge": carried_spend()})
+    with pytest.raises(BudgetExceeded):  # an unreadable total keeps the gate shut rather than open
+        unreadable.check_and_reserve("meta_api", "sam-3.1", 0.01, "j3", audience="judge")
+
+
+def test_feature_caps_can_be_totals_instead_of_per_day(tmp_path):
+    g, clock = _judge_guard(tmp_path)
+    g.budget = {**g.budget, "feature_caps_are_totals": True, "model_daily_caps_usd": {"muse-wonder-1.0": 0.30}}
+    g.check_and_reserve("meta_api", "muse-wonder-1.0", 0.25, "w1").commit(0.25)
+    clock["day"] = 2  # a new day does not refill a total
+    with pytest.raises(BudgetExceeded, match="total budget"):
+        g.check_and_reserve("meta_api", "muse-wonder-1.0", 0.10, "w2")

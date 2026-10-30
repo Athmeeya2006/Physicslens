@@ -10,7 +10,7 @@ import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import (
     Body,
@@ -52,7 +52,7 @@ from .physics.health import (
     trend,
 )
 from .pipeline import AnalysisError, RunOptions, trajectory_from_result
-from .public import PublicQuota, client_address, turnstile_ok
+from .public import PublicQuota, VisitorAllowance, client_address, turnstile_ok
 from .runs import RunManager
 from .settings import OPEN_WEIGHT_MODELS, load_settings
 from .studies import Studies, StudyError
@@ -83,13 +83,39 @@ app.add_middleware(
 )
 
 
+def has_code(access_code: str | None) -> bool:
+    expected = os.environ.get("DEMO_ACCESS_CODE", "")
+    return bool(expected and access_code and hmac.compare_digest(access_code, expected))
+
+
+def open_access() -> bool:
+    """Open judging: everyone gets what a judge gets, with no code to paste (the judges' total allowance still caps
+    the money, and VisitorAllowance keeps one visitor from using it all)."""
+    return os.environ.get("OPEN_ACCESS", "0") == "1"
+
+
 def audience_for(access_code: str | None) -> str:
     if settings.app_env == "dev":
         return "dev"
-    expected = os.environ.get("DEMO_ACCESS_CODE", "")
-    if expected and access_code and hmac.compare_digest(access_code, expected):
+    if has_code(access_code) or open_access():
         return "judge"
     return "public"
+
+
+# Per visitor, for the whole period, under open access: generous for a judge trying everything twice.
+OPEN_ACCESS_DEFAULTS = {"analysis": 15, "live": 5, "picture": 5, "controller": 3, "study": 3}
+visitors = VisitorAllowance(settings.data_dir / "public.db",
+                            {**OPEN_ACCESS_DEFAULTS, **(client.guard.budget.get("open_access_per_visitor") or {})})
+
+
+def allow_visitor(kind: str, access_code: str | None, headers: Any, remote: str | None) -> None:
+    """Under open access, one more paid action of this kind for this visitor, or a polite refusal (never a count)."""
+    if settings.app_env == "dev" or not open_access() or has_code(access_code):
+        return
+    addr = client_address(remote, headers.get("x-forwarded-for"), headers.get("cf-connecting-ip"))
+    if not visitors.take(addr, kind):
+        raise HTTPException(status_code=429, detail="You've tried this a lot already; every result in the gallery "
+                                                    "shows the full analysis. Please come back later.")
 
 
 def public_try_enabled() -> bool:
@@ -104,6 +130,7 @@ def health(x_access_code: Annotated[str | None, Header()] = None) -> dict[str, o
     return {"status": "ok", "app_env": settings.app_env, "mock_mode": settings.mock_models, "audience": audience,
             "reasoning": {"provider": provider, "model": OPEN_WEIGHT_MODELS[provider]} if provider else None,
             "can_upload": audience != "public" or public_try_enabled(), "can_go_live": audience != "public",
+            "open_access": open_access(),
             "turnstile_site_key": os.environ.get("TURNSTILE_SITE_KEY", "") if audience == "public" else ""}
 
 
@@ -149,6 +176,7 @@ def create_run(
     suffix = Path(video.filename or "").suffix.lower()
     if suffix not in VIDEO_SUFFIXES:
         raise HTTPException(status_code=400, detail="Please upload a video file (MP4 or MOV).")
+    allow_visitor("analysis", x_access_code, request.headers, request.client.host if request.client else None)
     # Public checks come after the cheap request checks, so a wrong file never uses up a visitor's daily analysis.
     if audience == "public":
         if not public_try_enabled():
@@ -241,12 +269,18 @@ def live_cap() -> float:
 
 @app.websocket("/ws/live")
 async def live(ws: WebSocket) -> None:
-    """First message: JSON {fps, pendulum_length_m?, access_code?}. Then one binary JPEG per camera frame."""
+    """First message: JSON {fps, pendulum_length_m?, object_size_m?, access_code?}. Then one binary JPEG per camera frame."""
     await ws.accept()
     init = await ws.receive_json()
     audience = audience_for(init.get("access_code"))
     if audience == "public":
         await ws.send_json({"type": "notice", "level": "error", "message": "Live mode needs the access code; the gallery is open to everyone."})
+        await ws.close()
+        return
+    try:
+        allow_visitor("live", init.get("access_code"), ws.headers, ws.client.host if ws.client else None)
+    except HTTPException as e:
+        await ws.send_json({"type": "notice", "level": "error", "message": e.detail})
         await ws.close()
         return
     loop = asyncio.get_running_loop()
@@ -257,10 +291,16 @@ async def live(ws: WebSocket) -> None:
 
     run_dir = runs.new_run_dir()
     fps = min(float(init.get("fps") or 25), 30.0)
-    length = init.get("pendulum_length_m")
+    length, size = init.get("pendulum_length_m"), init.get("object_size_m")
+
+    def positive(v) -> float | None:
+        try:
+            return float(v) if v is not None and 0 < float(v) < 1000 else None
+        except (TypeError, ValueError):
+            return None
     session = LiveSession(client, run_dir, f"live-{run_dir.name}",
-                          LiveConfig(fps=fps, pendulum_length_m=float(length) if length else None, audience=audience,
-                                     run_cap_usd=live_cap()), send)
+                          LiveConfig(fps=fps, pendulum_length_m=positive(length), object_size_m=positive(size),
+                                     audience=audience, run_cap_usd=live_cap()), send)
     await ws.send_json({"type": "ready", "run_id": run_dir.name})
     try:
         frames = 0
@@ -325,6 +365,7 @@ def whatif(
 @app.post("/api/runs/{run_id}/setup-guide")
 def setup_guide(
     run_id: str,
+    request: Request,
     step_ref: Annotated[int, Body(embed=True)],
     x_access_code: Annotated[str | None, Header()] = None,
 ) -> dict:
@@ -332,6 +373,7 @@ def setup_guide(
     audience = audience_for(x_access_code)
     if audience == "public":
         raise HTTPException(status_code=403, detail="Picture guides need the access code.")
+    allow_visitor("picture", x_access_code, request.headers, request.client.host if request.client else None)
     result = _finished_result(run_id)
     run_dir = _run_file(run_id, "")
     try:
@@ -495,11 +537,13 @@ def sim_to_real(run_id: str) -> dict:
 
 
 @app.post("/api/runs/{run_id}/control")
-def start_control(run_id: str, task: ControlTask, x_access_code: Annotated[str | None, Header()] = None) -> dict:
+def start_control(run_id: str, task: ControlTask, request: Request,
+                  x_access_code: Annotated[str | None, Header()] = None) -> dict:
     """Muse Wonder writes a controller for the identified system; MuJoCo decides whether it works. Judges and dev only."""
     audience = audience_for(x_access_code)
     if audience == "public":
         raise HTTPException(status_code=403, detail="Controller design needs the access code.")
+    allow_visitor("controller", x_access_code, request.headers, request.client.host if request.client else None)
     _run_file(run_id, "result.json")  # rejects malformed ids
     result = _finished_result(run_id)
     try:
@@ -614,8 +658,11 @@ def _study_call(fn, *args):
 
 
 @app.post("/api/studies")
-def create_study(goal: Annotated[str, Body(embed=True)], x_access_code: Annotated[str | None, Header()] = None) -> dict:
-    return _study_call(studies.create, goal, _study_audience(x_access_code))
+def create_study(goal: Annotated[str, Body(embed=True)], request: Request,
+                 x_access_code: Annotated[str | None, Header()] = None) -> dict:
+    audience = _study_audience(x_access_code)
+    allow_visitor("study", x_access_code, request.headers, request.client.host if request.client else None)
+    return _study_call(studies.create, goal, audience)
 
 
 @app.get("/api/studies/{study_id}")

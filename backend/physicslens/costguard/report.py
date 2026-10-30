@@ -38,6 +38,11 @@ def render(ledger: Ledger, guard: Guard) -> str:
             f"{s['spent_today_usd']:>10.4f} {s['daily_cap_usd']:>10.2f}"
         )
 
+    judge = guard.audience_totals("judge")
+    if judge:
+        lines += ["", "Judges, whole judging period: " + ", ".join(
+            f"{p} ${t['spent_usd']:.4f} of ${t['cap_usd']:.2f}" for p, t in judge.items())]
+
     open_res = sum(1 for r in rows if r["status"] == "reserved")
     hits = sum(1 for r in rows if r["status"] == "cache_hit")
     lines += ["", f"Cache hits (free): {hits}. Open reservations (counted as spent): {open_res}."]

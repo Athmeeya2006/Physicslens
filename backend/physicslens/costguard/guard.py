@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import math
+import os
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -38,12 +40,31 @@ class Reservation:
         self._guard.settle(self, 0.0, None, "released", None)
 
 
+def carried_spend(env: str = "JUDGE_SPENT_BEFORE") -> dict[str, float]:
+    """Judge spend from earlier server sessions ({"baseten": 1.2, "meta_api": 0.8}). A judging server restarts every
+    day with an empty ledger; without this, a total for the whole judging period would reset each morning."""
+    raw = os.environ.get(env, "").strip()
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        return {str(k): max(0.0, float(v)) for k, v in data.items()}
+    except (ValueError, TypeError, AttributeError) as e:
+        # A total that can't be read must not open the gate: every provider counts as fully spent.
+        log.error("%s is not valid JSON of provider to dollars (%s); judge calls are refused.", env, e)
+        return {"*": math.inf}
+
+
 class Guard:
-    def __init__(self, ledger: Ledger, budget: dict[str, Any], now: Callable[[], datetime] = utc_now):
+    def __init__(self, ledger: Ledger, budget: dict[str, Any], now: Callable[[], datetime] = utc_now,
+                 carried: dict[str, dict[str, float]] | None = None):
         self.ledger = ledger
         self.budget = budget
         self._now = now
         self._lock = threading.Lock()
+        # Spend per audience and provider from earlier sessions, counted against that audience's totals.
+        self.carried = carried if carried is not None else (
+            {"judge": carried_spend()} if self.budget.get("judge_total_caps_usd") else {})
 
     def _caps(self, provider: str) -> dict[str, float]:
         caps = self.budget.get(provider)
@@ -82,13 +103,25 @@ class Guard:
             audience_cap = self.budget.get(f"{audience}_daily_cap_usd") if audience != "dev" else None
             if audience_cap is not None:
                 checks.append((Ledger.spent(conn, day=today, audience=audience), audience_cap, f"{audience} daily safety cap"))
+            total_cap = (self.budget.get(f"{audience}_total_caps_usd") or {}).get(provider) if audience != "dev" else None
+            if total_cap is not None:
+                # One allowance for the whole judging period, not per day: a busy first day must not lock judges out
+                # while later days' money sits unused.
+                carried = self.carried.get(audience, {})
+                before = carried.get("*", carried.get(provider, 0.0))
+                since = self.budget.get(f"{audience}_period_start")
+                checks.append((before + Ledger.spent(conn, provider=provider, audience=audience, since=since), float(total_cap),
+                               f"{audience} {provider} total for the period"))
+            # A feature's allowance counts per day, or over all days when the budget says its caps are totals (a
+            # per-day limit can block a busy day while later days' money sits unused).
+            feature_day, feature_kind = (None, "total") if self.budget.get("feature_caps_are_totals") else (today, "daily")
             if model_daily_cap_usd is not None:
-                # A feature with its own small allowance (picture guides) must not eat the provider's daily budget.
-                checks.append((Ledger.spent(conn, day=today, model=model), model_daily_cap_usd, f"{model} daily budget"))
+                # A feature with its own small allowance (picture guides) must not eat the provider's budget.
+                checks.append((Ledger.spent(conn, day=feature_day, model=model), model_daily_cap_usd, f"{model} {feature_kind} budget"))
             model_cap = (self.budget.get("model_daily_caps_usd") or {}).get(model)
             if model_cap is not None and model_daily_cap_usd is None:
-                # Some models are approved for one narrow use with their own daily cap inside the provider's.
-                checks.append((Ledger.spent(conn, day=today, model=model), float(model_cap), f"{model} daily budget"))
+                # Some models are approved for one narrow use with their own cap inside the provider's.
+                checks.append((Ledger.spent(conn, day=feature_day, model=model), float(model_cap), f"{model} {feature_kind} budget"))
 
             for spent, cap, label in checks:
                 if spent + est_cost > cap:
@@ -125,13 +158,27 @@ class Guard:
             self.ledger.update(res.id, **fields)
         res.settled = True
 
+    def audience_totals(self, audience: str = "judge") -> dict[str, dict[str, float]]:
+        """Spend against an audience's allowance for the period, earlier server sessions included."""
+        caps = self.budget.get(f"{audience}_total_caps_usd") or {}
+        carried = self.carried.get(audience, {})
+        out: dict[str, dict[str, float]] = {}
+        with self.ledger.transaction() as conn:
+            for provider, cap in caps.items():
+                here = Ledger.spent(conn, provider=provider, audience=audience,
+                                    since=self.budget.get(f"{audience}_period_start"))
+                before = carried.get("*", carried.get(provider, 0.0))
+                out[provider] = {"this_session_usd": round(here, 6), "earlier_sessions_usd": round(before, 6),
+                                 "spent_usd": round(here + before, 6), "cap_usd": float(cap)}
+        return out
+
     def summary(self) -> dict[str, Any]:
         """Spent vs caps per provider, for the dev UI header and the report."""
         today = self._now().date().isoformat()
         out: dict[str, Any] = {}
         with self.ledger.transaction() as conn:
             for provider, caps in self.budget.items():
-                if not isinstance(caps, dict):
+                if not isinstance(caps, dict) or "hard_cap_usd" not in caps:
                     continue
                 out[provider] = {
                     "spent_usd": round(Ledger.spent(conn, provider=provider), 6),

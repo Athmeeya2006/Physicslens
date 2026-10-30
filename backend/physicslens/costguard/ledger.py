@@ -77,6 +77,7 @@ class Ledger:
         run_id: str | None = None,
         audience: str | None = None,
         model: str | None = None,
+        since: str | None = None,
     ) -> float:
         where = [f"status IN ({','.join('?' * len(COUNTED_STATUSES))})"]
         args: list[Any] = list(COUNTED_STATUSES)
@@ -84,6 +85,9 @@ class Ledger:
             if value is not None:
                 where.append(f"{column} = ?")
                 args.append(value)
+        if since is not None:
+            where.append("ts >= ?")  # ISO timestamps compare in time order
+            args.append(since)
         row = conn.execute(f"SELECT COALESCE(SUM(est_cost_usd), 0) FROM spend WHERE {' AND '.join(where)}", args).fetchone()
         return float(row[0])
 

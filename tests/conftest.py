@@ -1,4 +1,6 @@
+import os
 import shutil
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -16,11 +18,26 @@ TEST_BUDGET = {
     "together": {"hard_cap_usd": 0.50, "daily_cap_usd": 0.20},
     "per_run_cap_usd": 0.20,
     "smoke_cap_usd": 0.10,
-    "judge_daily_cap_usd": 0.30,
+    "judge_total_caps_usd": {"meta_api": 0.30, "baseten": 0.30},
     "public_daily_cap_usd": 0.05,
     "public_per_ip_daily_analyses": 3,
     "warn_at_fraction": 0.75,
 }
+
+
+def pytest_configure(config):
+    """Before any test module imports the app: a private config folder with test-only caps.
+
+    The app refuses to start without config/budget.yaml (it must never fall back to example caps). Tests should neither
+    depend on a developer's real caps nor fail on a fresh clone that has not run `make setup` yet.
+    """
+    if os.environ.get("PHYSICSLENS_CONFIG_DIR"):
+        return
+    tmp = Path(tempfile.mkdtemp(prefix="physicslens-test-config-"))
+    for name in ("models.yaml", "prices.yaml", "limits.yaml"):
+        shutil.copy(REPO_CONFIG / name, tmp / name)
+    (tmp / "budget.yaml").write_text(yaml.safe_dump(TEST_BUDGET))
+    os.environ["PHYSICSLENS_CONFIG_DIR"] = str(tmp)
 
 
 @pytest.fixture(autouse=True)

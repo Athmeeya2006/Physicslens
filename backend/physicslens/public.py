@@ -41,12 +41,43 @@ class PublicQuota:
         return True
 
 
-def client_address(remote: str | None, forwarded_for: str | None) -> str:
-    # Behind a proxy the visitor's address is the first X-Forwarded-For entry; only trust it when told to,
-    # otherwise anyone could rotate the header to dodge the limit.
-    if forwarded_for and os.environ.get("TRUST_PROXY", "0") == "1":
-        return forwarded_for.split(",")[0].strip()
+def client_address(remote: str | None, forwarded_for: str | None, cf_connecting_ip: str | None = None) -> str:
+    # Behind a proxy every request arrives from the proxy (a Cloudflare tunnel: 127.0.0.1), so the visitor's address
+    # comes from a header; only trust headers when told to, otherwise anyone could rotate one to dodge the limit.
+    # Cloudflare's own CF-Connecting-IP is set at its edge and can't be supplied by the visitor.
+    if os.environ.get("TRUST_PROXY", "0") == "1":
+        if cf_connecting_ip:
+            return cf_connecting_ip.strip()
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
     return remote or "unknown"
+
+
+class VisitorAllowance:
+    """Open judging (no access code): how many paid actions of each kind one visitor may start in the whole period.
+
+    The money is capped by the judges' total allowance; this only keeps one visitor (or a bot) from using all of it
+    before the judges arrive. Counted per address and kind, not per day."""
+
+    def __init__(self, path: Path, limits: dict[str, int]):
+        self.path = path
+        self.limits = limits
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with closing(sqlite3.connect(path)) as conn, conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS visitor_use (addr TEXT, kind TEXT, n INTEGER, PRIMARY KEY (addr, kind))")
+
+    def take(self, addr: str, kind: str) -> bool:
+        limit = self.limits.get(kind, 0)
+        with closing(sqlite3.connect(self.path, timeout=30, isolation_level=None)) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT n FROM visitor_use WHERE addr = ? AND kind = ?", (addr, kind)).fetchone()
+            used = row[0] if row else 0
+            if used >= limit:
+                conn.execute("ROLLBACK")
+                return False
+            conn.execute("INSERT OR REPLACE INTO visitor_use (addr, kind, n) VALUES (?, ?, ?)", (addr, kind, used + 1))
+            conn.execute("COMMIT")
+        return True
 
 
 def turnstile_ok(token: str | None, addr: str) -> bool:

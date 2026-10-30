@@ -175,9 +175,10 @@ def main() -> None:
     if not a.skip_upload:
         upload_code()
     push_kernel(min(a.hours, 11.75), a.gpu, a.slot)
-    url = wait_for_url(kernel=KERNEL + (f"-{a.slot}" if a.slot else ""))
-    print(f"server: {url}")
-    point_site(url)
+    # No re-pointing here: a pushed run has no Kaggle Secrets and never serves, and the log stream can still be the
+    # previous session's (pointing the site at an old server). A run started with Save & Run All or the schedule
+    # announces itself through the gist; use `connect` to point the site by hand.
+    print("pushed; start it with Save & Run All (or wait for the schedule): it announces itself through the gist")
 
 
 if __name__ == "__main__":

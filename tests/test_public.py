@@ -64,3 +64,46 @@ def test_gallery_lists_curated_results(public_app, tmp_path, monkeypatch):
     items = client.get("/api/gallery").json()
     assert items[0]["id"] == "gallery-test" and items[0]["title"] == "Pendulum" and items[0]["object"] == "ball"
     assert client.get("/api/runs/gallery-test").json()["status"] == "done"  # opens like any finished run
+
+
+def test_cloudflare_address_wins_behind_the_tunnel(monkeypatch):
+    """Through a Cloudflare tunnel every request comes from 127.0.0.1; the visitor is in CF-Connecting-IP."""
+    monkeypatch.setenv("TRUST_PROXY", "1")
+    assert client_address("127.0.0.1", "6.6.6.6", "8.8.8.8") == "8.8.8.8"
+    monkeypatch.delenv("TRUST_PROXY")
+    assert client_address("127.0.0.1", "6.6.6.6", "8.8.8.8") == "127.0.0.1"
+
+
+def test_visitor_allowance_is_for_the_whole_period_per_kind(tmp_path):
+    from physicslens.public import VisitorAllowance
+    v = VisitorAllowance(tmp_path / "v.db", {"analysis": 2, "live": 1})
+    assert v.take("1.1.1.1", "analysis") and v.take("1.1.1.1", "analysis") and not v.take("1.1.1.1", "analysis")
+    assert v.take("1.1.1.1", "live") and not v.take("1.1.1.1", "live")
+    assert v.take("2.2.2.2", "analysis")
+    assert not v.take("1.1.1.1", "unknown kind")  # anything unlisted is closed
+
+
+@pytest.fixture
+def open_app(monkeypatch, tmp_path):
+    import dataclasses
+
+    from physicslens import app as app_module
+    from physicslens.public import VisitorAllowance
+    monkeypatch.setattr(app_module, "settings", dataclasses.replace(app_module.settings, app_env="demo"))
+    monkeypatch.setattr(app_module, "visitors", VisitorAllowance(tmp_path / "v.db", {"analysis": 2}))
+    monkeypatch.setenv("OPEN_ACCESS", "1")
+    monkeypatch.setenv("TRUST_PROXY", "1")
+    monkeypatch.setenv("DEMO_ACCESS_CODE", "judge-code")
+    return app_module
+
+
+def test_open_access_needs_no_code_and_limits_each_visitor(open_app):
+    from fastapi.testclient import TestClient
+    client = TestClient(open_app.app)
+    health = client.get("/api/health").json()
+    assert health["audience"] == "judge" and health["can_upload"] and health["can_go_live"] and health["open_access"]
+    post = lambda ip, **h: client.post("/api/runs", files={"video": ("a.mp4", b"x", "video/mp4")},
+                                       headers={"cf-connecting-ip": ip, **h}).status_code
+    assert [post("8.8.8.8") for _ in range(3)] == [200, 200, 429]
+    assert post("9.9.9.9") == 200                               # another visitor
+    assert post("8.8.8.8", **{"x-access-code": "judge-code"}) == 200  # the code still lifts the per-visitor limit

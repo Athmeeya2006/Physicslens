@@ -10,7 +10,8 @@
 # - Keys come from Kaggle Secrets (Add-ons > Secrets): BASETEN_API_KEY (Muse Spark Open), MODEL_API_KEY (Meta Model
 #   API, for SAM 3.1 and voice) and DEMO_ACCESS_CODE (what judges use). Nothing secret is printed or written.
 # - The backend runs with APP_ENV=demo: reasoning only on open-weight models, judges need the access code,
-#   public visitors get the gallery only. Spending is capped per session by the budget below.
+#   public visitors get the gallery only. Spending caps come from a secret gist (PRIVATE_GIST_ID), never from this
+#   public file; the same gist carries the judges' running spend from one daily session to the next.
 # - scripts/judging_session.py pushes this script, reads the tunnel address from its log and points the site at it.
 import glob
 import json
@@ -25,14 +26,7 @@ import urllib.request
 
 SERVE_HOURS = 6.0  # replaced by judging_session.py; the session ends itself (Kaggle stops any run at 12 h)
 SERVE_GPU = False  # replaced by judging_session.py
-SESSION_BUDGET = {  # costguard caps for this session (the ledger lives as long as the session)
-    "meta_api": {"hard_cap_usd": 3.00, "daily_cap_usd": 3.00},
-    "baseten": {"hard_cap_usd": 4.00, "daily_cap_usd": 4.00},
-    "glimmer": {"hard_cap_usd": 0.00, "daily_cap_usd": 0.00},
-    "per_run_cap_usd": 0.50, "live_session_cap_usd": 1.00, "smoke_cap_usd": 0.25,
-    "judge_daily_cap_usd": 3.00, "public_daily_cap_usd": 0.00, "public_per_ip_daily_analyses": 0,
-    "warn_at_fraction": 0.75,
-}
+PRIVATE_FILE = "physicslens-private.json"  # in the secret gist: {"session_budget": {...}, "judge_spent": {...}}
 SITE = "https://physicslens.vercel.app"
 T0 = time.time()
 
@@ -91,6 +85,52 @@ def announce(api_base: str, only_if_mine: str | None = None) -> None:
         print(f"pointer: could not update the gist ({type(e).__name__})", flush=True)  # never the token
 
 
+def _gist(gist_id: str, body: dict | None = None) -> dict:
+    token = secret("GIST_TOKEN")
+    req = urllib.request.Request(f"https://api.github.com/gists/{gist_id}", method="PATCH" if body else "GET",
+                                 data=json.dumps(body).encode() if body else None,
+                                 headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
+                                          "User-Agent": "physicslens-server", "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read())
+
+
+def read_private() -> dict:
+    """The session budget and the judges' spend so far. Missing means no caps known, so the server must not serve."""
+    gist_id = secret("PRIVATE_GIST_ID")
+    if not gist_id or not secret("GIST_TOKEN"):
+        return {}
+    try:
+        return json.loads(_gist(gist_id)["files"][PRIVATE_FILE]["content"])
+    except Exception as e:
+        print(f"private gist: could not read it ({type(e).__name__})", flush=True)
+        return {}
+
+
+def save_judge_spent(private: dict, ledger_db: str) -> None:
+    """Earlier sessions' judge spend plus this session's, written back so tomorrow's session starts from it."""
+    import sqlite3
+    start = private["session_budget"].get("judge_period_start", "")
+    try:
+        with sqlite3.connect(ledger_db) as conn:
+            rows = conn.execute("SELECT provider, COALESCE(SUM(est_cost_usd), 0) FROM spend WHERE audience = 'judge' "
+                                "AND status IN ('committed', 'failed_billed', 'reserved') AND ts >= ? GROUP BY provider",
+                                (start,)).fetchall()
+    except sqlite3.Error:
+        return  # no ledger yet: nothing spent
+    before = private.get("judge_spent", {})
+    now = {p: round(before.get(p, 0.0) + dict(rows).get(p, 0.0), 6) for p in set(before) | {r[0] for r in rows}}
+    if now == private.get("_last_saved"):
+        return
+    try:
+        _gist(secret("PRIVATE_GIST_ID"), {"files": {PRIVATE_FILE: {"content": json.dumps({**{k: v for k, v in private.items()
+                                                                                               if not k.startswith("_")},
+                                                                                            "judge_spent": now}, indent=1)}}})
+        private["_last_saved"] = now
+    except Exception as e:
+        print(f"private gist: could not save judge spend ({type(e).__name__})", flush=True)
+
+
 def secret(name: str) -> str:
     try:
         from kaggle_secrets import UserSecretsClient
@@ -103,8 +143,20 @@ baseten_key, model_key, access_code = secret("BASETEN_API_KEY"), secret("MODEL_A
 print("secrets: " + ", ".join(f"{n} {'present' if v else 'MISSING'}" for n, v in (
     ("BASETEN_API_KEY", baseten_key), ("MODEL_API_KEY", model_key), ("DEMO_ACCESS_CODE", access_code))), flush=True)
 if not baseten_key and not SERVE_GPU:
-    sys.exit("No BASETEN_API_KEY secret and no GPU: there is no open-weight model to reason on.")
+    # Runs pushed from the command line never get Kaggle Secrets; that is expected, not a failure. Ending cleanly keeps
+    # the notebook's history readable: only a run started from the editor or the schedule can serve.
+    print("PHYSICSLENS_NOT_SERVING: this run has no secrets (pushed from the command line). Attach BASETEN_API_KEY, "
+          "MODEL_API_KEY, DEMO_ACCESS_CODE, GIST_TOKEN and GIST_ID under Add-ons > Secrets, then use Save & Run All "
+          "or the schedule.", flush=True)
+    sys.exit(0)
 os.makedirs("/kaggle/working/logs", exist_ok=True)
+private = read_private()
+if not private.get("session_budget"):
+    # Never serve without known caps (and never fall back to a guess): judges would get an unguarded server.
+    print("PHYSICSLENS_NOT_SERVING: no session budget. Add PRIVATE_GIST_ID (a secret gist holding "
+          f"{PRIVATE_FILE}) and GIST_TOKEN under Add-ons > Secrets.", flush=True)
+    sys.exit(1)
+print("private gist: session budget loaded; judge spend so far carried over", flush=True)
 
 
 def start_glimmer() -> tuple[subprocess.Popen, str]:
@@ -170,9 +222,13 @@ if shutil.which("ffmpeg") is None:
 import yaml
 
 with open(f"{src}/config/budget.yaml", "w") as f:
-    yaml.safe_dump(SESSION_BUDGET, f)
+    yaml.safe_dump(private["session_budget"], f)
 env = dict(os.environ, PYTHONPATH=f"{src}/backend", APP_ENV="demo", MOCK_MODELS="0", USE_CONTRIBUTOR_MODEL="0",
-           **reasoning_env, MODEL_API_KEY=model_key, DEMO_ACCESS_CODE=access_code, PUBLIC_TRY_ENABLED="0", FRONTEND_ORIGINS=SITE)
+           **reasoning_env, MODEL_API_KEY=model_key, DEMO_ACCESS_CODE=access_code, PUBLIC_TRY_ENABLED="0", FRONTEND_ORIGINS=SITE,
+           JUDGE_SPENT_BEFORE=json.dumps(private.get("judge_spent", {})),
+           # "open_access": true in the private gist gives every visitor the full site with no code; TRUST_PROXY lets
+           # the per-visitor allowance read Cloudflare's visitor address (through the tunnel, everyone is 127.0.0.1).
+           OPEN_ACCESS="1" if private.get("open_access") else "0", TRUST_PROXY="1")
 procs["backend"] = backend = subprocess.Popen([sys.executable, "-m", "uvicorn", "physicslens.app:app", "--host", "127.0.0.1", "--port", "8000"],
                            cwd=src, env=env, stdout=open("/kaggle/working/logs/backend.log", "w"), stderr=subprocess.STDOUT)
 if not wait_http("http://127.0.0.1:8000/api/health", 180, backend):
@@ -204,8 +260,10 @@ while time.time() - T0 < SERVE_HOURS * 3600:
     if dead or not wait_http(f"{url}/api/health", 30):
         print(f"PHYSICSLENS_DOWN {dead or ['tunnel health check']}", flush=True)
         break
+    save_judge_spent(private, f"{src}/var/ledger.db")
     print(f"alive {(time.time() - T0) / 3600:.1f} h", flush=True)
 print("PHYSICSLENS_STOPPING", flush=True)
+save_judge_spent(private, f"{src}/var/ledger.db")
 announce("", only_if_mine=url)
 for p in procs.values():
     p.terminate()
