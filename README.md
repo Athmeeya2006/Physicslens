@@ -21,7 +21,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 - **The problem:** robots are trained in simulators and fail when the simulator's physics is wrong (friction, damping, stiffness). Measuring real physics takes lab rigs and an expert.
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
-- **Proof it discovers rather than recalls:** from rendered videos of asteroid Apophis and of Jupiter's four large moons it found the inverse-square law, the Sun's GM within 0.023% and Jupiter's within 0.012% of NASA/JPL, and Kepler's third law (exponent 1.4991 ± 0.0032) from the tracks alone.
+- **Proof it discovers rather than recalls:** from rendered videos of asteroid Apophis and of Jupiter's four large moons it found the inverse-square law, the Sun's GM within 0.023% and Jupiter's within 0.012% of NASA/JPL, and Kepler's third law (exponent 1.4991 ± 0.0032) from the tracks alone; on Halley's comet a force law with the exponent left free fitted 1.9998.
 - **On real footage:** a 0.5 m pendulum gives g within 1%; a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
 - **Meta models doing real work:** Muse Spark Open (open weights, on Baseten) reasons, SAM 3.1 tracks, Muse Voice Transcribe listens, Muse Image draws setup guides, Muse Wonder writes controllers that only simulation can accept, and Muse Glimmer 30B is the fully offline open-weight path.
 
@@ -31,6 +31,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 |---|---|---|
 | 0 | [Home page](https://physicslens.vercel.app) | the discovery playing: Apophis around the Sun with the law it wrote, typeset, and the numbers it measured |
 | 1 | [Asteroid Apophis](https://physicslens.vercel.app/?run=gallery-apophis) | a dot moving around the Sun becomes the inverse-square law; the force arrow points at the Sun in every frame |
+| 1b | [Halley's comet](https://physicslens.vercel.app/?run=gallery-halley) | the 1986 hairpin around the Sun: inverse-square gravity, the exponent left free fits 1.9998 |
 | 2 | [Weighing Jupiter](https://physicslens.vercel.app/?run=gallery-jupiter) | Jupiter's GM from Io's orbit, within 0.018% of JPL |
 | 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | the referee proposes damping and the verdict changes, on screen, with the reason |
 | 4 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | free fall rejected; a drag law accepted on held-out motion |
@@ -200,6 +201,20 @@ Reproduce: `python scripts/orbit_demo.py all` (fetch and render are free; analyz
 | **Combined** | | **4.49272 ± 0.00047** | **-0.012%** |
 
 Then, across the moons and without any fitted force law: the period and mean distance of each orbit, measured straight from the track, follow **period proportional to distance^1.4991 ± 0.0032** (Kepler's third law is 1.5), with every moon predicted from the other three within 0.7 sigma; its prefactor weighs Jupiter a third way, 0.35% below JPL. The distance carries one pixel of systematic uncertainty in that test. SAM's tracker dropped a plain dot on two of the moons; the pipeline now finds the object by name in every frame before giving up, and that is how Europa was tracked. Data credits: `data/jupiter/SOURCES.md`.
+
+### Halley's comet: the hairpin around the Sun
+
+[Open the result](https://physicslens.vercel.app/?run=gallery-halley). Halley's orbit is a long ellipse (eccentricity 0.967): over the 28 months of the 1986 passage shown in the video, the Sun's pull on it grows about 80-fold and the comet moves more than three times faster at perihelion than at the edges of the frame. A law that is even slightly wrong in its exponent bends that hairpin visibly. Rendered from NASA/JPL Horizons positions (small-body record 90000030), one frame per 1.44 days; the analysis saw only the moving dot.
+
+| Result | Value |
+|---|---|
+| Accepted law | inverse-square gravity, written by the agent; held-out forecast error 0.2% |
+| A rival law with the exponent left free | exponent **1.9998** (Newton: 2) |
+| The Sun's GM | **0.095% below JPL's value** (plus or minus 0.067%) |
+| The referee | proposed three alternatives; none could be tested (it wrote `pow(...)`, which the law grammar then lacked and now accepts), so the law stands on its own verification |
+| Physics audit | consistent |
+
+The honest limit: carried 75 years forward with the Sun alone, the law brings Halley back in **November 2063, not JPL's July 2061**. The period of so long an ellipse hinges on the speed at perihelion to a few parts in ten thousand, finer than a video measures, and the planets' pull (part of JPL's prediction) is not in a law found from the Sun's neighbourhood. Reproduce: `python scripts/halley_demo.py fetch|render|analyze|predict`. Data credits: `data/halley/SOURCES.md`.
 
 ---
 
@@ -695,6 +710,8 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Physics audit checked against real footage: a teleport or a sudden size change counts only when the motion is otherwise continuous through it, and "no law fits" never accuses on its own
 - [x] Physics audit at scale: a batch runner for public benchmark clips (AI-generated and real), with a free replay of changed rules on every stored run
 - [x] Spending as totals for a period, not per day: one judging allowance per provider, carried across the judging server's daily restarts; the server's caps live in a private gist, not in this repository
+- [x] Halley's comet from a video of its 1986 passage: inverse-square gravity, a free exponent fitted at 1.9998, the Sun's GM within 0.1% of JPL
+- [x] Home page showcase: each discovery with its own clean video, the law typeset large and the numbers it measured
 - [x] Open access switch: the whole site (own videos, live camera, voice, studies) for every visitor, with a per-visitor allowance that reads the real visitor address through the tunnel
 - [x] Fitting (SciPy) with BIC model selection, held-out forecasts and bootstrap uncertainty that includes the scale's own error; PySINDy shown separately as unverified model-free regression
 - [x] Verification with simulate-and-compare on held-out data
