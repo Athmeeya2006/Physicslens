@@ -74,10 +74,16 @@ In every result, open the decision trail: each step is tagged with the model (pr
 - [Cost and safety controls](#cost-and-safety-controls)
 
 **Part VI: Reference**
+- [The pipeline in detail](#the-pipeline-in-detail)
+- [Getting started (Linux)](#getting-started-linux)
+- [Configuration reference](#configuration-reference)
+- [HTTP and WebSocket API](#http-and-websocket-api)
+- [Project structure](#project-structure)
+- [Testing](#testing)
+- [What we built during the hackathon](#what-we-built-during-the-hackathon)
 - [Roadmap](#roadmap)
 - [Acknowledgements](#acknowledgements)
 - [License](#license)
-- Reference (collapsed): [The pipeline in detail](#the-pipeline-in-detail), [Getting started (Linux)](#getting-started-linux), [Configuration reference](#configuration-reference), [HTTP and WebSocket API](#http-and-websocket-api), [Project structure](#project-structure), [Testing](#testing), [What we built during the hackathon](#what-we-built-during-the-hackathon)
 
 ---
 
@@ -476,12 +482,9 @@ Other rules: the language model never receives video, only up to four keyframes 
 
 # Part VI: Reference
 
-Everything below is the manual: open a section when you need it.
+The manual: setup, configuration, API, structure and tests, in full.
 
-<details>
-<summary><b>The pipeline in detail</b></summary>
-
-### The pipeline in detail
+## The pipeline in detail
 
 Code: `backend/physicslens/pipeline.py` orchestrates; every step below is a separate module.
 
@@ -497,20 +500,15 @@ Code: `backend/physicslens/pipeline.py` orchestrates; every step below is a sepa
 10. **Uncertainty** (`physics/uncertainty.py`). A residual block bootstrap refits each accepted model 40 times; intervals are value ± 1.96 standard deviations, with the scale's error added in quadrature for length-dependent parameters.
 11. **Output** (`runs.py`, frontend). Equation in KaTeX, parameters with intervals, the ghost overlay, a forecast chart with the held-out band, a short explanation and the decision trail. Results are saved as `result.json` with the clip, so a run can be reopened, shared and exported later.
 
-</details>
+## Getting started (Linux)
 
-<details>
-<summary><b>Getting started (Linux)</b></summary>
-
-### Getting started (Linux)
-
-#### Prerequisites
+### Prerequisites
 
 - Python 3.11+, Node.js 20.17+ (or 22.9+), ffmpeg (`sudo apt install ffmpeg`)
 - A Meta Model API key ([dev.meta.ai](https://dev.meta.ai)) for SAM 3.1 and Muse Voice Transcribe
 - For open-weight reasoning: a Baseten API key (Muse Spark Open), or a GPU machine with about 20 GB of GPU memory (two 16 GB T4s work) running llama.cpp `llama-server` (b10353 or newer) with `meta-models/Muse-Glimmer-30B-GGUF`
 
-#### Setup
+### Setup
 
 ```bash
 git clone https://github.com/Athmeeya2006/Physicslens.git physicslens
@@ -521,7 +519,7 @@ make setup                    # creates .venv, installs backend dependencies, cr
 make test                     # unit tests with mocked models (no API spend)
 ```
 
-#### Serve Muse Glimmer
+### Serve Muse Glimmer
 
 ```bash
 # weights from meta-models/Muse-Glimmer-30B-GGUF
@@ -535,7 +533,7 @@ llama-server -m Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf \
 
 Then set `REASONING_PROVIDER=glimmer`, `GLIMMER_BASE_URL=http://127.0.0.1:8080/v1` and `GLIMMER_API_KEY` in `.env`. This is the exact command the hosted server runs (`scripts/gpu_server/serve.py`): the drafter (`-md`) speeds up generation without changing outputs, and `-np 2` serves two analyses at once with 32k context each.
 
-#### Run
+### Run
 
 ```bash
 make dev-backend              # FastAPI on http://localhost:8000
@@ -544,7 +542,7 @@ make dev-frontend             # Next.js on http://localhost:3000
 
 Open `http://localhost:3000` for the gallery and uploads, `/live` for the camera, `/study` for goal-driven studies, `/health` for machine-health comparisons. Live mode needs HTTPS (or localhost) for camera access.
 
-#### Cost controls
+### Cost controls
 
 ```bash
 make report                   # spend so far per provider/model/day and per audience, remaining budget
@@ -555,7 +553,7 @@ make smoke                    # one cheap real call per model (asks before spend
 
 Budget caps live in `config/budget.yaml` (created from `config/budget.example.yaml` by `make setup`); prices in `config/prices.yaml`.
 
-#### Hosted judging server
+### Hosted judging server
 
 During judging the full app (uploads, live mode, voice, studies) runs on a CPU machine; reasoning goes to Muse Spark Open on Baseten, so the server needs no GPU. Only the backend is exposed, through a Cloudflare tunnel, and the site switches its analysis features on only when that server answers its health check. The home page shows "Analysis server online, reasoning on Muse Spark Open (open weights)" when it does.
 
@@ -565,18 +563,13 @@ During judging the full app (uploads, live mode, voice, studies) runs on a CPU m
 
 `scripts/modal_app.py` runs the same backend on Modal (CPU only, one container, scaled to zero) for when Modal credits are available.
 
-#### Static gallery site
+### Static gallery site
 
 The public gallery is a static export that needs no server: `python scripts/build_static_gallery.py` copies each gallery result, clip, poster, report and export into `frontend/public/gallery/` (gitignored), then `cd frontend && STATIC_EXPORT=1 NEXT_PUBLIC_API_BASE="" npx next build` writes the site to `frontend/out/`. New results are promoted with `scripts/add_to_gallery.py` (single runs) and `scripts/study_to_gallery.py` (studies).
 
-</details>
+## Configuration reference
 
-<details>
-<summary><b>Configuration reference</b></summary>
-
-### Configuration reference
-
-#### Environment variables
+### Environment variables
 
 | Variable | Effect |
 |---|---|
@@ -597,7 +590,7 @@ The public gallery is a static export that needs no server: `python scripts/buil
 | `TRUST_PROXY` | `1` to read the client address from proxy headers (per-visitor limits behind a tunnel) |
 | `NEXT_PUBLIC_API_BASE` | Backend URL baked into a frontend build; the static site uses `/backend.json` at runtime instead |
 
-#### Config files
+### Config files
 
 | File | Contents |
 |---|---|
@@ -606,12 +599,7 @@ The public gallery is a static export that needs no server: `python scripts/buil
 | `config/limits.yaml` | our rate limits, timeouts, token limits, the agent turn cap, and the controller loop's attempt cap, success threshold and sandbox limits |
 | `config/budget.example.yaml` | example budget caps; `make setup` copies it to the untracked `config/budget.yaml`, which the app requires |
 
-</details>
-
-<details>
-<summary><b>HTTP and WebSocket API</b></summary>
-
-### HTTP and WebSocket API
+## HTTP and WebSocket API
 
 All routes are in `backend/physicslens/app.py`. Routes that start paid work are open under open access (with a per-visitor allowance), or need the access code, or public try mode.
 
@@ -636,12 +624,7 @@ All routes are in `backend/physicslens/app.py`. Routes that start paid work are 
 | `WS /ws/voice` | spoken what-if questions |
 | `WS /ws/voice/notes` | settings spoken while filming |
 
-</details>
-
-<details>
-<summary><b>Project structure</b></summary>
-
-### Project structure
+## Project structure
 
 ```
 config/                  model allowlist, prices, rate limits, budget example
@@ -670,12 +653,7 @@ scripts/                 gallery promotion, static site build, Glimmer batch run
 tests/                   unit tests (mocked models; recorded real responses as fixtures)
 ```
 
-</details>
-
-<details>
-<summary><b>Testing</b></summary>
-
-### Testing
+## Testing
 
 ```bash
 make test                     # MOCK_MODELS=1 pytest: no network, no spend
@@ -693,12 +671,7 @@ The suite (416 tests) covers:
 - **Exports, studies, live mode, voice notes and what-ifs.**
 - **Generated controllers:** unsafe code rejected before it runs, an endless loop and a huge allocation stopped by the sandbox limits, a wrong-sign controller fixed through the failure report, the honest result after three failures, infeasible goals reported without a call, no call once the budget cap is reached, and identical metrics from the same seed.
 
-</details>
-
-<details>
-<summary><b>What we built during the hackathon (the full checklist)</b></summary>
-
-### What we built during the hackathon
+## What we built during the hackathon
 
 All code in this repository was written during the hackathon building period (Oct 27 to Nov 4, 2026).
 
@@ -757,8 +730,6 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Site quality pass: every page checked by script at phone and desktop width for errors, overflow and hover contrast (judge and public views), card layout for wide tables on phones, readable scientific notation, units of the result on every chart, a styled not-found page, and access shown before anyone tries a judge-only feature
 - [x] Force and velocity vectors and the law's own prediction drawn on the video, in the web player and the shareable MP4
 - [x] Faster analysis: SAM masks decoded in parallel (a 450-frame clip from about 280 s to 10 s), and a time budget per fitted model
-
-</details>
 
 ## Roadmap
 
