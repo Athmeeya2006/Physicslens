@@ -6,6 +6,7 @@ import asyncio
 import hmac
 import json
 import logging
+import math
 import os
 import shutil
 import uuid
@@ -103,7 +104,8 @@ def audience_for(access_code: str | None) -> str:
 
 
 # Per visitor, for the whole period, under open access: generous for a judge trying everything twice.
-OPEN_ACCESS_DEFAULTS = {"analysis": 15, "live": 5, "picture": 5, "controller": 3, "study": 3}
+# "question": a typed or spoken what-if, or spoken settings: one short text call each, so many more than analyses.
+OPEN_ACCESS_DEFAULTS = {"analysis": 15, "live": 5, "picture": 5, "controller": 3, "study": 3, "question": 40}
 visitors = VisitorAllowance(settings.data_dir / "public.db",
                             {**OPEN_ACCESS_DEFAULTS, **(client.guard.budget.get("open_access_per_visitor") or {})})
 
@@ -267,11 +269,29 @@ def live_cap() -> float:
     return float(cap)
 
 
+FIRST_MESSAGE_SECONDS = 15
+
+
+async def _first_message(ws: WebSocket) -> dict | None:
+    """The opening JSON of a socket, or None (socket closed): a client that never says hello must not hold it open."""
+    try:
+        init = await asyncio.wait_for(ws.receive_json(), FIRST_MESSAGE_SECONDS)
+    except (TimeoutError, ValueError, KeyError):
+        await ws.close(code=1008)
+        return None
+    if not isinstance(init, dict):
+        await ws.close(code=1008)
+        return None
+    return init
+
+
 @app.websocket("/ws/live")
 async def live(ws: WebSocket) -> None:
     """First message: JSON {fps, pendulum_length_m?, object_size_m?, access_code?}. Then one binary JPEG per camera frame."""
     await ws.accept()
-    init = await ws.receive_json()
+    init = await _first_message(ws)
+    if init is None:
+        return
     audience = audience_for(init.get("access_code"))
     if audience == "public":
         await ws.send_json({"type": "notice", "level": "error", "message": "Live mode is paused right now; the gallery is open to everyone."})
@@ -290,7 +310,11 @@ async def live(ws: WebSocket) -> None:
         asyncio.run_coroutine_threadsafe(ws.send_json(msg), loop)
 
     run_dir = runs.new_run_dir()
-    fps = min(float(init.get("fps") or 25), 30.0)
+    try:
+        fps = float(init.get("fps") or 25)
+    except (TypeError, ValueError):
+        fps = 25.0
+    fps = min(fps, 30.0) if math.isfinite(fps) and fps >= 1 else 25.0  # NaN would pass min() untouched
     length, size = init.get("pendulum_length_m"), init.get("object_size_m")
 
     def positive(v) -> float | None:
@@ -346,6 +370,7 @@ def _finished_result(run_id: str) -> dict:
 @app.post("/api/runs/{run_id}/whatif")
 def whatif(
     run_id: str,
+    request: Request,
     question: Annotated[str, Body(embed=True)],
     x_access_code: Annotated[str | None, Header()] = None,
 ) -> dict:
@@ -354,6 +379,7 @@ def whatif(
     if audience == "public":
         raise HTTPException(status_code=403, detail="What-if questions are paused right now.")
     result = _finished_result(run_id)
+    allow_visitor("question", x_access_code, request.headers, request.client.host if request.client else None)
     try:
         # One budget "run" per question: a shared id would fill the lifetime per-run cap and lock everyone out.
         return run_whatif(client, question[:500], result, f"whatif-{run_id}-{uuid.uuid4().hex[:8]}", audience)
@@ -411,11 +437,23 @@ def get_setup_guide_frame(run_id: str) -> FileResponse:
     return FileResponse(path, media_type="image/jpeg")
 
 
+def _visitor_may_ask(ws: WebSocket, init: dict) -> bool:
+    """The per-visitor allowance for one spoken question; refusals reach the page as a notice, not a closed socket."""
+    try:
+        allow_visitor("question", init.get("access_code"), ws.headers, ws.client.host if ws.client else None)
+    except HTTPException as e:
+        asyncio.get_running_loop().create_task(ws.send_json({"type": "notice", "level": "error", "message": e.detail}))
+        return False
+    return True
+
+
 @app.websocket("/ws/voice")
 async def voice(ws: WebSocket) -> None:
     """First message: JSON {run_id, access_code?}. Then binary 24 kHz s16le mono PCM; text {"type": "stop"} ends it."""
     await ws.accept()
-    init = await ws.receive_json()
+    init = await _first_message(ws)
+    if init is None:
+        return
     run_id = str(init.get("run_id", ""))
     audience = audience_for(init.get("access_code"))
     state = runs.get(run_id) if run_id.replace("-", "").isalnum() else None
@@ -436,6 +474,8 @@ async def voice(ws: WebSocket) -> None:
         if turn is not None:
             _, text = turn
             await ws.send_json({"type": "transcript", "text": text, "final": True})
+            if not _visitor_may_ask(ws, init):
+                return
             answer = await asyncio.to_thread(run_whatif, client, text, result,
                                              f"voice-{run_id}-{uuid.uuid4().hex[:8]}", audience)
             await ws.send_json({"type": "whatif", **answer})
@@ -716,7 +756,9 @@ NOTES_KEYWORDS = ["string", "length", "centimeters", "meters", "inches", "feet",
 async def voice_notes(ws: WebSocket) -> None:
     """Spoken settings while filming. First message: JSON {access_code?}; then 24 kHz s16le mono PCM; {"type": "stop"}."""
     await ws.accept()
-    init = await ws.receive_json()
+    init = await _first_message(ws)
+    if init is None:
+        return
     audience = audience_for(init.get("access_code"))
     if audience == "public":
         await ws.send_json({"type": "notice", "level": "error", "message": "Voice is paused right now."})
@@ -733,6 +775,8 @@ async def voice_notes(ws: WebSocket) -> None:
         if turn is not None:
             _, text = turn
             await ws.send_json({"type": "transcript", "text": text, "final": True})
+            if not _visitor_may_ask(ws, init):
+                return
             notes = await asyncio.to_thread(interpret_notes, client, text, f"notes-{uuid.uuid4().hex[:8]}", audience)
             await ws.send_json({"type": "notes", **notes})
             return

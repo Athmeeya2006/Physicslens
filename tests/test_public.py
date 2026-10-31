@@ -107,3 +107,27 @@ def test_open_access_needs_no_code_and_limits_each_visitor(open_app):
     assert [post("8.8.8.8") for _ in range(3)] == [200, 200, 429]
     assert post("9.9.9.9") == 200                               # another visitor
     assert post("8.8.8.8", **{"x-access-code": "judge-code"}) == 200  # the code still lifts the per-visitor limit
+
+
+def test_open_access_limits_each_visitors_questions(open_app, monkeypatch):
+    # A what-if is a paid text call: under open access each visitor has an allowance of them, like analyses.
+    from fastapi.testclient import TestClient
+    from physicslens.public import VisitorAllowance
+    monkeypatch.setattr(open_app, "visitors", VisitorAllowance(open_app.settings.data_dir / "q.db", {"question": 2}))
+    monkeypatch.setattr(open_app, "_finished_result", lambda _rid: {"status": "accepted"})
+    monkeypatch.setattr(open_app, "run_whatif", lambda *_a, **_k: {"answer": "ok"})
+    client = TestClient(open_app.app)
+    ask = lambda ip: client.post("/api/runs/abc/whatif", json={"question": "twice the length?"},
+                                 headers={"cf-connecting-ip": ip}).status_code
+    assert [ask("8.8.8.8") for _ in range(3)] == [200, 200, 429]
+    assert ask("9.9.9.9") == 200
+
+
+def test_a_socket_that_never_says_hello_is_closed(open_app, monkeypatch):
+    from fastapi.testclient import TestClient
+    from starlette.websockets import WebSocketDisconnect
+    monkeypatch.setattr(open_app, "FIRST_MESSAGE_SECONDS", 0.2)
+    client = TestClient(open_app.app)
+    with client.websocket_connect("/ws/live") as ws, pytest.raises(WebSocketDisconnect) as closed:
+        ws.receive_json()
+    assert closed.value.code == 1008
