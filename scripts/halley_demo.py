@@ -120,11 +120,11 @@ def render() -> Path:
     basis = plane_basis(comet)
     step = (jd(TRAIN_STOP) - jd(TRAIN_START)) / MAX_FRAMES
     frames_jd = jd(TRAIN_START) + step * np.arange(MAX_FRAMES)
-    interp = lambda tab: np.column_stack([np.interp(frames_jd, tab[:, 0], tab[:, i]) for i in (1, 2, 3)])  # noqa: E731
+    interp = lambda tab: np.column_stack([np.interp(frames_jd, tab[:, 0], tab[:, i]) for i in (1, 2, 3)])
     c_xy = interp(comet) @ basis[:2].T
     e_xy = interp(earth) @ basis[:2].T
     scale, sun_px = layout(c_xy)
-    to_px = lambda xy: np.column_stack([sun_px[0] + xy[:, 0] * scale, sun_px[1] - xy[:, 1] * scale])  # noqa: E731
+    to_px = lambda xy: np.column_stack([sun_px[0] + xy[:, 0] * scale, sun_px[1] - xy[:, 1] * scale])
     c_px, e_px = to_px(c_xy), to_px(e_xy)
     speed = np.linalg.norm(np.diff(c_px, axis=0), axis=1)
     print(f"scale {scale:.1f} px/AU, one frame = {step:.2f} days, fastest move {speed.max():.1f} px/frame")

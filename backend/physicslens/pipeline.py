@@ -38,8 +38,8 @@ from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
 from .perception.track_quality import assess_track, overlay_frames
 from .physics import depth3d
 from .physics.audit import AuditInput, LawEvidence, audit
-from .physics.audit import save_input as save_audit_input
 from .physics.audit import cant_judge as audit_cant_judge
+from .physics.audit import save_input as save_audit_input
 from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
 from .physics.custom import FREE_MODELS, FreeParam, build, law_latex, register, spec_for

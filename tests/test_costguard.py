@@ -413,6 +413,7 @@ def _judge_guard(tmp_path, carried=None, day=1):
     from datetime import UTC, datetime
 
     from physicslens.costguard.guard import Guard
+
     from tests.conftest import TEST_BUDGET
     clock = {"day": day}
     g = Guard(Ledger(tmp_path / "ledger.db"), {**TEST_BUDGET, "per_run_cap_usd": 5.0},

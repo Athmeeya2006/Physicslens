@@ -50,7 +50,7 @@ VIDEOPHY2_CSV = "https://huggingface.co/datasets/videophysics/videophy2_test/res
 PIQ_LIST = "https://storage.googleapis.com/storage/v1/b/physics-iq-benchmark/o?prefix={prefix}&maxResults=1000"
 PIQ_FILE = "https://storage.googleapis.com/physics-iq-benchmark/{name}"
 MOTION = re.compile(r"\b(drop(s|ped)?|falls?|falling|thrown|throws?|tossed|tosses|bounc\w*|swing\w*|pendulum|rolls?|"
-                    r"rolling|launch\w*|projectile|slides?|sliding)\b", re.I)
+                    r"rolling|launch\w*|projectile|slides?|sliding)\b", re.IGNORECASE)
 # Physics-IQ scenes with one object in free fall, rolling, swinging or colliding: the motion the audit can measure.
 PIQ_SCENES = ("ball-and-block-fall", "ball-hits-nothing", "ball-rolls-off", "ball-ramp", "mirror-ball-fall",
               "single-cradle", "ball-in-sand", "balls-collide", "ball-rolls-on-glass", "roll-front-box",
@@ -197,7 +197,7 @@ def run_one(clip: dict[str, Any], profile: str = "full") -> dict[str, Any]:
             "providers": sorted({f"{c['provider']}:{c['model']}" for c in result.get("llm_calls") or []}),
             "spend_usd": round(spent(run_id), 5),
         })
-    except Exception as e:  # one clip failing must not stop the study; the failure is a row of its own
+    except Exception as e:  # noqa: BLE001  one clip failing must not stop the study; the failure is a row of its own
         row.update({"status": "error", "audit": "error", "error": f"{type(e).__name__}: {e}"[:400]})
     row["seconds"] = round(time.time() - t0, 1)
     return row
@@ -279,12 +279,12 @@ def baseline(max_usd: float) -> None:
     sys.path.insert(0, str(ROOT / "backend"))
     from typing import Literal
 
-    from pydantic import Field
     from physicslens.agent.llm import ask_json
     from physicslens.agent.schemas import Strict
     from physicslens.costguard import CostGuardClient
     from physicslens.perception import media
     from physicslens.settings import load_settings
+    from pydantic import Field
 
     class Judgement(Strict):
         verdict: Literal["violates_physics", "consistent", "cant_judge"]
@@ -312,7 +312,7 @@ def baseline(max_usd: float) -> None:
                 j, call = ask_json(client, task="llm_alone", system=BASELINE_SYSTEM, schema_model=Judgement,
                                    text=f"Frame times in seconds: {times}.", run_id=f"study-baseline-{c['id']}", images=frames)
                 row = {"id": c["id"], "verdict": j.verdict, "reason": j.reason, "model": f"{call.provider}:{call.model}"}
-            except Exception as e:  # recorded, not hidden
+            except Exception as e:  # noqa: BLE001  recorded, not hidden
                 row = {"id": c["id"], "verdict": "error", "reason": f"{type(e).__name__}: {e}"[:300]}
             out.write(json.dumps(row) + "\n")
             out.flush()

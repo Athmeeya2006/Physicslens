@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
-from physicslens.export.mp4 import render_share_video  # noqa: E402
+from physicslens.export.mp4 import render_share_video
 
 GALLERY = ROOT / "gallery"
 OUT = ROOT / "frontend" / "public" / "stories"

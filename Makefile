@@ -47,4 +47,4 @@ dev-frontend:
 	cd frontend && npm run dev
 
 lint:
-	$(BIN)/ruff check backend tests
+	$(BIN)/ruff check backend tests scripts

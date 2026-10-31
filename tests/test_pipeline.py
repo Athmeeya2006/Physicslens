@@ -359,5 +359,5 @@ def test_a_long_low_frame_rate_clip_is_not_too_short(harness, tmp_path):
         analyze(harness.client, slow, tmp_path / "run", "run-slow")
     except AnalysisError as e:
         assert "too short" not in str(e)
-    except Exception:  # the mock harness has no scripted answers; only the length rule is under test here
-        pass
+    except Exception as e:  # noqa: BLE001  the mock harness has no scripted answers; only the length rule is under test here
+        assert "too short" not in str(e)

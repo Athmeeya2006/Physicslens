@@ -795,7 +795,7 @@ def load_input(path: Path) -> AuditInput:
     meta = json.loads(str(z["meta"]))
     law = meta.pop("law")
     fps = meta.pop("fps")
-    get = lambda k: z[k] if k in z.files else None  # noqa: E731
+    get = lambda k: z[k] if k in z.files else None
     return AuditInput(traj=Trajectory(z["t"], z["xy"], z["frames"], fps), law=LawEvidence(**law) if law else None,
                       areas_px=get("areas_px"), outline_px=get("outline_px"), confidence=get("confidence"), reference_px=get("reference_px"), **meta)
 

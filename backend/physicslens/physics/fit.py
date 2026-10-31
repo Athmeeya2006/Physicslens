@@ -183,7 +183,6 @@ def fit_model(spec: ModelSpec, c: Coordinates, warm: dict[str, float] | None = N
     """warm: parameters from a previous fit of the same model (live mode); skips the slow continuation start."""
     if spec.family != c.family:
         raise ValueError(f"{spec.id} is a {spec.family} model, coordinates are {c.family}.")
-    n_samples, d = c.q.shape
     kin = differentiate(c.q, 1.0 / (c.t[1] - c.t[0]))
     noise = noise_sigma(c.q, kin.pos, 1.0 / (c.t[1] - c.t[0]))
     guess = {**initial_guess(spec, c), **(warm or {})}

@@ -103,7 +103,15 @@ def test_pipeline_records_the_referee_in_the_trail_and_result(harness, tmp_path)
 def test_a_batch_can_turn_the_referee_off_and_the_trail_says_so(harness, tmp_path):
     from physicslens.pipeline import RunOptions, analyze
 
-    from .test_pipeline import AGENT, CLIP, HYPOTHESES, TRACK_OK, sam_result, sam_text_as_object_1, script
+    from .test_pipeline import (
+        AGENT,
+        CLIP,
+        HYPOTHESES,
+        TRACK_OK,
+        sam_result,
+        sam_text_as_object_1,
+        script,
+    )
     script(harness, responses_result(text=json.dumps(SCENE)), sam_result(frames=60, text=sam_text_as_object_1()),
            responses_result(text=json.dumps(TRACK_OK)), responses_result(text=json.dumps(HYPOTHESES)),
            responses_result(text=json.dumps(AGENT)))
