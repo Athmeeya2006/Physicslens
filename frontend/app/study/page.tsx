@@ -117,7 +117,7 @@ export default function StudyPage() {
   const analyzing = !!run && (run.status === "queued" || run.status === "running");
 
   return (
-    <main className="stack" style={{ gap: 28 }}>
+    <main id="main" className="stack" style={{ gap: 28 }}>
       <header className="page-head">
         <h1>Studies</h1>
         <p className="tagline">

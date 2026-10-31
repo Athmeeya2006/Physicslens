@@ -56,6 +56,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <a className="skip-link" href="#main">Skip to content</a>
       <header className="shell-bar">
         <div className="shell-inner">
           <a className="wordmark" href="/">

@@ -144,7 +144,7 @@ export default function AuditPage() {
   const result = run?.status === "done" ? run.result : null;
 
   return (
-    <main>
+    <main id="main">
       <header className="page-head">
         <h1>Physics audit</h1>
         <p className="tagline">

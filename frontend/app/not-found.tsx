@@ -1,6 +1,6 @@
 export default function NotFound() {
   return (
-    <main className="stack" style={{ gap: 16 }}>
+    <main id="main" className="stack" style={{ gap: 16 }}>
       <header className="page-head">
         <h1>Page not found</h1>
         <p className="tagline">There is nothing at this address. It may have been a mistyped link, or a result that was never saved.</p>

@@ -135,7 +135,7 @@ export default function Home() {
   return (
     <>
       {health?.mock_mode && <div className="mock-banner">Mock mode: model responses are fake (automated tests only)</div>}
-      <main className="stack" style={{ gap: 32 }}>
+      <main id="main" className="stack" style={{ gap: 32 }}>
         {done ? (
           <div className="stack">
             <p><button className="secondary" onClick={closeRun}><ArrowLeft size={16} aria-hidden="true" />All recordings</button></p>

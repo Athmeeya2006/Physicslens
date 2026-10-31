@@ -38,7 +38,7 @@ export default function DatasetPage() {
   }, [rows, q]);
 
   return (
-    <main>
+    <main id="main">
       <header className="page-head">
         <h1>Open dataset</h1>
         <p className="tagline">
