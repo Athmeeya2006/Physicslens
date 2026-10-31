@@ -196,6 +196,8 @@ export interface AnalysisResult {
     decisive: boolean; noise_mm: number; options_tested: number; models: string[];
   };
   scale_note?: string;
+  // Parameter pairs whose bootstrap refits move together (|r| >= 0.98): the clip measures their combination.
+  entangled?: { a: string; b: string; r: number }[];
   scale_basis?: string;
   double?: {
     params: { g: number; mu: number; gamma: number }; L1: number; L2: number; accepted: boolean; reason: string;

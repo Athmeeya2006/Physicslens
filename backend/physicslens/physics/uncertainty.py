@@ -61,7 +61,32 @@ def bootstrap_samples(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int
     return np.array(samples), np.array(lengths)
 
 
+ENTANGLED_R = 0.98  # refits this correlated: the clip measures a combination of the two, not each one
+
+
+def entangled(names: list[str], samples: np.ndarray) -> list[dict[str, object]]:
+    """Parameter pairs whose bootstrap refits move together almost perfectly. Each value's interval is then honest
+    only as part of the pair: a different clip could trade one against the other and fit as well."""
+    if len(samples) < MIN_BOOTSTRAP_REPS or samples.ndim != 2 or samples.shape[1] < 2:
+        return []
+    sd = samples.std(axis=0)
+    out = []
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            if sd[i] == 0 or sd[j] == 0:
+                continue
+            r = float(np.corrcoef(samples[:, i], samples[:, j])[0, 1])
+            if abs(r) >= ENTANGLED_R:
+                out.append({"a": names[i], "b": names[j], "r": round(r, 3)})
+    return out
+
+
 def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 40, seed: int = 0) -> dict[str, ParamEstimate]:
+    return bootstrap_full(spec, c, fit, reps, seed)[0]
+
+
+def bootstrap_full(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 40,
+                   seed: int = 0) -> tuple[dict[str, ParamEstimate], list[dict[str, object]]]:
     """95% interval as value +- 1.96 standard deviations of the refits.
 
     Percentiles of a few dozen refits would just be their second-smallest and second-largest values; the spread
@@ -73,4 +98,4 @@ def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 40, s
         # Too few refits finished in time: the uncertainty is unknown (shown without a +-), never a made-up number.
         v, sd = fit.params[name], float(arr[:, i].std(ddof=1)) if len(arr) >= 2 else float("nan")
         out[name] = ParamEstimate(v, sd, v - 1.96 * sd, v + 1.96 * sd)
-    return out
+    return out, entangled(spec.param_names, arr)

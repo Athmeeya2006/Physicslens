@@ -206,6 +206,16 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
               </tbody>
             </table>
           </div>
+          {r.entangled?.map((e) => {
+            const tex = (n: string) => r.parameters?.find((p) => p.name === n)?.latex ?? n;
+            return (
+              <p key={`${e.a}-${e.b}`} className="note">
+                <Tex tex={tex(e.a)} /> and <Tex tex={tex(e.b)} /> move together in the refits (correlation {e.r.toFixed(2)}):
+                this recording pins down their combination better than each one. A recording that separates them (a wider
+                swing, a longer clip) would narrow both.
+              </p>
+            );
+          })}
         </div>
       )}
 

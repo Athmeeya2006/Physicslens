@@ -6,7 +6,7 @@ from physicslens.physics.coords import length_is_reliable, to_coordinates
 from physicslens.physics.fit import fit_model, fit_models
 from physicslens.physics.models import MODELS, models_for
 from physicslens.physics.sindy import discover, vet
-from physicslens.physics.uncertainty import bootstrap
+from physicslens.physics.uncertainty import bootstrap, bootstrap_full, entangled
 from physicslens.physics.verify import assess, judge_candidates
 from physicslens.sigproc.trajectory import Trajectory
 from scipy.integrate import solve_ivp
@@ -257,3 +257,18 @@ def test_parallel_fits_match_one_after_another(monkeypatch):
     for a, b in zip(alone, together, strict=True):
         assert a.params == b.params and a.heldout_nrmse == b.heldout_nrmse
         np.testing.assert_array_equal(a.sim, b.sim)
+
+
+def test_entangled_pairs_are_flagged_and_independent_ones_are_not():
+    rng = np.random.default_rng(0)
+    a = rng.normal(0, 1, 30)
+    samples = np.column_stack([a, 2 * a + rng.normal(0, 0.01, 30), rng.normal(0, 1, 30)])
+    pairs = entangled(["k", "m", "g"], samples)
+    assert [(p["a"], p["b"]) for p in pairs] == [("k", "m")] and pairs[0]["r"] > 0.98
+    assert entangled(["k", "m"], samples[:3, :2]) == []  # too few refits to say
+
+
+def test_a_well_posed_pendulum_has_no_entangled_parameters(damped_pendulum):
+    c, v = damped_pendulum
+    _, pairs = bootstrap_full(MODELS[v.winner.model_id], c, v.winner, reps=16)
+    assert pairs == []

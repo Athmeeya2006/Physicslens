@@ -58,7 +58,7 @@ from .physics.models import MODELS, models_for, needs_scale
 from .physics.regime import RegimeChange, detect_change
 from .physics.rotation import RotationError, rotation_coordinates
 from .physics.sindy import vet
-from .physics.uncertainty import bootstrap
+from .physics.uncertainty import bootstrap_full
 from .physics.verify import Verdict, assess, judge_candidates, window_indices
 from .sigproc.cleanup import detect_impacts, differentiate, fill_short_gaps, split_at
 from .sigproc.summary import summarize
@@ -505,7 +505,9 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     if verdict.status == "accepted" and verdict.winner and coords is not None:
         progress("Estimating uncertainty")
         spec = MODELS[verdict.winner.model_id]
-        est = bootstrap(spec, coords, verdict.winner)
+        est, linked = bootstrap_full(spec, coords, verdict.winner)
+        if linked:
+            result["entangled"] = linked
         result["equation"] = {"model_id": spec.id, "title": spec.title, "latex": spec.latex}
         result["parameters"] = [
             {"name": p.name, "latex": p.latex, "unit": p.unit, "value": est[p.name].value, "std": est[p.name].std,
