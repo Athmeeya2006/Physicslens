@@ -89,7 +89,10 @@ def start_backend() -> subprocess.Popen:
     # Explicit values win over .env (the app loads .env without overriding what is already set).
     env = dict(os.environ, PYTHONPATH=str(ROOT / "backend"), APP_ENV="demo", MOCK_MODELS="0",
                USE_CONTRIBUTOR_MODEL="0", REASONING_PROVIDER=os.environ.get("REASONING_PROVIDER", "baseten"),
-               PUBLIC_TRY_ENABLED="0", FRONTEND_ORIGINS=SITE)
+               PUBLIC_TRY_ENABLED="0", FRONTEND_ORIGINS=SITE,
+               # Open access as on the Kaggle servers: every visitor gets the full site, with a per-visitor allowance
+               # that reads the real visitor address from Cloudflare (through the tunnel everyone is 127.0.0.1).
+               OPEN_ACCESS=os.environ.get("OPEN_ACCESS", "1"), TRUST_PROXY="1")
     log = open(LOGS / "backend.log", "a")  # noqa: SIM115 (open for the life of the process)
     proc = subprocess.Popen([sys.executable, "-m", "uvicorn", "physicslens.app:app", "--host", "127.0.0.1",
                              "--port", str(PORT)], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
