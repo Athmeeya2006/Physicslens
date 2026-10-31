@@ -220,8 +220,10 @@ def done_ids(path: Path, retry_errors: bool = False) -> set[str]:
         err = err.lower()
         return any(k in err for k in ("busy", "budget", "urlopen error", "name or service", "timed out", "connection",
                                       "open-weight model failed"))
+    # Study rows keep a failure in "error"; baseline rows in "reason" (with verdict "error").
     return {r["id"] for r in rows_of(path)
-            if not (retry(r.get("error") or "") or (retry_errors and r.get("status") == "error"))}
+            if not (retry(r.get("error") or (r.get("reason") if r.get("verdict") == "error" else "") or "")
+                    or (retry_errors and r.get("status") == "error"))}
 
 
 def run(limit: int, workers: int, max_usd: float, only: str | None, profile: str, retry_errors: bool = False,
@@ -316,6 +318,9 @@ def baseline(max_usd: float) -> None:
                 row = {"id": c["id"], "verdict": j.verdict, "reason": j.reason, "model": f"{call.provider}:{call.model}"}
             except Exception as e:  # noqa: BLE001  recorded, not hidden
                 row = {"id": c["id"], "verdict": "error", "reason": f"{type(e).__name__}: {e}"[:300]}
+                if "paused" in str(e) or "Connection" in str(e):
+                    # The provider is down for a while: wait it out instead of marking every remaining clip failed.
+                    time.sleep(120)
             out.write(json.dumps(row) + "\n")
             out.flush()
             print(row["id"], row["verdict"], flush=True)
