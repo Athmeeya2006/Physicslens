@@ -272,36 +272,18 @@ def predict() -> dict:
 
 def return_date(gm_sun: float, planets: bool) -> tuple[float, float]:
     """Days by which the integrated 2061 perihelion misses JPL's, and the perihelion distance (AU)."""
-    from scipy.integrate import solve_ivp
-    from scipy.interpolate import CubicSpline
+    from physicslens.physics.nbody import Body, propagate
     start = load("halley")
     s0 = start[np.argmin(np.abs(start[:, 0] - jd(TRAIN_START)))]
     later = load("halley_2061")
     jpl_peri = float(later[np.argmin(np.linalg.norm(later[:, 1:4], axis=1)), 0])
     gm_planets = json.loads((DATA / "planets_gm.json").read_text())["gm_km3_s2"] if planets else {}
-    pulls = []
-    for name, gm in gm_planets.items():
-        track = load(name)
-        pulls.append((CubicSpline(track[:, 0], track[:, 1:4]), gm * 86400**2 / AU_KM**3))
-
-    def rhs(t: float, s: np.ndarray) -> np.ndarray:
-        r = s[:3]
-        a = -gm_sun * r / np.linalg.norm(r) ** 3
-        for where, gm in pulls:
-            rp = where(s0[0] + t)
-            d = rp - r
-            # Heliocentric frame: the planet pulls the comet, and pulls the Sun too (the second, indirect term).
-            a = a + gm * (d / np.linalg.norm(d) ** 3 - rp / np.linalg.norm(rp) ** 3)
-        return np.concatenate([s[3:], a])
-
-    span = jpl_peri + 900 - s0[0]
-    sol = solve_ivp(rhs, (0.0, span), s0[1:7], method="DOP853", rtol=1e-11, atol=1e-13, dense_output=True)
-    if not sol.success:
-        sys.exit(f"Integration to 2061 failed: {sol.message}")
-    t = np.arange(40 * 365, span, 0.05)
-    r = np.linalg.norm(sol.sol(t)[:3], axis=0)
+    bodies = [Body.from_table(name, gm, load(name)) for name, gm in gm_planets.items()]
+    at = propagate(s0[1:7], s0[0], jpl_peri + 900, gm_sun, bodies, rtol=1e-11, atol=1e-13)
+    when = s0[0] + np.arange(40 * 365, jpl_peri + 900 - s0[0], 0.05)
+    r = np.linalg.norm(at(when)[:3], axis=0)
     k = int(np.argmin(r))
-    return s0[0] + float(t[k]) - jpl_peri, float(r[k])
+    return float(when[k]) - jpl_peri, float(r[k])
 
 
 def planets() -> dict:

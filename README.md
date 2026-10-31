@@ -186,7 +186,18 @@ What happened, in order: three independent proposals each wrote the inverse-squa
 
 **Honest limits.** One pixel is about 340,000 km at this scale, and SAM's centroids carry about 2 px of error, so the position error is about 0.8 million km at the end of the video and grows to about 2.2 million km by 2029 (`var/orbit/prediction_error.png`). The prediction is Sun only (no planets, no relativity, no Yarkovsky effect) and lives in Apophis's orbital plane. It is a deterministic prediction compared with JPL's answer, not an impact probability: PhysicsLens does not propagate the uncertainty a "will it hit Earth" verdict needs. The units are AU and days (the expression language bounds parameters, and GM in SI is about 1e20).
 
-Reproduce: `python scripts/orbit_demo.py all` (fetch and render are free; analyze calls SAM 3.1 and Muse Spark Open once; predict is local). Data sources and credits: `data/orbit/SOURCES.md`.
+**Where the miss comes from.** The same check as for Halley, each source switched on alone, all from JPL's 3D position and velocity of Apophis on the video's last day (`physics/nbody.py`, Newton's pull of the Sun, every planet and the Moon, positions and masses from JPL Horizons):
+
+| Integrated from 2026-01-01 to the 2029 flyby | Time against JPL | Closest distance (JPL: 38,011 km) |
+|---|---|---|
+| The Sun alone, JPL's GM | 2.8 h late | 93,400 km |
+| The Sun alone, the GM measured from the video | 9.0 h late | 1.83 million km |
+| The Sun, planets and Moon, JPL's GM | **within a minute** | **37,654 km** |
+| The Sun, planets and Moon, the GM measured from the video | 8.2 h late | 1.85 million km |
+
+With the planets and the Moon, the integration lands the flyby within a minute of JPL's time and 360 km (under 1%) from its distance after 3.3 years; the rest is what JPL also models (the Yarkovsky push of sunlight, relativity) and we do not. Earth's own pull is what bends the pass: without Earth and the Moon the same integration misses by 3.5 hours. What remains in the video's prediction is the Sun's GM, measured to 0.023%, and a 2D track that cannot show the planets' pull from outside the orbital plane. `tests/test_apophis.py` checks the within-a-minute result offline.
+
+Reproduce: `python scripts/orbit_demo.py all` (fetch and render are free; analyze calls SAM 3.1 and Muse Spark Open once; predict is local), then `fetch-planets` and `planets` (free). Data sources and credits: `data/orbit/SOURCES.md`.
 
 ### Jupiter: one planet weighed four ways
 
@@ -668,7 +679,7 @@ backend/physicslens/
   sigproc/               trajectories, smoothing, derivatives, summaries
   physics/               models, fitting, verification, uncertainty, SINDy, collisions, double pendulum,
                          rotation, regimes, free-form law parser, combining recordings, joint fits,
-                         machine health, forecasts, physics audit, what-ifs
+                         machine health, forecasts, physics audit, what-ifs, N-body check against JPL
   agent/                 model calls, prompts, JSON schemas, spoken notes, what-ifs
   voice/                 realtime transcription events
   sound.py               the microphone as a second sensor

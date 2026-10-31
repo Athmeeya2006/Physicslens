@@ -8,5 +8,7 @@ All files here were fetched by `scripts/orbit_demo.py fetch` from free public NA
 | `apophis_flyby.csv`, `earth_flyby.csv` | JPL Horizons API | The same, every 10 minutes from 2029-04-11 to 2029-04-16 |
 | `cad_2029.json` | JPL SBDB Close-Approach Data API (https://ssd-api.jpl.nasa.gov/cad.api) | Apophis's official 2029 Earth close approach |
 | `sun_gm.json` | JPL Horizons API, Sun (10) physical data | GM of the Sun |
+| `planet_*.csv` | JPL Horizons API (`orbit_demo.py fetch-planets`) | Heliocentric positions (ecliptic J2000, AU, TDB), daily, 2025-12 to 2029-06: Mercury, Venus, the Moon, and the Mars, Jupiter, Saturn, Uranus and Neptune system barycentres |
+| `planets_gm.json` | JPL Horizons API, physical data | GM of each planet and the Moon (planets' moons left out) |
 
 Each CSV header records the API version and the fetch date. Credit: NASA/JPL Solar System Dynamics (Horizons, CNEOS).

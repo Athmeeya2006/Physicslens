@@ -4,6 +4,8 @@
   python scripts/orbit_demo.py render     -> var/orbit/apophis.mp4, the video PhysicsLens watches
   python scripts/orbit_demo.py analyze    the normal PhysicsLens pipeline on that video (PAID: SAM 3.1 + Muse Spark Open)
   python scripts/orbit_demo.py predict    integrate the recovered law to April 2029; compare with JPL; plots + report
+  python scripts/orbit_demo.py fetch-planets   the planets' and Moon's positions and masses (free)
+  python scripts/orbit_demo.py planets    the 2029 flyby with the planets and the Moon added: where the miss comes from
   python scripts/orbit_demo.py all        everything above (asks before the paid step)
 
 Data: positions and velocities of 99942 Apophis and Earth from JPL Horizons (heliocentric, ecliptic J2000, AU and
@@ -18,6 +20,10 @@ The prediction integrates the law the pipeline accepted, exactly as it was fitte
 lives in the orbital plane, which is lifted back to 3D with the same basis to measure the distance to Earth. Sun only:
 no planets, no relativity, no Yarkovsky effect. This is a deterministic prediction compared with JPL's answer, not an
 impact probability.
+
+The planets step starts from JPL's 3D state of Apophis on the video's last day and adds Newton's pull of every planet
+and the Moon (physics/nbody.py), switching each source of error on alone: the Sun's GM from JPL or from the video,
+with or without the planets.
 """
 
 from __future__ import annotations
@@ -52,6 +58,11 @@ PX_PER_AU = 440.0
 FPS = 30
 AU_KM = 149_597_870.7
 JD_UNIX0 = 2440587.5
+# Horizons ids: (position, GM). Earth's position is earth.csv (399); the outer planets' are their system barycentres.
+PERTURBERS = {"mercury": ("199", "199"), "venus": ("299", "299"), "earth": (None, "399"), "moon": ("301", "301"),
+              "mars": ("4", "499"), "jupiter": ("5", "599"), "saturn": ("6", "699"), "uranus": ("7", "799"),
+              "neptune": ("8", "899")}
+PLANET_SPAN = ("2025-12-01", "2029-06-01")
 
 
 # ---------- fetch ----------
@@ -98,6 +109,34 @@ def _fetch_vectors(suffix: str, start: str, stop: str, step: str) -> None:
                   "# jd_tdb,x,y,z,vx,vy,vz")
         np.savetxt(DATA / f"{name}{suffix}.csv", np.array(rows), delimiter=",", header=header, comments="", fmt="%.15g")
         print(f"{name}{suffix}: {len(rows)} rows")
+
+
+def fetch_planets() -> None:
+    import re
+    gms = {}
+    for name, (pos, body) in PERTURBERS.items():
+        txt = _get(HORIZONS, {"format": "json", "COMMAND": f"'{body}'", "OBJ_DATA": "'YES'", "MAKE_EPHEM": "'NO'"})["result"]
+        m = re.search(r"GM[ ,(]*km\^3/s\^2\)?\s*=\s*([\d.]+)", txt)
+        if not m:
+            sys.exit(f"Horizons gave no GM for {name}")
+        gms[name] = float(m.group(1))
+        if pos is None:
+            continue
+        d = _get(HORIZONS, {"format": "json", "COMMAND": f"'{pos}'", "EPHEM_TYPE": "VECTORS", "CENTER": "'500@10'",
+                            "START_TIME": f"'{PLANET_SPAN[0]}'", "STOP_TIME": f"'{PLANET_SPAN[1]}'", "STEP_SIZE": "'1 d'",
+                            "VEC_TABLE": "'1'", "REF_PLANE": "'ECLIPTIC'", "OUT_UNITS": "'AU-D'", "CSV_FORMAT": "'YES'"})
+        rows = []
+        for line in d["result"].split("$$SOE")[1].split("$$EOE")[0].strip().splitlines():
+            f = [v.strip() for v in line.split(",")]
+            rows.append([float(f[0]), *(float(v) for v in f[2:5])])
+        header = (f"# JPL Horizons API ({d['signature']['source']} {d['signature']['version']}), fetched "
+                  f"{datetime.now(UTC):%Y-%m-%d}, COMMAND={pos} ({name}), CENTER=500@10 (Sun), ECLIPTIC J2000, AU, TDB\n"
+                  "# jd_tdb,x,y,z")
+        np.savetxt(DATA / f"planet_{name}.csv", np.array(rows), delimiter=",", header=header, comments="", fmt="%.15g")
+        print(f"{name}: {len(rows)} rows, GM {gms[name]} km^3/s^2")
+    (DATA / "planets_gm.json").write_text(json.dumps({
+        "gm_km3_s2": gms, "note": "GM of each body alone (Horizons physical data); planets' moons left out",
+        "source": f"JPL Horizons API, physical data, fetched {datetime.now(UTC):%Y-%m-%d}"}, indent=1))
 
 
 def load(name: str) -> np.ndarray:
@@ -290,9 +329,48 @@ def _plot(ahead: np.ndarray, err_km: np.ndarray, out: dict) -> None:
     fig.savefig(OUT / "prediction_error.png")
 
 
+def flyby(gm_sun: float, planets: bool) -> tuple[float, float]:
+    """Hours by which the integrated 2029 closest approach misses JPL's time, and its distance (km)."""
+    from physicslens.physics.nbody import Body, propagate
+    from scipy.interpolate import CubicSpline
+    ast = load("apophis")
+    s0 = ast[np.argmin(np.abs(ast[:, 0] - jd(TRAIN_STOP)))]
+    cad = json.loads((DATA / "cad_2029.json").read_text())
+    jd_cad = float(cad["data"][0][2])
+    bodies = []
+    if planets:
+        gms = json.loads((DATA / "planets_gm.json").read_text())["gm_km3_s2"]
+        bodies = [Body.from_table(n, gm, load("earth" if n == "earth" else f"planet_{n}")) for n, gm in gms.items()]
+    at = propagate(s0[1:7], s0[0], jd_cad + 2, gm_sun, bodies)
+    earth = load("earth_flyby")
+    when = np.arange(jd_cad - 1.9, jd_cad + 1.9, 1 / 1440)  # one-minute steps; JPL's 10-minute Earth table between
+    d = np.linalg.norm(at(when)[:3].T - CubicSpline(earth[:, 0], earth[:, 1:4])(when), axis=1) * AU_KM
+    k = int(np.argmin(d))
+    return (float(when[k]) - jd_cad) * 24, float(d[k])
+
+
+def planets() -> dict:
+    """Where the Sun-only miss comes from: each source switched on alone, from the same 2026 start."""
+    gm_jpl = json.loads((DATA / "sun_gm.json").read_text())["gm_au3_d2"]
+    gm_video = json.loads((OUT / "prediction.json").read_text())["gm_recovered_au3_d2"]
+    rows = []
+    for label, gm, with_planets in [("Sun only, JPL's GM", gm_jpl, False), ("Sun only, GM from the video", gm_video, False),
+                                    ("Sun, planets and Moon, JPL's GM", gm_jpl, True),
+                                    ("Sun, planets and Moon, GM from the video", gm_video, True)]:
+        hours, km = flyby(gm, with_planets)
+        rows.append({"case": label, "time_error_hours": round(hours, 2), "distance_km": round(km)})
+        print(f"{label:42s} {hours:+7.2f} h   {km:12,.0f} km", flush=True)
+    cad = json.loads((DATA / "cad_2029.json").read_text())
+    out = {"start": f"JPL state of 99942 Apophis on {TRAIN_STOP}",
+           "jpl": {"date_tdb": cad["data"][0][3], "distance_km": float(cad["data"][0][4]) * AU_KM},
+           "gm_sun_video_au3_d2": gm_video, "gm_sun_jpl_au3_d2": gm_jpl, "cases": rows}
+    (OUT / "planets.json").write_text(json.dumps(out, indent=1))
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=["fetch", "render", "analyze", "predict", "all"])
+    ap.add_argument("step", choices=["fetch", "fetch-planets", "render", "analyze", "predict", "planets", "all"])
     a = ap.parse_args()
     if a.step in ("fetch", "all") and (a.step == "fetch" or not (DATA / "apophis.csv").exists()):
         fetch()
@@ -302,6 +380,10 @@ def main() -> None:
         analyze()
     if a.step in ("predict", "all"):
         predict()
+    if a.step == "fetch-planets":
+        fetch_planets()
+    if a.step == "planets":
+        planets()
 
 
 if __name__ == "__main__":

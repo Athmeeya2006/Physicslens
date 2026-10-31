@@ -58,7 +58,8 @@ export function Hero() {
         <figcaption>
           Asteroid Apophis over four years, rendered from NASA/JPL positions. Red arrow: the force the law gives,
           pointing at the Sun in every frame; yellow: velocity. Carried 3.3 years forward, the law puts the 2029 Earth
-          flyby 13 hours from JPL&apos;s time.
+          flyby 13 hours from JPL&apos;s time. Given JPL&apos;s own Sun, planets and Moon instead, our N-body integrator lands it
+          within a minute: the hours come from what one video can measure.
         </figcaption>
       </figure>
     </section>

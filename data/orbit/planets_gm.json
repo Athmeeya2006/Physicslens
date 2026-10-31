@@ -1,0 +1,15 @@
+{
+ "gm_km3_s2": {
+  "mercury": 22031.86855,
+  "venus": 324858.592,
+  "earth": 398600.435436,
+  "moon": 4902.800066,
+  "mars": 42828.375662,
+  "jupiter": 126686531.9,
+  "saturn": 37931206.234,
+  "uranus": 5793950.6103,
+  "neptune": 6835099.97
+ },
+ "note": "GM of each body alone (Horizons physical data); planets' moons left out",
+ "source": "JPL Horizons API, physical data, fetched 2026-10-31"
+}
