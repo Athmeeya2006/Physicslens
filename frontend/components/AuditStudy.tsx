@@ -25,7 +25,7 @@ const NAMES: Record<string, string> = { cogvideo: "CogVideoX", cosmos: "Cosmos",
   sora: "Sora", videocrafter: "VideoCrafter", wan: "Wan" };
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
-function useWidth(min = 300): [React.RefObject<HTMLElement | null>, number] {
+function useWidth(min = 260): [React.RefObject<HTMLElement | null>, number] {
   const ref = useRef<HTMLElement>(null);
   const [w, setW] = useState(720);
   useEffect(() => {
@@ -42,8 +42,8 @@ function useWidth(min = 300): [React.RefObject<HTMLElement | null>, number] {
 function IntervalChart({ rows, caption, unit }: { rows: { label: string; s: Share; reference?: boolean }[]; caption: string; unit: string }) {
   const [box, W] = useWidth();
   const [hover, setHover] = useState<number | null>(null);
-  const left = W < 520 ? 112 : 150;
-  const right = 56;
+  const left = W < 360 ? 96 : W < 520 ? 112 : 150;
+  const right = W < 360 ? 44 : 56;
   const ROW = 30;
   const gap = rows.some((r) => r.reference) ? 12 : 0;
   const H = 26 + rows.length * ROW + gap + 30;
@@ -74,7 +74,7 @@ function IntervalChart({ rows, caption, unit }: { rows: { label: string; s: Shar
                     : <circle className="mark" cx={x(r.s.rate)} cy={cy} r={5} />}
                   <text className="value" x={W - right + 8} y={cy + 4}>{pct(r.s.rate)}</text>
                 </>
-              ) : <text className="value muted" x={x(0) + 6} y={cy + 4}>no clips yet</text>}
+              ) : <text className="value muted" x={x(0) + 6} y={cy + 4}>none could be judged</text>}
             </g>
           );
         })}
@@ -107,7 +107,7 @@ function IntervalChart({ rows, caption, unit }: { rows: { label: string; s: Shar
 /** Every clip's held-out forecast error as a dot, real against generated, on a log scale; the line is the median. */
 function ErrorStrip({ real, gen }: { real: number[]; gen: number[] }) {
   const [box, W] = useWidth();
-  const left = W < 520 ? 112 : 150;
+  const left = W < 360 ? 96 : W < 520 ? 112 : 150;
   const right = 24;
   const lo = Math.log10(0.001);
   const hi = Math.log10(3);

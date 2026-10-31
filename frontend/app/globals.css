@@ -423,6 +423,7 @@ a.gallery-item { text-decoration: none; }
 .law .katex-display > .katex { text-align: left; }
 
 /* Physics audit at scale: dot-and-interval rows; the real-footage control is the neutral reference. */
+.study-chart { margin: 0; }
 .study-chart svg { display: block; max-width: 100%; }
 .study-chart .row-label { font-size: 12px; fill: var(--ink-2); }
 .study-chart .value { font-size: 12px; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
