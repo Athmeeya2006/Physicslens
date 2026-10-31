@@ -1,8 +1,8 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import { useEffect, useRef } from "react";
 import { Law } from "./Equation";
+import { LoopVideo } from "./LoopVideo";
 
 // The home page's showcase: what PhysicsLens found, one discovery per row, each with its own clean video (ghost,
 // trail and force arrows; scripts/build_stories.py), the law typeset large and the numbers it measured. Every
@@ -59,22 +59,6 @@ const STORIES: Story[] = [
   },
 ];
 
-function StoryVideo({ run, label }: { run: string; label: string }) {
-  const ref = useRef<HTMLVideoElement>(null);
-  useEffect(() => {
-    const v = ref.current;
-    if (!v) return;
-    // Play only while on screen: five looping videos at once would make a phone stutter.
-    const io = new IntersectionObserver(([e]) => (e.isIntersecting ? v.play().catch(() => {}) : v.pause()), { threshold: 0.3 });
-    io.observe(v);
-    return () => io.disconnect();
-  }, []);
-  return (
-    <video ref={ref} src={`/stories/${run}.mp4`} poster={`/stories/${run}.jpg`} muted loop playsInline preload="none"
-           aria-label={label} />
-  );
-}
-
 export function Discoveries() {
   return (
     <section className="discoveries" aria-labelledby="discoveries-title">
@@ -85,7 +69,8 @@ export function Discoveries() {
         </header>
         {STORIES.map((s, i) => (
           <article key={s.run} className={`story${i % 2 ? " flip" : ""}`}>
-            <div className="story-media"><StoryVideo run={s.run} label={`${s.eyebrow}: the measured track, the law's ghost and its force arrow`} /></div>
+            <div className="story-media"><LoopVideo src={`/stories/${s.run}.mp4`} poster={`/stories/${s.run}.jpg`}
+              label={`${s.eyebrow}: the measured track, the law's ghost and its force arrow`} /></div>
             <div className="story-text">
               <p className="story-eyebrow">{s.eyebrow}</p>
               <h3>{s.title}</h3>

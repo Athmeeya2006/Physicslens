@@ -1,5 +1,6 @@
 import { Activity, Camera, Route, Upload } from "lucide-react";
 import { Law, Tex } from "./Equation";
+import { LoopVideo } from "./LoopVideo";
 
 // The first screen: what PhysicsLens found, shown working, before any form. Every number is from a stored gallery
 // run (gallery-apophis, gallery-jupiter) checked against NASA/JPL values fetched at run time.
@@ -42,8 +43,8 @@ export function Hero() {
         </div>
       </div>
       <figure className="hero-media">
-        <video src="/hero/apophis-orbit.mp4" poster="/hero/apophis-orbit.jpg" autoPlay muted loop playsInline
-               preload="metadata" aria-label="Asteroid Apophis around the Sun, with the law PhysicsLens found: the force arrow points at the Sun in every frame" />
+        <LoopVideo src="/hero/apophis-orbit.mp4" poster="/hero/apophis-orbit.jpg" preload="metadata"
+                   label="Asteroid Apophis around the Sun, with the law PhysicsLens found: the force arrow points at the Sun in every frame" />
         <div className="hero-law">
           <p className="hero-law-title">The law it wrote, then verified</p>
           <Law tex={LAW} />
