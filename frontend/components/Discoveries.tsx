@@ -25,7 +25,7 @@ const STORIES: Story[] = [
     text: "As Halley whips past the Sun its pull grows about 80-fold in a year, a hard test for any law. The agent wrote inverse-square gravity; a rival law with the exponent left free fitted it at 1.9998, Newton's 2.",
     law: "\\ddot x = -\\frac{\\mu\\,x}{(x^2+y^2)^{3/2}},\\quad \\ddot y = -\\frac{\\mu\\,y}{(x^2+y^2)^{3/2}}",
     stats: [{ value: "0.095%", label: "the Sun's GM against NASA/JPL" }, { value: "1.9998", label: "the force law's exponent, left free" }],
-    note: "Carried 75 years forward with the Sun alone, the law brings Halley back in late 2063, not JPL's July 2061: the planets' pull, and a period that hinges on the speed at perihelion to a few parts in ten thousand.",
+    note: "Carried 75 years forward with the Sun alone, the law brings Halley back in late 2063, not JPL's July 2061. Adding the giant planets' pull brings the same integration within 4 days of JPL's date; what remains is the Sun's GM, whose 0.095% error so long an orbit turns into about eight months.",
   },
   {
     run: "gallery-jupiter", eyebrow: "Jupiter and its four large moons",

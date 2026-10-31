@@ -214,7 +214,16 @@ Then, across the moons and without any fitted force law: the period and mean dis
 | The referee | proposed three alternatives; none could be tested (it wrote `pow(...)`, which the law grammar then lacked and now accepts), so the law stands on its own verification |
 | Physics audit | consistent |
 
-The honest limit: carried 75 years forward with the Sun alone, the law brings Halley back in **November 2063, not JPL's July 2061**. The period of so long an ellipse hinges on the speed at perihelion to a few parts in ten thousand, finer than a video measures, and the planets' pull (part of JPL's prediction) is not in a law found from the Sun's neighbourhood. Reproduce: `python scripts/halley_demo.py fetch|render|analyze|predict`. Data credits: `data/halley/SOURCES.md`.
+The honest limit: carried 75 years forward with the Sun alone, the law brings Halley back in **November 2063, not JPL's July 2061**. Where that miss comes from was then measured, each source switched on alone, all from JPL's 1985 position and velocity of the comet (the planets pull from outside the comet's plane, which a video of that plane cannot show):
+
+| Integrated from 1985 to the 2061 perihelion | Error against JPL's date |
+|---|---|
+| The Sun alone, JPL's GM | 263 days late |
+| The Sun alone, the GM measured from the video | 509 days late |
+| The Sun and the four giant planets, JPL's GM | **3.8 days early** |
+| The Sun and the four giant planets, the GM measured from the video | 236 days late |
+
+So the planets account for most of the miss: Newton's pull of Jupiter, Saturn, Uranus and Neptune (positions and masses from JPL Horizons) brings our integration within four days of JPL's date after 76 years, at JPL's perihelion distance (0.5927 AU against 0.5928); the four days are about what the comet's own outgassing shifts it, which JPL models and we do not. What remains is the Sun's GM: the video measured it to 0.095%, and so long an ellipse turns that into about eight months over one orbit. Reproduce: `python scripts/halley_demo.py fetch|render|analyze|predict|planets` (`tests/test_halley.py` checks the four-day result offline). Data credits: `data/halley/SOURCES.md`.
 
 ---
 
@@ -604,6 +613,9 @@ The public gallery is a static export that needs no server: `python scripts/buil
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Optional Cloudflare Turnstile check on public uploads |
 | `FRONTEND_ORIGINS` | Allowed CORS origins for the backend |
 | `TRUST_PROXY` | `1` to read the client address from proxy headers (per-visitor limits behind a tunnel) |
+| `PHYSICSLENS_FIT_WORKERS` | Processes that fit candidate laws side by side (default half the CPU threads, at most 4; `1` fits one after another). The numbers are identical either way |
+| `PHYSICSLENS_DECODE_WORKERS` | Processes that decode SAM masks (same default) |
+| `FFMPEG_THREADS` | Threads per ffmpeg conversion (default: ffmpeg's own choice) |
 | `NEXT_PUBLIC_API_BASE` | Backend URL baked into a frontend build; the static site uses `/backend.json` at runtime instead |
 
 ### Config files
@@ -677,7 +689,7 @@ make test                     # MOCK_MODELS=1 pytest: no network, no spend
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (416 tests) covers:
+The suite (446 tests) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.

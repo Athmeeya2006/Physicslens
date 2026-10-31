@@ -4,6 +4,7 @@
   python scripts/halley_demo.py render     -> var/halley/halley.mp4, the video PhysicsLens watches
   python scripts/halley_demo.py analyze    the normal PhysicsLens pipeline on that video (PAID: SAM 3.1 + Muse Spark Open)
   python scripts/halley_demo.py predict    integrate the recovered law to the next perihelion; compare with JPL
+  python scripts/halley_demo.py planets    the same return with the giant planets' pulls added: where the miss comes from
 
 Halley's orbit is a hard test for a law found from pixels: it is a long ellipse (eccentricity 0.967), so near the Sun
 the pull is thousands of times stronger than at its far end, and an inverse-square law that is even slightly wrong in
@@ -15,6 +16,12 @@ Data: positions of 1P/Halley (JPL small-body record 90000030, the solution fitte
 apparition) and Earth from JPL Horizons, heliocentric, ecliptic J2000, AU and days. They draw the video and, afterwards,
 check the answer. The analysis sees pixels: a dot moving around a fixed point. The prediction integrates the accepted
 law alone (Sun only: no planets, no outgassing), so its 2061 date shows how much of Halley's return the Sun explains.
+
+The planets step answers what the rest is. A video of one passage gives the comet's track in its own plane, but the
+planets pull from outside that plane, so it starts from JPL's 1985 position and velocity of the comet (3D) and adds
+Newton's pull of Jupiter, Saturn, Uranus and Neptune (positions and masses from JPL Horizons; heliocentric, with the
+indirect term for the Sun being pulled too). Each source of error is then switched on alone: the Sun's GM from JPL or
+from the video, with or without the planets.
 """
 
 from __future__ import annotations
@@ -39,6 +46,10 @@ OUT = ROOT / "var" / "halley"
 HORIZONS = "https://ssd.jpl.nasa.gov/api/horizons.api"
 BODIES = {"halley": "90000030;", "earth": "399"}
 SPANS = {"": ("1982-01-01", "1990-01-01"), "_2061": ("2059-01-01", "2063-12-31")}
+# Horizons ids: the planet's system barycentre for its position, the planet for its GM. The inner planets moved the
+# 2061 date by half a day in a trial with all eight, so only the giants are kept (smaller data, same answer).
+GIANTS = {"jupiter": ("5", "599"), "saturn": ("6", "699"), "uranus": ("7", "799"), "neptune": ("8", "899")}
+PLANET_SPAN = ("1984-06-01", "2063-12-31")
 TRAIN_START, TRAIN_STOP = "1985-01-01", "1987-05-01"  # the 1986 passage (perihelion 1986-02-09)
 SIZE = 1080
 FPS = 30
@@ -80,6 +91,32 @@ def fetch() -> None:
     (DATA / "sun_gm.json").write_text(json.dumps({
         "gm_km3_s2": gm_km3_s2, "gm_au3_d2": gm_km3_s2 * 86400**2 / AU_KM**3,
         "source": f"JPL Horizons API, Sun (10) physical data, fetched {datetime.now(UTC):%Y-%m-%d}"}, indent=1))
+
+
+def fetch_planets() -> None:
+    import re
+    gms = {}
+    for name, (bary, body) in GIANTS.items():
+        txt = _get(HORIZONS, {"format": "json", "COMMAND": f"'{body}'", "OBJ_DATA": "'YES'", "MAKE_EPHEM": "'NO'"})["result"]
+        m = re.search(r"GM[ ,(]*km\^3/s\^2\)?\s*=\s*([\d.]+)", txt)
+        if not m:
+            sys.exit(f"Horizons gave no GM for {name}")
+        gms[name] = float(m.group(1))
+        d = _get(HORIZONS, {"format": "json", "COMMAND": f"'{bary}'", "EPHEM_TYPE": "VECTORS", "CENTER": "'500@10'",
+                            "START_TIME": f"'{PLANET_SPAN[0]}'", "STOP_TIME": f"'{PLANET_SPAN[1]}'", "STEP_SIZE": "'8 d'",
+                            "VEC_TABLE": "'1'", "REF_PLANE": "'ECLIPTIC'", "OUT_UNITS": "'AU-D'", "CSV_FORMAT": "'YES'"})
+        rows = []
+        for line in d["result"].split("$$SOE")[1].split("$$EOE")[0].strip().splitlines():
+            f = [v.strip() for v in line.split(",")]
+            rows.append([float(f[0]), *(float(v) for v in f[2:5])])
+        header = (f"# JPL Horizons API ({d['signature']['source']} {d['signature']['version']}), fetched "
+                  f"{datetime.now(UTC):%Y-%m-%d}, COMMAND={bary} ({name} system barycentre), CENTER=500@10 (Sun), "
+                  "ECLIPTIC J2000, AU, TDB\n# jd_tdb,x,y,z")
+        np.savetxt(DATA / f"{name}.csv", np.array(rows), delimiter=",", header=header, comments="", fmt="%.12g")
+        print(f"{name}: {len(rows)} rows, GM {gms[name]} km^3/s^2")
+    (DATA / "planets_gm.json").write_text(json.dumps({
+        "gm_km3_s2": gms, "note": "GM of each planet alone (Horizons physical data); moons are left out",
+        "source": f"JPL Horizons API, physical data of 599, 699, 799, 899, fetched {datetime.now(UTC):%Y-%m-%d}"}, indent=1))
 
 
 def load(name: str) -> np.ndarray:
@@ -233,11 +270,64 @@ def predict() -> dict:
     return out
 
 
+def return_date(gm_sun: float, planets: bool) -> tuple[float, float]:
+    """Days by which the integrated 2061 perihelion misses JPL's, and the perihelion distance (AU)."""
+    from scipy.integrate import solve_ivp
+    from scipy.interpolate import CubicSpline
+    start = load("halley")
+    s0 = start[np.argmin(np.abs(start[:, 0] - jd(TRAIN_START)))]
+    later = load("halley_2061")
+    jpl_peri = float(later[np.argmin(np.linalg.norm(later[:, 1:4], axis=1)), 0])
+    gm_planets = json.loads((DATA / "planets_gm.json").read_text())["gm_km3_s2"] if planets else {}
+    pulls = []
+    for name, gm in gm_planets.items():
+        track = load(name)
+        pulls.append((CubicSpline(track[:, 0], track[:, 1:4]), gm * 86400**2 / AU_KM**3))
+
+    def rhs(t: float, s: np.ndarray) -> np.ndarray:
+        r = s[:3]
+        a = -gm_sun * r / np.linalg.norm(r) ** 3
+        for where, gm in pulls:
+            rp = where(s0[0] + t)
+            d = rp - r
+            # Heliocentric frame: the planet pulls the comet, and pulls the Sun too (the second, indirect term).
+            a = a + gm * (d / np.linalg.norm(d) ** 3 - rp / np.linalg.norm(rp) ** 3)
+        return np.concatenate([s[3:], a])
+
+    span = jpl_peri + 900 - s0[0]
+    sol = solve_ivp(rhs, (0.0, span), s0[1:7], method="DOP853", rtol=1e-11, atol=1e-13, dense_output=True)
+    if not sol.success:
+        sys.exit(f"Integration to 2061 failed: {sol.message}")
+    t = np.arange(40 * 365, span, 0.05)
+    r = np.linalg.norm(sol.sol(t)[:3], axis=0)
+    k = int(np.argmin(r))
+    return s0[0] + float(t[k]) - jpl_peri, float(r[k])
+
+
+def planets() -> dict:
+    """Where the Sun-only miss comes from: each source switched on alone, from the same 1985 start."""
+    gm_jpl = json.loads((DATA / "sun_gm.json").read_text())["gm_au3_d2"]
+    gm_video = json.loads((OUT / "prediction.json").read_text())["gm_recovered_au3_d2"]
+    rows = []
+    for label, gm, with_planets in [("Sun only, JPL's GM", gm_jpl, False), ("Sun only, GM from the video", gm_video, False),
+                                    ("Sun and giant planets, JPL's GM", gm_jpl, True),
+                                    ("Sun and giant planets, GM from the video", gm_video, True)]:
+        days, q = return_date(gm, with_planets)
+        rows.append({"case": label, "error_days": round(days, 1), "perihelion_au": round(q, 4)})
+        print(f"{label:42s} {days:+8.1f} days   q = {q:.4f} AU", flush=True)
+    out = {"start": f"JPL state of 1P/Halley on {TRAIN_START}", "jpl_perihelion_2061": date_of(
+        float(load("halley_2061")[np.argmin(np.linalg.norm(load("halley_2061")[:, 1:4], axis=1)), 0])),
+        "gm_sun_video_au3_d2": gm_video, "gm_sun_jpl_au3_d2": gm_jpl, "cases": rows}
+    (OUT / "planets.json").write_text(json.dumps(out, indent=1))
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=["fetch", "render", "analyze", "predict"])
+    ap.add_argument("step", choices=["fetch", "fetch-planets", "render", "analyze", "predict", "planets"])
     a = ap.parse_args()
-    {"fetch": fetch, "render": render, "analyze": analyze, "predict": predict}[a.step]()
+    {"fetch": fetch, "fetch-planets": fetch_planets, "render": render, "analyze": analyze, "predict": predict,
+     "planets": planets}[a.step]()
 
 
 if __name__ == "__main__":

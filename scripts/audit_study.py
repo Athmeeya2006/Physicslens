@@ -303,6 +303,8 @@ def baseline(max_usd: float) -> None:
                 print("budget reached")
                 break
             video = WORK / "clips" / (c["id"] + ".mp4")
+            if not video.is_file():  # never downloaded (a dead link): nothing for either method to judge
+                continue
             info = media.probe(video)
             n = int(cfg.get("llm_keyframes_max", 4))
             frames = media.keyframes(video, n, int(cfg.get("llm_image_long_side_px", 768)))
