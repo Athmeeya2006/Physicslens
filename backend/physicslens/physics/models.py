@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
@@ -38,6 +38,13 @@ class ModelSpec:
     latex: str  # uses {param} placeholders, filled with fitted values for display
     params: tuple[Param, ...]
     rhs: Rhs  # state = [q..., qdot...]
+    # "This law becomes <submodel> when these parameters take these values": exact reductions only (each checked
+    # against both right-hand sides). Fitting uses them to start a law from its fitted special cases, so a law can
+    # never end worse than a special case it contains.
+    nests: tuple[tuple[str, tuple[tuple[str, float], ...]], ...] = ()
+    # A law that uses the time t or a known input signal: its rhs takes the time as a fourth argument. Library laws
+    # depend on the state alone.
+    time_dependent: bool = False
 
     @property
     def param_names(self) -> list[str]:
@@ -45,6 +52,18 @@ class ModelSpec:
 
 
 G = Param("g", "g", "m/s^2", 0.5, 40.0)
+
+
+def derivative(spec: ModelSpec, s: np.ndarray, params: dict[str, float], ctx: dict[str, float], t: float) -> np.ndarray:
+    """The state's time derivative at time t: the one call every simulation and fit goes through."""
+    return spec.rhs(s, params, ctx, t) if spec.time_dependent else spec.rhs(s, params, ctx)  # type: ignore[call-arg]
+
+
+def smoothing(ctx: dict[str, float]) -> float:
+    """Width multiplier for the smoothed sign() of friction laws. The fit starts on short windows with a wide, gentle
+    corner (ctx["v_eps_scale"] 20, then 5) and ends on the true law (1): a near-discontinuous right-hand side makes
+    the finite-difference Jacobian poor, and a spring with both frictions drifted away even from its true parameters."""
+    return ctx.get("v_eps_scale", 1.0)
 
 
 def _pendulum(damping: str | None, small_angle: bool = False) -> Rhs:
@@ -121,7 +140,7 @@ def _spin(coulomb: bool, viscous: bool, air: bool) -> Rhs:
         _, w = s
         a = 0.0
         if coulomb:
-            a -= p["c"] * np.tanh(w / SPIN_EPS)
+            a -= p["c"] * np.tanh(w / (SPIN_EPS * smoothing(ctx)))
         if viscous:
             a -= p["k"] * w
         if air:
@@ -165,12 +184,13 @@ V_EPS = 0.01  # m/s: smooths sign(v) so dry friction lets the mass stop without 
 
 def _oscillator_dry(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
     x, v = s
-    return np.array([v, -p["omega"] ** 2 * (x - p["s0"]) - p["f"] * np.tanh(v / V_EPS)])
+    return np.array([v, -p["omega"] ** 2 * (x - p["s0"]) - p["f"] * np.tanh(v / (V_EPS * smoothing(ctx)))])
 
 
 def _oscillator_mixed(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
     x, v = s
-    return np.array([v, -p["omega"] ** 2 * (x - p["s0"]) - 2 * p["zeta"] * p["omega"] * v - p["f"] * np.tanh(v / V_EPS)])
+    return np.array([v, -p["omega"] ** 2 * (x - p["s0"]) - 2 * p["zeta"] * p["omega"] * v
+                     - p["f"] * np.tanh(v / (V_EPS * smoothing(ctx)))])
 
 
 def _duffing(s: np.ndarray, p: dict[str, float], ctx: dict[str, float]) -> np.ndarray:
@@ -269,6 +289,32 @@ MODELS_3D: dict[str, ModelSpec] = {
                   _projectile3d("quadratic")),
     ]
 }
+
+# Exact reductions, as (law, special case, the parameters switched off). Checked one by one against the right-hand
+# sides above: each term vanishes at that value and nothing else changes.
+NESTINGS: tuple[tuple[str, str, dict[str, float]], ...] = (
+    ("pendulum_linear_damping", "pendulum", {"gamma": 0.0}),
+    ("pendulum_quadratic_damping", "pendulum", {"beta": 0.0}),
+    ("damped_harmonic", "harmonic", {"zeta": 0.0}),
+    ("oscillator_dry", "harmonic", {"f": 0.0}),
+    ("oscillator_mixed", "damped_harmonic", {"f": 0.0}),
+    ("oscillator_mixed", "oscillator_dry", {"zeta": 0.0}),
+    ("duffing", "damped_harmonic", {"beta": 0.0}),
+    ("linear_drag", "free_fall", {"k": 0.0}),
+    ("quadratic_drag", "free_fall", {"c": 0.0}),
+    ("spin_dry", "spin_free", {"c": 0.0}),
+    ("spin_viscous", "spin_free", {"k": 0.0}),
+    ("spin_air", "spin_free", {"q": 0.0}),
+    ("spin_dry_viscous", "spin_dry", {"k": 0.0}),
+    ("spin_dry_viscous", "spin_viscous", {"c": 0.0}),
+    ("line_constant_accel", "line_constant_velocity", {"a0": 0.0}),
+    ("plane_constant_accel", "plane_constant_velocity", {"ax0": 0.0, "ay0": 0.0}),
+    ("linear_drag_3d", "free_fall_3d", {"k": 0.0}),
+    ("quadratic_drag_3d", "free_fall_3d", {"c": 0.0}),
+)
+for _sup, _sub, _off in NESTINGS:
+    _table = MODELS if _sup in MODELS else MODELS_3D
+    _table[_sup] = replace(_table[_sup], nests=(*_table[_sup].nests, (_sub, tuple(_off.items()))))
 
 # Every law a freshly started process knows. custom.py adds the agent's own laws to MODELS at run time, in that
 # process only, so a worker process can be handed a law by id only if it is in here.

@@ -145,7 +145,7 @@ export interface RankedFit {
 }
 
 export interface TrailStep {
-  step: "skeptic" | "scaling" | "locate" | "plan" | "study_turn" | "joint_fit" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "audio" | "agent" | "setup_guide" | "controller" | "control_test";
+  step: "skeptic" | "scaling" | "locate" | "plan" | "study_turn" | "joint_fit" | "scene" | "tracking" | "hypotheses" | "verification" | "design" | "plausibility" | "track_check" | "collision" | "regime" | "chaos" | "audio" | "agent" | "setup_guide" | "controller" | "control_test" | "identifiability" | "inputs";
   provider: string | null;
   model: string;
   text: string;
@@ -196,8 +196,11 @@ export interface AnalysisResult {
     decisive: boolean; noise_mm: number; options_tested: number; models: string[];
   };
   scale_note?: string;
-  // Parameter pairs whose bootstrap refits move together (|r| >= 0.98): the clip measures their combination.
-  entangled?: { a: string; b: string; r: number }[];
+  // Parameter pairs whose bootstrap refits move together (|r| > 0.9), with the recording that would separate them.
+  identifiability?: { params: [string, string]; corr: number; advice: string }[];
+  bootstrap_reps?: number;  // resamples behind every interval
+  n_eff?: number | null;    // effective independent samples BIC was computed with
+  inputs?: { name: string; unit: string; provenance: string; from_s: number; to_s: number; samples: number }[];
   scale_basis?: string;
   double?: {
     params: { g: number; mu: number; gamma: number }; L1: number; L2: number; accepted: boolean; reason: string;
@@ -448,6 +451,8 @@ export interface RunInputs {
   setting?: number | null;
   depth3d?: boolean;
   focalPx?: number | null;
+  knownMover?: string | null;  // a second object to track whose path laws may use (x2, y2)
+  inputsCsv?: File | null;     // known signals: t (seconds from the clip's start), then named columns
 }
 
 // path: "/api/audit" runs the same analysis as an audit (every result carries its physics audit).
@@ -462,6 +467,8 @@ export function startRun(file: File, inputs: RunInputs, turnstileToken: string |
   if (turnstileToken) form.append("turnstile_token", turnstileToken);
   if (inputs.depth3d) form.append("depth_3d", "true");
   if (inputs.focalPx) form.append("focal_px", String(inputs.focalPx));
+  if (inputs.knownMover?.trim()) form.append("known_mover", inputs.knownMover.trim().slice(0, 60));
+  if (inputs.inputsCsv) form.append("inputs_csv", inputs.inputsCsv);
   return fetch(`${API_BASE}${path}`, { method: "POST", body: form, headers: codeHeaders() }).then((r) => json<RunView>(r));
 }
 

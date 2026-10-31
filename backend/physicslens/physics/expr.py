@@ -202,6 +202,11 @@ def compile_expr(node: Node) -> Callable[[dict[str, float]], float]:
         op, (f, g) = _BINARY[k], args
         return lambda env: op(f(env), g(env))
     fn = _SCALAR[str(node.value)]
+    if fn is _sign:
+        (f,) = args
+        # During the fit's first, short windows (env["_sign_eps"] > 0) the corner is smoothed, as for the library's
+        # friction laws (models.smoothing); the final fit and every forecast use the exact sign.
+        return lambda env: _sign(f(env)) if not env.get("_sign_eps") else math.tanh(f(env) / env["_sign_eps"])
     if len(args) == 1:
         (f,) = args
         return lambda env: fn(f(env))

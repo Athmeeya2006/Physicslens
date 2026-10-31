@@ -18,7 +18,7 @@ import numpy as np
 
 from ..sigproc.cleanup import fill_short_gaps
 from .coords import Coordinates
-from .fit import fit_models
+from .fit import fit_family
 from .models import MODELS_3D
 from .uncertainty import bootstrap
 from .verify import assess, judge_candidates
@@ -155,7 +155,7 @@ def analyze(frames: np.ndarray, centers_px: np.ndarray, long_px: np.ndarray, sho
     t = (seg_frames - seg_frames[0]) / fps
     q = xyz * np.array([1.0, 1.0, z_scale])
     coords = Coordinates("projectile3d", t, q, ("x", "y", "z"), {"z_scale": z_scale})
-    fits = fit_models([MODELS_3D[m] for m in CANDIDATES], coords)
+    fits = fit_family([MODELS_3D[m] for m in CANDIDATES], coords)
     verdict = assess(coords, fits)
     judged = judge_candidates(verdict)
 

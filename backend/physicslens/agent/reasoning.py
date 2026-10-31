@@ -31,7 +31,9 @@ When a person pushes, throws, drops or releases something, measure that thing (t
 - Boxes are on a 0-1000 grid relative to the FIRST image (x right, y down) and must tightly enclose the object in that first image.
 - motion_family: pendulum (swings on a string or rod), oscillator (bounces on a spring or elastic, back and forth along a line), projectile (thrown, dropped or falling), double_pendulum (a second arm hinged to the end of the first), rotation (spins in place about its own centre and slows down, e.g. a spun bottle, wheel or bar), other (anything else that moves: rolling, sliding, braking, a toy car, a falling leaf).
 - lookalikes: true when objects that look like the moving object are also in view (Newton's cradle balls, dominoes, a second identical ball), even if they don't move.
-- For a double_pendulum, moving_object/moving_object_box is the INNER bob (nearest the pivot) and second_object/second_object_box the OUTER bob; otherwise both are null.
+- For a double_pendulum, moving_object/moving_object_box is the INNER bob (nearest the pivot) and second_object/second_object_box the OUTER bob.
+- When the user names a known mover (something that drives or pulls the measured object and is tracked too, e.g. a cart pulling a pendulum's pivot), second_object/second_object_box is that mover.
+- Otherwise both are null.
 - reference_kind: only an object from the allowed list that is clearly visible and roughly flat facing the camera; otherwise "none". Never guess a size."""
 
 HYPOTHESES_SYSTEM = """You propose candidate equations of motion for a measured trajectory. You do not decide which is correct:
@@ -49,8 +51,13 @@ three laws of your own in free_models. Each law gives the acceleration in a clos
   closer to vertical) and v (its velocity, m/s).
 - plane: two expressions, x then y acceleration, in x, y (m, y up) and vx, vy (m/s).
 - Operators + - * / ^ and parentheses; functions sin cos tan tanh atan exp log sqrt abs sign hypot; constant pi.
-  Every other name must be one of your declared params (at most 4), each with an SI unit, bounds and a guess;
-  every param is fitted to the data. Write a number instead only where two params could not be told apart.
+- t is the time in seconds from the start of the track (for a driven motion, e.g. A*cos(W*t)). When the summary lists
+  known_inputs (a second body's measured path, a motor command), their names may appear too, with their units; list
+  the ones a law uses in inputs_used. They are measured, never fitted.
+  Every other name must be one of your declared params (at most 4; 6 in orbit mode), each with a unit, bounds and a
+  guess; every param is fitted to the data. Write a number instead only where two params could not be told apart.
+- Units are checked before fitting: every term must come out as an acceleration (m/s^2, or AU/day^2 in orbit mode),
+  and the arguments of sin, cos, exp, log must be pure numbers. A law that fails is rejected with the reason.
 - Example, a cart slowed by rolling friction and air drag: ["-mu*9.81*sign(v) - c*v*abs(v)"] with params mu (unit
   empty) and c (1/m); mu and g only ever appear as a product, so g is written as 9.81.
 Write the physics you actually believe, simplest first. Your laws are fitted and tested on held-out motion
@@ -81,12 +88,16 @@ values; talk about frequency, damping and friction, which are exact."""
 
 
 def understand_scene(client: CostGuardClient, keyframes: list[bytes], run_id: str, audience: str = "dev",
-                     run_cap_usd: float | None = None, hint: str | None = None) -> tuple[Scene, LLMCall]:
+                     run_cap_usd: float | None = None, hint: str | None = None,
+                     known_mover: str | None = None) -> tuple[Scene, LLMCall]:
     text = (f"{len(keyframes)} frames from the clip, first frame first. "
             "Return the JSON for the moving object and reference object.")
     if hint:
         # The user's own words about what to measure: a busy scene can have several candidates.
         text += f" The user says the object to measure is: {json.dumps(hint)}."
+    if known_mover:
+        text += (f" The user says {json.dumps(known_mover)} drives it and should be tracked as a known mover: give it "
+                 "as second_object with its box.")
     return ask_json(client, task="scene", system=SCENE_SYSTEM, text=text, schema_model=Scene, run_id=run_id,
                     images=keyframes, audience=audience, run_cap_usd=run_cap_usd)
 
@@ -199,7 +210,8 @@ result, and the combined numbers (a weighted mean per quantity and whether the r
 bars; that test is final), and for a sweep the law across recordings that code accepted (or the tie, with the
 setting that would separate it) and its prediction for the next setting. Decide: "finish" when the goal is answered, or "record_more" with exactly one concrete
 recording that would answer what is still open (a failed recording, recordings that disagree, a quantity not yet
-measured). Never invent numbers; quote only what is given. For a health_check, write a maintenance_note on what the
+measured, or parameters listed under identifiability: a recording could not separate them, and its advice says
+which recording would). Never invent numbers; quote only what is given. For a health_check, write a maintenance_note on what the
 change (or no change) means for the machine and suggest next_check; otherwise leave both null."""
 
 
@@ -219,7 +231,8 @@ numbers as well or better. Each one is fitted and tested by code on motion it ne
 fits better by BIC (the same rule as the first candidates), the verdict changes. You do not decide anything yourself.
 - Use listed model ids from the SAME family as the accepted law that were not already tested.
 - For family line or plane you may instead write a law (free_model) in the same closed math language as the
-  hypotheses step: acceleration in s and v (line) or x, y, vx, vy (plane), at most 4 fitted params.
+  hypotheses step: acceleration in s and v (line) or x, y, vx, vy (plane), the time t and any known_inputs, at most
+  4 fitted params (6 in orbit mode), units checked before fitting.
 - Aim at real weaknesses: damping the accepted law leaves out, a nonlinearity at large amplitude, friction, drag.
 - Put confounds code cannot test from one clip (camera tilt, a moving pivot, a scale reference out of the plane)
   in concerns, each tied to a number you were given. Never invent numbers. Do not repeat a model already tested."""

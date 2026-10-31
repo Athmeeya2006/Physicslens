@@ -37,6 +37,8 @@ export default function Home() {
   const [sizeCm, setSizeCm] = useState("");
   const [slowMo, setSlowMo] = useState("");
   const [hint, setHint] = useState("");
+  const [mover, setMover] = useState("");
+  const [inputsCsv, setInputsCsv] = useState<File | null>(null);
   const [run, setRun] = useState<RunView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
@@ -119,7 +121,8 @@ export default function Home() {
       setTurnstileToken(null);
       if (turnstileBox.current) window.turnstile?.reset(turnstileBox.current);
       const r = await startRun(file, { pendulumLengthM: length, objectSizeM: size,
-                                       slowMotion: slowMo ? Number(slowMo) : null, objectHint: hint || null }, token);
+                                       slowMotion: slowMo ? Number(slowMo) : null, objectHint: hint || null,
+                                       knownMover: mover || null, inputsCsv }, token);
       setRun(r);
       setRunParam(r.run_id);
       poll(r.run_id);
@@ -217,6 +220,20 @@ export default function Home() {
                   Slow-motion clip? How many times slower it plays (8 for 240 fps shown at 30), else leave empty
                   <input type="number" inputMode="decimal" min="1" step="any" value={slowMo} onChange={(e) => setSlowMo(e.target.value)} />
                 </label>
+                <fieldset className="scale-fields">
+                  <legend>Driven motion, optional: something else pushes or pulls it, and you know how</legend>
+                  <label className="field">
+                    Also track this object as the known mover
+                    <input type="text" maxLength={60} placeholder="e.g. the cart holding the pivot" value={mover}
+                           onChange={(e) => setMover(e.target.value)} />
+                  </label>
+                  <label className="field">
+                    Or a CSV of known signals: a column t (seconds from the clip&apos;s start), then up to 6 named
+                    columns, e.g. u[N]
+                    <input type="file" accept=".csv,text/csv" onChange={(e) => setInputsCsv(e.target.files?.[0] ?? null)} />
+                  </label>
+                  <p className="small muted">Laws may then use these signals and the time t; they are measured, never fitted.</p>
+                </fieldset>
                 {health?.turnstile_site_key && <div ref={turnstileBox} />}
                 <button type="submit" disabled={!file || busy || !canUpload}>
                   {busy ? <><Loader2 size={16} className="spin" aria-hidden="true" />Analyzing</> : "Analyze the motion"}

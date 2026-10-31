@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  ClipboardList, Code2, Compass, Cpu, Crosshair, Eye, Flag, FlaskConical, GitBranch, Layers, Lightbulb, MessageSquareText, Mic, Orbit,
-  PencilRuler, Ruler, ScanEye, Split, Swords, TrendingUp, type LucideIcon,
+  Activity, ClipboardList, Code2, Compass, Cpu, Crosshair, Eye, Flag, FlaskConical, GitBranch, Layers, Lightbulb, MessageSquareText, Mic, Orbit,
+  Link2, PencilRuler, Ruler, ScanEye, Split, Swords, TrendingUp, type LucideIcon,
 } from "lucide-react";
 import type { TrailStep } from "@/lib/api";
 import { SetupGuide } from "./SetupGuide";
@@ -28,6 +28,8 @@ const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
   audio: { label: "Listens to the soundtrack", icon: Mic },
   agent: { label: "Decides what to do next", icon: MessageSquareText },
   setup_guide: { label: "Draws the setup", icon: PencilRuler },
+  identifiability: { label: "Finds parameters this clip cannot separate", icon: Link2 },
+  inputs: { label: "Takes the known inputs", icon: Activity },
   controller: { label: "Writes the controller", icon: Code2 },
   control_test: { label: "Tests it in simulation", icon: Cpu },
 };

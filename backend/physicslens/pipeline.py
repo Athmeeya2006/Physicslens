@@ -22,11 +22,12 @@ from .agent.reasoning import (
     propose_hypotheses_sampled,
     understand_scene,
 )
-from .agent.schemas import AgentTurn, Scene
+from .agent.schemas import LAW_CONTEXT, AgentTurn, LawContext, Scene
 from .agent.skeptic import challenge, fit_more, outcome_text
 from .costguard import CostGuardClient, CostGuardError
 from .costguard.cache import file_digest
 from .export.mjcf import MjcfError, calibrate_contact, check_against_fit
+from .inputs import coverage_note, describe, merge_signals, mover_signals, track_signals
 from .perception import media
 from .perception.calibration import (
     Calibration,
@@ -42,7 +43,17 @@ from .physics.audit import cant_judge as audit_cant_judge
 from .physics.audit import save_input as save_audit_input
 from .physics.collisions import BounceError, detect_bounces, fit_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
-from .physics.custom import FREE_MODELS, FreeParam, build, law_latex, register, spec_for
+from .physics.custom import (
+    FREE_MODELS,
+    MAX_PARAMS,
+    MAX_PARAMS_ORBIT,
+    FreeParam,
+    InputSignals,
+    build,
+    law_latex,
+    register,
+    spec_for,
+)
 from .physics.design import design_experiment
 from .physics.double import HORIZON_S as DOUBLE_HORIZON_S
 from .physics.double import (
@@ -53,8 +64,9 @@ from .physics.double import (
 )
 from .physics.double import simulate as double_simulate
 from .physics.double import summary as double_summary
-from .physics.fit import FitResult, fit_models
+from .physics.fit import FitResult, configure_fit_workers, fit_family
 from .physics.models import MODELS, models_for, needs_scale
+from .physics.prescreen import noise_like
 from .physics.regime import RegimeChange, detect_change
 from .physics.rotation import RotationError, rotation_coordinates
 from .physics.sindy import vet
@@ -103,6 +115,11 @@ class RunOptions:
     origin_px: tuple[float, float] | None = None
     units: dict[str, str] | None = None  # display names when 1 m and 1 s stand for other units, e.g. AU and day
     frame_note: str | None = None  # what the coordinates mean, passed to the reasoning model with the numbers
+    # Known input signals in clip time (inputs.parse_inputs_csv, or a simulation): laws may use them, never fit them.
+    inputs: dict[str, Any] | None = None
+    # The user's words for a second object that drives the measured one ("the cart"): SAM tracks it too and its
+    # measured path becomes the known inputs x2, y2 in the measured object's own coordinates.
+    known_mover: str | None = None
 
 
 Progress = Callable[[str], None]
@@ -115,7 +132,10 @@ MIN_CLIP_FRAMES = 30
 
 def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, options: RunOptions | None = None,
             progress: Progress = lambda _msg: None) -> dict[str, Any]:
-    return finite(_analyze(client, video, run_dir, run_id, options, progress))
+    try:
+        return finite(_analyze(client, video, run_dir, run_id, options, progress))
+    finally:
+        LAW_CONTEXT.set(None)  # the run's known inputs and limits must not leak into the next run on this thread
 
 
 def finite(obj: Any) -> Any:
@@ -136,6 +156,7 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     options = options or RunOptions()
     run_dir.mkdir(parents=True, exist_ok=True)
     limits = client.limits
+    configure_fit_workers((limits.get("fitting") or {}).get("workers"))
     media_cfg = limits.get("media") or {}
     max_turns = int((limits.get("agent") or {}).get("max_turns", 4))
     llm_calls: list[dict[str, Any]] = []
@@ -167,7 +188,8 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
 
     progress("Understanding the scene")
     hint = (options.object_hint or "").strip()[:60] or None
-    scene, call = understand_scene(client, frames_jpeg, run_id, options.audience, hint=hint)
+    mover = (options.known_mover or "").strip()[:60] or None
+    scene, call = understand_scene(client, frames_jpeg, run_id, options.audience, hint=hint, known_mover=mover)
     ref = "no reference object" if scene.reference_kind == "none" else f"reference: {scene.reference_kind.replace('_', ' ')}"
     told = f" (asked to measure: {hint})" if hint else ""
     record("scene", call, f"Sees {article(scene.moving_object)} {scene.moving_object} {MOTION_PHRASE[scene.motion_family]}; "
@@ -231,6 +253,23 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         rotation, traj, origin_px = rotation_track(moving, fps, calibration.px_per_m)
 
     summary = rotation_summary(rotation) if rotation is not None else summarize(traj, calibration.source == "none")
+    signals = track_signals(options.inputs, int(full.frames[0]), full.fps)
+    if scene.second_object and scene.motion_family != "double_pendulum" and tracks.get(SECOND_ID) is not None:
+        # A known mover: tracked by SAM like the measured object, in the same frame of reference and time base.
+        second = tracks[SECOND_ID]
+        mover_frames, mover_px = max(fill_short_gaps(second.frames, second.centers_px, max_gap=3), key=lambda g: len(g[0]))
+        signals = merge_signals(signals, mover_signals(mover_frames, mover_px, int(full.frames[0]), full.fps,
+                                                       calibration.px_per_m, full_origin, scene.second_object), full.t)
+    max_params = MAX_PARAMS_ORBIT if options.units else MAX_PARAMS
+    LAW_CONTEXT.set(LawContext(max_params, signals))
+    if signals is not None:
+        known = describe(signals)
+        summary = {**summary, "known_inputs": known}
+        note = coverage_note(signals, full.t)
+        trail.append({"step": "inputs", "provider": None, "model": "known inputs",
+                      "text": "Known inputs a law may use (measured, never fitted): "
+                              + "; ".join(f"{k['name']} ({k['unit'] or 'no unit given'}, {k['provenance']})" for k in known)
+                              + (f". {note}" if note else "")})
     if options.frame_note:
         # Every reasoning step that reads the numbers also reads what they mean (units, where the origin is).
         summary = {**summary, "frame_note": options.frame_note}
@@ -274,7 +313,7 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     tried: list[str] = []
     family = hyp.family
     full_clip_verdict: dict[str, Any] | None = None  # set when the agent's fit window was used
-    candidate_ids, rationales = _candidates(hyp)
+    candidate_ids, rationales = _candidates(hyp, signals, max_params)
     verdict: Verdict | None = None
     coords: Coordinates | None = None
     turn = None
@@ -405,7 +444,7 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         if hyp.family in tried:
             break
         family = hyp.family
-        candidate_ids, more = _candidates(hyp)
+        candidate_ids, more = _candidates(hyp, signals, max_params)
         rationales.update(more)
 
     assert verdict is not None and turn is not None
@@ -450,6 +489,8 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         "calibration": {"px_per_m": calibration.px_per_m, "rel_std": calibration.rel_std, "source": calibration.source},
         "agent": {"action": turn.action, "message": turn.message, "reasoning_summary": turn.reasoning_summary},
         "ranking": [fit_summary(f, rationales.get(f.model_id)) for f in verdict.ranked],
+        "n_eff": verdict.n_eff,
+        "inputs": describe(signals),
         "real_track_px": _track_points(traj.frames, traj.xy, origin_px, calibration.px_per_m),
         # For a spin the ghost is a small marker on the rim, not the whole object.
         "object_size_px": float(np.median(moving.long_px)) * (0.25 if rotation is not None else 1.0),
@@ -505,9 +546,16 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     if verdict.status == "accepted" and verdict.winner and coords is not None:
         progress("Estimating uncertainty")
         spec = MODELS[verdict.winner.model_id]
-        est, linked = bootstrap_full(spec, coords, verdict.winner)
-        if linked:
-            result["entangled"] = linked
+        boot = bootstrap_full(spec, coords, verdict.winner)
+        est = boot.estimates
+        result["bootstrap_reps"] = boot.reps
+        if boot.identifiability:
+            result["identifiability"] = boot.identifiability
+            for pair in boot.identifiability:
+                a, b = pair["params"]
+                trail.append({"step": "identifiability", "provider": None, "model": "bootstrap refits",
+                              "text": f"{a} and {b} move together in the refits (correlation {pair['corr']:.2f}): "
+                                      f"this recording measures their combination better than each. {pair['advice']}"})
         result["equation"] = {"model_id": spec.id, "title": spec.title, "latex": spec.latex}
         result["parameters"] = [
             {"name": p.name, "latex": p.latex, "unit": p.unit, "value": est[p.name].value, "std": est[p.name].std,
@@ -1046,7 +1094,10 @@ def fit_and_verify(traj: Trajectory, family: str, candidate_ids: list[str],
         coords = coords if coords is not None else to_coordinates(traj, family)
     except ValueError as e:
         return None, Verdict("no_fit", None, (), (), f"The motion does not look like a {family}: {e}")
-    fits = fit_models([MODELS[m] for m in candidate_ids], coords)
+    specs = [MODELS[m] for m in candidate_ids]
+    if (reason := noise_like(coords, specs)) is not None:
+        return coords, Verdict("no_fit", None, (), (), reason)
+    fits = fit_family(specs, coords)
     return coords, assess(coords, fits)
 
 
@@ -1111,12 +1162,13 @@ def _sampled_text(s: SampledHypotheses) -> str:
             f"together they name {n} {h.family} models, all of which are tested.")
 
 
-def _candidates(hyp) -> tuple[list[str], dict[str, str]]:
+def _candidates(hyp, signals: InputSignals | None = None, max_params: int = MAX_PARAMS) -> tuple[list[str], dict[str, str]]:
     """Listed models plus the agent's own free-form laws (already validated by the schema), with controls."""
     ids = [h.model_id for h in hyp.candidates]
     rationales = {h.model_id: h.rationale for h in hyp.candidates}
     for f in hyp.free_models:
-        spec = register(build(hyp.family, f.title, f.acceleration, [FreeParam(**p.model_dump()) for p in f.params]))
+        spec = register(build(hyp.family, f.title, f.acceleration, [FreeParam(**p.model_dump()) for p in f.params],
+                              signals, max_params=max_params))
         ids.append(spec.id)
         rationales[spec.id] = f"{f.rationale} (written by the agent)"
     return _with_control(hyp.family, ids), rationales
@@ -1148,8 +1200,9 @@ def agent_context(v: Verdict, family: str, summary: dict[str, Any], scene: Scene
 
 def fit_summary(f: FitResult, rationale: str | None = None) -> dict[str, Any]:
     spec = MODELS[f.model_id]
-    return {"model_id": f.model_id, "title": spec.title, "params": f.params, "bic": f.bic,
+    return {"model_id": f.model_id, "title": spec.title, "params": f.params, "bic": f.bic, "bic_raw": f.bic_raw,
             "heldout_nrmse": f.heldout_nrmse, "rmse": f.rmse, "rationale": rationale,
+            "rolling": [{"origin": r["origin"], "horizon": r["horizon"], "nrmse": r["nrmse"]} for r in f.rolling],
             "param_meta": [{"name": p.name, "latex": p.latex, "unit": p.unit} for p in spec.params],
             # A law the agent wrote has no familiar name, so its equation is shown with it.
             **({"latex": spec.latex} if f.model_id.startswith("custom_") else {})}

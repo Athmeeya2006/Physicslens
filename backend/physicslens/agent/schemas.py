@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from contextvars import ContextVar
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..perception.calibration import REFERENCE_SIZES
-from ..physics.custom import MAX_BOUND, FreeParam, build
+from ..physics.custom import MAX_BOUND, MAX_PARAMS, MAX_PARAMS_ORBIT, FreeParam, InputSignals, build
 from ..physics.expr import ExprError
 from ..physics.models import MODELS
 
@@ -50,7 +52,9 @@ class Scene(Strict):
     moving_object: str = Field(description="Short concrete noun phrase for the moving object, e.g. 'metal ball'.")
     moving_object_box: Box1000 = Field(description="Box around the moving object in the FIRST image.")
     motion_family: Literal["pendulum", "oscillator", "projectile", "double_pendulum", "rotation", "other"]
-    second_object: str | None = Field(description="For a double pendulum only: the outer bob (the moving_object is the inner one). Otherwise null.")
+    second_object: str | None = Field(description=(
+        "For a double pendulum: the outer bob (the moving_object is the inner one). When the user named a known mover "
+        "(something driving the measured object, tracked too): that mover. Otherwise null."))
     second_object_box: Box1000 | None = Field(description="Box around the second object in the FIRST image, or null.")
     reference_kind: ReferenceKind = Field(description="Known-size object visible in the plane of motion, or 'none'.")  # type: ignore[valid-type]
     reference_box: Box1000 | None = Field(description="Box around the reference object in the FIRST image, or null.")
@@ -109,13 +113,38 @@ class FreeParamIn(Strict):
         return self
 
 
+@dataclass(frozen=True)
+class LawContext:
+    """What a written law may use beyond its state and parameters on this run: the names and units of known input
+    signals, and the parameter limit (orbit mode allows more). Set by the pipeline around the agent's call, so the
+    schema can validate a proposal against the run it is for."""
+
+    max_params: int = MAX_PARAMS
+    signals: InputSignals | None = None  # the run's known inputs, on the track's time base
+
+    @property
+    def inputs(self) -> tuple[str, ...]:
+        return tuple(sorted(self.signals.values)) if self.signals is not None else ()
+
+
+LAW_CONTEXT: ContextVar[LawContext | None] = ContextVar("law_context", default=None)
+
+
+def law_context() -> LawContext:
+    return LAW_CONTEXT.get() or LawContext()
+
+
 class FreeModelIn(Strict):
     title: str = Field(description="Short name, e.g. 'Sliding with dry friction'.")
     acceleration: list[str] = Field(min_length=1, max_length=2, description=(
         "family line: one expression for the acceleration along the path, in s (position, m) and v (velocity, m/s). "
-        "family plane: two expressions, x then y acceleration, in x, y (m, y up) and vx, vy (m/s)."))
-    params: list[FreeParamIn] = Field(max_length=4)
+        "family plane: two expressions, x then y acceleration, in x, y (m, y up) and vx, vy (m/s). Either may also use "
+        "t (seconds from the start of the track) and the known input signals named in the summary. Units are checked: "
+        "every term must come out as an acceleration."))
+    params: list[FreeParamIn] = Field(max_length=MAX_PARAMS_ORBIT)
     rationale: str = Field(description="One sentence: which numbers in the summary point to this law.")
+    inputs_used: list[str] = Field(default_factory=list, description=(
+        "Names of the known input signals this law uses (measured, never fitted). [] when it uses none."))
 
 
 class FitWindow(Strict):
@@ -140,9 +169,15 @@ class Hypotheses(Strict):
             raise ValueError(f"candidates {wrong} are not {self.family} models")
         if self.free_models and self.family not in ("line", "plane"):
             raise ValueError("free_models are only allowed with family 'line' or 'plane'; use listed model ids otherwise")
+        law = law_context()
         for i, f in enumerate(self.free_models):
+            unknown = sorted(set(f.inputs_used) - set(law.inputs))
+            if unknown:
+                raise ValueError(f"free_models[{i}] ({f.title}): no known input named {unknown}; "
+                                 f"available: {list(law.inputs) or 'none'}")
             try:
-                build(self.family, f.title, f.acceleration, [FreeParam(**p.model_dump()) for p in f.params])
+                build(self.family, f.title, f.acceleration, [FreeParam(**p.model_dump()) for p in f.params],
+                      law.signals, max_params=law.max_params)
             except ExprError as e:
                 raise ValueError(f"free_models[{i}] ({f.title}): {e}") from e
         return self

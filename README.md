@@ -1,5 +1,7 @@
 # PhysicsLens
 
+[![ci](https://github.com/Athmeeya2006/Physicslens/actions/workflows/ci.yml/badge.svg)](https://github.com/Athmeeya2006/Physicslens/actions/workflows/ci.yml) [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE) ![Python 3.11 and 3.12](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg) ![Node 20](https://img.shields.io/badge/node-20-blue.svg)
+
 **Point a phone at anything moving. Get the equations that govern it, verified.**
 
 *A simulator is only as good as its physics. PhysicsLens gets physics from reality, proves it, and shows its work.*
@@ -164,6 +166,10 @@ flowchart LR
 
 **Equations the agent writes itself.** For motion outside the named families the agent proposes the acceleration law as text, for example `-mu*9.81*sign(v) - c*v*abs(v)` for a cart slowed by rolling friction and air drag. A small recursive-descent parser over a closed grammar (numbers, declared parameters, the state variables, `+ - * / ^` and a whitelist of functions) turns it into a model; nothing is ever passed to `eval`. The parsed tree drives the ODE solver, the LaTeX shown in the app and the exported Python script, so what you see is exactly what was fitted. Each law must beat "nothing acts on it" and "a constant force" on held-out motion, and a malformed proposal goes back to the agent with the parser's error. On synthetic data an agent-written air-drag law recovers its coefficient within 5% and a wrong spring law is rejected.
 
+**Time-dependent and driven laws.** A law may also use the time `t` (seconds from the start of the track) and named *known inputs*: signals that are measured, never fitted. They come from a second object in the same video that you name as the known mover (SAM tracks it too, and its path becomes `x2`, `y2` in the measured object's coordinates), from a CSV you upload with the clip (a column `t` in seconds from the clip's start, then up to six named columns with optional units, e.g. `u[N]`, such as a robot's logged motor command), or from a simulation (labelled "simulation, no pixels"). Each input's source is recorded in the result and the decision trail. A law is evaluated only where its inputs were measured: asked for a time outside that span it fails with a clear error, never an extrapolation. On synthetic data a driven oscillator `-w^2*s - 2*z*w*v + A*cos(W*t)` recovers its drive's amplitude and frequency within 2%, and a law pulled toward a moving point given as inputs recovers its stiffness within 2% (`tests/test_driven.py`); the exported Python script carries the inputs and reproduces the fitted motion to 1e-6.
+
+**Units are checked before anything is fitted.** Every state variable, input, parameter and `t` carries a unit (length, time and mass, with fractional powers allowed), and the law's terms must each come out as an acceleration. Sums need equal units, the arguments of `sin`, `exp`, `log` and the like must be pure numbers, and a power needs a constant exponent unless its base is a pure number. A law that fails is rejected before fitting, with a message the agent can act on, for example "term 1 has units L T^-1, expected L T^-2: did you mean it multiplied by a rate (a parameter in 1/s), as in c*v?". Unit text the checker does not know, and literal constants such as 9.81 that stand for a physical constant, leave their term unchecked rather than rejected. Ten library laws written in this language pass and eleven wrong ones are rejected (`tests/test_driven.py`). Everyday clips allow up to 4 fitted parameters; orbit mode, with thousands of clean samples, allows 6.
+
 Changes during a clip (say, the string is shortened mid-recording) are detected; each regime is fitted separately, and live mode refits on the new motion.
 
 **3D from one phone, balls only.** A ball looks the same from every side, so its apparent size gives its distance: Z = f·D/d, with D the diameter you enter, d the diameter of the disc with the mask's area, and f the camera's focal length in pixels. Its image position then gives X and Y. Frames where the mask is stretched by motion blur (aspect ratio over 1.3), loses over 30% of its area against its neighbours, or touches the frame edge are rejected. One pixel of diameter error on a 40 px ball is 2.5% of the distance, so depth is far noisier than position across the image; the fit weights it accordingly, and every frame's depth error is reported. The three 3D projectile laws then go through the same held-out forecast and BIC rules as the 2D ones. The mode is opt-in (`depth_3d` and `focal_px` on `POST /api/runs`, with the object's size) and runs only for a ball fitted as a projectile; otherwise the 2D result stands and a note says why 3D was skipped. Phone videos record no focal length that ffprobe can read (none of our clips have one), so you measure it once: film an A4 sheet flat at a known distance and use f = d·Z/D (`physics/depth3d.py`, `focal_from_reference`).
@@ -248,11 +254,14 @@ So the planets account for most of the miss: Newton's pull of Jupiter, Saturn, U
 Only code decides, never the language model:
 
 - **Held-out forecast.** Each model is fitted on the first 75% of the motion and must forecast the last 25%. The normalized RMS error on that held-out part must be at most 15%, or at most 30% when the error is also within 3 times the measured tracking noise.
-- **Model selection by BIC.** Among the models that pass, the lowest Bayesian Information Criterion wins. A winner must beat every other passing model by at least 10 BIC (strong evidence on the Kass and Raftery scale) unless the rival has more parameters.
+- **Rolling-origin forecasts.** One 75/25 split can be lucky, so each law that passes it is also restarted from four later points of the clip (55%, 65%, 75% and 85%), with its fitted parameters fixed and only the starting state refitted on the data before each point, and must forecast the following 15%. The median of those four errors must pass the same rule. The accepted law's trail line reports them, and a law that forecasts the last quarter but not from the later starting points is rejected with that reason (`physics/rigor.py`, `tests/test_rigor.py`). Live mode, which refits every second, skips them.
+- **Model selection by BIC, with honest evidence.** Among the models that pass, the lowest Bayesian Information Criterion wins. Residuals of a smooth model are correlated frame to frame, so N samples carry far fewer than N independent pieces of evidence: BIC is computed with the effective sample size n_eff = N(1 - rho)/(1 + rho) from the best model's residual lag-1 autocorrelation rho, the same n_eff for every law (the raw-N BIC stays in the result as `bic_raw`). A winner must beat every other passing model by at least 10 BIC (strong evidence on the Kass and Raftery scale) unless the rival has more parameters. On a barely damped spring under smoothly wandering tracking error, raw-N BIC calls the damping term decisive (142 BIC) while n_eff BIC leaves it ambiguous (5 BIC), which is the honest answer (`tests/test_rigor.py`).
+- **A law never loses to its own special case.** Each law in the library declares which simpler law it becomes when a term is switched off (a spring with both frictions becomes the damped spring at f = 0). Special cases are fitted first, and each larger law also starts from their solutions, so it can only match or beat them; if it still could not, the trail says so (`ModelSpec.nests`, `tests/test_nesting.py`). Friction corners (sign of the velocity) are smoothed on the fit's first, short windows and exact on the last, so the solver's gradients stay usable.
 - **Ties become experiments.** If genuinely different laws are within 10 BIC, the agent is asked which recording would separate them (for a small-angle pendulum tie: "swing it wider"), and the user sees that request.
 - **Approximations are named, not rejected.** When a law ties with its own approximation (sin θ versus θ at small angles) the exact law is kept and the other is labeled "Same law: the small-angle approximation", not "Rejected".
 - **Controls are always tested.** The simplest model of each family (no damping, no drag, constant velocity or acceleration) is fitted alongside the agent's proposals, so a fancy law must beat the obvious baseline.
-- **Nothing fits, nothing shown.** If no model passes, the result is "no clean governing equation found."
+- **Nothing fits, nothing shown, and fast.** If no model passes, the result is "no clean governing equation found." Motion that looks like noise is recognised before any simulation: when no candidate law explains more than 20% of the measured acceleration, the velocity's spectrum is flat (white-noise-like) and no smooth trend explains the track, the fits are skipped. A random walk that took four minutes of fits now gets its honest answer in about a second, while every physical synthetic track, including constant velocity and free fall, goes on to the full fits (`physics/prescreen.py`, `tests/test_prescreen.py`).
+- **Parameters the clip cannot separate are named.** Every interval comes from bootstrap refits (40 targeted, at least 8 under the time limit; the result states how many). When two parameters' refits move together (correlation above 0.9), the result and the trail say so, with the recording that would separate them: for viscous against dry friction, "film a larger first swing and let it decay to rest: viscous damping shrinks the swings by a fixed ratio, dry friction by a fixed amount". A study passes that advice to its agent as the next experiment to ask for.
 - **Scale stated, never hidden.** When gravity is used as the ruler, the assumption and the scale's uncertainty are written into the trail and the result.
 
 ## The agent: samples, tools and a referee
@@ -480,7 +489,7 @@ Every verified measurement in the gallery also becomes a row of an open dataset 
 - Accuracy depends on frame rate, lighting and a visible reference of known size (or a known pendulum length).
 - The double pendulum assumes point masses on light rods; solid-bar pendulums may fit worse.
 - Phone video with a variable frame rate is resampled to a constant rate, which can shift a frame's time by up to half a frame. Live mode uses each frame's capture time instead.
-- Laws the agent writes may depend on position and velocity, not explicitly on time, so driven systems (a motor, a push) are out of reach.
+- Laws the agent writes may use the time and known input signals (a second tracked object, an uploaded CSV, a simulation), but an input is only valid where it was measured, and a driver that is neither tracked nor logged (a hand push you can't see) is still out of reach. The known mover is tracked in the same 2D image plane as the measured object.
 - Driven motion (a car under throttle, a person walking) has no single governing law; at most its kinematics can be fitted.
 - A full analysis on the open-weight model takes minutes, not seconds; the live mode's one-tap family choice is the fast path.
 - Stopping a live session doesn't save it as a result yet; record a clip for something you can keep and export.
@@ -670,7 +679,7 @@ All routes are in `backend/physicslens/app.py`. Routes that start paid work are 
 | `GET /api/health` | status, environment, mock mode, and what this visitor may do |
 | `GET /api/gallery` | the curated results |
 | `GET /api/budget` | spent and remaining per provider (development UI) |
-| `POST /api/runs` | upload a clip with optional settings (length, object size, hint, slow-motion factor, blade count for sound); returns a run id |
+| `POST /api/runs` | upload a clip with optional settings (length, object size, hint, slow-motion factor, blade count for sound, a `known_mover` to track as an input, an `inputs_csv` of known signals); returns a run id |
 | `POST /api/audit` | the same upload as `POST /api/runs`; the result's `audit` field holds the physics audit |
 | `GET /api/runs/{id}` | progress and, when done, the full result |
 | `GET /api/runs/{id}/clip.mp4`, `/poster.jpg`, `/share.mp4` | media for a run; `POST /api/runs/{id}/share` renders the shareable MP4 |
@@ -718,12 +727,16 @@ tests/                   unit tests (mocked models; recorded real responses as f
 ## Testing
 
 ```bash
-make test                     # MOCK_MODELS=1 pytest: no network, no spend
+make test                     # every test, mocked models, in parallel (pytest-xdist): no network, no spend
+make test-fast                # the same without the tests marked slow (over 10 s each)
+make lint                     # ruff over backend, tests and scripts
 ```
+
+CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.11 and 3.12, and the frontend typecheck, build and static build, on every push; it needs no secrets and makes no paid calls. Optional local hooks run the same checks before a commit: `pip install pre-commit && pre-commit install` (`.pre-commit-config.yaml`). Dependabot proposes grouped weekly updates for the pinned dependencies. Each test process keeps its own ledger, cache and runs (`PHYSICSLENS_VAR_DIR`), and the agent's laws registered by one test are removed after it, so tests are independent in any order.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (446 tests) covers:
+The suite (527 tests, counted by `pytest --collect-only -q`; 49 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.
@@ -741,6 +754,10 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Recorded mode: video → SAM 3.1 tracking → calibrated trajectory
 - [x] Hypothesis generation and agent decisions with validated structured outputs, running on open weights (Muse Spark Open on Baseten; Muse Glimmer self-hosted as the offline path and fallback)
 - [x] Equations the agent writes itself, parsed by a closed math grammar (no eval) and verified like any built-in model
+- [x] Time-dependent and driven laws: the time t and known input signals (a second tracked object, an uploaded CSV, a simulation) in the law language, each input's source recorded
+- [x] Dimensional analysis of every written law before fitting, with actionable messages
+- [x] Rolling-origin forecasts and BIC with the effective sample size; laws seeded from their fitted special cases so none loses to them; noise-like motion refused in about a second; identifiability with filming advice fed to studies
+- [x] CI (lint, tests on Python 3.11 and 3.12, frontend build), parallel tests, Dependabot, optional pre-commit hooks
 - [x] Scale from a known object size, slow-motion clips in real time, and a hint for what to track
 - [x] Goal-driven studies: agent-planned recordings, combined by weighted means with an agreement test, a wear verdict and maintenance note, a study report and a combined MuJoCo model
 - [x] Tracking that checks itself: the reasoning model inspects SAM's box and re-prompts SAM by name when it is off target

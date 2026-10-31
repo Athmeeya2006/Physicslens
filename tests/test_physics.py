@@ -6,8 +6,9 @@ from physicslens.physics.coords import length_is_reliable, to_coordinates
 from physicslens.physics.fit import fit_model, fit_models
 from physicslens.physics.models import MODELS, models_for
 from physicslens.physics.sindy import discover, vet
-from physicslens.physics.uncertainty import bootstrap, bootstrap_full, entangled
+from physicslens.physics.uncertainty import bootstrap, bootstrap_full, identifiability
 from physicslens.physics.verify import assess, judge_candidates
+from physicslens.pipeline import fit_and_verify
 from physicslens.sigproc.trajectory import Trajectory
 from scipy.integrate import solve_ivp
 
@@ -30,8 +31,8 @@ def pendulum_xy(theta0: float, gamma: float, seconds: float, length: float = 0.6
 
 
 def run(traj: Trajectory, family: str):
-    c = to_coordinates(traj, family)
-    return c, assess(c, fit_models(models_for(family), c))
+    """The pipeline's own fit-and-verify step (pre-screen, family fits, verdict) on every law of the family."""
+    return fit_and_verify(traj, family, [m.id for m in models_for(family)])
 
 
 @pytest.fixture(scope="module")
@@ -259,16 +260,17 @@ def test_parallel_fits_match_one_after_another(monkeypatch):
         np.testing.assert_array_equal(a.sim, b.sim)
 
 
-def test_entangled_pairs_are_flagged_and_independent_ones_are_not():
+def test_pairs_the_clip_cannot_separate_are_flagged_with_advice():
     rng = np.random.default_rng(0)
     a = rng.normal(0, 1, 30)
-    samples = np.column_stack([a, 2 * a + rng.normal(0, 0.01, 30), rng.normal(0, 1, 30)])
-    pairs = entangled(["k", "m", "g"], samples)
-    assert [(p["a"], p["b"]) for p in pairs] == [("k", "m")] and pairs[0]["r"] > 0.98
-    assert entangled(["k", "m"], samples[:3, :2]) == []  # too few refits to say
+    samples = np.column_stack([a, 2 * a + rng.normal(0, 0.1, 30), rng.normal(0, 1, 30)])
+    pairs = identifiability(["zeta", "f", "omega"], samples)
+    assert [p["params"] for p in pairs] == [["zeta", "f"]] and pairs[0]["corr"] > 0.9
+    assert "fixed ratio" in pairs[0]["advice"]  # the physics of viscous against dry friction, not a generic line
+    assert identifiability(["zeta", "f"], samples[:3, :2]) == []  # too few refits to say
 
 
-def test_a_well_posed_pendulum_has_no_entangled_parameters(damped_pendulum):
+def test_a_well_posed_pendulum_is_identifiable_and_reports_its_resamples(damped_pendulum):
     c, v = damped_pendulum
-    _, pairs = bootstrap_full(MODELS[v.winner.model_id], c, v.winner, reps=16)
-    assert pairs == []
+    boot = bootstrap_full(MODELS[v.winner.model_id], c, v.winner, reps=16)
+    assert boot.identifiability == [] and 8 <= boot.reps <= 16

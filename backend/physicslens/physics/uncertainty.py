@@ -61,12 +61,27 @@ def bootstrap_samples(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int
     return np.array(samples), np.array(lengths)
 
 
-ENTANGLED_R = 0.98  # refits this correlated: the clip measures a combination of the two, not each one
+IDENTIFIABILITY_R = 0.9  # refits this correlated: the clip pins down a combination of the two better than each one
+
+# A filming instruction that separates each pair, from the physics of how the two terms differ.
+ADVICE: dict[frozenset[str], str] = {
+    frozenset({"zeta", "f"}): ("Film a larger first swing and let it decay to rest: viscous damping shrinks the swings "
+                               "by a fixed ratio, dry friction by a fixed amount."),
+    frozenset({"c", "k"}): ("Film the spin from fast all the way to a stop: dry friction slows it by the same amount "
+                            "each second, viscous friction in proportion to its speed."),
+    frozenset({"omega", "beta"}): "Film swings of several sizes: a stiffening spring's period changes with amplitude.",
+    frozenset({"beta", "zeta"}): "Film swings of several sizes: a stiffening spring's period changes with amplitude.",
+    frozenset({"g", "k"}): "Film a longer, faster throw: drag grows with speed, gravity does not.",
+    frozenset({"g", "c"}): "Film a longer, faster throw: drag grows with speed, gravity does not.",
+    frozenset({"g", "gamma"}): "Film more swings, so the decay shows apart from the period.",
+    frozenset({"g", "beta"}): "Film a larger swing: air drag grows with speed, the period's dependence on g does not.",
+}
+GENERIC_ADVICE = "Film a longer clip with a larger motion, so each term acts on its own for part of it."
 
 
-def entangled(names: list[str], samples: np.ndarray) -> list[dict[str, object]]:
-    """Parameter pairs whose bootstrap refits move together almost perfectly. Each value's interval is then honest
-    only as part of the pair: a different clip could trade one against the other and fit as well."""
+def identifiability(names: list[str], samples: np.ndarray) -> list[dict[str, object]]:
+    """Parameter pairs whose bootstrap refits move together (|r| > IDENTIFIABILITY_R), with the recording that would
+    separate them. Each value's interval is then honest only as part of the pair."""
     if len(samples) < MIN_BOOTSTRAP_REPS or samples.ndim != 2 or samples.shape[1] < 2:
         return []
     sd = samples.std(axis=0)
@@ -76,17 +91,25 @@ def entangled(names: list[str], samples: np.ndarray) -> list[dict[str, object]]:
             if sd[i] == 0 or sd[j] == 0:
                 continue
             r = float(np.corrcoef(samples[:, i], samples[:, j])[0, 1])
-            if abs(r) >= ENTANGLED_R:
-                out.append({"a": names[i], "b": names[j], "r": round(r, 3)})
+            if abs(r) > IDENTIFIABILITY_R:
+                advice = ADVICE.get(frozenset({names[i], names[j]}), GENERIC_ADVICE)
+                out.append({"params": [names[i], names[j]], "corr": round(r, 3), "advice": advice})
     return out
 
 
 def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 40, seed: int = 0) -> dict[str, ParamEstimate]:
-    return bootstrap_full(spec, c, fit, reps, seed)[0]
+    return bootstrap_full(spec, c, fit, reps, seed).estimates
+
+
+@dataclass(frozen=True)
+class Bootstrap:
+    estimates: dict[str, ParamEstimate]
+    identifiability: list[dict[str, object]]
+    reps: int  # refits that finished: 40 is the target, MIN_BOOTSTRAP_REPS the floor under the time budget
 
 
 def bootstrap_full(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 40,
-                   seed: int = 0) -> tuple[dict[str, ParamEstimate], list[dict[str, object]]]:
+                   seed: int = 0) -> Bootstrap:
     """95% interval as value +- 1.96 standard deviations of the refits.
 
     Percentiles of a few dozen refits would just be their second-smallest and second-largest values; the spread
@@ -98,4 +121,4 @@ def bootstrap_full(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 
         # Too few refits finished in time: the uncertainty is unknown (shown without a +-), never a made-up number.
         v, sd = fit.params[name], float(arr[:, i].std(ddof=1)) if len(arr) >= 2 else float("nan")
         out[name] = ParamEstimate(v, sd, v - 1.96 * sd, v + 1.96 * sd)
-    return out, entangled(spec.param_names, arr)
+    return Bootstrap(out, identifiability(spec.param_names, arr), len(arr))

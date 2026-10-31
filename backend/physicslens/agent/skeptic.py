@@ -13,12 +13,12 @@ from ..costguard import CostGuardClient
 from ..physics.coords import Coordinates
 from ..physics.custom import FreeParam, build, register
 from ..physics.expr import ExprError
-from ..physics.fit import fit_models
+from ..physics.fit import fit_family
 from ..physics.models import MODELS, models_for
 from ..physics.verify import Verdict, assess, judge_candidates
 from .llm import LLMCall
 from .reasoning import skeptic_review
-from .schemas import FreeModelIn, Scene, SkepticReview
+from .schemas import FreeModelIn, Scene, SkepticReview, law_context
 
 
 @dataclass(frozen=True)
@@ -100,7 +100,9 @@ def fit_more(coords: Coordinates, verdict: Verdict, family: str, proposals: list
                           "why": f"{why} Written laws apply only to motion along a line or in the plane."})
             continue
         try:
-            spec = register(build(family, free.title, free.acceleration, [FreeParam(**p.model_dump()) for p in free.params]))
+            law = law_context()  # the run's known inputs and parameter limit, as the first round's laws had
+            spec = register(build(family, free.title, free.acceleration, [FreeParam(**p.model_dump()) for p in free.params],
+                                  law.signals, max_params=law.max_params))
         except ExprError as e:
             items.append({"model_id": free.title, "title": free.title, "status": "untestable", "why": f"{why} It does not parse: {e}"})
             continue
@@ -108,7 +110,7 @@ def fit_more(coords: Coordinates, verdict: Verdict, family: str, proposals: list
         rationales[spec.id] = f"{why} Written by {source}."
     if not new_ids:
         return verdict, items, rationales
-    new_verdict = assess(coords, [*verdict.ranked, *fit_models([MODELS[m] for m in new_ids], coords)])
+    new_verdict = assess(coords, [*verdict.ranked, *fit_family([MODELS[m] for m in new_ids], coords, known=list(verdict.ranked))])
     judged = judge_candidates(new_verdict)
     by_id = {f.model_id: f for f in new_verdict.ranked}
     for m in new_ids:

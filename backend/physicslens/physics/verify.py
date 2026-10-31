@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import math
+from dataclasses import dataclass, replace
 from typing import Literal
 
 import numpy as np
@@ -10,6 +11,7 @@ import numpy as np
 from .coords import Coordinates, length_is_reliable
 from .fit import FitResult
 from .models import MODELS, MODELS_3D
+from .rigor import bic_with, effective_n, rolling_origin
 
 # A model must forecast the held-out final quarter within this fraction of the signal's spread,
 # or within a few times the tracking noise (a correct model can't beat the noise floor), but never
@@ -34,16 +36,32 @@ class Verdict:
     contenders: tuple[FitResult, ...]  # models still in the running (winner first), for experiment requests
     ranked: tuple[FitResult, ...]
     reason: str
+    n_eff: float | None = None  # the effective number of independent samples BIC was computed with
 
 
 def title(f: FitResult) -> str:
     return (MODELS.get(f.model_id) or MODELS_3D[f.model_id]).title
 
 
-def forecasts_well(f: FitResult) -> bool:
-    if f.heldout_nrmse <= MAX_HELDOUT_NRMSE:
+def _within(nrmse: float, rmse: float, noise: float) -> bool:
+    if nrmse <= MAX_HELDOUT_NRMSE:
         return True
-    return f.heldout_nrmse <= HARD_MAX_HELDOUT_NRMSE and f.heldout_rmse <= MAX_HELDOUT_NOISE_RATIO * f.noise_sigma
+    return nrmse <= HARD_MAX_HELDOUT_NRMSE and rmse <= MAX_HELDOUT_NOISE_RATIO * noise
+
+
+def rolling_median(f: FitResult) -> tuple[float, float] | None:
+    """(median nrmse, median rmse) of the rolling-origin forecasts, or None when they were not run."""
+    if not f.rolling:
+        return None
+    return (float(np.median([r["nrmse"] for r in f.rolling])), float(np.median([r["rmse"] for r in f.rolling])))
+
+
+def forecasts_well(f: FitResult) -> bool:
+    """The 75/25 forecast, and (when run) the median of the rolling-origin forecasts, by the same rule."""
+    if not _within(f.heldout_nrmse, f.heldout_rmse, f.noise_sigma):
+        return False
+    med = rolling_median(f)
+    return med is None or _within(med[0], med[1], f.noise_sigma)
 
 
 SAME_LAW_REL = 1e-4  # simulated paths closer than this (relative to the motion's size) are one law, written twice
@@ -95,13 +113,51 @@ def decide(fits: list[FitResult]) -> Verdict:
                    f"{title(best)} forecasts held-out data within {best.heldout_nrmse:.1%}{margin}{note}.")
 
 
-def assess(c: Coordinates, fits: list[FitResult]) -> Verdict:
-    """decide(), plus checks that depend on the measurement geometry rather than the fit."""
-    v = decide(fits)
+# Live mode refits every second and skips the rolling-origin forecasts for speed; recorded clips always run them.
+ROLLING_ORIGIN = True
+
+
+def _spec(model_id: str):
+    return MODELS.get(model_id) or MODELS_3D.get(model_id)
+
+
+def strengthen(c: Coordinates, fits: list[FitResult], rolling: bool = ROLLING_ORIGIN) -> tuple[list[FitResult], float | None]:
+    """BIC with the effective sample size (the same n_eff for every law, so ranks stay fair), and rolling-origin
+    forecasts for each law that passes the 75/25 forecast."""
+    done = [f for f in fits if f.success and f.sim is not None and f.sim.shape == c.q.shape]
+    if not done:
+        return fits, None
+    best = min(done, key=lambda f: f.bic if f.bic_raw is None else f.bic_raw)
+    n_eff, _ = effective_n(best.sim - c.q)
+    out = [replace(f, bic_raw=f.bic if f.bic_raw is None else f.bic_raw, bic=bic_with(f, n_eff)) if f.success else f
+           for f in fits]  # every law with this one n_eff, also those already adjusted in an earlier round
+    if not rolling:
+        return out, n_eff
+    # Rolling forecasts in BIC order, only where they can change the verdict: once one law passes them, a law more
+    # than DECISIVE_DELTA_BIC behind it can be neither the winner nor a contender.
+    order = sorted((i for i, f in enumerate(out) if f.success and _within(f.heldout_nrmse, f.heldout_rmse, f.noise_sigma)),
+                   key=lambda i: out[i].bic)
+    leader: float | None = None
+    for i in order:
+        f = out[i]
+        if leader is not None and f.bic - leader >= DECISIVE_DELTA_BIC:
+            break
+        spec = _spec(f.model_id)
+        if spec is not None and not f.rolling:
+            out[i] = f = replace(f, rolling=rolling_origin(spec, c, f))
+        if leader is None and forecasts_well(f):
+            leader = f.bic
+    return out, n_eff
+
+
+def assess(c: Coordinates, fits: list[FitResult], rolling: bool = ROLLING_ORIGIN) -> Verdict:
+    """decide(), on fits made stricter by strengthen(), plus checks that depend on the measurement geometry."""
+    fits, n_eff = strengthen(c, fits, rolling)
+    v = replace(decide(fits), n_eff=n_eff)
     if c.family == "pendulum" and v.status == "accepted" and not length_is_reliable(c):
         # The dynamics only pin down g/L; with a flat arc L (and so g) would be invented.
         return Verdict("ambiguous", None, v.contenders, v.ranked,
-                       "The swing's arc is too flat to measure the pendulum length, so g cannot be determined.")
+                       "The swing's arc is too flat to measure the pendulum length, so g cannot be determined.", v.n_eff)
     return v
 
 
@@ -112,20 +168,31 @@ def judge_candidates(v: Verdict) -> dict[str, tuple[str, str]]:
     contenders = {f.model_id for f in v.contenders}
     for f in v.ranked:
         if v.winner is not None and f.model_id == v.winner.model_id:
-            out[f.model_id] = ("accepted", f"forecasts held-out motion within {f.heldout_nrmse:.1%} and has the best BIC")
+            med = rolling_median(f)
+            rolling = (f"; from {len(f.rolling)} later starting points, median error {med[0]:.1%}" if med else "")
+            why = f"forecasts held-out motion within {f.heldout_nrmse:.1%} and has the best BIC{rolling}"
+            out[f.model_id] = ("accepted", why)
         elif f.model_id in contenders:
             out[f.model_id] = ("tied", "fits about as well as the best; the data can't separate them")
         elif APPROXIMATES.get(f.model_id, ("",))[0] in contenders and forecasts_well(f):
             _, what = APPROXIMATES[f.model_id]
             out[f.model_id] = ("approximation", f"{what}: indistinguishable at this amplitude, so the exact law is kept")
-        elif not forecasts_well(f):
+        elif not _within(f.heldout_nrmse, f.heldout_rmse, f.noise_sigma):
             out[f.model_id] = ("rejected", f"forecast error {f.heldout_nrmse:.0%} on held-out data")
+        elif not forecasts_well(f):
+            med = rolling_median(f)
+            why = (f"forecasts the last quarter, but not from later starting points (median error "
+                   f"{med[0] if med else math.nan:.0%} over {len(f.rolling)} rolling forecasts)")
+            out[f.model_id] = ("rejected", why)
         elif best is not None and f.k > best.k:
             out[f.model_id] = ("rejected", f"extra parameters don't improve on {title(best)}")
         elif best is not None:
             out[f.model_id] = ("rejected", f"{f.bic - best.bic:.0f} BIC worse than {title(best)}")
         else:
             out[f.model_id] = ("rejected", "does not explain the motion")
+        if f.notes:
+            status, reason = out[f.model_id]
+            out[f.model_id] = (status, "; ".join([reason, *f.notes]))
     return out
 
 

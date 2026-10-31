@@ -16,7 +16,7 @@ from scipy.ndimage import median_filter, uniform_filter1d
 from scipy.signal import butter, sosfiltfilt, spectrogram
 
 from ..physics.coords import Coordinates
-from ..physics.fit import fit_models
+from ..physics.fit import fit_family
 from ..physics.models import MODELS
 from ..physics.uncertainty import bootstrap
 from ..physics.verify import assess
@@ -298,7 +298,7 @@ def spin_down_from_sound(x: np.ndarray, sr: int = SAMPLE_RATE, blade_count: int 
     w_n = 2 * np.pi * f / f_ref
     phase = cumulative_trapezoid(w_n, t, initial=0.0)
     c = Coordinates("rotation", t - t[0], phase[:, None], ("phi",), {})
-    fits = fit_models([MODELS[m] for m in SPIN_LAWS], c)
+    fits = fit_family([MODELS[m] for m in SPIN_LAWS], c)
     verdict = assess(c, fits)
     out: dict[str, Any] = {
         "t_start": float(t[0]), "t_end": float(t[-1]), "f_start_hz": float(f[0]), "f_end_hz": float(f[-1]),

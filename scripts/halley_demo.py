@@ -227,6 +227,7 @@ def analyze() -> Path:
 
 def predict() -> dict:
     from physicslens.physics.custom import spec_for
+    from physicslens.physics.models import derivative
     from scipy.integrate import solve_ivp
     meta = json.loads((OUT / "render.json").read_text())
     result = json.loads((OUT / "run" / "result.json").read_text())
@@ -239,7 +240,7 @@ def predict() -> dict:
     jpl_peri = float(later[np.argmin(np.linalg.norm(later[:, 1:4], axis=1)), 0])
     # Seventy-five years past many perihelia: integrated here with tight tolerances, not the fitter's quick simulate.
     span = jpl_peri + 3 * 365 - jd0
-    sol = solve_ivp(lambda _t, s: spec.rhs(s, fs["params"], fs["ctx"]), (0.0, span), np.asarray(fs["y0"]),
+    sol = solve_ivp(lambda t, s: derivative(spec, s, fs["params"], fs["ctx"], t), (0.0, span), np.asarray(fs["y0"]),
                     method="DOP853", rtol=1e-10, atol=1e-12, dense_output=True)
     if not sol.success:
         sys.exit(f"The recovered law could not be integrated to 2061: {sol.message}")

@@ -49,6 +49,8 @@ def _rhs_body(model_id: str) -> str:
         return _RHS[model_id]
     # Written from the parsed expression tree, so the script runs exactly the law that was fitted.
     lines = [f"{p.name} = p[{p.name!r}]" for p in free.params]
+    # Known inputs: the same cubic spline through the measured samples that the fit used, at the solver's time t.
+    lines += [f"{n} = float(INPUTS[{n!r}](t))" for n in free.inputs_used]
     lines += [f"dv = {free.python[0]}"] if free.family == "line" else [f"ax = {free.python[0]}", f"ay = {free.python[1]}"]
     return "\n    ".join(lines)
 
@@ -60,9 +62,23 @@ def _param_lines(result: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _inputs_block(model_id: str) -> str:
+    free = FREE_MODELS.get(model_id)
+    if free is None or free.inputs is None or not free.inputs_used:
+        return ""
+    t = json.dumps(list(free.inputs.t))
+    signals = ",\n".join(f"    {n!r}: CubicSpline(INPUT_T, {json.dumps(list(free.inputs.values[n]))})"
+                         for n in free.inputs_used)
+    where = "; ".join(f"{n}: {free.inputs.provenance.get(n, '')} ({free.inputs.units.get(n) or 'no unit given'})"
+                      for n in free.inputs_used)
+    return (f"\n# Known inputs, measured and never fitted ({where}). Valid only between the first and last time.\n"
+            f"INPUT_T = {t}\nINPUTS = {{\n{signals},\n}}\n")
+
+
 def python_script(result: dict[str, Any], seconds: float | None = None) -> str:
     fs = result["fit_state"]
     spec = spec_for(fs)
+    inputs = _inputs_block(spec.id)
     unpack, ret, columns = _STATE[spec.family]
     seconds = seconds or result["clip"]["frames"] / result["clip"]["fps"]
     length = f"L = {fs['ctx']['length_m']!r}  # m, radius of the measured swing arc\n" if spec.family == "pendulum" else ""
@@ -79,9 +95,9 @@ Simulates from the measured initial state and writes physicslens_trajectory.csv.
 
 import numpy as np
 from scipy.integrate import solve_ivp
-
+{"from scipy.interpolate import CubicSpline" + chr(10) if inputs else ""}
 p = {json.dumps(fs["params"], indent=4)}
-{length}STATE0 = {json.dumps([float(v) for v in fs["y0"]])}  # measured initial state
+{inputs}{length}STATE0 = {json.dumps([float(v) for v in fs["y0"]])}  # measured initial state
 FPS = {fs["fps"]!r}
 SECONDS = {seconds!r}
 

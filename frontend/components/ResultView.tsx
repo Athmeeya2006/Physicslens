@@ -206,13 +206,13 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
               </tbody>
             </table>
           </div>
-          {r.entangled?.map((e) => {
+          {r.bootstrap_reps ? <p className="muted small">Every interval from {r.bootstrap_reps} bootstrap resamples.</p> : null}
+          {r.identifiability?.map((e) => {
             const tex = (n: string) => r.parameters?.find((p) => p.name === n)?.latex ?? n;
             return (
-              <p key={`${e.a}-${e.b}`} className="note">
-                <Tex tex={tex(e.a)} /> and <Tex tex={tex(e.b)} /> move together in the refits (correlation {e.r.toFixed(2)}):
-                this recording pins down their combination better than each one. A recording that separates them (a wider
-                swing, a longer clip) would narrow both.
+              <p key={e.params.join("-")} className="note">
+                <Tex tex={tex(e.params[0])} /> and <Tex tex={tex(e.params[1])} /> move together in the refits (correlation{" "}
+                {e.corr.toFixed(2)}): this recording pins down their combination better than each one. {e.advice}
               </p>
             );
           })}

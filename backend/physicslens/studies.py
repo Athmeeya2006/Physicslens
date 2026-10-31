@@ -129,7 +129,16 @@ class Studies:
             "joint_fit": study.get("joint") and {k: study["joint"][k] for k in ("status", "text")},
             "sweep": study.get("sweep") and {k: study["sweep"].get(k) for k in
                                              ("status", "reason", "winner", "expected_law", "next", "checks", "points")},
+            # Parameters a recording could not separate, with the recording that would: the next experiment to ask for.
+            "identifiability": [{"recording": label, **pair} for label, res in results
+                                for pair in res.get("identifiability", [])],
         }
+        seen = {t.get("run_id") for t in study["trail"] if t.get("step") == "identifiability"}
+        for label, rid, res in done:
+            for pair in res.get("identifiability", []) if rid not in seen else []:
+                study["trail"].append({"step": "identifiability", "provider": None, "model": "bootstrap refits",
+                                       "run_id": rid, "text": f"{label}: {' and '.join(pair['params'])} could not be "
+                                                              f"separated (correlation {pair['corr']:.2f}). {pair['advice']}"})
         turn, call = study_turn(self.client, context, f"study-{study_id}-{len(study['turns'])}", audience)
         entry = {**turn.model_dump(), "model": call.model, "provider": call.provider, "after_recordings": len(done)}
         if turn.action == "finish" and not accepted:

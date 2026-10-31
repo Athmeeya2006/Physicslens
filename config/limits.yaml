@@ -27,6 +27,11 @@ timeouts_seconds:
   glimmer: 900          # a 30B model on two T4s decodes slowly; still bounded
   image_edit: 120        # the image model refines in passes before it returns
 
+fitting:
+  # Processes that fit candidate laws side by side (each loads SciPy: a few hundred MB). null = half the CPU
+  # threads, at most 4. PHYSICSLENS_FIT_WORKERS overrides for one run.
+  workers: null
+
 circuit_breaker:
   consecutive_failures: 5
   pause_seconds: 120

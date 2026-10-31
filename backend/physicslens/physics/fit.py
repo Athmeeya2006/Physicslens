@@ -10,7 +10,7 @@ import os
 import time
 from concurrent.futures import Executor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 from scipy.integrate import solve_ivp
@@ -18,7 +18,7 @@ from scipy.optimize import least_squares
 
 from ..sigproc.cleanup import differentiate, savgol_window
 from .coords import Coordinates
-from .models import BUILTIN_MODELS, ModelSpec
+from .models import BUILTIN_MODELS, ModelSpec, derivative
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +47,10 @@ class FitResult:
     # Fitted on the first TRAIN_FRACTION only and run over the whole clip: the honest forecast of the rest.
     sim_train: np.ndarray = field(default_factory=lambda: np.empty((0, 0)), repr=False)
     n_train: int = 0
+    # Shown in the decision trail: e.g. a law that could not improve on a special case it contains.
+    notes: tuple[str, ...] = ()
+    bic_raw: float | None = None  # BIC with every sample counted as independent (bic then uses n_eff; physics/rigor.py)
+    rolling: tuple[dict[str, float], ...] = ()  # forecasts from later origins (physics/rigor.py)
 
 
 # One simulation's own limits. The fit's time budget is checked between simulations, but a stiff law (an agent's
@@ -71,7 +75,7 @@ def simulate(spec: ModelSpec, params: dict[str, float], y0: np.ndarray, t: np.nd
         calls += 1
         if calls > MAX_RHS_CALLS or (calls % 2000 == 0 and time.monotonic() > stop):
             raise _TooSlow
-        return spec.rhs(s, params, ctx)
+        return derivative(spec, s, params, ctx, _t)
 
     try:
         with np.errstate(all="ignore"):
@@ -137,13 +141,9 @@ class FitTimeout(RuntimeError):
 MAX_FIT_SECONDS = 45.0
 
 
-# Library models with two terms that can stand in for each other (viscous and dry friction both shrink a swing):
-# from a single start the fit settles on whichever term it grows first and can end up worse than the simpler model
-# it contains. Starting it again from each simpler model's corner (one term switched off) and keeping the best fit
-# guarantees it never loses to its own special case.
-NESTED_STARTS: dict[str, tuple[dict[str, float], ...]] = {"oscillator_mixed": ({"f": 0.0}, {"zeta": 0.0})}
-
-
+# Smoothing of friction corners per continuation window (models.smoothing): wide on the first quarter, narrower on
+# the half, the true law on the whole training span.
+SMOOTHING = {0.25: 20.0, 0.5: 5.0, 1.0: 1.0}
 def derivative_match(spec: ModelSpec, c: Coordinates, kin, guess: dict[str, float]) -> dict[str, float]:
     """Parameters that best make the law's acceleration match the smoothed measured acceleration."""
     d = c.q.shape[1]
@@ -159,7 +159,7 @@ def derivative_match(spec: ModelSpec, c: Coordinates, kin, guess: dict[str, floa
     def residual(theta: np.ndarray) -> np.ndarray:
         params = dict(zip(spec.param_names, theta, strict=True))
         with np.errstate(all="ignore"):
-            pred = np.array([spec.rhs(s, params, c.ctx)[d:] for s in states])
+            pred = np.array([derivative(spec, s, params, c.ctx, c.t[i])[d:] for s, i in zip(states, idx, strict=True)])
         r = ((pred - acc) / scale).ravel()
         return np.where(np.isfinite(r), r, FAILED_RESIDUAL)
 
@@ -187,30 +187,53 @@ def fit_window(spec: ModelSpec, c: Coordinates, stop: int, theta0: np.ndarray, l
                          max_nfev=max_nfev).x
 
 
-def fit_model(spec: ModelSpec, c: Coordinates, warm: dict[str, float] | None = None) -> FitResult:
-    """warm: parameters from a previous fit of the same model (live mode); skips the slow continuation start."""
+def fit_model(spec: ModelSpec, c: Coordinates, warm: dict[str, float] | None = None,
+              starts: tuple[dict[str, float], ...] = ()) -> FitResult:
+    """warm: parameters from a previous fit of the same model (live mode); skips the slow continuation start.
+    starts: extra starting points (fit_family passes the fitted special cases); the best successful fit is kept."""
     if spec.family != c.family:
         raise ValueError(f"{spec.id} is a {spec.family} model, coordinates are {c.family}.")
     kin = differentiate(c.q, 1.0 / (c.t[1] - c.t[0]))
     noise = noise_sigma(c.q, kin.pos, 1.0 / (c.t[1] - c.t[0]))
     guess = {**initial_guess(spec, c), **(warm or {})}
-    if (spec.id.startswith("custom_") or spec.id in NESTED_STARTS) and not warm:
+    if (spec.id.startswith("custom_") or starts) and not warm:
         # A law the agent wrote comes with only its own rough guesses. Matching the law to the measured accelerations
         # first (no simulation needed) puts the parameters near the right basin; without it, an orbit fit started
         # 3x off locked onto a wrong period and missed GM by half.
         guess = derivative_match(spec, c, kin, guess)
-    if spec.id in NESTED_STARTS and not warm:
-        fits = [_fit_from(spec, c, kin, noise, start, None)
-                for start in (guess, *({**guess, **off} for off in NESTED_STARTS[spec.id]))]
+    if starts and not warm:
+        # A special case's optimum is already in the right basin: refit it on the whole training span directly (the
+        # short early windows would pull it away), from that fit's own initial state.
+        fits = [_fit_from(spec, c, kin, noise, guess, None),
+                *(_fit_from(spec, c, kin, noise, st, st) for st in starts)]
         done = [f for f in fits if f.success]
         return min(done, key=lambda f: f.rss) if done else fits[0]
     return _fit_from(spec, c, kin, noise, guess, warm)
 
 
+def nested_starts(spec: ModelSpec, fitted: dict[str, FitResult]) -> tuple[dict[str, float], ...]:
+    """Starts for a law from each fitted special case it contains: the special case's parameters and initial state,
+    with the switched-off terms at their reduction value."""
+    out: list[dict[str, float]] = []
+    bounds = {p.name: (p.lower, p.upper) for p in spec.params}
+    for sub_id, off in spec.nests:
+        sub = fitted.get(sub_id)
+        if sub is None or not sub.success:
+            continue
+        base = {k: v for k, v in sub.params.items() if k in bounds}
+        y0 = {f"_y0_{i}": float(v) for i, v in enumerate(sub.y0)}
+        out.append({**base, **dict(off), **y0})
+    return tuple(out)
+
+
 def _fit_from(spec: ModelSpec, c: Coordinates, kin, noise: float, guess: dict[str, float],
               warm: dict[str, float] | None) -> FitResult:
     n_samples, d = c.q.shape
-    theta = np.concatenate([np.array([guess[p] for p in spec.param_names], dtype=float), kin.pos[0], kin.vel[0]])
+    start_state = np.concatenate([kin.pos[0], kin.vel[0]])
+    if "_y0_0" in guess:  # a start from a fitted special case brings its fitted initial state
+        start_state = np.array([guess[f"_y0_{i}"] for i in range(2 * d)], dtype=float)
+    theta = np.concatenate([np.array([guess[p] for p in spec.param_names], dtype=float), start_state])
+    theta_start = theta.copy()
     span = np.ptp(c.q, axis=0).max() + 1e-9
     vspan = np.abs(kin.vel).max() + 1e-9
     lower = np.concatenate([[p.lower for p in spec.params], c.q.min(axis=0) - span, -3 * vspan * np.ones(d)])
@@ -220,9 +243,14 @@ def _fit_from(spec: ModelSpec, c: Coordinates, kin, noise: float, guess: dict[st
     deadline = time.monotonic() + MAX_FIT_SECONDS
     try:
         for frac in (1.0,) if warm else CONTINUATION:
-            theta = fit_window(spec, c, max(8, int(n_train * frac)), theta, lower, upper, deadline=deadline)
+            window = replace(c, ctx={**c.ctx, "v_eps_scale": SMOOTHING.get(frac, 1.0)})
+            theta = fit_window(spec, window, max(8, int(n_train * frac)), theta, lower, upper, deadline=deadline)
         params_train, y0_train = _unpack(spec, theta)
         sim_train = simulate(spec, params_train, y0_train, c.t, c.ctx)
+        if "_y0_0" in guess:
+            # From a special case's whole-clip optimum the whole-clip fit can only go down from that special case's
+            # RSS (least squares never ends above its start), so the law cannot end worse than what it contains.
+            theta = theta_start
         theta = fit_window(spec, c, n_samples, theta, lower, upper, deadline=deadline)
     except FitTimeout:
         params, y0 = _unpack(spec, theta)
@@ -255,7 +283,18 @@ def fit_workers() -> int:
     env = os.environ.get("PHYSICSLENS_FIT_WORKERS", "").strip()
     if env.isdigit():
         return max(1, int(env))
+    if _configured_workers is not None:
+        return max(1, _configured_workers)
     return max(1, min((os.cpu_count() or 1) // 2, 4))
+
+
+_configured_workers: int | None = None
+
+
+def configure_fit_workers(n: int | None) -> None:
+    """From config/limits.yaml (fitting.workers); the environment variable still wins, for one-off runs."""
+    global _configured_workers
+    _configured_workers = n
 
 
 _pool: Executor | None = None
@@ -270,12 +309,13 @@ def _get_pool(workers: int) -> Executor:
     return _pool
 
 
-def _fit_builtin(model_id: str, c: Coordinates) -> FitResult:
+def _fit_builtin(model_id: str, c: Coordinates, starts: tuple[dict[str, float], ...] = ()) -> FitResult:
     """Top level so a worker process can run it; the law is looked up by id because specs hold closures."""
-    return fit_model(BUILTIN_MODELS[model_id], c)
+    return fit_model(BUILTIN_MODELS[model_id], c, starts=starts)
 
 
-def fit_models(specs: list[ModelSpec], c: Coordinates) -> list[FitResult]:
+def fit_models(specs: list[ModelSpec], c: Coordinates,
+               starts: list[tuple[dict[str, float], ...]] | None = None) -> list[FitResult]:
     """fit_model for every candidate, in order. Each fit is independent and deterministic, so built-in laws are fitted
     in worker processes while the agent's own laws (known only to this process) are fitted here meanwhile: the same
     results as one after another, sooner: the wait becomes that of the slowest law (random motion, where every law
@@ -283,18 +323,19 @@ def fit_models(specs: list[ModelSpec], c: Coordinates) -> list[FitResult]:
     global _pool
     remote = [i for i, s in enumerate(specs) if BUILTIN_MODELS.get(s.id) is s]
     workers = fit_workers()
+    starts = starts or [()] * len(specs)
     if workers < 2 or len(specs) < 2 or not remote:
-        return [fit_model(s, c) for s in specs]
+        return [fit_model(s, c, starts=st) for s, st in zip(specs, starts, strict=True)]
     results: list[FitResult | None] = [None] * len(specs)
     try:
-        futures = {i: _get_pool(workers).submit(_fit_builtin, specs[i].id, c) for i in remote}
+        futures = {i: _get_pool(workers).submit(_fit_builtin, specs[i].id, c, starts[i]) for i in remote}
     except (BrokenProcessPool, RuntimeError) as e:
         log.warning("Fit workers unavailable (%s); fitting one after another.", e)
         _pool = None
-        return [fit_model(s, c) for s in specs]
+        return [fit_model(s, c, starts=st) for s, st in zip(specs, starts, strict=True)]
     for i, s in enumerate(specs):
         if i not in futures:
-            results[i] = fit_model(s, c)
+            results[i] = fit_model(s, c, starts=starts[i])
     for i, f in futures.items():
         try:
             results[i] = f.result()
@@ -302,5 +343,63 @@ def fit_models(specs: list[ModelSpec], c: Coordinates) -> list[FitResult]:
             # A worker died (out of memory, killed): this fit is redone here, and the next call starts a new pool.
             log.warning("A fit worker stopped (%s); fitting %s here instead.", e, specs[i].id)
             _pool = None
-            results[i] = fit_model(specs[i], c)
+            results[i] = fit_model(specs[i], c, starts=starts[i])
     return [r for r in results if r is not None]
+
+
+NESTED_REL_TOL = 1e-9
+
+
+def fit_family(specs: list[ModelSpec], c: Coordinates, known: list[FitResult] | None = None,
+               warm: dict[str, dict[str, float]] | None = None) -> list[FitResult]:
+    """Fit candidate laws so that none ends worse than a special case it contains (ModelSpec.nests).
+
+    Every law is first fitted from its own guess, side by side in worker processes. A law that ends with more
+    residual than one of its fitted special cases is then refitted from that special case's solution (its extra terms
+    at zero, its fitted initial state); from there least squares can only go down, so the law matches or beats it.
+    Doing this only when needed keeps the cost where it was: starting every law from every special case made the
+    oscillator tests four times slower. known: fits already made (the referee's laws reuse the first round's).
+    warm: live mode's previous parameters per law, refitted in place every second, still checked by the guard.
+    Returns the fits in the order of specs."""
+    fitted: dict[str, FitResult] = {f.model_id: f for f in known or []}
+    if warm is not None:
+        for s in specs:
+            fitted[s.id] = fit_model(s, c, warm=warm.get(s.id))
+        return _nesting_guard(specs, fitted)
+    for f in fit_models(specs, c):
+        fitted[f.model_id] = f
+    losing = [s for s in specs if _loses_to_special_case(s, fitted)]
+    if losing:
+        for f in fit_models(losing, c, [nested_starts(s, fitted) for s in losing]):
+            if f.success and (not fitted[f.model_id].success or f.rss < fitted[f.model_id].rss):
+                fitted[f.model_id] = f
+    return _nesting_guard(specs, fitted)
+
+
+def _loses_to_special_case(s: ModelSpec, fitted: dict[str, FitResult]) -> bool:
+    f = fitted.get(s.id)
+    if f is None or not f.success:
+        return False
+    return any(sub is not None and sub.success and f.rss > sub.rss * (1 + NESTED_REL_TOL)
+               for sub in (fitted.get(sub_id) for sub_id, _ in s.nests))
+
+
+def _nesting_guard(specs: list[ModelSpec], fitted: dict[str, FitResult]) -> list[FitResult]:
+    out = []
+    for s in specs:
+        f = fitted[s.id]
+        for sub_id, off in s.nests:
+            sub = fitted.get(sub_id)
+            if f.success and sub is not None and sub.success and f.rss > sub.rss * (1 + NESTED_REL_TOL):
+                # Started from the special case and still worse. The special case's solution IS this law with its
+                # extra terms at zero, so the law is reported there (same paths, same forecast, more parameters
+                # paid for in BIC), and the trail says so rather than hiding it.
+                sub_title = BUILTIN_MODELS[sub_id].title if sub_id in BUILTIN_MODELS else sub_id
+                note = (f"{s.title} could not improve on {sub_title} (a special case it contains) from either start, "
+                        "so it is reported at that special case, its extra terms at zero")
+                k = len(s.params) + len(sub.y0)
+                f = replace(sub, model_id=s.id, params={**sub.params, **dict(off)}, k=k,
+                            bic=float(sub.n * math.log(max(sub.rss, 1e-300) / sub.n) + k * math.log(sub.n)),
+                            notes=(*f.notes, note))
+        out.append(f)
+    return out

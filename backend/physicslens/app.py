@@ -42,6 +42,7 @@ from .export.mp4 import ExportError, render_share_video
 from .export.report import report_markdown
 from .export.script import parameters_json, python_script
 from .export.sim2real import Sim2RealError, sim2real
+from .inputs import MAX_INPUT_BYTES, InputError, parse_inputs_csv
 from .live import LiveConfig, LiveSession
 from .physics.health import (
     HealthError,
@@ -166,8 +167,17 @@ def create_run(
     blade_count: Annotated[int | None, Form(ge=1, le=64)] = None,
     depth_3d: Annotated[bool, Form()] = False,
     focal_px: Annotated[float | None, Form()] = None,
+    inputs_csv: Annotated[UploadFile | None, File()] = None,
+    known_mover: Annotated[str | None, Form(max_length=60)] = None,
 ) -> dict[str, object]:
     audience = audience_for(x_access_code)
+    inputs = None
+    if inputs_csv is not None and inputs_csv.filename:
+        # Known signals a law may use (a logged motor command, a second body's path): checked before the video is kept.
+        try:
+            inputs = parse_inputs_csv(inputs_csv.file.read(MAX_INPUT_BYTES + 1))
+        except InputError as e:
+            raise HTTPException(status_code=400, detail=f"Inputs file: {e}") from e
     if focal_px is not None and not 50 <= focal_px <= 50000:
         raise HTTPException(status_code=400, detail="The focal length should be between 50 and 50000 pixels.")
     for name, value in (("pendulum length", pendulum_length_m), ("object size", object_size_m)):
@@ -202,7 +212,8 @@ def create_run(
         raise HTTPException(status_code=413, detail="That video is too large; trim it to under 30 seconds.")
     state = runs.start(dest, RunOptions(audience=audience, pendulum_length_m=pendulum_length_m, object_size_m=object_size_m,
                                          slow_motion=slow_motion, object_hint=object_hint, blade_count=blade_count,
-                                         depth_3d=depth_3d, focal_px=focal_px))
+                                         depth_3d=depth_3d, focal_px=focal_px, inputs=inputs,
+                                         known_mover=known_mover))
     return runs.public_view(state)
 
 

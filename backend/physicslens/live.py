@@ -40,7 +40,7 @@ from .perception.local_track import TemplateTracker, box_around_tap, to_gray
 from .perception.sam_track import ObjectTrack, tracks_from_text
 from .physics.coords import Coordinates, fit_circle, to_coordinates
 from .physics.cueing import learned_lead, next_cue, push_delay
-from .physics.fit import FitResult, fit_model, simulate
+from .physics.fit import FitResult, fit_family, simulate
 from .physics.forecast import FAMILIES as FORECAST_FAMILIES
 from .physics.forecast import Prediction, judge, observed_crossing, predict_crossing
 from .physics.models import MODELS, models_for
@@ -535,11 +535,11 @@ class LiveSession:
             msg = {"type": "fit", "status": "no_fit", "reason": str(e)}
             self.send(msg)
             return msg
-        fits = [fit_model(MODELS[m], coords, warm=self.warm.get(m)) for m in self.candidates]
+        fits = fit_family([MODELS[m] for m in self.candidates], coords, warm=self.warm)
         for f in fits:
             if f.success:
                 self.warm[f.model_id] = f.params
-        verdict = assess(coords, fits)
+        verdict = assess(coords, fits, rolling=False)  # refit every second: the rolling forecasts wait for a clip
         change = detect_change(traj, self.family, max(self.candidates, key=lambda m: len(MODELS[m].params)))  # type: ignore[arg-type]
         if change is not None:
             at = grid[min(change.index, len(grid) - 1)]
