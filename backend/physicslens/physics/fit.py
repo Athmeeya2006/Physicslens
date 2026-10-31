@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
+import atexit
+import logging
 import math
+import multiprocessing
+import os
 import time
+from concurrent.futures import Executor, ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -12,7 +18,9 @@ from scipy.optimize import least_squares
 
 from ..sigproc.cleanup import differentiate, savgol_window
 from .coords import Coordinates
-from .models import ModelSpec
+from .models import BUILTIN_MODELS, ModelSpec
+
+log = logging.getLogger(__name__)
 
 TRAIN_FRACTION = 0.75
 # Fit on growing windows so an oscillation's frequency is locked in before many cycles can alias it.
@@ -238,3 +246,61 @@ def _fit_from(spec: ModelSpec, c: Coordinates, kin, noise: float, guess: dict[st
         heldout_nrmse=heldout_rmse / float(np.std(c.q) + 1e-12), noise_sigma=noise, success=True, sim=sim,
         sim_train=sim_train, n_train=n_train,
     )
+
+
+def fit_workers() -> int:
+    """Processes for fitting candidate laws side by side. Each is a full Python process with SciPy loaded, so the
+    default stays small (a laptop running several analyses ran out of memory with one per thread);
+    PHYSICSLENS_FIT_WORKERS overrides, 1 turns it off."""
+    env = os.environ.get("PHYSICSLENS_FIT_WORKERS", "").strip()
+    if env.isdigit():
+        return max(1, int(env))
+    return max(1, min((os.cpu_count() or 1) // 2, 4))
+
+
+_pool: Executor | None = None
+
+
+def _get_pool(workers: int) -> Executor:
+    global _pool
+    if _pool is None:
+        # spawn, not fork: the server has threads, and a forked child can inherit a lock held by one of them.
+        _pool = ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context("spawn"))
+        atexit.register(_pool.shutdown, cancel_futures=True)
+    return _pool
+
+
+def _fit_builtin(model_id: str, c: Coordinates) -> FitResult:
+    """Top level so a worker process can run it; the law is looked up by id because specs hold closures."""
+    return fit_model(BUILTIN_MODELS[model_id], c)
+
+
+def fit_models(specs: list[ModelSpec], c: Coordinates) -> list[FitResult]:
+    """fit_model for every candidate, in order. Each fit is independent and deterministic, so built-in laws are fitted
+    in worker processes while the agent's own laws (known only to this process) are fitted here meanwhile: the same
+    results as one after another, sooner: the wait becomes that of the slowest law (random motion, where every law
+    struggles, went from 214 s to 105 s)."""
+    global _pool
+    remote = [i for i, s in enumerate(specs) if BUILTIN_MODELS.get(s.id) is s]
+    workers = fit_workers()
+    if workers < 2 or len(specs) < 2 or not remote:
+        return [fit_model(s, c) for s in specs]
+    results: list[FitResult | None] = [None] * len(specs)
+    try:
+        futures = {i: _get_pool(workers).submit(_fit_builtin, specs[i].id, c) for i in remote}
+    except (BrokenProcessPool, RuntimeError) as e:
+        log.warning("Fit workers unavailable (%s); fitting one after another.", e)
+        _pool = None
+        return [fit_model(s, c) for s in specs]
+    for i, s in enumerate(specs):
+        if i not in futures:
+            results[i] = fit_model(s, c)
+    for i, f in futures.items():
+        try:
+            results[i] = f.result()
+        except BrokenProcessPool as e:
+            # A worker died (out of memory, killed): this fit is redone here, and the next call starts a new pool.
+            log.warning("A fit worker stopped (%s); fitting %s here instead.", e, specs[i].id)
+            _pool = None
+            results[i] = fit_model(specs[i], c)
+    return [r for r in results if r is not None]

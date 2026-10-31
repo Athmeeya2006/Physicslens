@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 from physicslens.physics.coords import length_is_reliable, to_coordinates
-from physicslens.physics.fit import fit_model
+from physicslens.physics.fit import fit_model, fit_models
 from physicslens.physics.models import MODELS, models_for
 from physicslens.physics.sindy import discover, vet
 from physicslens.physics.uncertainty import bootstrap
@@ -31,7 +31,7 @@ def pendulum_xy(theta0: float, gamma: float, seconds: float, length: float = 0.6
 
 def run(traj: Trajectory, family: str):
     c = to_coordinates(traj, family)
-    return c, assess(c, [fit_model(m, c) for m in models_for(family)])
+    return c, assess(c, fit_models(models_for(family), c))
 
 
 @pytest.fixture(scope="module")
@@ -243,3 +243,17 @@ def test_a_stiff_law_gives_up_instead_of_hanging():
     t0 = _time.monotonic()
     assert simulate(stiff, {}, np.array([0.1, 0.0]), np.linspace(0, 5, 150), {}) is None
     assert _time.monotonic() - t0 < 10
+
+
+def test_parallel_fits_match_one_after_another(monkeypatch):
+    # Worker processes must change only the time taken: same laws, same order, identical numbers.
+    c = to_coordinates(track(pendulum_xy(0.5, 0.05, 4)), "pendulum")
+    specs = models_for("pendulum")
+    monkeypatch.setenv("PHYSICSLENS_FIT_WORKERS", "1")
+    alone = [fit_model(s, c) for s in specs]
+    monkeypatch.setenv("PHYSICSLENS_FIT_WORKERS", "3")
+    together = fit_models(specs, c)
+    assert [f.model_id for f in together] == [s.id for s in specs]
+    for a, b in zip(alone, together, strict=True):
+        assert a.params == b.params and a.heldout_nrmse == b.heldout_nrmse
+        np.testing.assert_array_equal(a.sim, b.sim)

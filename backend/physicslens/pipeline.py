@@ -53,7 +53,7 @@ from .physics.double import (
 )
 from .physics.double import simulate as double_simulate
 from .physics.double import summary as double_summary
-from .physics.fit import FitResult, fit_model
+from .physics.fit import FitResult, fit_models
 from .physics.models import MODELS, models_for, needs_scale
 from .physics.regime import RegimeChange, detect_change
 from .physics.rotation import RotationError, rotation_coordinates
@@ -1044,7 +1044,7 @@ def fit_and_verify(traj: Trajectory, family: str, candidate_ids: list[str],
         coords = coords if coords is not None else to_coordinates(traj, family)
     except ValueError as e:
         return None, Verdict("no_fit", None, (), (), f"The motion does not look like a {family}: {e}")
-    fits = [fit_model(MODELS[m], coords) for m in candidate_ids]
+    fits = fit_models([MODELS[m] for m in candidate_ids], coords)
     return coords, assess(coords, fits)
 
 

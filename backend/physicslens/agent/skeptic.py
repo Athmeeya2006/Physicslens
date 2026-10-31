@@ -13,7 +13,7 @@ from ..costguard import CostGuardClient
 from ..physics.coords import Coordinates
 from ..physics.custom import FreeParam, build, register
 from ..physics.expr import ExprError
-from ..physics.fit import fit_model
+from ..physics.fit import fit_models
 from ..physics.models import MODELS, models_for
 from ..physics.verify import Verdict, assess, judge_candidates
 from .llm import LLMCall
@@ -108,7 +108,7 @@ def fit_more(coords: Coordinates, verdict: Verdict, family: str, proposals: list
         rationales[spec.id] = f"{why} Written by {source}."
     if not new_ids:
         return verdict, items, rationales
-    new_verdict = assess(coords, [*verdict.ranked, *(fit_model(MODELS[m], coords) for m in new_ids)])
+    new_verdict = assess(coords, [*verdict.ranked, *fit_models([MODELS[m] for m in new_ids], coords)])
     judged = judge_candidates(new_verdict)
     by_id = {f.model_id: f for f in new_verdict.ranked}
     for m in new_ids:

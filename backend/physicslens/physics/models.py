@@ -269,3 +269,7 @@ MODELS_3D: dict[str, ModelSpec] = {
                   _projectile3d("quadratic")),
     ]
 }
+
+# Every law a freshly started process knows. custom.py adds the agent's own laws to MODELS at run time, in that
+# process only, so a worker process can be handed a law by id only if it is in here.
+BUILTIN_MODELS: dict[str, ModelSpec] = {**MODELS, **MODELS_3D}
