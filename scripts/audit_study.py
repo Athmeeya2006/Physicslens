@@ -409,7 +409,6 @@ def analysis() -> dict[str, Any]:
         tracked = [r for r in rows if r["audit"] != "error"]
         laws = Counter(r.get("status") for r in tracked)
         nrmse = sorted(float(r["heldout_nrmse"]) for r in tracked if r.get("heldout_nrmse") is not None)
-        spend = [float(r["spend_usd"]) for r in rows if r.get("spend_usd")]
         secs = [float(r["seconds"]) for r in rows if r.get("seconds") and r.get("status") != "error"]
         out["sets"][name] = {
             "clips": len(rows), "verdicts": dict(c),
@@ -420,7 +419,6 @@ def analysis() -> dict[str, Any]:
             "verified_law_among_tracked": share(laws["accepted"], len(tracked)),
             "heldout_error_median": nrmse[len(nrmse) // 2] if nrmse else None,
             "heldout_errors": nrmse,
-            "cost_per_clip_usd": sum(spend) / len(spend) if spend else None,
             "seconds_per_clip_median": sorted(secs)[len(secs) // 2] if secs else None,
             "model_alone": dict(Counter(r["model_alone"] for r in rows if r["model_alone"])),
         }
@@ -449,6 +447,11 @@ def analysis() -> dict[str, Any]:
                                    "upper_95": wilson(real["verdicts"].get("violates_physics", 0), n)[1] if n else None}
     (DATA / "analysis.json").write_text(json.dumps(out, indent=1, default=float) + "\n")
     return out
+
+
+def _no_money(text: str | None) -> str | None:
+    """Published files carry no money figures: an error message that quotes a call's cost keeps only its cause."""
+    return re.sub(r";?\s*the call cost \$[\d.]+\.?|\$[\d.]+", "", text) if text else text
 
 
 def report() -> None:
@@ -482,10 +485,14 @@ def report() -> None:
         for r in rows:
             c = clips.get(r["id"], {})
             w.writerow([r["id"], r["set"], r["generator"], c.get("caption"), r["human_pc"], r.get("status"), r.get("family"),
-                        r.get("equation"), r.get("audit"), ";".join(r.get("violations") or []), r.get("headline") or r.get("error"),
+                        r.get("equation"), r.get("audit"), ";".join(r.get("violations") or []), _no_money(r.get("headline") or r.get("error")),
                         (base.get(r["id"]) or {}).get("verdict"), c.get("license"), c.get("url")])
     print(f"\nwrote {DATA / 'results.csv'} ({len(rows)} clips)")
     summary = {**summarize(rows, clips, base), "analysis": analysis()}
+    # Money stays out of the published files (they are tracked and served); the console shows it to the operator.
+    spend = [float(r["spend_usd"]) for r in rows if r.get("spend_usd")]
+    if spend:
+        print(f"(private) mean spend per analysed clip: ${sum(spend) / len(spend):.3f}")
     for path in (DATA / "summary.json", ROOT / "frontend" / "public" / "audit_study.json"):
         path.write_text(json.dumps(summary, indent=1) + "\n")
     print(f"wrote {DATA / 'summary.json'} and the site's copy")

@@ -1,1 +1,562 @@
-{"clips": 0, "sources": [], "by_human_score": [], "examples": [], "model_alone": null}
+{
+ "clips": 149,
+ "sources": [
+  {
+   "key": "real",
+   "label": "Real footage (Physics-IQ)",
+   "n": 65,
+   "judged": 13,
+   "flagged": 0,
+   "consistent": 13,
+   "cant_judge": 42,
+   "error": 10,
+   "rate": 0.0,
+   "lo": 0.0,
+   "hi": 0.22810184305529166
+  },
+  {
+   "key": "cogvideo",
+   "label": "CogVideoX",
+   "n": 40,
+   "judged": 6,
+   "flagged": 2,
+   "consistent": 4,
+   "cant_judge": 23,
+   "error": 11,
+   "rate": 0.3333333333333333,
+   "lo": 0.09676933255921683,
+   "hi": 0.7000116786584712
+  },
+  {
+   "key": "cosmos",
+   "label": "Cosmos",
+   "n": 7,
+   "judged": 1,
+   "flagged": 0,
+   "consistent": 1,
+   "cant_judge": 5,
+   "error": 1,
+   "rate": 0.0,
+   "lo": 0.0,
+   "hi": 0.7934567085261071
+  },
+  {
+   "key": "hunyuan",
+   "label": "HunyuanVideo",
+   "n": 6,
+   "judged": 1,
+   "flagged": 0,
+   "consistent": 1,
+   "cant_judge": 4,
+   "error": 1,
+   "rate": 0.0,
+   "lo": 0.0,
+   "hi": 0.7934567085261071
+  },
+  {
+   "key": "ray2",
+   "label": "Ray2",
+   "n": 6,
+   "judged": 0,
+   "flagged": 0,
+   "consistent": 0,
+   "cant_judge": 0,
+   "error": 6,
+   "rate": null,
+   "lo": 0.0,
+   "hi": 1.0
+  },
+  {
+   "key": "sora",
+   "label": "Sora",
+   "n": 16,
+   "judged": 4,
+   "flagged": 0,
+   "consistent": 4,
+   "cant_judge": 12,
+   "error": 0,
+   "rate": 0.0,
+   "lo": 0.0,
+   "hi": 0.48990002040399916
+  },
+  {
+   "key": "videocrafter",
+   "label": "VideoCrafter",
+   "n": 5,
+   "judged": 0,
+   "flagged": 0,
+   "consistent": 0,
+   "cant_judge": 4,
+   "error": 1,
+   "rate": null,
+   "lo": 0.0,
+   "hi": 1.0
+  },
+  {
+   "key": "wan",
+   "label": "Wan",
+   "n": 4,
+   "judged": 2,
+   "flagged": 0,
+   "consistent": 2,
+   "cant_judge": 1,
+   "error": 1,
+   "rate": 0.0,
+   "lo": 0.0,
+   "hi": 0.6576280471103807
+  }
+ ],
+ "by_human_score": [
+  {
+   "pc": 1,
+   "n": 10,
+   "judged": 2,
+   "flagged": 0,
+   "consistent": 2,
+   "cant_judge": 4,
+   "error": 4,
+   "rate": 0.0,
+   "lo": 0.0,
+   "hi": 0.6576280471103807
+  },
+  {
+   "pc": 2,
+   "n": 19,
+   "judged": 5,
+   "flagged": 0,
+   "consistent": 5,
+   "cant_judge": 9,
+   "error": 5,
+   "rate": 0.0,
+   "lo": 0.0,
+   "hi": 0.43449149475208104
+  },
+  {
+   "pc": 3,
+   "n": 18,
+   "judged": 3,
+   "flagged": 2,
+   "consistent": 1,
+   "cant_judge": 12,
+   "error": 3,
+   "rate": 0.6666666666666666,
+   "lo": 0.2076549551264879,
+   "hi": 0.9385096847238394
+  },
+  {
+   "pc": 4,
+   "n": 21,
+   "judged": 2,
+   "flagged": 0,
+   "consistent": 2,
+   "cant_judge": 15,
+   "error": 4,
+   "rate": 0.0,
+   "lo": 0.0,
+   "hi": 0.6576280471103807
+  },
+  {
+   "pc": 5,
+   "n": 16,
+   "judged": 2,
+   "flagged": 0,
+   "consistent": 2,
+   "cant_judge": 9,
+   "error": 5,
+   "rate": 0.0,
+   "lo": 0.0,
+   "hi": 0.6576280471103807
+  }
+ ],
+ "examples": [
+  {
+   "id": "vp2-cogvideo-81c9e276",
+   "generator": "CogVideoX",
+   "caption": "An overhead throw sends an axe into a target made of stacked tires; the axe sticks through several.",
+   "human_pc": 3,
+   "headline": "Violates physics: At 0.75 s the object's mask area shrinks 10.3 times from one moment to the next (14 times the noise): its shape or size changes abruptly.",
+   "url": "https://videophysics2testvideos.s3.us-east-2.amazonaws.com/cogvideoX5b_hard_upsampled/An_overhead_throw_sends_an_axe_into_a_target_made_of_stacked_tires%3B_the_axe_sticks_through_several.mp4"
+  },
+  {
+   "id": "vp2-cogvideo-cfc9fa44",
+   "generator": "CogVideoX",
+   "caption": "A hammer is thrown, landing in a grassy field, leaving a small crater in the turf.",
+   "human_pc": 3,
+   "headline": "Violates physics: At 4.62 s the object jumps 161 px (1.0 object sizes) in one frame, beyond what its motion allows (64 times the noise). A tracker that hopped to a lookalike would do the same: check the overlay.",
+   "url": "https://videophysics2testvideos.s3.us-east-2.amazonaws.com/cogvideoX5b_hard_upsampled/A_hammer_is_thrown%2C_landing_in_a_grassy_field%2C_leaving_a_small_crater_in_the_turf.mp4"
+  }
+ ],
+ "model_alone": {
+  "violates_physics": 31,
+  "consistent": 103,
+  "cant_judge": 4
+ },
+ "licences": {
+  "generated": "VideoPhy-2 test set, MIT",
+  "real": "Physics-IQ, CC BY 4.0 (Google DeepMind)"
+ },
+ "analysis": {
+  "sets": {
+   "generated": {
+    "clips": 84,
+    "verdicts": {
+     "cant_judge": 49,
+     "consistent": 12,
+     "error": 21,
+     "violates_physics": 2
+    },
+    "judged": {
+     "k": 14,
+     "n": 84,
+     "rate": 0.16666666666666666,
+     "lo": 0.10195649348099849,
+     "hi": 0.2605323500737637
+    },
+    "flagged_among_judged": {
+     "k": 2,
+     "n": 14,
+     "rate": 0.14285714285714285,
+     "lo": 0.040093073737921175,
+     "hi": 0.39941907763863693
+    },
+    "errors": {
+     "tracking": 13,
+     "download": 7,
+     "model service": 1
+    },
+    "tracked": {
+     "k": 63,
+     "n": 76,
+     "rate": 0.8289473684210527,
+     "lo": 0.7290191762204462,
+     "hi": 0.8972207788906738
+    },
+    "verified_law_among_tracked": {
+     "k": 11,
+     "n": 63,
+     "rate": 0.1746031746031746,
+     "lo": 0.10039293923176863,
+     "hi": 0.28621659734425586
+    },
+    "heldout_error_median": 0.7330200022871851,
+    "heldout_errors": [
+     0.04678699333185955,
+     0.07208832429389482,
+     0.08696399736421945,
+     0.1301245796620425,
+     0.13238642239268172,
+     0.143000893212049,
+     0.16121852277976953,
+     0.16819715862351198,
+     0.17783685283287404,
+     0.18951029701259883,
+     0.25554126802581933,
+     0.330841225943433,
+     0.3636056593445381,
+     0.36786242727075175,
+     0.420111143836143,
+     0.44198189494372725,
+     0.45632825205311284,
+     0.4887253099702341,
+     0.4986377186301305,
+     0.5622516906661674,
+     0.5721645436729551,
+     0.6050065644264833,
+     0.6119401172397132,
+     0.6628908338416517,
+     0.6843891109537583,
+     0.7121824767262659,
+     0.7330200022871851,
+     0.7697640847224765,
+     0.8159511786000123,
+     0.8289636931417553,
+     0.8490409204016679,
+     0.8524328099820218,
+     0.8860196188744236,
+     0.9635457403272002,
+     0.9902609362242677,
+     1.277088764602973,
+     1.3512432210101744,
+     1.3595183788178287,
+     1.3717967687017991,
+     1.519393509010422,
+     1.6493308954036663,
+     1.7831718257414335,
+     1.8878228336403242,
+     1.9086800082687072,
+     1.9477996159426934,
+     2.15477578346534,
+     2.2826841981495587,
+     2.879644030527021,
+     3.068064176649889,
+     4.171903417291873,
+     4.220276495082877,
+     4.824737122738491,
+     10.816179521419919
+    ],
+    "seconds_per_clip_median": 246.8,
+    "model_alone": {
+     "violates_physics": 27,
+     "consistent": 48,
+     "cant_judge": 1
+    }
+   },
+   "real": {
+    "clips": 65,
+    "verdicts": {
+     "consistent": 13,
+     "error": 10,
+     "cant_judge": 42
+    },
+    "judged": {
+     "k": 13,
+     "n": 65,
+     "rate": 0.2,
+     "lo": 0.12077845770945213,
+     "hi": 0.31270362289297426
+    },
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 13,
+     "rate": 0.0,
+     "lo": 0.0,
+     "hi": 0.22810184305529166
+    },
+    "errors": {
+     "tracking": 7,
+     "model service": 2,
+     "download": 1
+    },
+    "tracked": {
+     "k": 55,
+     "n": 62,
+     "rate": 0.8870967741935484,
+     "lo": 0.7848003079004455,
+     "hi": 0.9442220730866508
+    },
+    "verified_law_among_tracked": {
+     "k": 26,
+     "n": 55,
+     "rate": 0.4727272727272727,
+     "lo": 0.34692885310480803,
+     "hi": 0.6020868092837061
+    },
+    "heldout_error_median": 0.15965960708643018,
+    "heldout_errors": [
+     0.010880826197440113,
+     0.021161407675831866,
+     0.02560327232481729,
+     0.026961982223239724,
+     0.03044264543410839,
+     0.037914887633287354,
+     0.04126113704020417,
+     0.04366145512471222,
+     0.04438815824152767,
+     0.04820348592236226,
+     0.048728381381486816,
+     0.05551383296004961,
+     0.06485326378991314,
+     0.06658736202537215,
+     0.07495465648516685,
+     0.07711811187005452,
+     0.0787868524295614,
+     0.09047332890514019,
+     0.10933209360888542,
+     0.11379178986374693,
+     0.12691160781959807,
+     0.13364221133256124,
+     0.13888157828575712,
+     0.14069130829644977,
+     0.14795224235320825,
+     0.15012523621498491,
+     0.15965960708643018,
+     0.16868688855738212,
+     0.21933417133447955,
+     0.3226665711866227,
+     0.34991868834762324,
+     0.36234585550499565,
+     0.5496021055260747,
+     0.5499875149049482,
+     0.727944467086247,
+     0.7280825594540499,
+     0.778248604140121,
+     0.8299185164897313,
+     0.999596588055576,
+     1.0389086181042098,
+     1.0807559747716204,
+     1.1501309671136304,
+     1.4426007064251094,
+     1.4482249594797636,
+     1.4843133223617662,
+     1.8902686228635703,
+     1.9041077893377363,
+     1.914112078407581,
+     1.9655813443533157,
+     2.00019425927594,
+     2.0317484287917082,
+     2.2298346067803725,
+     2.3967796782566135
+    ],
+    "seconds_per_clip_median": 249.6,
+    "model_alone": {
+     "consistent": 55,
+     "violates_physics": 4,
+     "cant_judge": 3
+    }
+   }
+  },
+  "generators": {
+   "cogvideo": {
+    "cant_judge": 23,
+    "consistent": 4,
+    "error": 11,
+    "violates_physics": 2,
+    "flagged_among_judged": {
+     "k": 2,
+     "n": 6,
+     "rate": 0.3333333333333333,
+     "lo": 0.09676933255921683,
+     "hi": 0.7000116786584712
+    }
+   },
+   "cosmos": {
+    "cant_judge": 5,
+    "consistent": 1,
+    "error": 1,
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "lo": 0.0,
+     "hi": 0.7934567085261071
+    }
+   },
+   "ray2": {
+    "error": 6,
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "lo": 0.0,
+     "hi": 1.0
+    }
+   },
+   "hunyuan": {
+    "cant_judge": 4,
+    "error": 1,
+    "consistent": 1,
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "lo": 0.0,
+     "hi": 0.7934567085261071
+    }
+   },
+   "sora": {
+    "consistent": 4,
+    "cant_judge": 12,
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 4,
+     "rate": 0.0,
+     "lo": 0.0,
+     "hi": 0.48990002040399916
+    }
+   },
+   "videocrafter": {
+    "error": 1,
+    "cant_judge": 4,
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 0,
+     "rate": null,
+     "lo": 0.0,
+     "hi": 1.0
+    }
+   },
+   "wan": {
+    "consistent": 2,
+    "error": 1,
+    "cant_judge": 1,
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 2,
+     "rate": 0.0,
+     "lo": 0.0,
+     "hi": 0.6576280471103807
+    }
+   }
+  },
+  "human_score": {
+   "1": {
+    "cant_judge": 4,
+    "error": 4,
+    "consistent": 2,
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 2,
+     "rate": 0.0,
+     "lo": 0.0,
+     "hi": 0.6576280471103807
+    }
+   },
+   "2": {
+    "cant_judge": 9,
+    "consistent": 5,
+    "error": 5,
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 5,
+     "rate": 0.0,
+     "lo": 0.0,
+     "hi": 0.43449149475208104
+    }
+   },
+   "3": {
+    "cant_judge": 12,
+    "error": 3,
+    "violates_physics": 2,
+    "consistent": 1,
+    "flagged_among_judged": {
+     "k": 2,
+     "n": 3,
+     "rate": 0.6666666666666666,
+     "lo": 0.2076549551264879,
+     "hi": 0.9385096847238394
+    }
+   },
+   "4": {
+    "cant_judge": 15,
+    "error": 4,
+    "consistent": 2,
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 2,
+     "rate": 0.0,
+     "lo": 0.0,
+     "hi": 0.6576280471103807
+    }
+   },
+   "5": {
+    "consistent": 2,
+    "cant_judge": 9,
+    "error": 5,
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 2,
+     "rate": 0.0,
+     "lo": 0.0,
+     "hi": 0.6576280471103807
+    }
+   }
+  },
+  "flags_vs_human_auc": 0.375,
+  "forecast_error_auc_generated_vs_real": 0.6895692417230331,
+  "false_accusation": {
+   "accused": 0,
+   "judged_real": 13,
+   "upper_95": 0.22810184305529166
+  }
+ }
+}

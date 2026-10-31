@@ -35,6 +35,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | 2 | [Weighing Jupiter](https://physicslens.vercel.app/?run=gallery-jupiter) | Jupiter's GM from Io's orbit, within 0.018% of JPL |
 | 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | the referee proposes damping and the verdict changes, on screen, with the reason |
 | 4 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | free fall rejected; a drag law accepted on held-out motion |
+| 4b | [Physics audit at scale](https://physicslens.vercel.app/audit) | 149 clips: real motion has a forecasting law 47% of the time, AI-generated 17%; no real clip falsely accused |
 | 5 | [Open dataset](https://physicslens.vercel.app/dataset) | every verified parameter, with its uncertainty, clip and licence |
 | 6 | Your own clip, live mode, a study | open to everyone, no code; [the home page](https://physicslens.vercel.app) shows whether the analysis server is online |
 
@@ -288,7 +289,7 @@ A study turns a goal into a measurement campaign (`studies.py`, `physics/combine
 - Live mode handles anything that **swings**, bounces **on a spring**, is **thrown or falls**, or **rolls or slides**. One tap on that type starts fitting at once; the agent's own proposal arrives in the background and can replace it. Spinning objects and double pendulums need a recorded clip (live mode follows one position): when the agent sees one, or cannot settle the type, the app says so and asks for a tap instead of assuming a pendulum.
 - The equation is refitted about every second on a rolling buffer, with a confidence that converges; a residual spike is reported as "dynamics changed" and the new regime is fitted.
 - Scale: an A4 sheet in view is read automatically; otherwise give the pendulum length or the moving object's longest side (the object's own size in SAM's masks then sets the scale). A length spoken or typed during the session applies immediately. Without a scale, a nominal scale is used and a notice says so once.
-- Live sessions, studies and uploads cost money per use. During judging they are open to everyone with no code, under one spending allowance for the period and a per-visitor allowance (so one visitor or a bot can't use it all); an access code still lifts the per-visitor allowance. The gallery, dataset and machine-health comparisons cost nothing and are always open.
+- Live sessions, studies, uploads and what-if or voice questions cost money per use. During judging they are open to everyone with no code, under one spending allowance for the period and a per-visitor allowance (so one visitor or a bot can't use it all); an access code still lifts the per-visitor allowance. The gallery, dataset and machine-health comparisons cost nothing and are always open.
 - If a rate limit or budget cap is hit, tracking and fitting continue locally and only the model features pause, with a visible notice.
 - **Predict the future, then prove it.** Once the law is verified and its parameters have settled, the app predicts when the swing will next pass its rest point about 20 s ahead (10 s or 5 s if it will have died out), with a 95% timing window from bootstrap refits of the law plus one sample of time resolution. A countdown runs on screen, and when the moment comes the measured track says hit or miss, with the error. Each prediction is written to `predictions.json` with its wall-clock time before the event happens, so the claim is auditable.
 - **Control it by hand.** Once a swing's law is verified, set a target ("pump it to 30°" or "stop it") and the phone tells you when to push: three ticks one period apart, then a beep on the push, timed from the law to the moment the bob passes the bottom (where a push changes its energy most), corrected for the device's audio latency. People anticipate a beat far better than they react to a beep. The app also finds each push on the track (where the motion leaves the law's prediction), learns how late this person's pushes land, and moves the beats that much earlier. Fits use only the motion since the last push, because a push is outside the law. Pumping cues a train of three pushes; stopping re-measures after every push.
@@ -402,6 +403,28 @@ Every analysis also asks a sharper question: does this motion break a law that e
 | Kinematics | a one-frame position break larger than 5% of the motion and half the object's size (teleporting), or the mask's size doubling or halving from one moment to the next (morphing; a quick move toward or away from the camera changes it by up to about 1.6 times). Not counted at an impact (the object slows sharply or turns back at that moment: a ball landing in sand sprays, a tracker can slip to a neighbour), nor when objects like the tracked one are in view (a Newton's cradle passes the motion from ball to identical ball); speeding up from nowhere is never excused |
 
 Each violation also needs at least 5 standard errors (8 for the frame-to-frame checks, which test every frame against a heavy-tailed noise level). Both bars are deliberate: false accusations are worse than misses, and the practical sizes sit above real-world effects the noise model doesn't know about, such as a reference sheet 10 to 20 cm out of the plane of motion (10 to 20% in g). A one- or two-frame tracker glitch that comes straight back is not counted as a teleport.
+
+### Measured at scale: AI-generated video against real footage
+
+`scripts/audit_study.py` ran the same pipeline, with the same settings, on 149 public clips: 84 AI-generated videos from the VideoPhy-2 benchmark (CogVideoX, Cosmos, HunyuanVideo, Sora, VideoCrafter, Wan and Ray2; MIT licence) and 65 clips of real footage of the same kinds of motion from Physics-IQ (CC BY 4.0) as the control. Every verdict is replayed under the current audit rules from each clip's saved measurements (free), and the same keyframes were also shown to Muse Spark Open alone with the question "does this video violate physics?". [See the charts](https://physicslens.vercel.app/audit); every clip, its source, licence and verdict are in [`data/audit_study`](data/audit_study).
+
+| | Real footage | AI-generated |
+|---|---|---|
+| Object tracked by SAM 3.1 | 55 of 62 (89%) | 63 of 76 (83%) |
+| A law that forecasts the held-out motion, among tracked clips | **26 of 55 (47%)** | **11 of 63 (17%)** |
+| Median forecast error of the best law (share of the motion's spread) | **0.16** | **0.73** |
+| Judged by the audit (not "can't judge") | 13 | 14 |
+| Accused of breaking physics | **0 of 13** (at most 23% at 95% confidence) | 2 of 14 |
+| The model alone, from 4 frames, says "violates physics" | 4 of 62 | 27 of 76 |
+
+What it shows, stated plainly:
+
+- **Real motion has laws; generated motion mostly does not.** A law fitted to the first part of a real clip forecasts the rest almost three times as often, and with about a fifth of the error. Picking one real and one generated clip at random, the generated one is the harder to forecast 69% of the time (AUC 0.69; 0.5 would mean no difference).
+- **No false accusations on real footage.** The audit flagged none of the 13 real clips it could judge. Its two catches are both CogVideoX: an axe whose mask shrinks 10 times in one moment, and a hammer that jumps its own length in one frame.
+- **The trade-off against the model alone.** Asked directly, the model calls far more generated clips fake, but it also accused 4 real clips, and it gives no measurement to check. The audit accuses only what it can measure and says "can't judge" otherwise, which is most clips: many are short, leave the frame, or show contact-rich motion with no single law.
+- **Limits.** The clips ran on the lighter profile (one hypothesis sample, no referee) to fit the study's budget, so the law rates are a floor; Ray2's benchmark links no longer serve video; the samples are small and the intervals wide.
+
+Reproduce: `python scripts/audit_study.py select|run|baseline|report` (run and baseline call SAM 3.1 and Muse Spark Open; report and replay are free).
 
 ## Open dataset
 
@@ -533,7 +556,7 @@ Code: `backend/physicslens/pipeline.py` orchestrates; every step below is a sepa
 7. **Hypotheses** (`agent/reasoning.py`). The model sees a numeric summary of the trajectory (never the video): duration, amplitudes, zero crossings, energy trend, impacts. It returns candidate model ids from the library, and optionally up to three free-form laws. Output is validated with Pydantic; a malformed answer is retried once, then the run fails clearly. Echoed schema keywords are stripped before validation. The agent may also mark the free-motion stretch of the clip (leaving out a hand throwing or catching it); code refuses any window that drops more than 30% of the clip, and the whole clip is fitted too, with its verdict kept beside the windowed one, so cutting can't hide a bad fit.
 8. **Fitting** (`physics/fit.py`, `physics/sindy.py`). Every candidate, plus the controls of its family, is fitted with `scipy.optimize.least_squares` on the first 75% of the motion and simulated with `solve_ivp` over the whole clip. PySINDy runs separately as model-free regression and is shown as unverified.
 9. **Verification** (`physics/verify.py`). See the next section.
-10. **Uncertainty** (`physics/uncertainty.py`). A residual block bootstrap refits each accepted model 40 times; intervals are value ± 1.96 standard deviations, with the scale's error added in quadrature for length-dependent parameters.
+10. **Uncertainty** (`physics/uncertainty.py`). A residual block bootstrap refits each accepted model 40 times; intervals are value ± 1.96 standard deviations, with the scale's error added in quadrature for length-dependent parameters. Two parameters whose refits move together (correlation 0.98 or more) are flagged on the result: the clip measures their combination, not each one, and each interval is honest only as part of the pair.
 11. **Output** (`runs.py`, frontend). Equation in KaTeX, parameters with intervals, the ghost overlay, a forecast chart with the held-out band, a short explanation and the decision trail. Results are saved as `result.json` with the clip, so a run can be reopened, shared and exported later.
 
 ## Getting started (Linux)
