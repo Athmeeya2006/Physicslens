@@ -31,6 +31,9 @@ def pytest_configure(config):
     The app refuses to start without config/budget.yaml (it must never fall back to example caps). Tests should neither
     depend on a developer's real caps nor fail on a fresh clone that has not run `make setup` yet.
     """
+    # Runtime data (mock ledger, cache, runs) per test process: parallel workers must not share one ledger.
+    worker = os.environ.get("PYTEST_XDIST_WORKER", "main")
+    os.environ["PHYSICSLENS_VAR_DIR"] = tempfile.mkdtemp(prefix=f"physicslens-test-var-{worker}-")
     if os.environ.get("PHYSICSLENS_CONFIG_DIR"):
         return
     tmp = Path(tempfile.mkdtemp(prefix="physicslens-test-config-"))
@@ -43,9 +46,11 @@ def pytest_configure(config):
 @pytest.fixture(autouse=True)
 def _no_kill_env(monkeypatch):
     monkeypatch.delenv("PHYSICSLENS_KILL", raising=False)
-    # Importing the app loads the developer's .env; tests choose their reasoning provider explicitly.
+    # Importing the app loads the developer's .env; tests choose their reasoning provider explicitly. Set to empty,
+    # not deleted: when a test is the first to import the app (common under pytest-xdist), .env would put a deleted
+    # variable straight back, but it never overrides one that is present.
     for name in ("REASONING_PROVIDER", "GLIMMER_BASE_URL", "PHYSICSLENS_CACHE_ONLY"):
-        monkeypatch.delenv(name, raising=False)
+        monkeypatch.setenv(name, "")
 
 
 @pytest.fixture
@@ -80,3 +85,58 @@ class Harness:
 @pytest.fixture
 def harness(settings) -> Harness:
     return Harness(settings)
+
+
+@pytest.fixture(autouse=True)
+def _isolated_law_registry():
+    """custom.register() adds the agent's laws to the global MODELS (and FREE_MODELS): restore both after every test,
+    so a law one test wrote cannot change another test's candidates, whatever order or worker runs them."""
+    from physicslens.physics.custom import FREE_MODELS
+    from physicslens.physics.models import MODELS
+    saved_models, saved_free = dict(MODELS), dict(FREE_MODELS)
+    yield
+    MODELS.clear()
+    MODELS.update(saved_models)
+    FREE_MODELS.clear()
+    FREE_MODELS.update(saved_free)
+
+
+# Tests over 10 s on one core (the slowest 30 of a parallel run, measured; re-measure with --durations=30).
+# `make test-fast` skips them; `make test` and CI run everything.
+SLOW_TESTS = {
+    "test_a_law_never_ends_worse_than_its_special_case",
+    "test_both_frictions_from_the_truth_reach_the_noise_floor",
+    "test_capture_timestamps_set_the_time_base",
+    "test_chaotic_swing_is_fitted_and_flagged",
+    "test_damped_pendulum_recovers_g_and_damping",
+    "test_damped_spring",
+    "test_door_closer_is_a_damped_torsional_spring",
+    "test_dry_friction_spring_is_told_from_viscous_damping",
+    "test_friction_law_identified",
+    "test_live_prediction_is_stored_before_it_happens_and_then_judged",
+    "test_live_session_switches_to_the_new_regime",
+    "test_live_stream_tracks_fits_and_predicts",
+    "test_no_design_without_a_tie",
+    "test_no_trend_when_nothing_changes",
+    "test_one_law_written_twice_is_not_a_tie",
+    "test_pipeline_double_analysis",
+    "test_pipeline_records_the_referee_in_the_trail_and_result",
+    "test_predictions_from_the_first_half_land_in_their_window",
+    "test_sindy_is_hidden_when_its_forecast_is_far_worse",
+    "test_slow_motion_factor_puts_the_physics_in_real_time",
+    "test_small_swing_ties_and_the_requested_large_swing_separates_the_laws",
+    "test_spring_with_both_frictions_needs_both_terms",
+    "test_study_review_fits_the_recordings_together",
+    "test_sun_planets_and_moon_reproduce_the_2029_flyby",
+    "test_tapped_family_fits_at_once_and_the_agent_still_proposes",
+    "test_the_law_survives_when_the_alternative_does_not_forecast_better",
+    "test_trend_catches_slowly_rising_damping",
+    "test_trend_endpoint_caches_metrics",
+    "test_undamped_pendulum_prefers_simplest_model",
+}
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        if item.originalname in SLOW_TESTS or item.name in SLOW_TESTS:
+            item.add_marker(pytest.mark.slow)

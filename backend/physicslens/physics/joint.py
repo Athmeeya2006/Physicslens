@@ -93,7 +93,7 @@ def fit_joint(spec: ModelSpec, clips: list[Coordinates]) -> JointFit:
     p0 = [float(np.median([f.params[p] for f in singles])) for p in spec.param_names]
     lower = [p.lower for p in spec.params]
     upper = [p.upper for p in spec.params]
-    for f, c in zip(singles, clips, strict=True):
+    for c in clips:
         span = np.ptp(c.q, axis=0).max() + 1e-9
         lower += [*(c.q.min(axis=0) - span), *(-np.inf * np.ones(d))]
         upper += [*(c.q.max(axis=0) + span), *(np.inf * np.ones(d))]

@@ -43,7 +43,8 @@ class Settings:
     repo_root: Path = REPO_ROOT
     # PHYSICSLENS_CONFIG_DIR lets the test suite run on its own caps (a fresh clone has no budget.yaml yet).
     config_dir: Path = field(default_factory=lambda: Path(os.environ.get("PHYSICSLENS_CONFIG_DIR") or REPO_ROOT / "config"))
-    var_dir: Path = field(default=REPO_ROOT / "var")
+    # PHYSICSLENS_VAR_DIR: each parallel test worker keeps its own ledger, cache and runs.
+    var_dir: Path = field(default_factory=lambda: Path(os.environ.get("PHYSICSLENS_VAR_DIR") or REPO_ROOT / "var"))
 
     @property
     def data_dir(self) -> Path:

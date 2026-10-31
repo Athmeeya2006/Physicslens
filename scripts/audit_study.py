@@ -240,7 +240,8 @@ def run(limit: int, workers: int, max_usd: float, only: str | None, profile: str
             by_gen[c["generator"]].append(c)
     gen = [c for group in zip_longest(*by_gen.values()) for c in group if c is not None]
     real = [c for c in todo if c["set"] == "real"]
-    order = [c for pair in zip(gen, real) for c in pair] + gen[len(real):] + real[len(gen):]
+    # Alternate generated and real; the longer list's tail follows.
+    order = [c for pair in zip(gen, real, strict=False) for c in pair] + gen[len(real):] + real[len(gen):]
     order = order[:limit]
     start = spent()
     est = 0.25 if profile == "full" else 0.15  # per clip, for the in-flight allowance; the ledger has the real figure afterwards

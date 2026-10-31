@@ -1,0 +1,16 @@
+# Optional local hooks: `pip install pre-commit && pre-commit install`. CI runs the same checks on every push.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.2
+    hooks:
+      - id: ruff
+        args: [backend, tests, scripts]
+        pass_filenames: false
+  - repo: local
+    hooks:
+      - id: frontend-typecheck
+        name: frontend typecheck
+        entry: bash -c "cd frontend && npx tsc --noEmit"
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false

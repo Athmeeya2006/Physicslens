@@ -1,0 +1,15 @@
+# Tooling configuration only; the backend's dependencies are pinned in backend/requirements.txt.
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = ["frontend", "var", "reports"]
+
+[tool.ruff.lint]
+# ruff's default rule set (which this code passes), plus import order and bugbear.
+extend-select = ["I", "B"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: takes over 10 s on one core (make test-fast skips these)",
+]

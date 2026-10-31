@@ -6,11 +6,12 @@ VENV ?= .venv
 BIN := $(VENV)/bin
 export PYTHONPATH := backend
 
-.PHONY: help setup test smoke report kill unkill dev-backend dev-frontend lint
+.PHONY: help setup test test-fast smoke report kill unkill dev-backend dev-frontend lint
 
 help:
 	@echo "setup         create venv and install backend deps"
-	@echo "test          run unit tests with mocked models (no spend)"
+	@echo "test          run every unit test with mocked models, in parallel (no spend)"
+	@echo "test-fast     the same without tests marked slow (over 10 s each)"
 	@echo "smoke         ONE real cheap call per model (spends money, asks first)"
 	@echo "report        print spend per provider/model/day and remaining budget"
 	@echo "kill / unkill block / unblock every paid API call"
@@ -25,7 +26,10 @@ setup:
 	$(BIN)/pip install -r backend/requirements.txt
 
 test:
-	MOCK_MODELS=1 APP_ENV=dev $(BIN)/pytest -q tests
+	MOCK_MODELS=1 APP_ENV=dev PHYSICSLENS_FIT_WORKERS=1 $(BIN)/pytest -q -n auto tests
+
+test-fast:
+	MOCK_MODELS=1 APP_ENV=dev PHYSICSLENS_FIT_WORKERS=1 $(BIN)/pytest -q -n auto -m "not slow" tests
 
 smoke:
 	@read -p "This makes REAL paid API calls (capped by smoke_cap_usd in config/budget.yaml). Continue? [y/N] " ans; \
