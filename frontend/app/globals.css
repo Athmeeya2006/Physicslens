@@ -51,27 +51,27 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --ground: #e8ebe7;
-  --surface: #f5f6f3;
-  --surface-2: #fbfbf9;
-  --sunk: #dde1dc;
+  --ground: #ffffff;
+  --surface: #f5f7f9;
+  --surface-2: #ffffff;
+  --sunk: #e9edf1;
   --ink: #121820;
   --ink-2: #3a4652;
   --ink-3: #56626e;
-  --shell: #fbfbf9;
+  --shell: #ffffff;
   --shell-ink: #121820;
   --shell-mute: #46525e;
   --shell-accent: #0b63ce;
   --stage: #0d1116;
-  --line: #c4cbc3;
-  --line-soft: #dfe3dd;
+  --line: #c9d0d7;
+  --line-soft: #e3e7eb;
   --ref: #56616d;
   --accent: #0f7a46;
   --link: #0b63ce;
   --link-hover: #084a9a;
-  --scroll: #b7beb6;
+  --scroll: #bcc3ca;
   --btn-hover: #26313c;
-  --btn2-hover: #d1d6d0;
+  --btn2-hover: #dde2e7;
   --note-ink: #5b3c00;
   --on-strong: #ffffff;
 

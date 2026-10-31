@@ -4,7 +4,7 @@ import { formatUnit } from "@/lib/api";
 
 import { useState } from "react";
 
-// One metric per chart (never two y-scales). Colors validated on the light panel surface (#f5f6f3):
+// One metric per chart (never two y-scales). Colors validated on the light panel surface (#f5f7f9):
 // series and flagged pass the lightness band, colorblind separation and contrast checks.
 const SERIES = "var(--model)";
 const FLAGGED = "var(--bad)";

@@ -8,7 +8,7 @@ import type { AnalysisResult } from "@/lib/api";
 // The verification as a picture: measured motion (neutral reference dots) against the forecast of the model
 // fitted on the first part only. The shaded band is data the model never saw. Measured is deliberately grey
 // (the reference) and only the model carries hue; identity is also carried by shape (dots vs line) and the
-// legend, never by colour alone. Model #0b63ce validated on the #f5f6f3 surface.
+// legend, never by colour alone. Model #0b63ce validated on the #f5f7f9 surface.
 
 type Forecast = NonNullable<AnalysisResult["forecast"]>;
 
