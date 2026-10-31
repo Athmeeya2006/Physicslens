@@ -140,7 +140,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("start")
-    s.add_argument("--hours", type=float, default=11.5, help="Kaggle stops any run at 12 h")
+    s.add_argument("--hours", type=float, default=11.5, help="Kaggle stops any run at 12 h; 11.9 leaves room for setup")
     s.add_argument("--slot", default="", help="another notebook, e.g. b or c, for overlapping scheduled sessions")
     s.add_argument("--gpu", action="store_true", help="also serve Muse Glimmer as the open-weight fallback (uses GPU quota)")
     s.add_argument("--skip-upload", action="store_true", help="reuse the code already uploaded")
@@ -176,7 +176,7 @@ def main() -> None:
         return
     if not a.skip_upload:
         upload_code()
-    push_kernel(min(a.hours, 11.75), a.gpu, a.slot)
+    push_kernel(min(a.hours, 11.9), a.gpu, a.slot)
     # No re-pointing here: a pushed run has no Kaggle Secrets and never serves, and the log stream can still be the
     # previous session's (pointing the site at an old server). A run started with Save & Run All or the schedule
     # announces itself through the gist; use `connect` to point the site by hand.
