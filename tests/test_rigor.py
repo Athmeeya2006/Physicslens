@@ -57,7 +57,7 @@ def test_the_verdict_carries_the_rolling_forecasts_and_says_why_a_law_failed_the
     assert live.winner.rolling == ()
 
 
-def _fake(model_id: str, k: int, bic: float, heldout: float, offset: float) -> "FitResult":
+def _fake(model_id: str, k: int, bic: float, heldout: float, offset: float):
     from physicslens.physics.fit import FitResult
     sim = np.linspace(0, 1, 40)[:, None] + offset  # distinct paths, so no two count as one law written twice
     return FitResult(model_id, {}, np.zeros(2), 40, k, 1.0, bic, 0.01, heldout * 0.1, heldout, 0.01, True, sim=sim)

@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Camera, ClipboardList, Database, Moon, Orbit, ScanSearch, ShieldCheck, Sun } from "lucide-react";
+import { Activity, Camera, ClipboardList, Database, Globe2, Moon, Orbit, ScanSearch, ShieldCheck, Sun } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { accessCode } from "@/lib/api";
@@ -22,8 +22,9 @@ const NAV = [
   { href: "/study", label: "Studies", icon: ClipboardList },
   { href: "/live", label: "Live", icon: Camera },
   { href: "/health", label: "Machine health", icon: Activity },
-  { href: "/audit", label: "Physics audit", icon: ShieldCheck },
+  { href: "/audit", label: "Audit", icon: ShieldCheck },
   { href: "/sky", label: "Solar System Lab", icon: Orbit },
+  { href: "/cases", label: "Cases", icon: Globe2 },
   { href: "/dataset", label: "Dataset", icon: Database },
 ];
 

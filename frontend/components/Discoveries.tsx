@@ -37,11 +37,11 @@ const STORIES: Story[] = [
   },
   {
     run: "gallery-pendulum", eyebrow: "Real footage: a pendulum on a phone",
-    title: "The referee changed the verdict.",
-    text: "Three proposals and verification first accepted an undamped pendulum. A referee model then proposed damping; it also forecast the swing it never saw and fit the whole motion better, so the verdict changed, with the reason written in the decision trail.",
-    law: "\\ddot\\theta = -\\frac{g}{L}\\sin\\theta - \\gamma\\,\\dot\\theta",
-    stats: [{ value: "9.91 ± 0.04", label: "g in m/s² from a 0.5 m string, 1% from 9.81" },
-            { value: "0.052", label: "damping rate per second, found by the referee" }],
+    title: "Damping fits better, so why isn't it accepted?",
+    text: "Damping fits the whole swing slightly better, but forecasts the part it never saw worse than the simple pendulum, so verification will not confirm it: the two laws tie. They agree on g, so that is measured either way, and the agent designs the recording that would settle the rest: release from about 35 degrees and film 7 seconds.",
+    law: "\\ddot\\theta = -\\frac{g}{L}\\sin\\theta \\quad\\text{or}\\quad -\\frac{g}{L}\\sin\\theta - \\gamma\\,\\dot\\theta\\,?",
+    stats: [{ value: "9.91 ± 0.04", label: "g in m/s² from a 0.5 m string, from both laws (0.99% from 9.81)" },
+            { value: "8.5×", label: "how far the two forecasts separate in the requested swing, against tracking noise" }],
   },
   {
     run: "gallery-paperbag", eyebrow: "Real footage: a thrown paper bag at 200 fps",
@@ -65,7 +65,7 @@ export function Discoveries() {
       <div className="discoveries-inner">
         <header className="discoveries-head">
           <p className="hero-eyebrow">What it found</p>
-          <h2 id="discoveries-title">Every one of these was found from video alone, then proved on motion the model never saw.</h2>
+          <h2 id="discoveries-title">Every one of these was found from video alone, then tested on motion the model never saw.</h2>
         </header>
         {STORIES.map((s, i) => (
           <article key={s.run} className={`story${i % 2 ? " flip" : ""}`}>

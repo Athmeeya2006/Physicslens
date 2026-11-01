@@ -141,6 +141,15 @@ p { margin: 0; }
 
 main { max-width: 1280px; margin: 0 auto; padding: 32px 24px 80px; }
 
+/* Between phone and wide desktop the full labels would not fit: tighter spacing first. */
+@media (max-width: 1400px) {
+  .shell-nav a { padding: 0 8px; font-size: 0.88rem; gap: 5px; }
+}
+@media (max-width: 1100px) {
+  .shell-nav a { padding: 0 10px; }
+  .shell-nav a span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
 @media (max-width: 720px) {
   .shell-inner { padding: 0 16px; gap: 12px; }
   /* Icons only, but the names stay for screen readers (display: none would hide them from everyone). */
@@ -635,3 +644,20 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .ab-possible { fill: var(--tie); }
 .ab-unlikely { fill: var(--bad); }
 @media (max-width: 560px) { .ab-chart .tick { font-size: 15px; } }
+
+/* Real-world cases: one card each, the status badge from the result file. */
+.case-grid > .panel { margin: 0; }
+.case-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+.case-card { display: flex; flex-direction: column; gap: 8px; }
+.case-card h2 { margin: 0; font-size: 1.15rem; }
+.case-badge { align-self: flex-start; font-size: 0.78rem; font-weight: 600; padding: 2px 10px; border-radius: 999px; margin: 0; }
+.case-proven .case-badge { background: var(--ok); color: var(--on-strong); }
+.case-partial .case-badge { background: var(--tie); color: var(--on-strong); }
+.case-not-yet-validated .case-badge { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+.case-number { font-weight: 600; margin: 4px 0; }
+.case-card .button { align-self: flex-start; margin-top: auto; }
+.cases-strip ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.case-badge-inline { display: inline-block; font-size: 0.74rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+.case-badge-inline.case-proven { background: var(--ok); color: var(--on-strong); }
+.case-badge-inline.case-partial { background: var(--tie); color: var(--on-strong); }
+.case-badge-inline.case-not-yet-validated { border: 1px solid var(--line); color: var(--ink-2); }

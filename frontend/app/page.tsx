@@ -7,6 +7,7 @@ import { ArrowLeft, Check, Loader2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Gallery } from "@/components/Gallery";
 import { VoiceNotes } from "@/components/VoiceNotes";
+import { CasesStrip } from "@/components/CasesStrip";
 import { Discoveries } from "@/components/Discoveries";
 import { Hero } from "@/components/Hero";
 import { ResultView } from "@/components/ResultView";
@@ -156,6 +157,7 @@ export default function Home() {
           <>
             <Hero />
             <Discoveries />
+            <CasesStrip />
           </>
         )}
 

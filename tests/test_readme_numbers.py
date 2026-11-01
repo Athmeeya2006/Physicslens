@@ -20,3 +20,12 @@ def test_precision_follows_how_the_number_is_written():
     assert numbers.matches("38,817", 38817.3) and numbers.matches("0.023", 0.02314)
     assert numbers.matches("2.0e-10", 1.998e-10) and not numbers.matches("47", 46.4)
     assert numbers.strict(r"fitted ([\d.]+)") == r"fitted " + numbers.NUMBER
+
+
+def test_readme_cases_table_matches_the_results():
+    spec = importlib.util.spec_from_file_location("build_cases", ROOT / "scripts" / "build_cases.py")
+    cases = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cases)
+    text = cases.README.read_text()
+    assert text[text.index(cases.START):text.index(cases.END) + len(cases.END)] == cases.table(cases.cases())
+    assert all(c["status"] in ("proven", "partial", "not yet validated") for c in cases.cases())
