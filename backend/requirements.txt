@@ -1,5 +1,5 @@
 # Pinned backend dependencies (Python 3.11+).
-openai==3.39.0
+openai==3.41.0
 pydantic==2.14.1
 PyYAML==6.0.3
 python-dotenv==1.2.4
@@ -19,9 +19,9 @@ pillow==13.0.0
 mujoco==3.17.0
 
 # Dev / test
-pytest==9.1.1
+pytest==9.2.0
 pytest-xdist==3.8.0
-ruff==0.17.2
+ruff==0.17.3
 # Astronomy: FITS, WCS, times, coordinates, photometry, catalogue queries (astro/)
 astropy==8.0.2
 photutils==3.1.1
