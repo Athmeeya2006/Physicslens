@@ -6,8 +6,8 @@ import { Law, Tex } from "@/components/Equation";
 import { Sky3D, type Sky3DHandle } from "@/components/Sky3D";
 import { useBackend, useHealth } from "@/lib/api";
 import {
-  bundled, changed, type Changes, decodeState, type Discovery, discoverOnServer, type Elements, encodeState, filmOnServer,
-  integrate, listScenarios, type ScenarioSummary, type Simulation, simulateOnServer,
+  bundled, bundledDiscovery, changed, type Changes, decodeState, type Discovery, discoverOnServer, type Elements, encodeState, filmOnServer,
+  HYPOTHETICAL, integrate, listScenarios, type ScenarioSummary, type Simulation, simulateOnServer, SUN_GM,
 } from "@/lib/sky";
 
 const NONE: Changes = { mass_scale: {}, disabled: [] };
@@ -39,23 +39,36 @@ function MiniChart({ title, unit, base, modified, pick }: {
 }
 
 // The target's equation of motion written out term by term: the Sun's pull, each body's (with the indirect term),
-// relativity when it is on. Beside each term its size right now, as a share of the Sun's pull, from the positions on
-// screen: change a mass or remove a body and its term changes with it.
-function Equations({ sim, init, changes, t }: { sim: Simulation; init: NonNullable<Simulation["initial"]>; changes: Changes; t: number }) {
+// relativity when it is on. Beside each term its own formula and its size right now, as a share of the Sun's pull,
+// from the positions on screen: change a mass, remove a body or add one, and its term changes with it.
+const sym = (n: string) => (n === HYPOTHETICAL ? "X" : n.replace(/[^A-Za-z]/g, "").slice(0, 3));
+const bodyTerm = (n: string) => {
+  const s = String.raw`\mathrm{${sym(n)}}`;
+  return String.raw`GM_{${s}}\left(\frac{\mathbf r_{${s}} - \mathbf r}{|\mathbf r_{${s}} - \mathbf r|^3} - \frac{\mathbf r_{${s}}}{r_{${s}}^3}\right)`;
+};
+const GR_TERM = String.raw`\frac{GM_\odot}{c^2 r^3}\left[\left(\frac{4GM_\odot}{r} - v^2\right)\mathbf r + 4(\mathbf r\cdot\mathbf v)\,\mathbf v\right]`;
+const C_AU_PER_DAY = 173.144632674;
+
+function Equations({ sim, init, changes, t, central }: {
+  sim: Simulation; init: NonNullable<Simulation["initial"]>; changes: Changes; t: number; central: string;
+}) {
+  const sun = central === "Sun";
+  const gmC = sun ? String.raw`GM_\odot` : String.raw`GM_{\mathrm{${sym(central)}}}`;
   const target = sim.bodies.find((b) => b.target);
   if (!target) return null;
-  const pos = (b: { points: number[][] }) => {
+  const at = (b: { points: number[][] }, when: number) => {
     const pts = b.points;
-    let k = pts.findIndex((p) => p[0] > t);
+    let k = pts.findIndex((p) => p[0] > when);
     if (k < 0) k = pts.length - 1;
-    return pts[Math.max(0, k)].slice(1, 4);
+    return pts[Math.max(0, k)];
   };
+  const pos = (b: { points: number[][] }) => at(b, t).slice(1, 4);
   const r = pos(target);
   const norm = (v: number[]) => Math.hypot(v[0], v[1], v[2] ?? 0);
   const sunPull = init.central_gm / norm(r) ** 2;
   const terms = sim.bodies.filter((b) => !b.target).map((b) => {
-    const gm0 = init.bodies.find((x) => x.name === b.name)?.gm ?? 0;
-    const gm = gm0 * (changes.mass_scale[b.name] ?? 1);
+    const gm = b.name === HYPOTHETICAL ? SUN_GM * (changes.extra_body?.gm_suns ?? 0)
+      : (init.bodies.find((x) => x.name === b.name)?.gm ?? 0) * (changes.mass_scale[b.name] ?? 1);
     const rk = pos(b);
     const d = [rk[0] - r[0], rk[1] - r[1], (rk[2] ?? 0) - (r[2] ?? 0)];
     const dn = norm(d), rkn = norm(rk);
@@ -63,32 +76,110 @@ function Equations({ sim, init, changes, t }: { sim: Simulation; init: NonNullab
     return { name: b.name, gm, share: norm(a) / sunPull, distance: dn };
   }).filter((x) => x.gm > 0).sort((a, b) => b.share - a.share);
   const gr = changes.gr ?? init.gr;
-  const sym = (n: string) => n.replace(/[^A-Za-z]/g, "").slice(0, 3);
-  const latex = String.raw`\ddot{\mathbf r} = -\frac{GM_\odot\,\mathbf r}{r^3}` + terms.slice(0, 6).map((x) =>
-    String.raw` + GM_{\mathrm{${sym(x.name)}}}\left(\frac{\mathbf r_{\mathrm{${sym(x.name)}}} - \mathbf r}{|\mathbf r_{\mathrm{${sym(x.name)}}} - \mathbf r|^3} - \frac{\mathbf r_{\mathrm{${sym(x.name)}}}}{r_{\mathrm{${sym(x.name)}}}^3}\right)`).join("")
+  const cScale = changes.c_scale ?? init.c_scale;
+  // Relativity's size needs the velocity: a central difference of the drawn track (AU and days only).
+  let grShare: number | null = null;
+  if (gr && sim.units.length === "AU" && sim.units.time === "day") {
+    const p0 = at(target, t), p1 = at(target, t + init.frame_step_days);
+    const dt = p1[0] - p0[0];
+    if (dt > 0) {
+      const v = [1, 2, 3].map((i) => (p1[i] - p0[i]) / dt);
+      const rn = norm(r), v2 = v[0] ** 2 + v[1] ** 2 + v[2] ** 2, rv = r[0] * v[0] + r[1] * v[1] + r[2] * v[2];
+      const k = (init.central_gm * cScale) / (C_AU_PER_DAY ** 2 * rn ** 3);
+      const a = [0, 1, 2].map((i) => k * ((4 * init.central_gm / rn - v2) * r[i] + 4 * rv * v[i]));
+      grShare = norm(a) / sunPull;
+    }
+  }
+  const latex = String.raw`\ddot{\mathbf r} = -\frac{${gmC}\,\mathbf r}{r^3}`
+    + terms.slice(0, 6).map((x) => ` + ${bodyTerm(x.name)}`).join("")
     + (terms.length > 6 ? String.raw` + \dots` : "") + (gr ? String.raw` + \mathbf a_{\mathrm{GR}}` : "");
+  const unit = sim.units.length;
   return (
     <section className="panel stack" style={{ gap: 10 }} aria-labelledby="eq-title">
       <h2 id="eq-title">Every force on {target.name}, now</h2>
-      <p className="small muted">Newton&apos;s law for {target.name}, one term per body; each body also pulls the Sun, so its
-        term subtracts that pull (the indirect term). Shares are of the Sun&apos;s pull at this moment.</p>
+      <p className="small muted">Newton&apos;s law for {target.name}, one term per body; each body also pulls {sun ? "the Sun" : central},
+        so its term subtracts that pull (the indirect term). Shares are of {sun ? "the Sun" : central}&apos;s pull at this
+        moment: change a mass, switch a body off or add one, and its row changes.</p>
       <div className="law-scroll"><Tex tex={latex} display /></div>
       <div className="table-wrap">
-        <table>
-          <thead><tr><th>Pulling body</th><th>Distance (AU)</th><th>Pull, as a share of the Sun&apos;s</th></tr></thead>
+        <table className="cards">
+          <thead><tr><th>Pulling body</th><th>Its term</th><th>GM ({unit}³/{sim.units.time}²)</th><th>Distance ({unit})</th><th>Share of {sun ? "the Sun" : central}&apos;s pull</th></tr></thead>
           <tbody>
-            <tr><td>Sun</td><td className="num">{norm(r).toFixed(3)}</td><td className="num">1</td></tr>
+            <tr><td data-label="Pulling body">{central}</td><td data-label="Its term" className="law-cell"><Tex tex={String.raw`-\frac{${gmC}\,\mathbf r}{r^3}`} /></td>
+              <td data-label="GM" className="num">{init.central_gm.toExponential(4)}</td>
+              <td data-label="Distance" className="num">{norm(r).toFixed(3)}</td><td data-label="Share" className="num">1</td></tr>
             {terms.map((x) => (
-              <tr key={x.name}><td>{x.name}{(changes.mass_scale[x.name] ?? 1) !== 1 ? ` (mass ${changes.mass_scale[x.name]}×)` : ""}</td>
-                <td className="num">{x.distance.toFixed(3)}</td><td className="num">{x.share.toExponential(2)}</td></tr>
+              <tr key={x.name}>
+                <td data-label="Pulling body">{x.name === HYPOTHETICAL ? "Hypothetical planet (X)" : x.name}
+                  {(changes.mass_scale[x.name] ?? 1) !== 1 ? ` (mass ${changes.mass_scale[x.name]}×)` : ""}</td>
+                <td data-label="Its term" className="law-cell"><Tex tex={bodyTerm(x.name)} /></td>
+                <td data-label="GM" className="num">{x.gm.toExponential(3)}</td>
+                <td data-label="Distance" className="num">{x.distance.toFixed(3)}</td>
+                <td data-label="Share" className="num">{x.share.toExponential(2)}</td></tr>
             ))}
-            {gr && <tr><td>Relativity (the Sun){(changes.c_scale ?? init.c_scale) !== 1 ? `, ${(changes.c_scale ?? init.c_scale)}× (fictional)` : ""}</td><td /><td className="num">on</td></tr>}
+            {gr && (
+              <tr><td data-label="Pulling body">Relativity (the Sun){cScale !== 1 ? `, ${cScale}× (fictional)` : ""}</td>
+                <td data-label="Its term" className="law-cell"><Tex tex={String.raw`\mathbf a_{\mathrm{GR}} = ${cScale !== 1 ? `${cScale}\\,` : ""}${GR_TERM}`} /></td>
+                <td data-label="GM" className="num" /><td data-label="Distance" className="num" />
+                <td data-label="Share" className="num">{grShare === null ? "on" : grShare.toExponential(2)}</td></tr>
+            )}
           </tbody>
         </table>
       </div>
     </section>
   );
 }
+
+// Which candidate laws were tried on the track and why each won or lost: the verification's own reasoning, by rule.
+function Chosen({ d }: { d: Discovery }) {
+  if (!d.ranking?.length) return null;
+  const best = Math.min(...d.ranking.map((r) => r.bic));
+  return (
+    <details className="stack" open>
+      <summary><strong>How the law was chosen</strong> <span className="small muted">every candidate, fitted on the first 75% and judged
+        on the rest{d.n_eff ? `; BIC with ${Math.round(d.n_eff)} effective samples` : ""}</span></summary>
+      <div className="table-wrap">
+        <table className="cards">
+          <thead><tr><th>Candidate law</th><th>Forecast error on the held-out quarter</th><th>BIC behind the best</th><th>Verdict and why</th></tr></thead>
+          <tbody>
+            {d.ranking.map((r) => (
+              <tr key={r.title}>
+                <td data-label="Candidate law">{r.title}</td>
+                <td data-label="Held-out error" className="num">{Number.isFinite(r.heldout_nrmse) ? `${(r.heldout_nrmse * 100).toPrecision(2)}%` : "diverged"}</td>
+                <td data-label="BIC behind" className="num">{Number.isFinite(r.bic) ? (r.bic - best).toFixed(1) : ""}</td>
+                <td data-label="Verdict" className="small">{r.status ? <span className={`verdict ${r.status === "accepted" ? "accepted" : r.status === "tied" ? "tied" : "rejected"}`}>{r.status}</span> : null} {r.why}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="small muted">A law is accepted only if it forecasts the held-out quarter (and from four later starting
+        points) and beats every rival by 10 BIC; within 10 rivals tie and the honest answer is that the data cannot tell
+        them apart. A law that only adds terms to a simpler one is set aside when those terms don&apos;t improve it. In the lab the candidates come from a fixed list of gravity laws; on a filmed clip the reasoning model
+        proposes them and the same rules decide.</p>
+    </details>
+  );
+}
+
+const GREEK = new Set(["mu", "nu", "phi", "omega", "gamma", "beta", "alpha", "theta", "lambda", "sigma", "tau"]);
+
+// Real questions each scenario answers, one click each.
+const USES: { title: string; text: string; scenario: string; changes?: Partial<Changes>; link?: [string, string] }[] = [
+  { title: "Will a comet come back on time?", scenario: "halley_with_jupiter_saturn", changes: { disabled: ["Jupiter"] },
+    text: "Halley returns every 75 to 76 years, and the giant planets decide the exact date. Jupiter is switched off here: compare the period with the scenario as written.",
+    link: ["/?run=gallery-halley", "Halley's law, found from a video"] },
+  { title: "How does a near miss change an asteroid?", scenario: "apophis_with_planets",
+    text: "Apophis passes 38,000 km from Earth in April 2029. The pull of every planet is in its equation; switch Earth off to see how much of the motion it explains.",
+    link: ["/?run=gallery-apophis", "Apophis's law, found from a video"] },
+  { title: "Is there a planet nobody has seen?", scenario: "uranus_neptune_hidden",
+    text: "Le Verrier found Neptune in 1846 from the way Uranus drifted. Neptune pulls here but is not drawn: find the law, then read the residuals for its signature.", },
+  { title: "Is Newton enough? Testing gravity", scenario: "mercury_gr_exaggerated",
+    text: "Mercury's perihelion turns 43 arcseconds a century more than Newton allows; relativity explains it. Here it is made 20,000 times stronger, so a few years show it.", },
+  { title: "Would the inner planets survive a heavier Jupiter?", scenario: "jupiter_x10",
+    text: "A fictional Jupiter ten times heavier: how far the inner orbits are pushed, as a stress test for a planetary system's stability.", },
+  { title: "Moons locked in rhythm", scenario: "galilean_resonance",
+    text: "Io, Europa and Ganymede orbit in a 1:2:4 resonance that missions such as Juno and Europa Clipper plan around; Jupiter's flattening (J2) is in their equations.", },
+];
 
 export default function SkyLab() {
   const online = useBackend();
@@ -171,10 +262,22 @@ export default function SkyLab() {
   }, [base, changes, name, online, noise]);
 
   const discover = useCallback(() => {
-    if (!online || !name) return;
+    if (!name) return;
+    if (!online) {
+      // No server: the scenario as written has its law found in advance; a changed one needs the server.
+      if (changed(changes)) return;
+      bundledDiscovery(name).then(setDiscovery).catch((e) => setError(`The bundled law could not be loaded: ${(e as Error).message}`));
+      return;
+    }
     setBusy("Finding the law from the simulated track");
     discoverOnServer(name, changes, noise).then(setDiscovery).catch((e) => setError((e as Error).message)).finally(() => setBusy(null));
   }, [online, name, changes, noise]);
+
+  const load = (scenario: string, preset?: Partial<Changes>) => {
+    setChanges({ ...NONE, ...preset });
+    setName(scenario);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const sc = scenarios.find((s) => s.name === name);
   const others = useMemo(() => (base?.initial?.bodies ?? []).map((b) => b.name).filter((n) => n !== base?.target), [base]);
@@ -307,7 +410,8 @@ export default function SkyLab() {
         <p className="small muted">Solid: the scenario as written. Dashed: with your changes.</p>
       </section>
 
-      {base?.initial && <Equations sim={modified ?? base} init={base.initial} changes={changes} t={time[0]} />}
+      {base?.initial && <Equations sim={modified ?? base} init={base.initial} changes={changes} t={time[0]}
+                                   central={sc?.name.startsWith("galilean") ? "Jupiter" : "Sun"} />}
 
       <section className="panel stack" style={{ gap: 10 }} aria-labelledby="law-title">
         <h2 id="law-title">The law, found from the motion</h2>
@@ -318,10 +422,13 @@ export default function SkyLab() {
               {[2, 0.5, 0.1, 0.02].map((v) => <option key={v} value={v}>{v} px{v === 2 ? " (a phone video)" : ""}</option>)}
             </select>
           </label>
-          <button type="button" onClick={discover} disabled={!online || !!busy}>Find the law</button>
+          <button type="button" onClick={discover} disabled={(!online && changed(changes)) || !!busy}>Find the law</button>
           {busy && <span className="small muted" role="status">{busy}</span>}
         </div>
-        {!online && <p className="note">The analysis server is offline right now, so the law cannot be found here; the orbits above still run in this browser.</p>}
+        {!online && <p className="note">The analysis server is offline right now. For the scenario as written, the law was found in
+          advance (at 2 px of noise) and shows here; with your changes the orbits still run in this browser, but finding
+          their law needs the server.</p>}
+        {discovery?.noise_px !== undefined && <p className="small muted">Found in advance for the scenario as written, at {discovery.noise_px} px of tracker noise.</p>}
         <div aria-live="polite" className="visually-hidden">{discovery?.law ? `Accepted law: ${discovery.law.title}` : ""}</div>
         {discovery && (
           <div className="stack" style={{ gap: 8 }}>
@@ -329,10 +436,11 @@ export default function SkyLab() {
             {discovery.law && <><h3>{discovery.law.title}</h3><Law tex={discovery.law.latex} /></>}
             {discovery.parameters && (
               <ul className="small">
-                {discovery.parameters.map((p) => <li key={p.name}><Tex tex={p.name} /> = {p.value.toPrecision(7)} ± {p.std.toPrecision(2)}</li>)}
+                {discovery.parameters.map((p) => <li key={p.name}><Tex tex={GREEK.has(p.name) ? `\\${p.name}` : p.name} /> = {p.value.toPrecision(7)} ± {p.std.toPrecision(2)}</li>)}
                 {discovery.bootstrap_reps ? <li className="muted">intervals from {discovery.bootstrap_reps} bootstrap resamples</li> : null}
               </ul>
             )}
+            <Chosen d={discovery} />
             {discovery.perturbation && <p className="note">{discovery.perturbation}</p>}
             {discovery.residual_spectrum && (
               <p className="small">Residuals: {discovery.residual_spectrum.significant ? "structured" : "like noise"}
@@ -360,6 +468,23 @@ export default function SkyLab() {
             {filmed && <a href={`/?run=${filmed}`}>Open the analysis</a>}
           </div>
         )}
+      </section>
+      <section className="panel stack" style={{ gap: 12 }} aria-labelledby="uses-title">
+        <h2 id="uses-title">What questions this answers</h2>
+        <p className="small muted">The same equations astronomers and mission planners integrate, on real starting positions from JPL.
+          Each button loads a scenario, with a change where the question needs one.</p>
+        <div className="sky-uses">
+          {USES.filter((u) => scenarios.some((s) => s.name === u.scenario)).map((u) => (
+            <article key={u.title} className="sky-use">
+              <h3>{u.title}</h3>
+              <p className="small">{u.text}</p>
+              <div className="row" style={{ gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <button type="button" className="secondary" onClick={() => load(u.scenario, u.changes)}>Load it</button>
+                {u.link && <a className="small" href={u.link[0]}>{u.link[1]}</a>}
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
     </main>
   );

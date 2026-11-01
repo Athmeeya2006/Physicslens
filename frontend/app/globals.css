@@ -582,3 +582,8 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .lens-panel summary { cursor: pointer; font-size: 0.86rem; color: var(--ink-2); }
 .lens-panel[open] summary { margin-bottom: 8px; }
 .lens-panel ol { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.sky-uses { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.sky-use { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: grid; gap: 8px; align-content: start; }
+.sky-use h3 { margin: 0; font-size: 1rem; }
+.sky-use p { margin: 0; }
+.law-cell { overflow-x: auto; max-width: 420px; }

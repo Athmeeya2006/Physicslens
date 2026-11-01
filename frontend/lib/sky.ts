@@ -58,6 +58,10 @@ export interface Discovery {
   equation_diff?: { before: { title: string; latex: string }; after: { title: string; latex: string }; added_terms: string[];
     summary: string; heldout_before: number; heldout_after: number };
   detectability?: Detectability;
+  // Every candidate law the rules judged: its forecast error, BIC, and why it won or lost.
+  ranking?: { title: string; heldout_nrmse: number; bic: number; status?: string; why?: string }[];
+  n_eff?: number | null;
+  noise_px?: number;  // set on a law found in advance and bundled with the site
 }
 
 export const changed = (c: Changes) =>
@@ -79,6 +83,10 @@ export async function listScenarios(online: boolean): Promise<ScenarioSummary[]>
 
 export const bundled = (name: string): Promise<Simulation> => fetch(`/sky/${name}.json`).then((r) => json<Simulation>(r));
 
+/** The law found in advance for a scenario as written (2 px of tracker noise), for when no server is online. */
+export const bundledDiscovery = (name: string): Promise<Discovery> =>
+  fetch(`/sky/${name}.discovery.json`).then((r) => json<Discovery>(r));
+
 export const simulateOnServer = (name: string, c: Changes): Promise<Simulation> =>
   fetch(`${API_BASE}/api/sky/simulate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: body(name, c) })
     .then((r) => json<Simulation>(r));
@@ -96,6 +104,20 @@ export const filmOnServer = (name: string, c: Changes): Promise<{ run_id: string
 // ---------- the in-browser integrator (previews only) ----------
 
 const C_AU_PER_DAY = 173.144632674;
+export const SUN_GM = 2.9591220828559115e-4;  // AU^3/day^2, as the server's catalogue
+export const HYPOTHETICAL = "hypothetical body";
+
+/** Heliocentric position and velocity from elements in the reference plane (node and perihelion at zero), as the
+ * server places a hypothetical body: Kepler's equation by Newton's method. */
+export function stateFromElements(a: number, e: number, iDeg: number, mDeg: number, gm: number): number[] {
+  const M = (mDeg * Math.PI) / 180, inc = (iDeg * Math.PI) / 180;
+  let E = e < 0.8 ? M : Math.PI;
+  for (let k = 0; k < 50; k++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+  const n = Math.sqrt(gm / a ** 3), q = Math.sqrt(1 - e * e), den = 1 - e * Math.cos(E);
+  const x = a * (Math.cos(E) - e), y = a * q * Math.sin(E);
+  const vx = (-a * n * Math.sin(E)) / den, vy = (a * n * q * Math.cos(E)) / den;
+  return [x, y * Math.cos(inc), y * Math.sin(inc), vx, vy * Math.cos(inc), vy * Math.sin(inc)];
+}
 
 /** Heliocentric Newtonian N-body with the indirect term (and optional 1PN relativity), RK4 with a step sized to the
  * fastest orbit. Good to a fraction of a pixel for the lab's spans; the server's DOP853 run is the real answer. */
@@ -103,6 +125,11 @@ export function integrate(init: Initial, c: Changes, target: string, maxPoints =
   const bodies = init.bodies.filter((b) => !c.disabled.includes(b.name)).map((b) => ({
     ...b, gm: b.massive ? b.gm * (c.mass_scale[b.name] ?? 1) : 0, state: [...b.state],
   }));
+  const x = c.extra_body;
+  if (x && x.a_au > 0 && x.e >= 0 && x.e < 1 && x.gm_suns >= 0) {
+    bodies.push({ name: HYPOTHETICAL, gm: SUN_GM * x.gm_suns, massive: true,
+                  state: stateFromElements(x.a_au, x.e, x.i_deg, x.M_deg, SUN_GM) });
+  }
   const n = bodies.length;
   const gm = bodies.map((b) => b.gm);
   const gr = c.gr ?? init.gr;

@@ -84,3 +84,6 @@ def test_discover_is_free_and_labelled(lab):
     client, _, _ = lab
     out = client.post("/api/sky/discover", json={"scenario": "apophis_sun_only", "noise_px": 2.0}).json()
     assert out["source"] == "simulation, no pixels" and out["status"] == "accepted"
+    # Every candidate carries its verdict and the reason, for the lab's "how the law was chosen" table.
+    verdicts = {r["status"] for r in out["ranking"]}
+    assert "accepted" in verdicts and all(r["why"] for r in out["ranking"])

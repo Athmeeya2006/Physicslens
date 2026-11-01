@@ -208,13 +208,22 @@ def auto_scale(xy: np.ndarray, size: int = 1080) -> float:
 def track(sr: ScenarioRun, noise_px: float = TRACKING_NOISE_PX, px_per_unit: float | None = None,
           seed: int = 0) -> tuple[np.ndarray, np.ndarray, float]:
     """What a tracker would see of the target: (t in days from the clip start, xy in the orbital plane, in AU) with
-    Gaussian noise of noise_px pixels at the video's scale. The source is a simulation, never pixels."""
-    pos = sr.run.of(sr.scenario.target)[0][np.isin(sr.run.jd, sr.frames_jd)]
+    Gaussian noise of noise_px pixels at the video's scale, on the frames the video would have (render_scenario keeps
+    at most MAX_FRAMES, evenly strided: more frames of the same noise would make the measured accelerations far
+    noisier than any clip's). The source is a simulation, never pixels."""
+    frames = video_frames(sr.frames_jd)
+    pos = sr.run.of(sr.scenario.target)[0][np.isin(sr.run.jd, frames)]
     xy = pos @ sr.basis[:2].T
     scale = px_per_unit or auto_scale(xy)
     if noise_px > 0:
         xy = xy + np.random.default_rng(seed).normal(0, noise_px / scale, xy.shape)
-    return sr.frames_jd - sr.frames_jd[0], xy, scale
+    return frames - frames[0], xy, scale
+
+
+def video_frames(frames_jd: np.ndarray) -> np.ndarray:
+    """The frame times a rendered clip keeps: every frame up to MAX_FRAMES, else an even stride."""
+    stride = max(1, math.ceil(len(frames_jd) / MAX_FRAMES))
+    return frames_jd[::stride][:MAX_FRAMES]
 
 
 FRAME_SIZE, FRAME_FPS, MAX_FRAMES = 1080, 30, 590  # the analysis takes clips up to 20 s at 30 fps
@@ -229,8 +238,7 @@ def render_scenario(sr: ScenarioRun, out: Path) -> dict[str, Any]:
     """The video a scenario's target would make (the one the pixel analysis watches), and its geometry."""
     from .render import Drawn, Frame, project, render
     sc = sr.scenario
-    stride = max(1, math.ceil(len(sr.frames_jd) / MAX_FRAMES))
-    keep = sr.frames_jd[::stride][:MAX_FRAMES]
+    keep = video_frames(sr.frames_jd)
     rows = np.isin(sr.run.jd, keep)
     scale = auto_scale(sr.run.of(sc.target)[0][rows] @ sr.basis[:2].T, FRAME_SIZE)
     origin = (FRAME_SIZE / 2, FRAME_SIZE / 2)

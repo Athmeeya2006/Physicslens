@@ -235,9 +235,12 @@ def discover(sr: ScenarioRun, noise_px: float = 2.0, perturbers: tuple[str, ...]
         out["perturbation"] = ("No single law is singled out at this noise, so there is no accepted law to look for "
                                "perturbations in: the data cannot show them"
                                + (f" ({sr.detectability.message})" if sr.detectability else "."))
+    judged = judge_candidates(final)
     out.update({"status": final.status, "reason": final.reason, "n_eff": final.n_eff, "trail": trail,
                 "ranking": [{"title": next(s.title for s in specs if s.id == f.model_id), "params": f.params,
-                             "heldout_nrmse": f.heldout_nrmse, "bic": f.bic} for f in final.ranked]})
+                             "heldout_nrmse": f.heldout_nrmse, "bic": f.bic,
+                             "status": judged.get(f.model_id, ("", ""))[0], "why": judged.get(f.model_id, ("", ""))[1]}
+                            for f in final.ranked]})
     if final.winner is not None:
         spec = next(s for s in specs if s.id == final.winner.model_id)
         boot = bootstrap_full(spec, c, final.winner, reps=bootstrap_reps)

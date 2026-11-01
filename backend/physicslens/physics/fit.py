@@ -225,6 +225,35 @@ def nested_starts(spec: ModelSpec, fitted: dict[str, FitResult]) -> tuple[dict[s
     return tuple(out)
 
 
+CLEAR_PERIOD_POWER = 0.25  # share of the spectrum's power in its strongest frequency for a "clear" period
+MIN_CYCLES_FOR_SHORT_WINDOWS = 4  # cycles in the first continuation window before shorter windows are added first
+
+
+def short_windows(q_train: np.ndarray) -> tuple[int, ...]:
+    """Window lengths (samples) of 1/2, 1, 2, 4... dominant periods, below the first continuation window; empty when
+    that window holds fewer than MIN_CYCLES_FOR_SHORT_WINDOWS periods or the motion has no clear period."""
+    n = len(q_train)
+    first = int(n * CONTINUATION[0])
+    if n < 64:
+        return ()
+    x = q_train - q_train.mean(axis=0)
+    power = (np.abs(np.fft.rfft(x, axis=0)) ** 2).sum(axis=1)[1:]
+    if not power.size or power.max() <= 0 or power.max() < CLEAR_PERIOD_POWER * power.sum():
+        return ()  # no single period dominates (noise, a drift): nothing to start from
+    k = int(np.argmax(power)) + 1  # cycles in the training span
+    period = n / k
+    if first < MIN_CYCLES_FOR_SHORT_WINDOWS * period:
+        return ()
+    out: list[int] = []
+    w = 0.5 * period
+    while w < first / 1.5:
+        n_w = max(8, round(w))
+        if not out or n_w > out[-1]:
+            out.append(n_w)
+        w *= 2
+    return tuple(out)
+
+
 def _fit_from(spec: ModelSpec, c: Coordinates, kin, noise: float, guess: dict[str, float],
               warm: dict[str, float] | None) -> FitResult:
     n_samples, d = c.q.shape
@@ -241,6 +270,12 @@ def _fit_from(spec: ModelSpec, c: Coordinates, kin, noise: float, guess: dict[st
     n_train = int(n_samples * TRAIN_FRACTION)
     deadline = time.monotonic() + MAX_FIT_SECONDS
     try:
+        # Many cycles in the first window: start on half of one and double, so a rough starting state is corrected
+        # before its error has cycles to grow. Io's track (34 orbits, 15 frames each) otherwise settled on an orbit 4%
+        # too wide with GM 12% high; from half an orbit, GM comes out within 0.3% at 2 px of noise.
+        for n_window in () if warm else short_windows(c.q[:n_train]):
+            theta = fit_window(spec, replace(c, ctx={**c.ctx, "v_eps_scale": SMOOTHING[CONTINUATION[0]]}), n_window,
+                               theta, lower, upper, deadline=deadline)
         for frac in (1.0,) if warm else CONTINUATION:
             window = replace(c, ctx={**c.ctx, "v_eps_scale": SMOOTHING.get(frac, 1.0)})
             theta = fit_window(spec, window, max(8, int(n_train * frac)), theta, lower, upper, deadline=deadline)

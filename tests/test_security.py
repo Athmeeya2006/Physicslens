@@ -69,3 +69,16 @@ def test_cors_refuses_wildcards_outside_development():
             cors_origins(env, "https://physicslens.vercel.app,*")
         with pytest.raises(ConfigError, match="https"):
             cors_origins(env, "http://evil.example")
+
+
+def test_an_oversized_upload_is_cut_off_and_its_folder_removed(monkeypatch):
+    from pathlib import Path
+
+    from physicslens import app as app_module
+    clip = Path(__file__).resolve().parents[1] / "samples" / "smoke_ball.mp4"
+    monkeypatch.setattr(app_module, "MAX_UPLOAD_BYTES", 8 * 1024)  # the sample clip is 27 KB
+    before = set(app_module.runs.root.iterdir()) if app_module.runs.root.exists() else set()
+    r = TestClient(app_module.app).post("/api/runs", files={"video": ("a.mp4", clip.read_bytes(), "video/mp4")})
+    assert r.status_code == 413 and "too large" in r.json()["detail"]
+    after = set(app_module.runs.root.iterdir()) if app_module.runs.root.exists() else set()
+    assert after == before  # nothing half-written is left behind

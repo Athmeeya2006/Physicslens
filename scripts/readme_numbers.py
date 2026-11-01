@@ -70,6 +70,13 @@ def audit(set_name: str) -> float:
     return load("data/audit_study/analysis.json")["sets"][set_name]["verified_law_among_tracked"]["rate"] * 100
 
 
+def const(module: str, name: str) -> float:
+    """A rule's constant from the code the README describes (imported, so a changed rule fails the check)."""
+    sys.path.insert(0, str(ROOT / "backend"))
+    import importlib
+    return float(getattr(importlib.import_module(f"physicslens.physics.{module}"), name))
+
+
 @cache
 def collected(marker: str | None = None) -> int:
     cmd = [sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider", "tests"]
@@ -162,6 +169,23 @@ CLAIMS = [
     Claim("Validation: spring, viscous misses by %", r"viscous damping misses by ([\d.]+)%",
           lambda: ranked("spring", "damped_harmonic") * 100),
     Claim("Validation: spring, undamped misses by %", r"the undamped model by (\d+)%", lambda: ranked("spring", "harmonic") * 100),
+    # The acceptance rules, as the code sets them
+    Claim("Rule: training share, %", r"Each model is fitted on the first (\d+)% of the motion",
+          lambda: const("fit", "TRAIN_FRACTION") * 100),
+    Claim("Rule: held-out limit, %", r"held-out part must be at most (\d+)%", lambda: const("verify", "MAX_HELDOUT_NRMSE") * 100),
+    Claim("Rule: hard held-out limit, %", r"or at most (\d+)% when the error is also within",
+          lambda: const("verify", "HARD_MAX_HELDOUT_NRMSE") * 100),
+    Claim("Rule: noise multiple", r"also within (\d+) times the measured tracking noise",
+          lambda: const("verify", "MAX_HELDOUT_NOISE_RATIO")),
+    Claim("Rule: decisive BIC", r"within (\d+) BIC, the agent is asked", lambda: const("verify", "DECISIVE_DELTA_BIC")),
+    Claim("Rule: noise prescreen, %", r"explains more than (\d+)% of the measured acceleration",
+          lambda: const("prescreen", "MAX_ACCEL_R2") * 100),
+    Claim("Rule: bootstrap floor", r"\(40 targeted, at least (\d+) under the time limit", lambda: const("uncertainty", "MIN_BOOTSTRAP_REPS")),
+    Claim("Rule: identifiability correlation", r"move together \(correlation above ([\d.]+)\)",
+          lambda: const("uncertainty", "IDENTIFIABILITY_R")),
+    Claim("Rule: identifiability correlation (pipeline)", r"move together \(correlation beyond ([\d.]+)\)",
+          lambda: const("uncertainty", "IDENTIFIABILITY_R")),
+    Claim("Rule: bootstrap time limit (s)", r"never fewer than \d+ within (\d+) s", lambda: const("uncertainty", "MAX_BOOTSTRAP_SECONDS")),
     # Testing
     Claim("Tests collected", r"The suite \((\d+) tests", lambda: collected(), tests=True),
     Claim("Tests marked slow", r"; (\d+) marked slow", lambda: collected("slow"), tests=True),

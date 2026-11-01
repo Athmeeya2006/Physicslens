@@ -102,8 +102,11 @@ export function DepthPanel({ d }: { d: Depth3d }) {
         here, so depth is far noisier than position across the image and is weighted accordingly in the fit. Used{" "}
         {d.frames_used} frames ({d.frames_interpolated ?? 0} bridged); rejected {d.frames_rejected?.blurred ?? 0} blurred and{" "}
         {d.frames_rejected?.occluded ?? 0} partly hidden. Focal length {d.focal_px?.toFixed(0)} px, ball diameter{" "}
-        {((d.diameter_m ?? 0) * 100).toFixed(1)} cm (as entered; every length and g scale with it). Assumes the phone is
-        upright and level, so gravity points straight down the image. Checked on synthetic throws only so far.
+        {((d.diameter_m ?? 0) * 100).toFixed(1)} cm (as entered; every length and g scale with it).{" "}
+        {d.gravity?.source === "accelerometer"
+          ? `Down is the phone's own reading at capture (tilted ${d.gravity.tilt_deg?.toFixed(1)}° from the image's vertical); positions were turned to it before fitting.`
+          : "Assumes the phone was upright and level, so gravity points straight down the image (save the tilt with the clip to measure it instead)."}{" "}
+        Checked on synthetic throws only so far.
       </p>
     </div>
   );

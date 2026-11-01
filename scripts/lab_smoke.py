@@ -3,8 +3,10 @@
   python scripts/lab_smoke.py [site]      site defaults to http://127.0.0.1:8777 (a static build being served)
 
 Loads /sky with the analysis server "online" (every /api/sky call answered here), picks Halley with Jupiter and
-Saturn, switches Jupiter off, and checks that the equation panel shows the law the API returned. Then loads it with no
-server and checks the offline message. Needs Playwright and Chrome; exits non-zero on any failure.
+Saturn, switches Jupiter off, and checks that the equation panel shows the law the API returned with its "how the law
+was chosen" table. Then loads it with no server: the offline message, the law found in advance for the scenario as
+written (from the static bundle), and a preset from "What questions this answers". Needs Playwright and Chrome; exits
+non-zero on any failure.
 """
 
 from __future__ import annotations
@@ -21,7 +23,11 @@ API = "http://lab-api.test"
 LAW = {"source": "simulation, no pixels", "status": "accepted", "reason": "Kepler forecasts held-out motion within 0.1%.",
        "law": {"title": "Inverse-square gravity (Kepler)", "latex": r"\ddot x = -\mu x/r^3"},
        "parameters": [{"name": "mu", "value": 2.959e-4, "std": 1e-9, "ci95": [2.95e-4, 2.97e-4]}],
-       "perturbation": "No perturbation needed: the residuals look like noise."}
+       "perturbation": "No perturbation needed: the residuals look like noise.",
+       "ranking": [{"title": "Inverse-square gravity (Kepler)", "heldout_nrmse": 0.001, "bic": -900.0, "status": "accepted",
+                    "why": "forecasts held-out motion within 0.1% and has the best BIC"},
+                   {"title": "Constant velocity", "heldout_nrmse": 1.2, "bic": 400.0, "status": "rejected",
+                    "why": "misses the held-out motion by 120%"}]}
 
 
 def main() -> int:
@@ -63,11 +69,26 @@ def main() -> int:
             failures.append("the equation panel never showed the law")
         if not any(p.startswith("/api/sky/discover") for p in seen):
             failures.append("no discover call was made after the change")
+        if not page.get_by_text("How the law was chosen").count() or not page.get_by_text("misses the held-out motion by 120%").count():
+            failures.append("online: no table of how the law was chosen")
+        if not page.get_by_text("Every force on Halley").count():
+            failures.append("online: no equation panel")
         offline = browser.new_context().new_page()
+        offline.on("pageerror", lambda e: errors.append(f"offline: {e}"))
         offline.goto(f"{SITE}/sky.html#halley_sun_only", wait_until="networkidle")
         offline.wait_for_timeout(1500)
         if not offline.get_by_text("analysis server is offline").count():
             failures.append("offline: no message that the law cannot be found")
+        offline.get_by_role("button", name="Find the law").click()
+        try:
+            offline.get_by_text("Found in advance for the scenario as written").wait_for(timeout=10000)
+            offline.get_by_text("How the law was chosen").first.wait_for(timeout=5000)
+        except Exception:  # noqa: BLE001
+            failures.append("offline: Find the law did not show the bundled law and how it was chosen")
+        offline.get_by_role("button", name="Load it").first.click()
+        offline.wait_for_timeout(2500)
+        if "halley_with_jupiter_saturn" not in offline.url or "s=" not in offline.url:
+            failures.append(f"offline: the first preset did not load its scenario with its change ({offline.url})")
         failures += [f"page error: {e}" for e in errors]
         browser.close()
     print("calls:", sorted({s.split("?")[0] for s in seen}))

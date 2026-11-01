@@ -242,16 +242,18 @@ def simulate_endpoint(request: Request, req: Annotated[SimulateRequest, Body()])
 def discover_endpoint(request: Request, req: Annotated[DiscoverRequest, Body()]) -> dict[str, Any]:
     _rate_limit(request)
     sc = scenario_for(req)
+    return _guarded(_key("discover", req), lambda: discovery(sc, req.noise_px))
 
-    def work() -> dict[str, Any]:
-        sr = S.run(sc)
-        out = discover(sr, noise_px=req.noise_px, bootstrap_reps=16)
-        if sr.detectability is not None:
-            out["detectability"] = {"max_px": sr.detectability.max_px, "visible": sr.detectability.visible,
-                                    "message": sr.detectability.message}
-        return json.loads(json.dumps(out, default=float))  # plain numbers for the JSON response and the cache
 
-    return _guarded(_key("discover", req), work)
+def discovery(sc: S.Scenario, noise_px: float) -> dict[str, Any]:
+    """The law from a scenario's simulated track, with its detectability: what /discover returns and the static site
+    bundles for each scenario as written."""
+    sr = S.run(sc)
+    out = discover(sr, noise_px=noise_px, bootstrap_reps=16)
+    if sr.detectability is not None:
+        out["detectability"] = {"max_px": sr.detectability.max_px, "visible": sr.detectability.visible,
+                                "message": sr.detectability.message}
+    return json.loads(json.dumps(out, default=float))  # plain numbers for the JSON response and the cache
 
 
 def static_bundle(name: str) -> dict[str, Any]:

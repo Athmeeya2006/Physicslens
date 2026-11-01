@@ -279,6 +279,7 @@ export interface Depth3d {
   status: "accepted" | "ambiguous" | "no_fit" | "skipped";
   reason: string;
   focal_px?: number;
+  gravity?: { source: "accelerometer" | "image vertical"; tilt_deg?: number };
   diameter_m?: number;
   diameter_noise_px?: number;
   frames_used?: number;
