@@ -28,7 +28,7 @@ export function OutcomeCard({ o, exportHref }: { o: Outcome; exportHref?: (kind:
   return (
     <section className={`panel outcome outcome-${o.status.replaceAll(" ", "-")}`} aria-labelledby={titleId}>
       <p className="outcome-status"><strong id={titleId}>{label}</strong> <span className="muted small">{gloss}</span></p>
-      <p className="outcome-headline">{o.headline}</p>
+      <p className="outcome-headline">{formatUnit(o.headline)}</p>
       <p><strong>What to do:</strong> {o.action}</p>
       {o.confidence && <p className="small"><strong>Confidence:</strong> {formatUnit(o.confidence)}</p>}
       {o.checked_against?.text && (

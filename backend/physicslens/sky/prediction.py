@@ -79,13 +79,16 @@ def propagate(gm_sun: float, state: np.ndarray, jd0: float, jd_eval: np.ndarray,
 
 
 def law_extra(fit_state: dict[str, Any], render_meta: dict[str, Any]):
-    """A fitted law's terms beyond the Sun's pull, as an extra acceleration in 3D (None when there are none). The
-    Apophis law found a tiny velocity term b: it acts along the velocity in the video's plane, so here along the
-    velocity as well."""
-    b = fit_state["params"].get("b")
-    if not b:
-        return None
-    return lambda r, v: -float(b) * v
+    """A fitted law's terms beyond the Sun's pull, as an extra acceleration in 3D (None when there are none). Both
+    small terms the Apophis laws have carried act along the velocity in the video's plane, so here along the 3D
+    velocity as well: a velocity term b (-b v) or a constant push A0 along the motion (A0 v / |v|)."""
+    params = fit_state["params"]
+    b, a0 = params.get("b"), params.get("A0")
+    if b:
+        return lambda r, v: -float(b) * v
+    if a0:
+        return lambda r, v: float(a0) * v / np.linalg.norm(v, axis=-1, keepdims=True)
+    return None
 
 
 def track_coordinates(result: dict[str, Any]):

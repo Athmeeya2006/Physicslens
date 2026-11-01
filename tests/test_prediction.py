@@ -29,7 +29,9 @@ def test_the_apophis_laws_own_extra_term_is_kept():
     result, meta = gallery("apophis")
     extra = law_extra(result["fit_state"], meta)
     v = np.array([[0.0, 0.017, 0.0]])
-    np.testing.assert_allclose(extra(np.zeros((1, 3)), v), -result["fit_state"]["params"]["b"] * v)
+    params = result["fit_state"]["params"]
+    want = -params["b"] * v if "b" in params else params["A0"] * v / np.linalg.norm(v)
+    np.testing.assert_allclose(extra(np.zeros((1, 3)), v), want)
     halley, hmeta = gallery("halley")
     assert law_extra(halley["fit_state"], hmeta) is None
 
