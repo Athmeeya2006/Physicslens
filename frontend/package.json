@@ -10,7 +10,9 @@
     "build:static": "STATIC_EXPORT=1 next build"
   },
   "dependencies": {
+    "@types/leaflet": "1.9.12",
     "katex": "0.19.1",
+    "leaflet": "1.9.4",
     "lucide-react": "1.57.0",
     "next": "16.4.3",
     "react": "19.3.1",

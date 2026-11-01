@@ -601,3 +601,37 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .term { border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 8px; background: transparent; color: inherit; cursor: pointer; }
 .term.fixed { cursor: default; border-style: dashed; }
 .term.off { text-decoration: line-through; opacity: 0.6; }
+.oc-chart > svg { width: 100%; height: auto; display: block; }
+.oc-chart .tick { font-size: 13px; fill: var(--ink-2); }
+.oc-chart figcaption { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 6px; }
+.oc-chart figcaption .key { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 560px) { .oc-chart .tick { font-size: 18px; } }
+.oc-chart .axis { stroke: var(--ink-2); }
+.oc-tra { fill: var(--ink); }
+.oc-occ { fill: none; stroke: var(--tie); stroke-width: 1.5; }
+.heldout-band { fill: var(--model); opacity: 0.08; }
+
+.object-whatif { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 12px 0 0; }
+.object-whatif legend { padding: 0 4px; color: var(--ink-2); }
+.object-whatif .field { display: flex; flex-direction: column; gap: 4px; font-size: 0.86rem; }
+
+/* Fireball page: the strewn-field map and the alpha-beta charts. */
+.fall-map-box { height: min(62vh, 520px); width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.fall-map figcaption { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 8px; }
+.fall-map .key { display: inline-flex; align-items: center; gap: 6px; }
+.fall-map .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.fall-map .dot.ring { box-shadow: 0 0 0 2px #111827; }
+.fall-map .swatch-line { width: 18px; height: 3px; display: inline-block; }
+.fall-map .swatch-line.dashed { background: repeating-linear-gradient(90deg, var(--ink-2) 0 5px, transparent 5px 8px); }
+.ab-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; align-items: start; }
+.ab-chart svg { width: 100%; height: auto; display: block; }
+.ab-chart .tick { font-size: 12px; fill: var(--ink-2); }
+.ab-frame { fill: none; stroke: var(--line); }
+.ab-line { fill: none; stroke: var(--ink-2); stroke-width: 2; }
+.ab-line.mu23 { stroke-dasharray: 6 4; }
+.ab-fit { fill: none; stroke: var(--model); stroke-width: 2.5; }
+.ab-point { stroke: var(--ground); stroke-width: 1.5; }
+.ab-likely { fill: var(--ok); }
+.ab-possible { fill: var(--tie); }
+.ab-unlikely { fill: var(--bad); }
+@media (max-width: 560px) { .ab-chart .tick { font-size: 15px; } }
