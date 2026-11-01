@@ -72,6 +72,22 @@ def fireball() -> dict:
     return load("data/astro/fireball/results.json")
 
 
+def sun() -> dict:
+    return load("data/astro/sun/results.json")
+
+
+def sun_law(law: str) -> dict:
+    return next(x for x in sun()["laws"] if x["law"] == law)
+
+
+def occ() -> dict:
+    return load("data/astro/occultation/results.json")
+
+
+def ast() -> dict:
+    return load("data/astro/asteroids/results.json")
+
+
 def sky(key: str) -> dict:
     return load("data/sky/validation_results.json")[key]
 
@@ -253,6 +269,34 @@ CLAIMS = [
     Claim("Winchcombe: finds matched, release at the end", r"Along it, (\d+) match stones released", lambda: fireball()["summary"]["along_at_end"]),
     Claim("Winchcombe: more matched, release after the flare", r"luminous end and (\d+) more match",
           lambda: fireball()["summary"]["along_either"] - fireball()["summary"]["along_at_end"]),
+    Claim("Sun: differential beats rigid (BIC)", r"wins over a rigid Sun by (\d+) BIC", lambda: sun_law("rigid")["bic"] - sun_law("sin2")["bic"]),
+    Claim("Sun: sunspots", r"From (\d+) sunspots, ω", lambda: len(sun()["rates"])),
+    Claim("Sun: A", r"ω = ([\d.]+) ± [\d.]+ \+", lambda: sun_law("sin2")["coef"]["A"]),
+    Claim("Sun: A sd", r"ω = [\d.]+ ± ([\d.]+) \+", lambda: sun_law("sin2")["sigma"]["A"]),
+    Claim("Sun: B", r"\+ \(−([\d.]+) ± [\d.]+\) sin² φ", lambda: -sun_law("sin2")["coef"]["B"]),
+    Claim("Sun: B sd", r"\+ \(−[\d.]+ ± ([\d.]+)\) sin² φ", lambda: sun_law("sin2")["sigma"]["B"]),
+    Claim("Sun: worst gap to the sunspot profile", r"within ([\d.]+)°/day of the published sunspot profile",
+          lambda: max(abs(v) for v in sun()["difference_from_published"]["allen"].values())),
+    Claim("Sun: Earth's rate, lowest", r"Carrington longitude for each date: ([\d.]+) to", lambda: min(sun()["earth_rate_deg_day"]["from_sunpy_L0"].values())),
+    Claim("Sun: Earth's rate, highest", r"for each date: [\d.]+ to ([\d.]+)°/day", lambda: max(sun()["earth_rate_deg_day"]["from_sunpy_L0"].values())),
+    Claim("Sun: regions forecast", r"of (\d+) regions still on the disc", lambda: sun()["returns_summary"]["forecast"]),
+    Claim("Sun: regions back", r"end of a period, (\d+) came back", lambda: sun()["returns_summary"]["came_back"]),
+    Claim("Sun: median miss (days)", r"east limb a median ([\d.]+) days from the forecast \(at most", lambda: sun()["returns_summary"]["median_error_days"]),
+    Claim("Sun: worst miss (days)", r"\(at most ([\d.]+)\)", lambda: sun()["returns_summary"]["max_error_days"]),
+    Claim("Sun: NOAA's compared", r"lists, for\s+(\d+) of them", lambda: sun()["returns_summary"]["noaa_compared"]),
+    Claim("Sun: NOAA's median miss", r"of them, were ([\d.]+) days off", lambda: sun()["returns_summary"]["noaa_median_error_days"]),
+    Claim("Umbriel: radius", r"Radius ([\d.]+) ± [\d.]+ km against the published", lambda: occ()["fits"]["circle"]["params"]["radius"]),
+    Claim("Umbriel: radius sd", r"Radius [\d.]+ ± ([\d.]+) km against the published", lambda: occ()["fits"]["circle"]["sigma"]["radius"]),
+    Claim("Umbriel: limb roughness", r"comes out at ([\d.]+) km, as in the paper", lambda: occ()["fits"]["circle"]["limb_sigma_km"]),
+    Claim("Umbriel: chords", r"fitted to the (\d+) chords", lambda: sum(c["positive"] for c in occ()["chords"])),
+    Claim("Umbriel: misses", r"and the (\d+) observers who saw nothing", lambda: sum(not c["positive"] for c in occ()["chords"])),
+    Claim("Occultation edges: lowest coverage %", r"error holds (\d+) to \d+% of the time", lambda: min(t["within_1_sigma"] for t in occ()["edge_trials"]) * 100),
+    Claim("Occultation edges: highest coverage %", r"error holds \d+ to (\d+)% of the time", lambda: max(t["within_1_sigma"] for t in occ()["edge_trials"]) * 100),
+    Claim("YR4: first positions", r"Minor Planet Center observations \((\d+) positions\)", lambda: ast()["n_first"]),
+    Claim("YR4: your positions", r"next night \((\d+) positions from ATLAS Chile\)", lambda: ast()["n_yours"]),
+    Claim("YR4: before (arcsec)", r"shrinks from ([\d.]+) to\s+[\d.]+ arcsec", lambda: ast()["before"]["uncertainty_ahead"]["major_arcsec"]),
+    Claim("YR4: after (arcsec)", r"shrinks from [\d.]+ to\s+([\d.]+) arcsec", lambda: ast()["after"]["uncertainty_ahead"]["major_arcsec"]),
+    Claim("YR4: later miss (arcsec)", r"fell ([\d.]+) arcsec from the forecast", lambda: ast()["after"]["forecast_check"]["median_miss_arcsec"]),
 ]
 
 

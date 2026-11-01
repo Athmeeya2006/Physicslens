@@ -3,7 +3,7 @@
   python scripts/build_astro_static.py
 
 Each case's results.json and its downloads (transit windows as CSV and ICS) are served as they are; the pages
-(/timing, /fireball and the other astronomy cases) read them without a server.
+(/timing, /fireball, /sun and the other astronomy cases) read them without a server.
 """
 
 from __future__ import annotations
@@ -17,6 +17,11 @@ FILES = {
     "timing.json": ROOT / "data" / "astro" / "timing" / "results.json",
     "wasp12b_windows.csv": ROOT / "data" / "astro" / "timing" / "wasp12b_windows.csv",
     "wasp12b_windows.ics": ROOT / "data" / "astro" / "timing" / "wasp12b_windows.ics",
+    "asteroids.json": ROOT / "data" / "astro" / "asteroids" / "results.json",
+    "example_ades.psv": ROOT / "data" / "astro" / "asteroids" / "example_ades.psv",
+    "occultation.json": ROOT / "data" / "astro" / "occultation" / "results.json",
+    "satellites.json": ROOT / "data" / "astro" / "satellites" / "results.json",
+    "sun.json": ROOT / "data" / "astro" / "sun" / "results.json",
     "fireball.json": ROOT / "data" / "astro" / "fireball" / "results.json",
     "winchcombe_strewn_field.geojson": ROOT / "data" / "astro" / "fireball" / "winchcombe_strewn_field.geojson",
     "winchcombe_strewn_field.kml": ROOT / "data" / "astro" / "fireball" / "winchcombe_strewn_field.kml",

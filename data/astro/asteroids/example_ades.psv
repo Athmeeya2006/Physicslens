@@ -1,0 +1,18 @@
+# version=2022
+# observatory
+! mpcCode XXX
+# submitter
+! name Your Name
+# observers
+! name Your Name
+# measurers
+! name Your Name
+# telescope
+! design reflector
+! aperture 0.3
+! detector CMOS
+provID | trkSub | mode | stn | obsTime | ra | dec | rmsRA | rmsDec | astCat | mag | band
+2024 YR4 | A11guOI | CCD | XXX | 2024-12-27T05:42:49.52Z | 134.170700 | -0.269980 | 0.197 | 0.161 | Gaia2 | 16.54 | Ao
+2024 YR4 | A11guOI | CCD | XXX | 2024-12-27T05:46:04.88Z | 134.153770 | -0.257750 | 0.201 | 0.165 | Gaia2 | 15.80 | Ao
+2024 YR4 | A11guOI | CCD | XXX | 2024-12-27T06:24:56.61Z | 133.953820 | -0.113900 | 0.158 | 0.129 | Gaia2 | 16.28 | Ao
+2024 YR4 | A11guOI | CCD | XXX | 2024-12-27T06:35:29.60Z | 133.900200 | -0.075450 | 0.163 | 0.133 | Gaia2 | 16.12 | Ao

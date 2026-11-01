@@ -130,29 +130,73 @@ def fireball() -> dict[str, Any]:
             "link": "/fireball"}
 
 
-def pending(id_: str, title: str, problem: str, who: str, gives: str, rel: str, cant: str, link: str | None) -> dict[str, Any]:
-    r = _json(rel)
+def sun() -> dict[str, Any]:
+    r = _json("data/astro/sun/results.json")
     o = (r or {}).get("outcome") or {}
-    c = o.get("checked_against")
-    return {"id": id_, "title": title, "problem": problem, "who": who, "gives": gives,
-            "number": f"{c['name']}: {c['measured']:.4g} against {c['truth']:.4g}" if c else None,
-            "status": o.get("status", "not yet validated"), "status_rule": "the case's own outcome card",
-            "cant": cant, "link": link if r else None}
+    w = next((x for x in (r or {}).get("laws", []) if x["law"] == "sin2"), None)
+    rs = (r or {}).get("returns_summary") or {}
+    return {"id": "sun", "title": "The Sun's rotation", "problem": "When will this sunspot region face the Earth again?",
+            "who": "space-weather watchers, radio operators, aurora chasers",
+            "gives": "the differential rotation law from real images, and return dates for active regions",
+            "number": (f"{w['coef']['A']:.2f} + ({w['coef']['B']:.2f}) sin² φ °/day against the published sunspot profile 14.44 − 3.0 sin² φ; "
+                       f"{rs.get('came_back')} regions back a median {rs.get('median_error_days', 0):.1f} days from the forecast") if w else None,
+            "status": o.get("status", "not yet validated"),
+            "status_rule": "proven when the law is within 0.1 °/day of the sunspot profile at 0, 15 and 30° and at least three regions came back within two days",
+            "cant": "not new science; spots do not rotate exactly like the plasma; whether a region flares is out of scope",
+            "link": "/sun" if r else None}
+
+
+def satellites() -> dict[str, Any]:
+    r = _json("data/astro/satellites/results.json")
+    o = (r or {}).get("outcome") or {}
+    sp = (r or {}).get("single_pass") or {}
+    c0 = (sp.get("checks") or [{}])[0]
+    runs = (r or {}).get("manoeuvres") or []
+    found = sum(1 for x in runs[1:] if x.get("manoeuvre") and x.get("window_right"))
+    return {"id": "satellites", "title": "Satellites", "problem": "A satellite that moved or decays is not where its catalogue orbit says.",
+            "who": "amateur trackers, space-safety analysts",
+            "gives": "which object a streak is, how far it is from its catalogue orbit, manoeuvre alerts, IOD reports",
+            "number": (f"ISS catalogue offset {c0['time_offset_s']:.2f} ± {c0['time_offset_sigma_s']:.2f} s from one pass (NASA's trajectory: "
+                       f"{sp['truth_catalogue_behind_s']:.2f} s); no false manoeuvre on the real orbit, {found} of {len(runs) - 1} injected found") if c0 else None,
+            "status": o.get("status", "not yet validated"),
+            "status_rule": "partial until a real recorded manoeuvre is reproduced (detection shown on impulses injected into the real orbit)",
+            "cant": "needs frame times good to a fraction of a second (a GPS-synced clock); one pass constrains an orbit weakly",
+            "link": "/satellites" if r else None}
+
+
+def occultation() -> dict[str, Any]:
+    r = _json("data/astro/occultation/results.json")
+    o = (r or {}).get("outcome") or {}
+    c = ((r or {}).get("fits") or {}).get("circle")
+    pub = (r or {}).get("published") or {}
+    return {"id": "occultation", "title": "Stellar occultations", "problem": "An asteroid's or moon's size and shape, measured directly from a star's disappearance.",
+            "who": "occultation observers (IOTA and amateur networks)",
+            "gives": "edge times with honest errors, and the outline from every observer's chord, misses included",
+            "number": (f"Umbriel's radius {c['params']['radius']:.1f} ± {c['sigma']['radius']:.1f} km against the published "
+                       f"{pub['radius'][0]} ± {pub['radius'][1]} km") if c else None,
+            "status": o.get("status", "not yet validated"),
+            "status_rule": "proven when the published radius lies within the combined 95% interval and no miss falls inside the outline",
+            "cant": "uses published timings, not raw videos; diffraction is not modelled",
+            "link": "/occultation" if r else None}
+
+
+def asteroids() -> dict[str, Any]:
+    r = _json("data/astro/asteroids/results.json")
+    o = (r or {}).get("outcome") or {}
+    return {"id": "asteroids", "title": "Asteroid follow-up", "problem": "A newly found asteroid is lost unless someone observes it again in time.",
+            "who": "amateur astronomers following up new objects",
+            "gives": "a submittable ADES report, and how much your night shrinks the orbit's uncertainty",
+            "number": (f"2024 YR4: one more night shrinks the uncertainty a month ahead from {r['before']['uncertainty_ahead']['major_arcsec']:.1f}″ to "
+                       f"{r['after']['uncertainty_ahead']['major_arcsec']:.1f}″; observations three weeks later fell {r['after']['forecast_check']['median_miss_arcsec']:.1f}″ "
+                       "from the forecast (median)") if r else None,
+            "status": o.get("status", "not yet validated"),
+            "status_rule": "proven when at least 90% of later observations fall within three stated sigmas and the night shrinks the uncertainty",
+            "cant": "the core astrometry is already done well by free tools; one night cannot detect the Yarkovsky drift",
+            "link": "/asteroids" if r else None}
 
 
 def cases() -> list[dict[str, Any]]:
-    return [
-        sim_to_real(), lab(), timing(), fireball(), audit(), health(),
-        pending("satellites", "Satellites", "A satellite that moved, decays or tumbles is not where the catalogue says.",
-                "amateur trackers, space-safety analysts", "manoeuvre and tumble detection against the orbital catalogue",
-                "data/astro/satellites/results.json", "needs frame times accurate to a few milliseconds (a GPS-synced clock)", "/satellites"),
-        pending("asteroids", "Asteroids and occultations", "Asteroid orbits and shapes need many careful observations.",
-                "amateur astronomers, occultation observers", "a submittable report, and an asteroid's outline from star disappearances",
-                "data/astro/asteroids/results.json", "the core astrometry is already done well by free tools", "/asteroids"),
-        pending("sun", "The Sun's rotation", "When will this sunspot region face the Earth again?",
-                "space-weather watchers, students", "the differential rotation law and return dates for active regions",
-                "data/astro/sun/results.json", "forecasting region returns is already done operationally by NOAA", "/sun"),
-    ]
+    return [sim_to_real(), lab(), timing(), fireball(), sun(), occultation(), asteroids(), satellites(), audit(), health()]
 
 
 def table(rows: list[dict[str, Any]]) -> str:

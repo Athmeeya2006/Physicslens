@@ -408,11 +408,12 @@ Every case at a glance (the status comes from each result file by a written rule
 | [Lab measurement](https://physicslens.vercel.app/?run=gallery-pendulum) | students, teachers, anyone checking an experiment | the constant with a 95% interval, the law it follows, and the recording that would settle what is still open | g = 9.907 m/s² against 9.81 (0.99% off) | not yet validated | it needs a known length (or another scale) in the picture; the arc alone cannot fix the length when the pivot is out of view |
 | [Exoplanet transit timing](https://physicslens.vercel.app/timing) | observatories, amateur transit-timing networks, exoplanet researchers | refreshed transit windows (calendar and CSV), a list of stale ephemerides, and the law behind the timings | WASP-12b's orbit shrinks by 28.6 ms/yr against the published 29 ± 2; Kepler-88's unseen planet: partial | proven | timing inversions are degenerate (mass against eccentricity); the Kepler-88 fit forecasts to 15 min, not the 3 min its data allow |
 | [Fireballs and meteorite falls](https://physicslens.vercel.app/fireball) | fireball networks, meteorite hunters | whether anything survived, the orbit it came from, and a strewn-field map (GeoJSON, KML) | Winchcombe: within 563 m of all 10 recovered stones across the track, 9 of 10 along it | partial | it starts from a triangulated trajectory, not one video; masses carry a factor-of-two uncertainty from shape and density |
+| [The Sun's rotation](https://physicslens.vercel.app/sun) | space-weather watchers, radio operators, aurora chasers | the differential rotation law from real images, and return dates for active regions | 14.46 + (-3.11) sin² φ °/day against the published sunspot profile 14.44 − 3.0 sin² φ; 7 regions back a median 1.5 days from the forecast | proven | not new science; spots do not rotate exactly like the plasma; whether a region flares is out of scope |
+| [Stellar occultations](https://physicslens.vercel.app/occultation) | occultation observers (IOTA and amateur networks) | edge times with honest errors, and the outline from every observer's chord, misses included | Umbriel's radius 582.1 ± 0.9 km against the published 582.4 ± 0.8 km | proven | uses published timings, not raw videos; diffraction is not modelled |
+| [Asteroid follow-up](https://physicslens.vercel.app/asteroids) | amateur astronomers following up new objects | a submittable ADES report, and how much your night shrinks the orbit's uncertainty | 2024 YR4: one more night shrinks the uncertainty a month ahead from 2.3″ to 0.4″; observations three weeks later fell 0.6″ from the forecast (median) | proven | the core astrometry is already done well by free tools; one night cannot detect the Yarkovsky drift |
+| [Satellites](https://physicslens.vercel.app/satellites) | amateur trackers, space-safety analysts | which object a streak is, how far it is from its catalogue orbit, manoeuvre alerts, IOD reports | ISS catalogue offset 0.03 ± 0.00 s from one pass (NASA's trajectory: 0.04 s); no false manoeuvre on the real orbit, 0 of 2 injected found | partial | needs frame times good to a fraction of a second (a GPS-synced clock); one pass constrains an orbit weakly |
 | [Physics audit of video](https://physicslens.vercel.app/audit) | video-model builders and anyone checking footage | a verdict per clip (consistent, violates physics, or cannot judge) with the measured reason | real footage: 0 of 13 judged clips flagged; AI-generated: 2 of 14 | partial | most clips cannot be judged (no clean single object or too short); a clean audit is not proof a clip is real |
 | [Machine health](https://physicslens.vercel.app/health) | maintenance engineers | drift alerts when two recordings of the same machine disagree beyond their intervals | no result yet | not yet validated | no validation on a real machine with known wear yet: the drift test is checked on simulated recordings only |
-| Satellites | amateur trackers, space-safety analysts | manoeuvre and tumble detection against the orbital catalogue | no result yet | not yet validated | needs frame times accurate to a few milliseconds (a GPS-synced clock) |
-| Asteroids and occultations | amateur astronomers, occultation observers | a submittable report, and an asteroid's outline from star disappearances | no result yet | not yet validated | the core astrometry is already done well by free tools |
-| The Sun's rotation | space-weather watchers, students | the differential rotation law and return dates for active regions | no result yet | not yet validated | forecasting region returns is already done operationally by NOAA |
 
 <!-- cases:end -->
 
@@ -457,6 +458,42 @@ UK Fireball Alliance's data, CC BY 4.0) through the whole chain and checks every
   the track (Russell et al. 2024). Along it, 5 match stones released at the luminous end and 4 more match release
   after the last flare at 34.9 km; one 20.6 g stone found beside the main mass is not reproduced, and the page
   says so.
+
+### The Sun's rotation from real images (`/sun`)
+
+`scripts/sun_demo.py` tracks sunspots across SDO/HMI continuum images (Helioviewer, one every 6 hours over five
+14-day periods from 2011 to 2024) and places them on the Sun with sunpy, using each image's own header for the
+observer's position. A spot's sidereal rate is the Carrington frame's 14.1844°/day plus its drift in Carrington
+longitude. Laws for the rate against latitude must forecast the last quarter of each period's positions:
+
+- Differential rotation wins over a rigid Sun by 296 BIC. From 119 sunspots, ω = 14.46 ± 0.02 + (−3.11 ± 0.18) sin² φ
+  degrees per day, within 0.022°/day of the published sunspot profile (Allen, as in sunpy) at 0, 15 and 30 degrees.
+  Spots rotate faster than the gas around them, and Howard, Harvey and Forgach's magnetic-feature profile is slower at
+  the equator, as expected. A law linear in |φ| ties with sin² φ (sunspots stay below about 30 degrees, where the two
+  shapes agree), and the page says so.
+- The synodic rate (what the Earth sees) is the sidereal one minus the Earth's own motion, taken from the sub-Earth
+  Carrington longitude for each date: 0.968 to 1.014°/day over these periods, not a fixed 0.9856.
+- Return forecasts: of 24 regions still on the disc at the end of a period, 7 came back and were numbered by NOAA;
+  they rounded the east limb a median 1.5 days from the forecast (at most 1.9). NOAA's own "due to return" lists, for
+  6 of them, were 2.1 days off (median).
+
+### Stellar occultations: Umbriel's size (`/occultation`)
+
+`scripts/occultation_demo.py` rebuilds the 2020 September 21 occultation by Uranus's moon Umbriel from the published
+timings (Assafin et al. 2023): every observer projected onto the plane perpendicular to the star, Umbriel's position
+from JPL Horizons, a weighted circle and ellipse fitted to the 19 chords, and the 5 observers who saw nothing kept as
+constraints. Radius 582.1 ± 0.9 km against the published 582.4 ± 0.8; the limb roughness that makes chi-square per
+degree of freedom 1 comes out at 4.2 km, as in the paper. Edge times from light curves model each frame's
+integration; on synthetic curves the stated one-sigma error holds 66 to 70% of the time (68% expected).
+
+### Asteroid follow-up: did my observation matter? (`/asteroids`)
+
+`scripts/asteroid_demo.py` fits 2024 YR4's orbit (Sun, planets and Moon, light-time, each observation weighted by its
+stated uncertainty) to the first two nights of Minor Planet Center observations (17 positions), then adds one
+observatory's next night (4 positions from ATLAS Chile). The 1-sigma uncertainty a month ahead shrinks from 2.3 to
+0.4 arcsec, and the observations made three weeks later fell 0.6 arcsec from the forecast (median), all within three
+of the stated sigmas. Started 30,000 km away, the fit lands on the same orbit. The night is also written as an ADES
+report (version 2022) for the observer to submit with their own MPC code.
 
 ---
 

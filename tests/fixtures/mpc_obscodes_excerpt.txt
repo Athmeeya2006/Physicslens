@@ -1,0 +1,4 @@
+500   0.000000.000000+0.000000Geocentric
+568 204.5278 0.94171 +0.33725 Maunakea
+C51                           WISE
+W68 289.235020.862845-0.504269ATLAS Chile, Rio Hurtado

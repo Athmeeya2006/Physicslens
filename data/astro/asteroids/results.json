@@ -1,0 +1,92 @@
+{
+ "generated": "scripts/asteroid_demo.py",
+ "object": "2024 YR4",
+ "first_nights": [
+  "2024-12-25",
+  "2024-12-26"
+ ],
+ "your_night": [
+  "2024-12-27",
+  "W68"
+ ],
+ "n_first": 17,
+ "n_yours": 4,
+ "ahead_days": 30,
+ "ahead_utc": "2025-01-26",
+ "before": {
+  "rms_arcsec": 0.13943417882836165,
+  "chi2_per_dof": 0.06360045720498048,
+  "rejected": 0,
+  "uncertainty_ahead": {
+   "major_arcsec": 2.3380653433391307,
+   "minor_arcsec": 0.6934640968432326,
+   "ra_dec": [
+    119.17623004532688,
+    12.00469616775691
+   ]
+  },
+  "forecast_check": {
+   "n": 56,
+   "median_miss_arcsec": 1.241253797952288,
+   "max_miss_arcsec": 1.7704746695826867,
+   "predicted_1sigma_major_arcsec": 2.2488547835389787,
+   "within_3_sigma": 1.0
+  }
+ },
+ "after": {
+  "rms_arcsec": 0.1373159294865336,
+  "chi2_per_dof": 0.07146639058631872,
+  "rejected": 0,
+  "uncertainty_ahead": {
+   "major_arcsec": 0.3992132523739198,
+   "minor_arcsec": 0.2063556109550153,
+   "ra_dec": [
+    119.17636262415465,
+    12.004589391989864
+   ]
+  },
+  "forecast_check": {
+   "n": 56,
+   "median_miss_arcsec": 0.6396536969667526,
+   "max_miss_arcsec": 1.1822504383953252,
+   "predicted_1sigma_major_arcsec": 0.40620931983771974,
+   "within_3_sigma": 1.0
+  }
+ },
+ "your_residuals_arcsec": {
+  "ra": [
+   0.18124931750851425,
+   0.11556628530744743,
+   0.1449409038687018,
+   0.22130857710848578
+  ],
+  "dec": [
+   -0.19541543039476306,
+   -0.10341377188902712,
+   -0.11064791987207556,
+   -0.21845650476192136
+  ],
+  "rms": 0.1677200191579043
+ },
+ "check_window": [
+  "2025-01-17",
+  "2025-01-24"
+ ],
+ "outcome": {
+  "headline": "One more night shrinks 2024 YR4's position uncertainty a month ahead from 2.3 to 0.4 arcsec (5.9 times smaller); the forecasts met the observations made three weeks later within 0.6 arcsec (median).",
+  "action": "Submit your night as ADES (example below) with your own MPC code; follow-up in the first days matters most.",
+  "artifacts": [],
+  "checked_against": {
+   "name": "forecast miss three weeks later (arcsec, median)",
+   "truth": 0.0,
+   "measured": 0.6396536969667526,
+   "relative_error": 0.0,
+   "within_interval": true,
+   "source": "MPC observations of 2024 YR4, 2025 January 17 to 24"
+  },
+  "confidence": "100% of the later observations within three of the stated sigmas",
+  "status": "proven",
+  "limits": [],
+  "readable": null
+ }
+}
