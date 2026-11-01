@@ -196,6 +196,10 @@ export interface AnalysisResult {
     decisive: boolean; noise_mm: number; options_tested: number; models: string[];
   };
   scale_note?: string;
+  rolling_shutter?: { skew_px: number; note: string | null };
+  camera_level?: { roll_deg: number; pitch_deg: number; note: string | null } | null;
+  video_kept?: boolean;  // false for a live session saved without its video
+  source?: string;
   // Parameter pairs whose bootstrap refits move together (|r| > 0.9), with the recording that would separate them.
   identifiability?: { params: [string, string]; corr: number; advice: string }[];
   bootstrap_reps?: number;  // resamples behind every interval
@@ -341,14 +345,14 @@ export function accessCode(): string | null {
   }
 }
 
-function codeHeaders(): HeadersInit {
+export function codeHeaders(): HeadersInit {
   const code = accessCode();
   return code ? { "X-Access-Code": code } : {};
 }
 
 export type Budget = Record<string, { spent_usd: number; hard_cap_usd: number; spent_today_usd: number; daily_cap_usd: number }>;
 
-async function json<T>(res: Response): Promise<T> {
+export async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
     try {
@@ -451,6 +455,7 @@ export interface RunInputs {
   setting?: number | null;
   depth3d?: boolean;
   focalPx?: number | null;
+  gravityUp?: [number, number, number] | null;  // the phone's "up" in camera axes when the clip was filmed
   knownMover?: string | null;  // a second object to track whose path laws may use (x2, y2)
   inputsCsv?: File | null;     // known signals: t (seconds from the clip's start), then named columns
 }
@@ -467,6 +472,7 @@ export function startRun(file: File, inputs: RunInputs, turnstileToken: string |
   if (turnstileToken) form.append("turnstile_token", turnstileToken);
   if (inputs.depth3d) form.append("depth_3d", "true");
   if (inputs.focalPx) form.append("focal_px", String(inputs.focalPx));
+  if (inputs.gravityUp) form.append("gravity_up", inputs.gravityUp.map((v) => v.toFixed(4)).join(","));
   if (inputs.knownMover?.trim()) form.append("known_mover", inputs.knownMover.trim().slice(0, 60));
   if (inputs.inputsCsv) form.append("inputs_csv", inputs.inputsCsv);
   return fetch(`${API_BASE}${path}`, { method: "POST", body: form, headers: codeHeaders() }).then((r) => json<RunView>(r));

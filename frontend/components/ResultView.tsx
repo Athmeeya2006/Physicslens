@@ -1,7 +1,7 @@
 "use client";
 
 import { Boxes, Download, FileCode2, FileJson, FileText, Film } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
 import { clipUrl, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
@@ -10,6 +10,7 @@ import { ControlPanel } from "./ControlPanel";
 import { DepthPanel } from "./DepthPanel";
 import { Law, Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
+import { type Prediction, PredictionChart } from "./PredictionChart";
 import { GhostPlayer } from "./GhostPlayer";
 import { SimToReal } from "./SimToReal";
 import { WhatIf } from "./WhatIf";
@@ -90,6 +91,13 @@ function prettyModel(id: string, titles: Record<string, string>): string {
 }
 
 export function ResultView({ runId, result }: { runId: string; result: AnalysisResult }) {
+  // Gallery orbit results carry a prediction file (scripts/halley_demo.py and orbit_demo.py prediction).
+  const [prediction, setPrediction] = useState<Prediction | null>(null);
+  useEffect(() => {
+    if (!isGallery(runId)) return;
+    fetch(`/gallery/${runId}/prediction.json`).then((r) => (r.ok ? r.json() : null)).then(setPrediction)
+      .catch(() => setPrediction(null));  // most gallery results have none: nothing to show
+  }, [runId]);
   const r = result;
   const [whatIfGhost, setWhatIfGhost] = useState<{ label: string; points: TrackPoint[] } | null>(null);
   const [share, setShare] = useState<{ state: "idle" | "busy" | "done" | "error"; url?: string; error?: string }>({ state: "idle" });
@@ -139,11 +147,16 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <span className="model-tag">numerical verification</span>
         </div>
         {r.scale_note && <p className="note">{r.scale_note}</p>}
+        {r.rolling_shutter?.note && <p className="note">{r.rolling_shutter.note}</p>}
+        {r.camera_level?.note && <p className="note">{r.camera_level.note}</p>}
         {r.scale_basis && <p className="note">{r.scale_basis}</p>}
       </div>
 
       <div className="result-grid">
-        <GhostPlayer
+        {r.video_kept === false ? (
+          <div className="panel"><p className="note">A saved live session: the video was not kept, only the track and
+            the numbers. The equation, the exports and the what-ifs below work as for any result.</p></div>
+        ) : <GhostPlayer
           src={clipUrl(runId)}
           width={r.clip.width}
           height={r.clip.height}
@@ -154,7 +167,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           whatIf={whatIfGhost}
           mujoco={r.mujoco?.points}
           ghosts={(r.ghosts ?? []).map((g) => ({ ...g, model_id: prettyModel(g.model_id, titles) }))}
-        />
+        />}
         <div className="panel">
           <h3>Decision trail</h3>
           <AgentTrail steps={r.trail ?? []} runId={runId} />
@@ -165,6 +178,13 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         <div className="panel forecast">
           <h3>Forecast check: does the model predict motion it never saw?</h3>
           <ForecastChart f={r.forecast} uncalibrated={!!r.scale_note} units={r.units} />
+        </div>
+      )}
+
+      {prediction && (
+        <div className="panel">
+          <h3>The prediction, years ahead: the law alone, and with the planets</h3>
+          <PredictionChart p={prediction} />
         </div>
       )}
 

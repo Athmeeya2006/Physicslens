@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Tex } from "@/components/Equation";
+import { LevelIndicator } from "@/components/LevelIndicator";
 import { VoiceNotes } from "@/components/VoiceNotes";
 import { accessCode, API_BASE, useBackend, useHealth, formatUnit } from "@/lib/api";
 
@@ -50,6 +51,9 @@ export default function LivePage() {
   const [status, setStatus] = useState("Point the camera at something moving, side-on, then press Start.");
   const [scene, setScene] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
+  const [keepVideo, setKeepVideo] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedRun, setSavedRun] = useState<string | null>(null);
   const [fit, setFit] = useState<FitMsg | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [lengthCm, setLengthCm] = useState("");
@@ -141,6 +145,12 @@ export default function LivePage() {
       if (msg.action === "push") scheduleCue(msg as CueMsg);
     }
     if (msg.type === "selected") setStatus("Locked on. Keep the camera still while it moves.");
+    if (msg.type === "saved") {
+      setSaving(false);
+      setSavedRun(String(msg.run_id));
+      stop();
+    }
+    if (msg.type === "notice" && saving) setSaving(false);
     if (msg.type === "notice") setNotices((n) => [{ level: msg.level, message: msg.message }, ...n].slice(0, 4));
     if (msg.type === "choose_family") {
       // The model could not settle what kind of motion this is: the type buttons come back for the user to choose.
@@ -285,6 +295,7 @@ export default function LivePage() {
         </div>
 
         <div className="panel">
+          <LevelIndicator />
           {!live && (
             <div className="upload stack" style={{ gap: 10 }}>
               <p className="small">
@@ -309,7 +320,18 @@ export default function LivePage() {
               <button onClick={start} disabled={!online || judgesOnly}>Start live analysis</button>
             </div>
           )}
-          {live && <button onClick={stop}>Stop</button>}
+          {live && (
+            <div className="row" style={{ gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <button type="button" disabled={saving || !fit?.equation} onClick={() => {
+                setSaving(true);
+                socket.current?.send(JSON.stringify({ type: "save", keep_video: keepVideo }));
+              }}>{saving ? "Saving" : "Save and stop"}</button>
+              <button type="button" className="secondary" onClick={stop}>Stop without saving</button>
+              <label className="small"><input type="checkbox" checked={keepVideo} onChange={(e) => setKeepVideo(e.target.checked)} /> Keep the
+                video too (otherwise only the track and the numbers are saved)</label>
+            </div>
+          )}
+          {savedRun && <p className="note">Saved: <a href={`/?run=${savedRun}`}>open this session as a result</a>, with its exports and what-ifs.</p>}
           {live && !picked && !fit?.equation && (
             <div className="stack" style={{ gap: 6 }}>
               <span className="small muted">What is it? Tap to start fitting now; the agent&apos;s hypotheses refine it when ready.</span>

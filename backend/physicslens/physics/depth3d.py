@@ -5,8 +5,9 @@ image position then gives X = (u - cx) Z / f and Y = (v - cy) Z / f. Only a sphe
 the same size from every side, so a change in d is a change in distance and nothing else.
 
 Pure local math on the tracked masks. Camera frame: X right, Y up (image rows point down), Z away from the
-camera, meters. The principal point is taken as the image centre and gravity as the image's down direction,
-which holds for a phone held upright and level.
+camera, meters. The principal point is taken as the image centre. Gravity is the image's down direction unless the
+phone's accelerometer reading at capture is given (gravity_up, the "up" direction in camera axes): then the positions
+are turned so that measured up is +Y before fitting, and the laws' g points the way the phone felt it.
 """
 
 from __future__ import annotations
@@ -113,6 +114,33 @@ def back_project(centers_px: np.ndarray, diameter_px: np.ndarray, size_m: float,
     return xyz, z * sigma_d_px / d, z * CENTER_NOISE_PX / focal_px
 
 
+MAX_TILT_DEG = 45.0  # beyond this the phone was not filming side-on, and a reading this far off is more likely wrong
+
+
+def tilt_deg(gravity_up: tuple[float, float, float] | np.ndarray) -> float:
+    """Angle between the measured up direction and the image's up (camera +Y), degrees."""
+    u = np.asarray(gravity_up, dtype=float)
+    return float(np.degrees(np.arccos(np.clip(u[1] / np.linalg.norm(u), -1.0, 1.0))))
+
+
+def level_rotation(gravity_up: tuple[float, float, float] | np.ndarray) -> np.ndarray:
+    """The smallest rotation taking the measured up direction to +Y (Rodrigues); camera axes in, level axes out."""
+    u = np.asarray(gravity_up, dtype=float)
+    norm = float(np.linalg.norm(u))
+    if not np.isfinite(norm) or norm < 1e-6:
+        raise DepthError("3D was not used: the phone's gravity reading was empty.")
+    u = u / norm
+    axis = np.cross(u, [0.0, 1.0, 0.0])
+    s, c = float(np.linalg.norm(axis)), float(u[1])
+    if s < 1e-12:
+        if c > 0:
+            return np.eye(3)
+        raise DepthError("3D was not used: the gravity reading says the phone was upside down.")
+    k = axis / s
+    K = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
+    return np.eye(3) + s * K + (1 - c) * K @ K
+
+
 def skip_reason(*, focal_px: float | None, size_m: float | None, moving_object: str, family: str) -> str | None:
     """Why the 3D mode can't run on this result, or None if it can try."""
     if focal_px is None:
@@ -131,7 +159,8 @@ def skip_reason(*, focal_px: float | None, size_m: float | None, moving_object: 
 
 def analyze(frames: np.ndarray, centers_px: np.ndarray, long_px: np.ndarray, short_px: np.ndarray,
             area_px: np.ndarray | None, *, fps: float, width: int, height: int, focal_px: float, size_m: float,
-            boxes: np.ndarray | None = None, bootstrap_reps: int = 40) -> dict[str, Any]:
+            boxes: np.ndarray | None = None, bootstrap_reps: int = 40,
+            gravity_up: tuple[float, float, float] | None = None) -> dict[str, Any]:
     """Filter frames, back-project to 3D, fit the three 3D projectile laws and verify them like the 2D ones."""
     frames = np.asarray(frames, dtype=int)
     diameter = equivalent_diameter(area_px, long_px, short_px)
@@ -150,6 +179,12 @@ def analyze(frames: np.ndarray, centers_px: np.ndarray, long_px: np.ndarray, sho
     sigma_d = diameter_noise_px(seg[:, 2])
     xyz, sigma_z, sigma_lat = back_project(seg[:, :2], seg[:, 2], size_m, focal_px, (width - 1) / 2, (height - 1) / 2,
                                            sigma_d)
+    if gravity_up is not None:
+        if tilt_deg(gravity_up) > MAX_TILT_DEG:
+            raise DepthError(f"3D was not used: the phone was tilted {tilt_deg(gravity_up):.0f} degrees from upright at "
+                             f"capture (more than {MAX_TILT_DEG:.0f}); film side-on with the phone near level.")
+        # Depth noise stays mostly along the new Z for the tilts allowed here, so the weighting below still applies.
+        xyz = xyz @ level_rotation(gravity_up).T
     # Weighted least squares through the coordinates: depth is scaled down by how much noisier it is.
     z_scale = float(min(1.0, np.median(sigma_lat) / np.median(sigma_z)))
     t = (seg_frames - seg_frames[0]) / fps
@@ -163,6 +198,10 @@ def analyze(frames: np.ndarray, centers_px: np.ndarray, long_px: np.ndarray, sho
         "status": verdict.status, "reason": verdict.reason, "focal_px": focal_px, "diameter_m": size_m,
         "diameter_noise_px": sigma_d, "frames_used": len(seg_frames), "frames_interpolated": int(filled.sum()),
         "frames_rejected": rejected, "z_weight": z_scale,
+        # Which way is down: the phone's accelerometer (tilt from the image's vertical) or the image itself.
+        "gravity": ({"source": "accelerometer", "tilt_deg": round(tilt_deg(gravity_up), 2),
+                     "up_camera": [round(float(v), 4) for v in np.asarray(gravity_up) / np.linalg.norm(gravity_up)]}
+                    if gravity_up is not None else {"source": "image vertical"}),
         "depth_range_m": [float(xyz[:, 2].min()), float(xyz[:, 2].max())],
         # Depth travel against its own noise: a throw across the image moves too little in depth for drag along it to show.
         "depth_travel_vs_error": float(np.ptp(xyz[:, 2]) / np.median(sigma_z)),
@@ -181,13 +220,14 @@ def analyze(frames: np.ndarray, centers_px: np.ndarray, long_px: np.ndarray, sho
         out["parameters"] = [{"name": p.name, "latex": p.latex, "unit": p.unit, "value": est[p.name].value,
                               "std": est[p.name].std, "ci95": [est[p.name].ci_low, est[p.name].ci_high]} for p in spec.params]
         out["g"] = next(p for p in out["parameters"] if p["name"] == "g")
-        # The fitted path in camera meters (depth unscaled), for checking against the measured track.
+        # The fitted path in the track's meters (level axes when gravity was measured; depth unscaled).
         out["fit_track"] = [[round(float(v), 4) for v in p] for p in lead.sim / np.array([1.0, 1.0, z_scale])]
     return out
 
 
 def for_run(track: Any, flight_frames: np.ndarray, *, fps: float, width: int, height: int, focal_px: float | None,
-            size_m: float | None, moving_object: str, family: str) -> dict[str, Any]:
+            size_m: float | None, moving_object: str, family: str,
+            gravity_up: tuple[float, float, float] | None = None) -> dict[str, Any]:
     """The 3D result for one analysis, or a 'skipped' entry whose reason is shown next to the 2D result.
 
     track is the moving object's perception.sam_track.ObjectTrack; flight_frames the frames the 2D projectile fit
@@ -202,6 +242,6 @@ def for_run(track: Any, flight_frames: np.ndarray, *, fps: float, width: int, he
     try:
         return analyze(track.frames[sel], track.centers_px[sel], track.long_px[sel], track.short_px[sel],
                        pick(track.area_px), fps=fps, width=width, height=height, focal_px=focal_px, size_m=size_m,
-                       boxes=pick(track.boxes))
+                       boxes=pick(track.boxes), gravity_up=gravity_up)
     except DepthError as e:
         return {"status": "skipped", "reason": str(e)}

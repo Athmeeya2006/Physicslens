@@ -41,6 +41,7 @@ const ACTION_LABEL: Record<string, string> = {
   give_up: "Reports no clean equation",
   test_models: "Tests models of its own choosing",
   inspect: "Inspects part of the motion",
+  residual_spectrum: "Looks for something else pulling",
 };
 
 const ITEM_STATUS: Record<string, string> = { accepted: "Accepted", tied: "Tied", rejected: "Rejected", approximation: "Same law" };

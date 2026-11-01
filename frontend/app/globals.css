@@ -516,3 +516,66 @@ a.gallery-item { text-decoration: none; }
 .study-chart .ref .strip { fill: var(--ref); opacity: 0.7; }
 .study-chart .gen .strip { fill: var(--model); opacity: 0.65; }
 .study-chart .median { stroke: var(--ink); stroke-width: 2.5; }
+
+/* Prediction chart: JPL grey and dashed (the reference), the discovered law in the model hue, the planets dotted. */
+.study-chart .pred-jpl { fill: none; stroke: var(--ref); stroke-width: 2; stroke-dasharray: 6 4; }
+.study-chart .pred-alone { fill: none; stroke: var(--model); stroke-width: 2; }
+.study-chart .pred-planets { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 2 3; }
+.toggle-row { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; margin-bottom: 6px; }
+
+/* ---------- Solar System Lab ---------- */
+select { font: inherit; padding: 6px 8px; border-radius: var(--radius); border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--ink); color-scheme: inherit; }
+select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.lead { color: var(--ink-2); max-width: 70ch; }
+.badge { display: inline-block; padding: 6px 10px; border-radius: var(--radius); font-size: 0.9rem; }
+.badge.ok { background: var(--ok-soft); color: var(--ok); }
+.badge.tie { background: var(--tie-soft); color: var(--tie); }
+.badge.bad { background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+.sky-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+.sky-stage { display: grid; gap: 10px; }
+.sky-canvas { width: 100%; aspect-ratio: 1 / 1; max-height: 72vh; display: block; background: var(--stage);
+  border-radius: var(--radius); touch-action: none; cursor: grab; }
+.sky-canvas:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
+.sky-transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sky-scrub { flex: 1 1 160px; display: flex; }
+.sky-scrub input { width: 100%; }
+.sky-controls { max-height: 82vh; overflow: auto; }
+.sky-body-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.sky-body-row label.small { display: flex; align-items: center; gap: 6px; }
+.mini-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.mini-chart { margin: 0; display: grid; gap: 4px; }
+.mini-chart svg { width: 100%; height: auto; }
+.mini-base { fill: none; stroke: var(--ref); stroke-width: 1.6; }
+.mini-modified { fill: none; stroke: var(--model); stroke-width: 1.8; stroke-dasharray: 5 3; }
+.sky-controls select, .sky-controls .field input { width: 100%; max-width: 100%; }
+@media (max-width: 640px) {
+  /* Stacked: the view first, the controls under it, the whole page scrolling (no panel that hides the orbit). */
+  .sky-layout { grid-template-columns: 1fr; }
+  .sky-controls { max-height: none; }
+}
+@media (max-width: 420px) {
+  /* Seven sections fit on a phone without scrolling the bar: the name is read out, the logo stays. */
+  .shell-inner { gap: 10px; padding: 0 12px; }
+  .shell-nav a { padding: 0 6px; }
+  .wordmark-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+.sky3d { position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: 74vh; border-radius: var(--radius); overflow: hidden; background: #02040a; }
+.sky3d-canvas { position: absolute; inset: 0; touch-action: none; }
+.sky3d-canvas canvas { display: block; }
+.sky3d-labels { position: absolute; inset: 0; pointer-events: none; }
+.sky3d-label { position: absolute; left: 0; top: 0; font-size: 12px; color: #dfe6f5; text-shadow: 0 0 4px #000; white-space: nowrap; }
+.law-scroll { overflow-x: auto; }
+
+/* Bubble level for filming: words carry the state, colour only repeats it. */
+.level { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border-radius: var(--radius);
+  font-size: 0.9rem; border: 1px solid var(--line, currentColor); }
+.level-ok { background: var(--ok-soft); }
+.level-warn { background: var(--tie-soft); }
+.level-ref { stroke: currentColor; stroke-opacity: 0.35; stroke-width: 1.5; }
+.level-bar { stroke-width: 4; stroke-linecap: round; }
+.level-ok .level-bar { stroke: var(--ok); }
+.level-warn .level-bar { stroke: var(--tie); }
+.level button { margin-left: auto; }

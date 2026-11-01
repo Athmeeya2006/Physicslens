@@ -151,3 +151,56 @@ def test_pipeline_runs_2d_and_explains_why_3d_was_skipped(harness, tmp_path):
     result = analyze_run(harness.client, CLIP, tmp_path / "run", "run-depth", options)
     assert result["status"] in ("accepted", "ambiguous") and result["family"] == "pendulum"
     assert result["depth3d"]["status"] == "skipped" and "fitted as pendulum" in result["depth3d"]["reason"]
+
+
+def _tilted(roll_deg: float, pitch_deg: float) -> np.ndarray:
+    """World-to-camera rotation of a phone rolled about its view axis and pitched about its X axis."""
+    r, p = np.radians(roll_deg), np.radians(pitch_deg)
+    roll = np.array([[np.cos(r), -np.sin(r), 0], [np.sin(r), np.cos(r), 0], [0, 0, 1]])
+    pitch = np.array([[1, 0, 0], [0, np.cos(p), -np.sin(p)], [0, np.sin(p), np.cos(p)]])
+    return roll @ pitch
+
+
+def test_measured_gravity_corrects_a_tilted_phone():
+    from physicslens.physics.depth3d import level_rotation, tilt_deg
+    rot = _tilted(8.0, 5.0)
+    rng = np.random.default_rng(3)
+    t = np.arange(0, 0.9, 1 / FPS)
+    world = np.array([-0.9, 0.3, 2.0]) + np.outer(t, [1.6, 3.5, 1.5]) + np.outer(0.5 * t**2, [0.0, -G, 0.0])
+    cam = world @ rot.T
+    u = (W - 1) / 2 + cam[:, 0] * F_PX / cam[:, 2] + rng.normal(0, 1.0, len(t))
+    v = (H - 1) / 2 - cam[:, 1] * F_PX / cam[:, 2] + rng.normal(0, 1.0, len(t))
+    d = F_PX * BALL_M / cam[:, 2] + rng.normal(0, 1.0, len(t))
+    n = len(t)
+    boxes = np.column_stack([u - d / 2, v - d / 2, u + d / 2, v + d / 2])
+    track = ObjectTrack("1", np.arange(n), np.column_stack([u, v]), np.zeros(n), d.copy(), d.copy(), np.ones(n), boxes,
+                        np.pi * d**2 / 4)
+    up = tuple(rot[:, 1] * 9.81)  # what the accelerometer reports: up, in camera axes, any length
+    assert level_rotation(up) @ (rot[:, 1]) == pytest.approx([0, 1, 0], abs=1e-12)
+    assert tilt_deg(up) == pytest.approx(np.degrees(np.arccos(np.cos(np.radians(8)) * np.cos(np.radians(5)))), abs=1e-6)
+    level = analyze(track.frames, track.centers_px, track.long_px, track.short_px, track.area_px, fps=FPS, width=W,
+                    height=H, focal_px=F_PX, size_m=BALL_M, boxes=track.boxes, bootstrap_reps=8, gravity_up=up)
+    assert level["gravity"]["source"] == "accelerometer"
+    assert level["g"]["value"] == pytest.approx(G, rel=0.05)
+    naive = analyze(track.frames, track.centers_px, track.long_px, track.short_px, track.area_px, fps=FPS, width=W,
+                    height=H, focal_px=F_PX, size_m=BALL_M, boxes=track.boxes, bootstrap_reps=8)
+    # Assuming the image's down is down, g leaks into x and z and no 3D law holds (or one holds with a worse g).
+    assert naive["status"] != "accepted" or abs(naive["g"]["value"] - G) > abs(level["g"]["value"] - G)
+    assert level["status"] == "accepted"
+
+
+def test_an_implausible_tilt_is_refused_with_a_reason():
+    tr = render(np.array([-0.9, 0.3, 2.0]), np.array([1.6, 3.5, 1.5]), 0.9)
+    out = for_run(tr, tr.frames, fps=FPS, width=W, height=H, focal_px=F_PX, size_m=BALL_M, moving_object="tennis ball",
+                  family="projectile", gravity_up=(1.0, 0.2, 0.0))
+    assert out["status"] == "skipped" and "tilted" in out["reason"]
+
+
+def test_camera_level_note():
+    from physicslens.pipeline import camera_level
+    assert camera_level(None) is None
+    assert camera_level((0.0, 9.81, 0.0))["note"] is None
+    rolled = camera_level((np.sin(np.radians(6)), np.cos(np.radians(6)), 0.0))
+    assert rolled["roll_deg"] == pytest.approx(6.0) and "rolled 6.0 degrees" in rolled["note"]
+    assert "pointed 27 degrees up" in camera_level((0.0, 1.0, 0.5))["note"]
+    assert "degrees down" in camera_level((0.0, 1.0, -0.5))["note"]

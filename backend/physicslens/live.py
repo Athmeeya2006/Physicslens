@@ -38,6 +38,7 @@ from .perception.calibration import (
 )
 from .perception.local_track import TemplateTracker, box_around_tap, to_gray
 from .perception.sam_track import ObjectTrack, tracks_from_text
+from .physics.collisions import detect_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
 from .physics.cueing import learned_lead, next_cue, push_delay
 from .physics.fit import FitResult, fit_family, simulate
@@ -57,7 +58,7 @@ from .pipeline import (
     _hypothesis_items,
     _with_control,
 )
-from .sigproc.cleanup import fill_short_gaps
+from .sigproc.cleanup import detect_impacts, fill_short_gaps, split_at
 from .sigproc.summary import summarize
 from .sigproc.trajectory import from_pixels
 
@@ -65,6 +66,9 @@ log = logging.getLogger("physicslens.live")
 
 WINDOW_S = 10.0  # rolling buffer the equation is fitted on
 MIN_FIT_S = 2.5  # don't fit before this much track exists
+# A throw is in the air for about a second: waiting 2.5 s meant a thrown ball never got a fit. 0.6 s is 18 samples at
+# 30 fps, above recorded mode's 12-sample minimum, and the fit then uses the longest free flight only.
+MIN_FIT_S_BY_FAMILY = {"projectile": 0.6}
 PREDICT_S = 3.0  # ghost extends this far past the newest tracked frame
 HISTORY = 6  # recent fits used to show how well the parameters have converged
 SCENE_AFTER_FRAMES = 25  # ask the scene model after ~1 s of video
@@ -257,6 +261,59 @@ class LiveSession:
             self._local_step()
         else:
             self._wake.set()
+
+    def save(self, run_dir: Path, keep_video: bool) -> dict[str, Any]:
+        """The session as a normal result in run_dir (result.json, and clip.mp4 only if the user chose to keep the
+        video: by default a live session keeps the track and the numbers, never the camera's picture)."""
+        last = getattr(self, "last_fit", None)
+        if last is None:
+            raise ValueError("Nothing to save yet: no equation has been fitted in this session.")
+        msg = last["msg"]
+        family = self.family or "line"
+        h, w = (self.size[1], self.size[0]) if self.size else (0, 0)
+        params = []
+        for p in msg.get("parameters", []):
+            spread = p.get("spread")
+            sd = float(spread) if spread is not None else float("nan")
+            params.append({"name": p["name"], "latex": p["latex"], "unit": p["unit"], "value": p["value"], "std": sd,
+                           "ci95": [p["value"] - 1.96 * sd, p["value"] + 1.96 * sd] if spread is not None else [p["value"], p["value"]]})
+        video_kept = False
+        if keep_video and self.frames:
+            with self.lock:
+                ordered = [self.frames[i] for i in sorted(self.frames)]
+            self._encode_saved(ordered, run_dir / "clip.mp4")
+            video_kept = True
+        result: dict[str, Any] = {
+            "status": last["status"], "reason": last["reason"], "family": family, "families_tried": [family],
+            "source": "live session", "video_kept": video_kept,
+            "scene": {"moving_object": self.scene.moving_object if self.scene else "the tracked object",
+                      "observations": "Measured live from the camera; the fit uses the last seconds of the session.",
+                      "motion_family": family},
+            "clip": {"width": w, "height": h, "fps": self.cfg.fps, "frames": len(last["track"]), "slow_motion": 1.0},
+            "calibration": {"px_per_m": last["ppm"], "rel_std": 0.0, "source": "none" if last["uncalibrated"] else "live"},
+            "equation": msg.get("equation"), "parameters": params, "ranking": last["ranking"],
+            "real_track_px": last["track"],
+            "fit_state": {"model_id": last["spec_id"], "params": last["params"], "y0": last["y0"], "ctx": last["ctx"],
+                          "fps": last["fps"], "origin_px": last["origin_px"], "px_per_m": last["ppm"],
+                          "first_frame": last["first_frame"]},
+            "trail": [{"step": "agent", "provider": None, "model": "live session", "text": last["reason"]}],
+            "llm_calls": [], "agent": {"action": "explain", "message": last["reason"], "reasoning_summary": ""},
+            **({"scale_note": SCALE_NOTE} if last["uncalibrated"] else {}),
+        }
+        (run_dir / "result.json").write_text(json.dumps(result, default=float))
+        return result
+
+    def _encode_saved(self, jpegs: list[bytes], out: Path) -> None:
+        import subprocess
+        frames_dir = out.parent / "saved_frames"
+        frames_dir.mkdir(exist_ok=True)
+        for k, j in enumerate(jpegs):
+            (frames_dir / f"{k:06d}.jpg").write_bytes(j)
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-framerate", str(self.cfg.fps), "-i", str(frames_dir / "%06d.jpg"),
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)], check=True)
+        for f in frames_dir.iterdir():
+            f.unlink()
+        frames_dir.rmdir()
 
     def close(self) -> None:
         self._closed = True
@@ -491,15 +548,16 @@ class LiveSession:
 
     def refit(self) -> dict[str, Any] | None:
         fps = self.cfg.fps
+        min_s = MIN_FIT_S_BY_FAMILY.get(self.family or "", MIN_FIT_S)
         frames, centers = self._merged()
-        if len(frames) < MIN_FIT_S * fps:
+        if len(frames) < min_s * fps:
             return None
         recent = (frames >= frames[-1] - WINDOW_S * fps) & (frames >= self.regime_start)
         if self.control is not None and self.control["after_t"] is not None:
             with self.lock:
                 recent &= np.array([self.times.get(int(f), int(f) / fps) > self.control["after_t"] for f in frames])
         seg_frames, seg_centers = max(fill_short_gaps(frames[recent], centers[recent], max_gap=3), key=lambda s: len(s[0]))
-        if len(seg_frames) < MIN_FIT_S * fps:
+        if len(seg_frames) < min_s * fps:
             return None
         ppm = self._scale(seg_centers)
         uncalibrated = ppm is None
@@ -529,6 +587,14 @@ class LiveSession:
         elif self.family_from_user and self.scene is not None and not self._agent_consulted:
             self._agent_consulted = True
             self._run(lambda t=traj: self._consult_agent(t))  # in the background: refits keep running meanwhile
+        if self.family == "projectile":
+            # Only the free flight: the throw's release and the landing (and the ball lying there after) are not
+            # projectile motion. Split at impacts and bounces and keep the piece with the most motion, as recorded mode.
+            pieces = split_at(traj, np.union1d(detect_impacts(traj), detect_bounces(traj)))
+            if pieces:
+                traj = max(pieces, key=lambda q: float(np.ptp(q.xy, axis=0).max()))
+            if len(traj) < min_s * fps:
+                return None
         try:
             coords = to_coordinates(traj, self.family)  # type: ignore[arg-type]
         except ValueError as e:
@@ -563,6 +629,16 @@ class LiveSession:
                 for p in spec.params
             ]
             msg["ghost"] = self._prediction(spec, lead, coords, seg_frames, ts, rate, seg_centers[0], ppm)
+            # Everything a saved session needs to become a normal result (save()): the law, the fitted state for
+            # exports and what-ifs, and the track it was fitted to.
+            self.last_fit = {"msg": msg, "spec_id": spec.id, "params": dict(lead.params), "y0": [float(v) for v in lead.y0],
+                             "ctx": {k: float(v) for k, v in coords.ctx.items()}, "fps": float(rate), "ppm": float(ppm),
+                             "origin_px": [float(v) for v in seg_centers[0]], "first_frame": int(seg_frames[0]),
+                             "track": [[int(f), float(c[0]), float(c[1])] for f, c in zip(seg_frames, seg_centers, strict=True)],
+                             "status": verdict.status, "reason": verdict.reason, "uncalibrated": uncalibrated,
+                             "ranking": [{"model_id": f.model_id, "title": MODELS[f.model_id].title, "params": f.params,
+                                          "bic": f.bic, "heldout_nrmse": f.heldout_nrmse, "rmse": f.rmse}
+                                         for f in verdict.ranked]}
             self._forecast_step(spec, lead, coords, float(ts[0]), verdict.status == "accepted")
             if self.control is not None and self.family == "pendulum" and verdict.status == "accepted":
                 self._control_step(spec, lead, coords, float(ts[0]))

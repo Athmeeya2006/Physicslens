@@ -1,4 +1,26 @@
-# Tooling configuration only; the backend's dependencies are pinned in backend/requirements.txt.
+# The package (pip install -e . gives the `physicslens` command) and tooling. Dependencies stay pinned in
+# backend/requirements.txt, read from there.
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "physicslens"
+version = "1.0.0"
+description = "Film anything moving; get the verified equation that governs it."
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dynamic = ["dependencies"]
+
+[project.scripts]
+physicslens = "physicslens.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["backend/requirements.txt"] }
 
 [tool.ruff]
 target-version = "py311"

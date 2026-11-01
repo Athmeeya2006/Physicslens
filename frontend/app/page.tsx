@@ -1,5 +1,7 @@
 "use client";
 
+import { LevelIndicator } from "@/components/LevelIndicator";
+import type { Level } from "@/lib/level";
 import { ArrowLeft, Check, Loader2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Gallery } from "@/components/Gallery";
@@ -39,6 +41,7 @@ export default function Home() {
   const [hint, setHint] = useState("");
   const [mover, setMover] = useState("");
   const [inputsCsv, setInputsCsv] = useState<File | null>(null);
+  const [tilt, setTilt] = useState<Level | null>(null);  // the phone's tilt, saved by the filmer for this clip
   const [run, setRun] = useState<RunView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
@@ -122,7 +125,7 @@ export default function Home() {
       if (turnstileBox.current) window.turnstile?.reset(turnstileBox.current);
       const r = await startRun(file, { pendulumLengthM: length, objectSizeM: size,
                                        slowMotion: slowMo ? Number(slowMo) : null, objectHint: hint || null,
-                                       knownMover: mover || null, inputsCsv }, token);
+                                       knownMover: mover || null, inputsCsv, gravityUp: tilt?.up ?? null }, token);
       setRun(r);
       setRunParam(r.run_id);
       poll(r.run_id);
@@ -195,6 +198,7 @@ export default function Home() {
                   <strong>{file ? file.name : "Choose or record a video"}</strong>
                   <span className="small muted">2 to 20 seconds, MP4 or MOV; longer clips are trimmed</span>
                 </label>
+                <LevelIndicator onLock={setTilt} locked={tilt} />
                 <VoiceNotes onNotes={(n) => {
                   if (n.pendulum_length_m) setLengthCm(String(Math.round(n.pendulum_length_m * 1000) / 10));
                   if (n.object_size_m) setSizeCm(String(Math.round(n.object_size_m * 1000) / 10));

@@ -1,9 +1,12 @@
 """Public visitors: a few free analyses per address per day, optional bot check, a free gallery."""
 
 import json
+from pathlib import Path
 
 import pytest
 from physicslens.public import PublicQuota, client_address, turnstile_ok
+
+CLIP = (Path(__file__).resolve().parents[1] / "samples" / "smoke_ball.mp4").read_bytes()  # a real 2 s clip
 
 
 def test_quota_per_address_per_day(tmp_path):
@@ -38,7 +41,7 @@ def public_app(monkeypatch, tmp_path):
 def test_public_uploads_closed_by_default(public_app, monkeypatch):
     from fastapi.testclient import TestClient
     monkeypatch.setenv("PUBLIC_TRY_ENABLED", "0")
-    r = TestClient(public_app.app).post("/api/runs", files={"video": ("a.mp4", b"x", "video/mp4")})
+    r = TestClient(public_app.app).post("/api/runs", files={"video": ("a.mp4", CLIP, "video/mp4")})
     assert r.status_code == 403 and "gallery" in r.json()["detail"]
 
 
@@ -46,7 +49,7 @@ def test_public_uploads_limited_per_day(public_app, monkeypatch):
     from fastapi.testclient import TestClient
     monkeypatch.setenv("PUBLIC_TRY_ENABLED", "1")
     client = TestClient(public_app.app)
-    codes = [client.post("/api/runs", files={"video": ("a.mp4", b"x", "video/mp4")}).status_code for _ in range(3)]
+    codes = [client.post("/api/runs", files={"video": ("a.mp4", CLIP, "video/mp4")}).status_code for _ in range(3)]
     assert codes == [200, 200, 429]
     health = client.get("/api/health").json()
     assert health["audience"] == "public" and not health["can_go_live"]
@@ -102,7 +105,7 @@ def test_open_access_needs_no_code_and_limits_each_visitor(open_app):
     client = TestClient(open_app.app)
     health = client.get("/api/health").json()
     assert health["audience"] == "judge" and health["can_upload"] and health["can_go_live"] and health["open_access"]
-    post = lambda ip, **h: client.post("/api/runs", files={"video": ("a.mp4", b"x", "video/mp4")},
+    post = lambda ip, **h: client.post("/api/runs", files={"video": ("a.mp4", CLIP, "video/mp4")},
                                        headers={"cf-connecting-ip": ip, **h}).status_code
     assert [post("8.8.8.8") for _ in range(3)] == [200, 200, 429]
     assert post("9.9.9.9") == 200                               # another visitor

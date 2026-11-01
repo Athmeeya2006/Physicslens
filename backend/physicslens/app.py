@@ -39,11 +39,14 @@ from .control.system import ControlUnsupported
 from .costguard import CostGuardClient, CostGuardError
 from .export.mjcf import bounce_mjcf, build_mjcf
 from .export.mp4 import ExportError, render_share_video
+from .export.og import render as render_og
 from .export.report import report_markdown
+from .export.robot import RobotExportError, sdf, urdf
 from .export.script import parameters_json, python_script
 from .export.sim2real import Sim2RealError, sim2real
 from .inputs import MAX_INPUT_BYTES, InputError, parse_inputs_csv
 from .live import LiveConfig, LiveSession
+from .perception import media
 from .physics.health import (
     HealthError,
     HealthMetrics,
@@ -53,10 +56,18 @@ from .physics.health import (
     metrics_to_dict,
     trend,
 )
-from .pipeline import AnalysisError, RunOptions, trajectory_from_result
+from .pipeline import MIN_CLIP_FRAMES, MIN_CLIP_SECONDS, AnalysisError, RunOptions, trajectory_from_result
 from .public import PublicQuota, VisitorAllowance, client_address, turnstile_ok
 from .runs import RunManager
 from .settings import OPEN_WEIGHT_MODELS, load_settings
+from .sky.nbody import SkyTooSlow
+from .sky.scenarios import FRAME_NOTE as SKY_FRAME_NOTE
+from .sky.scenarios import render_scenario
+from .sky.scenarios import run as run_scenario
+from .sky_api import SimulateRequest
+from .sky_api import configure as configure_sky
+from .sky_api import router as sky_router
+from .sky_api import scenario_for as sky_scenario
 from .studies import Studies, StudyError
 from .voice.events import final_turn, partial_text
 
@@ -77,6 +88,7 @@ MAX_LIVE_FRAMES = 25 * 60 * 10  # 10 minutes at 25 fps; budget caps normally end
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".webm", ".mkv"}
 
 app = FastAPI(title="PhysicsLens")
+app.include_router(sky_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o for o in os.environ.get("FRONTEND_ORIGINS", "http://localhost:3000").split(",") if o],
@@ -107,6 +119,7 @@ def audience_for(access_code: str | None) -> str:
 # Per visitor, for the whole period, under open access: generous for a judge trying everything twice.
 # "question": a typed or spoken what-if, or spoken settings: one short text call each, so many more than analyses.
 OPEN_ACCESS_DEFAULTS = {"analysis": 15, "live": 5, "picture": 5, "controller": 3, "study": 3, "question": 40}
+configure_sky(client.limits.get("sky"))
 visitors = VisitorAllowance(settings.data_dir / "public.db",
                             {**OPEN_ACCESS_DEFAULTS, **(client.guard.budget.get("open_access_per_visitor") or {})})
 
@@ -167,6 +180,7 @@ def create_run(
     blade_count: Annotated[int | None, Form(ge=1, le=64)] = None,
     depth_3d: Annotated[bool, Form()] = False,
     focal_px: Annotated[float | None, Form()] = None,
+    gravity_up: Annotated[str | None, Form(max_length=80)] = None,
     inputs_csv: Annotated[UploadFile | None, File()] = None,
     known_mover: Annotated[str | None, Form(max_length=60)] = None,
 ) -> dict[str, object]:
@@ -180,6 +194,7 @@ def create_run(
             raise HTTPException(status_code=400, detail=f"Inputs file: {e}") from e
     if focal_px is not None and not 50 <= focal_px <= 50000:
         raise HTTPException(status_code=400, detail="The focal length should be between 50 and 50000 pixels.")
+    up = parse_gravity_up(gravity_up)
     for name, value in (("pendulum length", pendulum_length_m), ("object size", object_size_m)):
         if value is not None and not 0.005 <= value <= 100:
             raise HTTPException(status_code=400, detail=f"The {name} should be between 0.5 cm and 100 m.")
@@ -210,10 +225,62 @@ def create_run(
     if written > MAX_UPLOAD_BYTES:
         shutil.rmtree(run_dir)
         raise HTTPException(status_code=413, detail="That video is too large; trim it to under 30 seconds.")
+    # Read it now (ffprobe: length, frames, rotation), so a file that cannot work is refused with a reason before it
+    # is queued and before anything is spent on it.
+    try:
+        info = media.probe(dest)
+    except media.MediaError as e:
+        shutil.rmtree(run_dir)
+        raise HTTPException(status_code=400, detail=f"That file could not be read as a video ({e}).") from e
+    if info.fps <= 0 or info.frames / info.fps < MIN_CLIP_SECONDS or info.frames < MIN_CLIP_FRAMES:
+        shutil.rmtree(run_dir)
+        raise HTTPException(status_code=400, detail=f"The clip is too short: at least {MIN_CLIP_SECONDS:g} seconds and "
+                                                    f"{MIN_CLIP_FRAMES} frames are needed (this one has {info.frames} "
+                                                    f"frames at {info.fps:.3g} fps).")
     state = runs.start(dest, RunOptions(audience=audience, pendulum_length_m=pendulum_length_m, object_size_m=object_size_m,
                                          slow_motion=slow_motion, object_hint=object_hint, blade_count=blade_count,
-                                         depth_3d=depth_3d, focal_px=focal_px, inputs=inputs,
+                                         depth_3d=depth_3d, focal_px=focal_px, gravity_up=up, inputs=inputs,
                                          known_mover=known_mover))
+    return runs.public_view(state)
+
+
+def parse_gravity_up(text: str | None) -> tuple[float, float, float] | None:
+    """The phone's accelerometer 'up' at capture, "x,y,z" in camera axes; any length (only the direction is used)."""
+    if not text:
+        return None
+    try:
+        x, y, z = (float(v) for v in text.split(","))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="The gravity reading should be three numbers: x,y,z.") from e
+    if not all(math.isfinite(v) for v in (x, y, z)) or math.hypot(x, y, z) < 1e-3:
+        raise HTTPException(status_code=400, detail="The gravity reading is empty or not a number.")
+    return (x, y, z)
+
+
+@app.post("/api/sky/render")
+def sky_render(
+    request: Request,
+    req: Annotated[SimulateRequest, Body()],
+    x_access_code: Annotated[str | None, Header()] = None,
+) -> dict[str, object]:
+    """Film a lab scenario: render its video and run the normal (paid) pipeline on it, exactly like an upload, behind
+    the same access rules and per-visitor allowance. The lab's own simulate and discover endpoints are free."""
+    audience = audience_for(x_access_code)
+    if audience == "public" and not public_try_enabled():
+        raise HTTPException(status_code=403, detail="Filming a scenario is paused right now; the lab itself is open.")
+    sc = sky_scenario(req)
+    allow_visitor("analysis", x_access_code, request.headers, request.client.host if request.client else None)
+    run_dir = runs.new_run_dir()
+    dest = run_dir / "input.mp4"
+    try:
+        meta = render_scenario(run_scenario(sc), dest)
+    except SkyTooSlow as e:
+        shutil.rmtree(run_dir)
+        raise HTTPException(status_code=503, detail=f"That scenario is too long to film: {e}.") from e
+    state = runs.start(dest, RunOptions(
+        audience=audience, object_hint=f"the white dot ({sc.target})", known_px_per_unit=meta["px_per_au"],
+        origin_px=tuple(meta["sun_px"]), units={"length": "AU", "time": "day"}, frame_note=SKY_FRAME_NOTE,
+        slow_motion=1.0 / (meta["step_days"] * meta["fps"])))
     return runs.public_view(state)
 
 
@@ -262,6 +329,18 @@ def get_poster(run_id: str) -> FileResponse:
     if not path.is_file():
         raise HTTPException(status_code=404)
     return FileResponse(path, media_type="image/jpeg")
+
+
+@app.get("/api/runs/{run_id}/og.jpg")
+def get_share_image(run_id: str) -> FileResponse:
+    """The link-preview picture for a finished result (drawn once, locally: costs nothing)."""
+    state = runs.get(run_id)
+    if state is None or state.status != "done" or state.result is None:
+        raise HTTPException(status_code=404, detail="That analysis is not finished.")
+    out = _run_file(run_id, "og.jpg")
+    if not out.is_file():
+        render_og(state.result, _run_file(run_id, "poster.jpg"), out)
+    return FileResponse(out, media_type="image/jpeg")
 
 
 @app.get("/api/runs/{run_id}/share.mp4")
@@ -357,6 +436,13 @@ async def live(ws: WebSocket) -> None:
                     session.set_control(str(cmd.get("goal", "off")), float(cmd.get("target_deg", 30)))
                 elif cmd.get("type") == "length" and 0.005 <= float(cmd.get("meters", 0)) <= 100:
                     session.set_length(float(cmd["meters"]))
+                elif cmd.get("type") == "save":
+                    # The session becomes a normal result (a ?run= link, exports, what-ifs); the video only if asked.
+                    try:
+                        await asyncio.to_thread(session.save, run_dir, bool(cmd.get("keep_video")))
+                        await ws.send_json({"type": "saved", "run_id": run_dir.name})
+                    except ValueError as e:
+                        await ws.send_json({"type": "notice", "level": "error", "message": str(e)})
         else:
             await ws.send_json({"type": "notice", "level": "info", "message": "Session length limit reached."})
     except WebSocketDisconnect:
@@ -528,6 +614,8 @@ EXPORTS = {
     "mjcf": ("application/xml", "xml"),
     "report": ("text/markdown", "md"),
     "contact": ("application/xml", "xml"),
+    "urdf": ("application/xml", "urdf"),
+    "sdf": ("application/xml", "sdf"),
 }
 
 
@@ -550,6 +638,11 @@ def export(run_id: str, kind: str) -> Response:
         body = parameters_json(result)
     elif kind == "py":
         body = python_script(result)
+    elif kind in ("urdf", "sdf"):
+        try:
+            body = (urdf if kind == "urdf" else sdf)(result["fit_state"])
+        except RobotExportError as e:
+            raise HTTPException(status_code=409, detail=str(e)) from e
     else:
         xml, notes = build_mjcf(result["fit_state"])
         if result.get("scale_note"):

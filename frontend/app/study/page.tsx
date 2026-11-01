@@ -43,7 +43,11 @@ export default function StudyPage() {
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("study");
     if (id) getStudy(id).then(setStudy).catch((e: Error) => setError(e.message));
-    else getGallery().then((g) => setPublished(g.filter((x) => x.kind === "study"))).catch(() => undefined);
+    else getGallery().then((g) => setPublished(g.filter((x) => x.kind === "study"))).catch((e: Error) => {
+      // The list of finished studies is extra; the form still works. Say so rather than show an empty page.
+      if (process.env.NODE_ENV !== "production") console.error(e);
+      setError(`Finished studies could not be loaded (${e.message}); you can still start one.`);
+    });
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
@@ -53,7 +57,12 @@ export default function StudyPage() {
   useEffect(() => {
     for (const r of study?.recordings ?? []) {
       if (results[r.run_id]?.status === "done" || results[r.run_id]?.status === "error") continue;
-      getRun(r.run_id).then((v) => setResults((m) => ({ ...m, [r.run_id]: v }))).catch(() => undefined);
+      getRun(r.run_id).then((v) => setResults((m) => ({ ...m, [r.run_id]: v }))).catch((e: Error) => {
+        if (process.env.NODE_ENV !== "production") console.error(e);
+        // Shown on the recording's row ("Failed: ...") instead of the recording silently staying at "Analyzing".
+        setResults((m) => ({ ...m, [r.run_id]: { run_id: r.run_id, status: "error", progress: [],
+                                                 error: `its result could not be loaded: ${e.message}`, result: null } }));
+      });
     }
   }, [study]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -262,7 +271,7 @@ export default function StudyPage() {
                         <li key={r.run_id}>
                           <span className={`verdict ${v === "done" || v === "running" || v === "queued" ? "" : v ?? ""}`}>{VERDICT[v ?? ""] ?? "Analyzing"}</span>
                           <a href={`/?run=${r.run_id}`}>{r.label}</a>
-                          <span className="muted small">{results[r.run_id]?.result?.equation?.title ?? ""}</span>
+                          <span className="muted small">{results[r.run_id]?.result?.equation?.title ?? results[r.run_id]?.error ?? ""}</span>
                         </li>
                       );
                     })}

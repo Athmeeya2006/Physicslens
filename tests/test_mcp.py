@@ -84,3 +84,32 @@ def test_export_kind_is_checked_and_returns_the_file(server):
     assert "<mujoco/>" in str(payload(call(mcp, "export", {"run_id": "r1", "kind": "mjcf"})))
     with pytest.raises(ToolError, match="kind must be one of"):
         call(mcp, "export", {"run_id": "r1", "kind": "exe"})
+
+
+def sky_api(seen: list[httpx.Request]) -> httpx.MockTransport:
+    def handle(req: httpx.Request) -> httpx.Response:
+        seen.append(req)
+        if req.url.path == "/api/sky/scenarios":
+            return httpx.Response(200, json=[{"name": "jupiter_x10", "fictional": True}])
+        if req.url.path == "/api/sky/simulate":
+            return httpx.Response(200, json={"scenario": {"name": "jupiter_x10"}, "target": "Mars",
+                                             "elements": [{"t": i, "a": 1.52} for i in range(100)],
+                                             "precession_arcsec_per_century": 1234.0, "bodies": [{"points": [[0, 1, 2]]}],
+                                             "detectability": {"visible": False}, "source": "simulation, no pixels"})
+        if req.url.path == "/api/sky/discover":
+            return httpx.Response(200, json={"source": "simulation, no pixels", "status": "accepted",
+                                             "law": {"title": "Kepler"}, "parameters": []})
+        return httpx.Response(404, json={"detail": "no"})
+    return httpx.MockTransport(handle)
+
+
+def test_sky_tools_call_the_lab_and_return_the_physics():
+    seen: list[httpx.Request] = []
+    mcp = build(lambda: httpx.Client(base_url="http://physicslens.test", transport=sky_api(seen)), poll_s=0.0)
+    assert {"list_sky_scenarios", "simulate_system", "discover_orbit_law"} <= {t.name for t in anyio.run(mcp.list_tools)}
+    assert payload(call(mcp, "list_sky_scenarios", {}))[0]["name"] == "jupiter_x10"
+    sim = payload(call(mcp, "simulate_system", {"scenario": "jupiter_x10", "mass_scale": {"Jupiter": 20}}))
+    assert sim["precession_arcsec_per_century"] == 1234.0 and "bodies" not in sim and len(sim["elements"]) == 5
+    assert json.loads(seen[-1].content)["mass_scale"] == {"Jupiter": 20}
+    found = payload(call(mcp, "discover_orbit_law", {"scenario": "apophis_sun_only"}))
+    assert found["source"] == "simulation, no pixels" and found["law"]["title"] == "Kepler"

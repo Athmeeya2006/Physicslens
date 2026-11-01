@@ -68,11 +68,14 @@ from .physics.fit import FitResult, configure_fit_workers, fit_family
 from .physics.models import MODELS, models_for, needs_scale
 from .physics.prescreen import noise_like
 from .physics.regime import RegimeChange, detect_change
+from .physics.residuals import spectrum
 from .physics.rotation import RotationError, rotation_coordinates
 from .physics.sindy import vet
 from .physics.uncertainty import bootstrap_full
 from .physics.verify import Verdict, assess, judge_candidates, window_indices
 from .sigproc.cleanup import detect_impacts, differentiate, fill_short_gaps, split_at
+from .sigproc.shutter import note as shutter_warning
+from .sigproc.shutter import skew_px
 from .sigproc.summary import summarize
 from .sigproc.trajectory import Trajectory, from_pixels
 from .sound import audio_trail_step, listen
@@ -109,6 +112,7 @@ class RunOptions:
     blade_count: int | None = None  # fan blades (or other sound sources per turn): turns a blade-pass tone into a spin rate
     depth_3d: bool = False  # also measure a ball's depth from its apparent size (needs object_size_m and focal_px)
     focal_px: float | None = None  # camera focal length in pixels at the uploaded video's resolution
+    gravity_up: tuple[float, float, float] | None = None  # the phone's "up" at capture, camera axes (X right, Y up, Z away)
     # A rendered or instrument-calibrated video (orbit mode): the image scale and the fixed point the coordinates are
     # measured from (the Sun) are part of the frame's geometry, given by whoever drew it. The law is still discovered.
     known_px_per_unit: float | None = None
@@ -252,6 +256,8 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         progress("Measuring the spin from the mask orientation")
         rotation, traj, origin_px = rotation_track(moving, fps, calibration.px_per_m)
 
+    # Rolling shutter: in capture time (a slow-motion clip was captured faster than it plays).
+    shear = skew_px(moving.centers_px, info.fps * options.slow_motion, float(np.median(moving.long_px)), info.height)
     summary = rotation_summary(rotation) if rotation is not None else summarize(traj, calibration.source == "none")
     signals = track_signals(options.inputs, int(full.frames[0]), full.fps)
     if scene.second_object and scene.motion_family != "double_pendulum" and tracks.get(SECOND_ID) is not None:
@@ -408,6 +414,12 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
                                  reasoning_summary="Step budget used up; the verdict from numerical verification stands.")
                 break
             tool_steps_left -= 1
+            if turn.action == "residual_spectrum":
+                note = residual_note(coords, verdict)
+                record("agent", call, f"{turn.message} {note['text']}", action="residual_spectrum",
+                       reasoning_summary=turn.reasoning_summary, expectation=turn.expectation)
+                notebook.append(note["entry"])
+                continue
             if turn.action == "inspect":
                 note = inspect_window(traj, turn, calibration.source == "none")
                 record("agent", call, f"{turn.message} {note['text']}", action="inspect",
@@ -490,6 +502,9 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         "agent": {"action": turn.action, "message": turn.message, "reasoning_summary": turn.reasoning_summary},
         "ranking": [fit_summary(f, rationales.get(f.model_id)) for f in verdict.ranked],
         "n_eff": verdict.n_eff,
+        # A measurement caveat, shown with the result like the scale note (not a decision, so not in the trail).
+        "rolling_shutter": {"skew_px": shear, "note": shutter_warning(shear)},
+        "camera_level": camera_level(options.gravity_up),
         "inputs": describe(signals),
         "real_track_px": _track_points(traj.frames, traj.xy, origin_px, calibration.px_per_m),
         # For a spin the ghost is a small marker on the rim, not the whole object.
@@ -641,6 +656,26 @@ def audit_clip(full: Trajectory, family: str, calibration: Calibration, verdict:
         return audit_cant_judge(f"the audit's own measurement failed on this track ({e}).")
 
 
+LEVEL_WARN_DEG = 3.0  # the measured limits assume a level phone; past this, "down" in the image is visibly not down
+
+
+def camera_level(gravity_up: tuple[float, float, float] | None) -> dict[str, Any] | None:
+    """The phone's roll (gravity's angle from the image's vertical) and pitch at capture, and a note when they matter."""
+    if gravity_up is None:
+        return None
+    x, y, z = (float(v) for v in gravity_up)
+    roll = float(np.degrees(np.arctan2(x, y)))
+    pitch = float(np.degrees(np.arctan2(z, np.hypot(x, y))))  # the view axis (+Z) above or below level
+    note = None
+    if abs(roll) > LEVEL_WARN_DEG:
+        note = (f"The phone was rolled {abs(roll):.1f} degrees at capture, so the image's 'down' is that far from gravity. "
+                f"Fitted g and drag in the 2D result mix the two axes slightly; the 3D mode corrects for it.")
+    elif abs(pitch) > 15:
+        note = (f"The phone was pointed {abs(pitch):.0f} degrees {'down' if pitch < 0 else 'up'} at capture, not side-on: "
+                "vertical distances far from the image centre are foreshortened.")
+    return {"roll_deg": round(roll, 2), "pitch_deg": round(pitch, 2), "note": note}
+
+
 def depth_for_run(moving: ObjectTrack, traj: Trajectory, fps: float, info: media.VideoInfo, video: Path,
                   options: RunOptions, moving_object: str, family: str) -> dict[str, Any]:
     focal = options.focal_px
@@ -650,7 +685,8 @@ def depth_for_run(moving: ObjectTrack, traj: Trajectory, fps: float, info: media
         source = media.probe(video)
         focal *= max(info.width, info.height) / max(source.width, source.height)
     return depth3d.for_run(moving, traj.frames, fps=fps, width=info.width, height=info.height, focal_px=focal,
-                           size_m=options.object_size_m, moving_object=moving_object, family=family)
+                           size_m=options.object_size_m, moving_object=moving_object, family=family,
+                           gravity_up=options.gravity_up)
 
 
 def prepare(video: Path, run_dir: Path, options: RunOptions, media_cfg: dict[str, Any], start_s: float = 0.0,
@@ -1114,7 +1150,7 @@ def _hypothesis_items(hyp, sampled: SampledHypotheses | None = None) -> list[dic
     return items
 
 
-TOOL_ACTIONS = ("test_models", "inspect")
+TOOL_ACTIONS = ("test_models", "inspect", "residual_spectrum")
 FINAL_FOR = {"accepted": "explain", "ambiguous": "request_experiment", "no_fit": "give_up"}
 
 
@@ -1130,6 +1166,19 @@ def inspect_window(traj: Trajectory, turn: AgentTurn, uncalibrated: bool) -> dic
     numbers = summarize(traj.slice(*span), uncalibrated)
     return {"text": f"Inspects {w.start_s:.2f} to {w.end_s:.2f} s ({w.reason}).",
             "entry": {"window": [w.start_s, w.end_s], "numbers": numbers}}
+
+
+def residual_note(coords: Coordinates, verdict: Verdict) -> dict[str, Any]:
+    """The agent's 'residual_spectrum' tool: periodic structure and drift left by the leading law (physics/residuals)."""
+    lead = verdict.winner or (verdict.contenders[0] if verdict.contenders else None)
+    if lead is None or lead.sim is None or lead.sim.shape != coords.q.shape or coords.q.shape[1] != 2:
+        return {"text": "There is no fitted path in the plane to take residuals from.", "entry": {"error": "no plane fit"}}
+    res = spectrum(coords.t, lead.sim, np.gradient(lead.sim, coords.t, axis=0), coords.q - lead.sim).summary()
+    top = res["peaks"][0] if res["peaks"] else None
+    text = ("The residuals are structured" if res["significant"] else "The residuals look like noise") + (
+        f": strongest peak {top['period']:.3g} in the {top['component']} direction (false-alarm probability "
+        f"{top['false_alarm_probability']:.1e})." if top else ".")
+    return {"text": text, "entry": {"residual_spectrum": res}}
 
 
 def tool_outcome(before: Verdict, after: Verdict) -> str:
@@ -1167,10 +1216,12 @@ def _candidates(hyp, signals: InputSignals | None = None, max_params: int = MAX_
     ids = [h.model_id for h in hyp.candidates]
     rationales = {h.model_id: h.rationale for h in hyp.candidates}
     for f in hyp.free_models:
-        spec = register(build(hyp.family, f.title, f.acceleration, [FreeParam(**p.model_dump()) for p in f.params],
-                              signals, max_params=max_params))
+        model = build(hyp.family, f.title, f.acceleration, [FreeParam(**p.model_dump()) for p in f.params],
+                      signals, max_params=max_params)
+        spec = register(model)
         ids.append(spec.id)
-        rationales[spec.id] = f"{f.rationale} (written by the agent)"
+        notes = " ".join(n for n in (model.indirect_warning, *model.unit_warnings) if n)
+        rationales[spec.id] = f"{f.rationale} (written by the agent){' ' + notes if notes else ''}"
     return _with_control(hyp.family, ids), rationales
 
 

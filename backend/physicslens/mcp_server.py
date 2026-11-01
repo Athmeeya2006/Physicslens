@@ -23,7 +23,7 @@ from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 VIDEO_SUFFIXES = (".mp4", ".mov", ".m4v")
-EXPORT_KINDS = ("json", "py", "mjcf", "contact", "report")
+EXPORT_KINDS = ("json", "py", "mjcf", "urdf", "sdf", "contact", "report")
 POLL_S = 3.0
 WAIT_LIMIT_S = 1800.0  # an analysis on the open-weight model takes minutes, not seconds
 
@@ -116,8 +116,9 @@ def build(client_factory: ClientFactory = _default_client, poll_s: float = POLL_
 
     @mcp.tool()
     def export(run_id: str, kind: str) -> str:
-        """Export a verified result: json (parameters), py (standalone simulation), mjcf (MuJoCo model),
-        contact (MuJoCo bounce contact), report (one-page Markdown)."""
+        """Export a verified result: json (parameters), py (standalone simulation), mjcf (MuJoCo model), urdf or sdf
+        (robot and Gazebo formats, for pendulums, springs and projectiles), contact (MuJoCo bounce contact), report
+        (one-page Markdown)."""
         if kind not in EXPORT_KINDS:
             raise ToolError(f"kind must be one of {', '.join(EXPORT_KINDS)}.")
         with client_factory() as c:
@@ -128,6 +129,38 @@ def build(client_factory: ClientFactory = _default_client, poll_s: float = POLL_
         """Re-simulate a verified result with a changed parameter, asked in plain words ("what if it were on the Moon?")."""
         with client_factory() as c:
             return _check(c.post(f"/api/runs/{run_id}/whatif", json={"question": question}))
+
+    @mcp.tool()
+    def list_sky_scenarios() -> list[dict[str, Any]]:
+        """The Solar System Lab's scenarios: real ones start from NASA/JPL states, fictional ones say so."""
+        with client_factory() as c:
+            return _check(c.get("/api/sky/scenarios"))
+
+    @mcp.tool()
+    def simulate_system(scenario: str, mass_scale: dict[str, float] | None = None, disabled: list[str] | None = None,
+                        relativity_scale: float | None = None, years: float | None = None) -> dict[str, Any]:
+        """Simulate a lab scenario with PhysicsLens's own N-body engine (checked against NASA/JPL), optionally changed:
+        scale a body's mass (0 to 1000), remove bodies, exaggerate relativity (fictional), or shorten the span. Returns
+        the target's orbital elements over time, its precession, and whether a video could see the change. Free."""
+        body = {"scenario": scenario, "mass_scale": mass_scale or {}, "disabled": disabled or [],
+                "c_scale": relativity_scale, "years": years}
+        with client_factory() as c:
+            out = _check(c.post("/api/sky/simulate", json={k: v for k, v in body.items() if v is not None}))
+        # The full trajectories are for drawing; an agent gets the physics.
+        return {k: out.get(k) for k in ("scenario", "target", "precession_arcsec_per_century", "energy_drift_per_century",
+                                        "detectability", "warnings", "source")} | {"elements": (out.get("elements") or [])[::20]}
+
+    @mcp.tool()
+    def discover_orbit_law(scenario: str, noise_px: float = 2.0, mass_scale: dict[str, float] | None = None,
+                           disabled: list[str] | None = None) -> dict[str, Any]:
+        """Find the law of a lab scenario's target from its simulated track with tracker-like noise (not from video):
+        Kepler, a free power law and the known bodies are fitted and verified on held-out motion; structured residuals
+        trigger a search for something else pulling. Free; every result says "simulation, no pixels"."""
+        body = {"scenario": scenario, "noise_px": noise_px, "mass_scale": mass_scale or {}, "disabled": disabled or []}
+        with client_factory() as c:
+            out = _check(c.post("/api/sky/discover", json=body))
+        return {k: out.get(k) for k in ("source", "status", "reason", "law", "parameters", "perturbation",
+                                        "equation_diff", "residual_spectrum", "detectability")}
 
     return mcp
 
