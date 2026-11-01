@@ -55,3 +55,30 @@ def test_the_verdict_carries_the_rolling_forecasts_and_says_why_a_law_failed_the
     assert v.winner.model_id in judge_candidates(v)
     live = assess(c, fit_family([MODELS["damped_harmonic"]], c), rolling=False)
     assert live.winner.rolling == ()
+
+
+def _fake(model_id: str, k: int, bic: float, heldout: float, offset: float) -> "FitResult":
+    from physicslens.physics.fit import FitResult
+    sim = np.linspace(0, 1, 40)[:, None] + offset  # distinct paths, so no two count as one law written twice
+    return FitResult(model_id, {}, np.zeros(2), 40, k, 1.0, bic, 0.01, heldout * 0.1, heldout, 0.01, True, sim=sim)
+
+
+def test_an_extra_term_that_forecasts_worse_is_not_confirmed():
+    # Damping wins on BIC (34 better) but forecasts the held-out quarter worse (13.8% against 9.9%): the gallery
+    # pendulum's case. The extra term has not shown it is real, so neither law is singled out.
+    v = decide([_fake("pendulum_linear_damping", 3, -1576.0, 0.138, 0.0), _fake("pendulum", 2, -1542.0, 0.099, 0.1)])
+    assert v.status == "ambiguous" and "not confirmed" in v.reason
+    trail = judge_candidates(v)
+    assert "forecasts the held-out motion worse" in trail["pendulum_linear_damping"][1]
+    assert "with fewer terms" in trail["pendulum"][1]
+
+
+def test_an_extra_term_that_forecasts_as_well_still_wins():
+    v = decide([_fake("pendulum_linear_damping", 3, -1576.0, 0.10, 0.0), _fake("pendulum", 2, -1542.0, 0.099, 0.1)])
+    assert v.status == "accepted" and v.winner.model_id == "pendulum_linear_damping"
+
+
+def test_tiny_forecast_differences_do_not_count():
+    # 0.11% against 0.08%: relatively worse, but far below a percent of the motion.
+    v = decide([_fake("damped_harmonic", 3, -600.0, 0.0011, 0.0), _fake("harmonic", 2, -50.0, 0.0008, 0.1)])
+    assert v.status == "accepted" and v.winner.model_id == "damped_harmonic"

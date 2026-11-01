@@ -21,6 +21,10 @@ MAX_HELDOUT_NOISE_RATIO = 3.0
 HARD_MAX_HELDOUT_NRMSE = 0.3
 # BIC difference needed to call a winner (>10 is "very strong" evidence on the Kass and Raftery scale).
 DECISIVE_DELTA_BIC = 10.0
+# An extra term must earn its place in the forecast too: a law that wins on BIC but forecasts the held-out motion
+# clearly worse (by this factor and this much error) than a simpler passing law has not shown the term is real.
+FORECAST_WORSE_REL = 1.2
+FORECAST_WORSE_ABS = 0.01
 
 Status = Literal["accepted", "ambiguous", "no_fit"]
 
@@ -107,6 +111,15 @@ def decide(fits: list[FitResult]) -> Verdict:
         return Verdict("ambiguous", None, group, ranked,
                        f"{listed} explain the data about equally well (BIC within {DECISIVE_DELTA_BIC:.0f}){note}.")
     best = group[0]
+    passing_ids = {f.model_id for f in passing}
+    simpler = next((f for f in passing if f.k < best.k and f not in folded
+                    and APPROXIMATES.get(f.model_id, ("",))[0] not in passing_ids  # the exact law, not its approximation
+                    and best.heldout_nrmse > max(FORECAST_WORSE_REL * f.heldout_nrmse, f.heldout_nrmse + FORECAST_WORSE_ABS)), None)
+    if simpler is not None:
+        return Verdict("ambiguous", None, (best, simpler), ranked,
+                       f"{title(best)} fits the whole clip better ({simpler.bic - best.bic:.0f} BIC) but forecasts the held-out "
+                       f"motion worse than the simpler {title(simpler)} ({best.heldout_nrmse:.1%} against "
+                       f"{simpler.heldout_nrmse:.1%}): its extra term is not confirmed{note}.")
     runner = next((f for f in passing if f is not best and f not in folded), None)
     margin = f"; next best ({title(runner)}) is {runner.bic - best.bic:.0f} BIC worse" if runner else ""
     return Verdict("accepted", best, (best,), ranked,
@@ -172,6 +185,12 @@ def judge_candidates(v: Verdict) -> dict[str, tuple[str, str]]:
             rolling = (f"; from {len(f.rolling)} later starting points, median error {med[0]:.1%}" if med else "")
             why = f"forecasts held-out motion within {f.heldout_nrmse:.1%} and has the best BIC{rolling}"
             out[f.model_id] = ("accepted", why)
+        elif f.model_id in contenders and len(v.contenders) == 2 and "not confirmed" in v.reason:
+            other = next(g for g in v.contenders if g.model_id != f.model_id)
+            out[f.model_id] = ("tied", f"fits the whole clip better than {title(other)} but forecasts the held-out motion worse "
+                                       f"({f.heldout_nrmse:.1%} against {other.heldout_nrmse:.1%}): the extra term is not confirmed"
+                               if f.k > other.k else
+                               f"forecasts the held-out motion better ({f.heldout_nrmse:.1%}) with fewer terms than {title(other)}")
         elif f.model_id in contenders:
             out[f.model_id] = ("tied", "fits about as well as the best; the data can't separate them")
         elif APPROXIMATES.get(f.model_id, ("",))[0] in contenders and forecasts_well(f):
