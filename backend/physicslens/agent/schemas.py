@@ -6,7 +6,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 from ..perception.calibration import REFERENCE_SIZES
 from ..physics.custom import MAX_BOUND, MAX_PARAMS, MAX_PARAMS_ORBIT, FreeParam, InputSignals, build
@@ -161,6 +161,11 @@ class Hypotheses(Strict):
     fit_window: FitWindow | None = Field(default=None, description=(
         "Optional: the stretch of the clip (seconds from its start) that is free motion, when its start or end is not "
         "(a hand throwing, holding or catching it). null to fit everything. It must keep at least 70% of the clip."))
+    _set_aside: list[str] = PrivateAttr(default_factory=list)  # written laws refused before fitting, with the reason
+
+    @property
+    def set_aside(self) -> list[str]:
+        return list(self._set_aside)
 
     @model_validator(mode="after")
     def same_family(self) -> Hypotheses:
@@ -170,16 +175,22 @@ class Hypotheses(Strict):
         if self.free_models and self.family not in ("line", "plane"):
             raise ValueError("free_models are only allowed with family 'line' or 'plane'; use listed model ids otherwise")
         law = law_context()
-        for i, f in enumerate(self.free_models):
+        # A written law that fails the grammar, the units check or names an unknown input is set aside with the
+        # reason (shown in the decision trail); the answer's other laws and candidates still go on to be fitted.
+        keep = []
+        for f in self.free_models:
             unknown = sorted(set(f.inputs_used) - set(law.inputs))
             if unknown:
-                raise ValueError(f"free_models[{i}] ({f.title}): no known input named {unknown}; "
-                                 f"available: {list(law.inputs) or 'none'}")
+                self._set_aside.append(f"{f.title}: no known input named {unknown} (available: {list(law.inputs) or 'none'})")
+                continue
             try:
                 build(self.family, f.title, f.acceleration, [FreeParam(**p.model_dump()) for p in f.params],
                       law.signals, max_params=law.max_params)
             except ExprError as e:
-                raise ValueError(f"free_models[{i}] ({f.title}): {e}") from e
+                self._set_aside.append(f"{f.title}: {e}")
+                continue
+            keep.append(f)
+        self.free_models = keep
         return self
 
 

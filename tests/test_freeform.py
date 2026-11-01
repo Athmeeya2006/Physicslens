@@ -116,9 +116,12 @@ def test_hypotheses_schema_validates_free_models_and_reports_errors():
           "free_models": [{"title": "Air drag", "acceleration": ["-c*v*abs(v)"], "rationale": "deceleration fades",
                            "params": [{"name": "c", "unit": "1/m", "lower": 0, "upper": 10, "guess": 0.3}]}]}
     assert Hypotheses.model_validate(ok).free_models[0].title == "Air drag"
-    bad = {**ok, "free_models": [{**ok["free_models"][0], "acceleration": ["-c*v*abs(v) - drag"]}]}
-    with pytest.raises(ValidationError, match="unknown name 'drag'"):
-        Hypotheses.model_validate(bad)
+    # A law the grammar or the units check rejects is set aside, with the reason, and its siblings still go on.
+    bad_law = {**ok["free_models"][0], "title": "Broken", "acceleration": ["-c*v*abs(v) - drag"]}
+    h = Hypotheses.model_validate({**ok, "free_models": [bad_law, ok["free_models"][0]]})
+    assert [f.title for f in h.free_models] == ["Air drag"] and "unknown name 'drag'" in h.set_aside[0]
+    units = {**ok["free_models"][0], "title": "Wrong units", "acceleration": ["-c*v*abs(v) + 1"]}
+    assert "units" in Hypotheses.model_validate({**ok, "free_models": [units]}).set_aside[0]
     wrong_family = {**ok, "family": "pendulum", "candidates": [{"model_id": "pendulum", "rationale": "x"}]}
     with pytest.raises(ValidationError, match="only allowed with family"):
         Hypotheses.model_validate(wrong_family)

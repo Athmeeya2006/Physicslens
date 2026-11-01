@@ -169,10 +169,11 @@ def test_the_schema_checks_proposals_against_the_runs_inputs():
         Hypotheses.model_validate({"family": "plane", "candidates": [{"model_id": "plane_constant_velocity",
                                                                       "rationale": "control"}],
                                    "free_models": [law]})
-        with pytest.raises(ValueError, match="no known input"):
-            Hypotheses.model_validate({"family": "plane", "candidates": [{"model_id": "plane_constant_velocity",
+        # A law naming an input the run does not have is set aside with the reason; the rest of the answer stands.
+        h = Hypotheses.model_validate({"family": "plane", "candidates": [{"model_id": "plane_constant_velocity",
                                                                           "rationale": "control"}],
-                                       "free_models": [{**law, "inputs_used": ["z9"]}]})
+                                       "free_models": [{**law, "inputs_used": ["z9"]}, law]})
+        assert [f.title for f in h.free_models] == ["Pulled"] and "no known input" in h.set_aside[0]
     finally:
         LAW_CONTEXT.reset(token)
     assert FreeModelIn.model_fields["inputs_used"].default_factory() == []

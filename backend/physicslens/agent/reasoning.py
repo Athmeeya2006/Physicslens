@@ -125,6 +125,7 @@ class SampledHypotheses:
     samples: int  # samples that answered usably (the vote denominator)
     families: list[str]
     failed: int = 0  # samples left out: no usable answer
+    set_aside: tuple[str, ...] = ()  # written laws refused before fitting (grammar, units, unknown inputs), with the reason
 
 
 def propose_hypotheses_sampled(client: CostGuardClient, summary: dict[str, Any], scene: Scene, run_id: str,
@@ -137,7 +138,7 @@ def propose_hypotheses_sampled(client: CostGuardClient, summary: dict[str, Any],
     """
     if samples <= 1:
         hyp, call = propose_hypotheses(client, summary, scene, run_id, audience, exclude_families)
-        return SampledHypotheses(hyp, [call], _votes([hyp]), 1, [hyp.family])
+        return SampledHypotheses(hyp, [call], _votes([hyp]), 1, [hyp.family], set_aside=tuple(hyp.set_aside))
     with ThreadPoolExecutor(samples) as pool:
         # A distinct note per sample keeps them independent: identical prompts would just replay one cached answer.
         futures = [pool.submit(propose_hypotheses, client, summary, scene, run_id, audience, exclude_families,
@@ -160,7 +161,8 @@ def propose_hypotheses_sampled(client: CostGuardClient, summary: dict[str, Any],
     window = next((h.fit_window for h in chosen if h.fit_window is not None), None)
     # Built without re-validating the list lengths: the union may hold more than one sample is allowed to propose.
     merged = Hypotheses.model_construct(family=family, candidates=candidates, free_models=laws, fit_window=window)
-    return SampledHypotheses(merged, [c for _, c in results], _votes(chosen), len(results), families, len(errors))
+    aside = tuple(dict.fromkeys(x for h in chosen for x in h.set_aside))
+    return SampledHypotheses(merged, [c for _, c in results], _votes(chosen), len(results), families, len(errors), aside)
 
 
 MAX_FREE_LAWS = 4

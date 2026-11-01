@@ -295,6 +295,9 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
     sampled = propose_hypotheses_sampled(client, summary, scene, run_id, options.audience, samples=n_samples)
     hyp = sampled.merged
     record("hypotheses", sampled.calls[0], _sampled_text(sampled), items=_hypothesis_items(hyp, sampled))
+    for why in sampled.set_aside:
+        trail.append({"step": "law_set_aside", "provider": None, "model": "units and grammar check",
+                      "text": f"A written law was set aside before fitting: {why}"})
     for extra_call in sampled.calls[1:]:
         record("hypotheses", extra_call, None)
 
