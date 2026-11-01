@@ -47,7 +47,7 @@ def test_analyze_mock_runs_the_plumbing_and_stops_plainly(tmp_path, capsys):
 
 
 def test_analyze_writes_every_export_for_a_verified_result(tmp_path, capsys, monkeypatch):
-    import physicslens.pipeline as pipeline
+    from physicslens import pipeline
     stored = json.loads((ROOT / "gallery" / "gallery-pendulum" / "result.json").read_text())
     monkeypatch.setattr(pipeline, "analyze", lambda *a, **k: stored)  # the analysis itself is tested elsewhere
     out = tmp_path / "out"
