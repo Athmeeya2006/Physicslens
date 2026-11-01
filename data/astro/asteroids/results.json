@@ -82,7 +82,8 @@
    "measured": 0.6396536969667526,
    "relative_error": 0.0,
    "within_interval": true,
-   "source": "MPC observations of 2024 YR4, 2025 January 17 to 24"
+   "source": "MPC observations of 2024 YR4, 2025 January 17 to 24",
+   "text": "the 56 positions measured then fell a median 0.64 arcsec (at most 1.18) from the forecast; 100% within three stated sigmas"
   },
   "confidence": "100% of the later observations within three of the stated sigmas",
   "status": "proven",

@@ -633,7 +633,9 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .fall-map .swatch-line { width: 18px; height: 3px; display: inline-block; }
 .fall-map .swatch-line.dashed { background: repeating-linear-gradient(90deg, var(--ink-2) 0 5px, transparent 5px 8px); }
 .ab-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; align-items: start; }
-.ab-chart svg { width: 100%; height: auto; display: block; }
+.ab-chart > svg { width: 100%; height: auto; display: block; }
+.ab-chart figcaption { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 6px; }
+.ab-chart figcaption .key { display: inline-flex; align-items: center; gap: 6px; }
 .ab-chart .tick { font-size: 12px; fill: var(--ink-2); }
 .ab-frame { fill: none; stroke: var(--line); }
 .ab-line { fill: none; stroke: var(--ink-2); stroke-width: 2; }

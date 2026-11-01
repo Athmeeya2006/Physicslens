@@ -174,7 +174,8 @@ export interface Outcome {
   headline: string;
   action: string;
   artifacts: { kind: string }[];
-  checked_against: { name: string; truth: number; measured: number; relative_error: number; within_interval: boolean; source: string } | null;
+  // text: a plain sentence for checks that are not one number against a true value (a forecast's misses)
+  checked_against: { name: string; truth: number; measured: number; relative_error: number; within_interval: boolean; source: string; text?: string } | null;
   confidence: string | null;
   status: "proven" | "partial" | "not yet validated";
   readable: Readable | null;

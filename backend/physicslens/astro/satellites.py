@@ -26,7 +26,11 @@ import numpy as np
 
 MU_EARTH = 398600.4418  # km^3/s^2
 R_EARTH = 6378.137  # km, equatorial (WGS84)
+# Zonal harmonics of the Earth's gravity (EGM2008, unnormalised): the flattening and the next two terms. Over a few
+# days J4 alone moves a low orbit's plane by kilometres, far more than a camera's 30 arcseconds.
 J2 = 1.08262668e-3
+J3 = -2.53265648533e-6
+J4 = -1.61962159137e-6
 TRAIN_FRACTION = 0.75
 DECISIVE_DELTA_BIC = 10.0
 HELDOUT_CHI2 = 4.0
@@ -265,15 +269,48 @@ def catalogue_check(t_jd: np.ndarray, ra: np.ndarray, dec: np.ndarray, sigma_arc
 
 # --- orbits with and without a manoeuvre ---------------------------------------------------------------------------------------------
 
-def _accel(r: np.ndarray, v: np.ndarray, k_drag: float) -> np.ndarray:
-    """Two-body + J2 (axes of GCRS, with z the Earth's axis to well under a degree for days) + an along-track
-    deceleration proportional to speed squared (drag, with the atmosphere's density folded into k_drag)."""
+def zonal_accel(r: np.ndarray) -> np.ndarray:
+    """Acceleration from J2, J3 and J4 (km/s^2), with r in a frame whose z axis is the Earth's true pole: the gradient
+    of the potential -(mu/r) sum_n Jn (Re/r)^n Pn(z/r) (Vallado, Fundamentals of Astrodynamics, the zonal terms)."""
     x, y, z = r
-    rn = math.sqrt(x * x + y * y + z * z)
+    r2 = x * x + y * y + z * z
+    rn = math.sqrt(r2)
+    s = z / rn
+    m = MU_EARTH
+    k2 = 1.5 * J2 * m * R_EARTH ** 2 / rn ** 5
+    a2 = k2 * np.array([x * (5 * s * s - 1), y * (5 * s * s - 1), z * (5 * s * s - 3)])
+    k3 = 2.5 * J3 * m * R_EARTH ** 3 / rn ** 7
+    a3 = k3 * np.array([x * (7 * z ** 3 / r2 - 3 * z), y * (7 * z ** 3 / r2 - 3 * z), 7 * z ** 4 / r2 - 6 * z * z + 0.6 * r2])
+    k4 = 15 / 8 * J4 * m * R_EARTH ** 4 / rn ** 7
+    a4 = k4 * np.array([x * (1 - 14 * s * s + 21 * s ** 4), y * (1 - 14 * s * s + 21 * s ** 4),
+                        z * (5 - 70 / 3 * s * s + 21 * s ** 4)])
+    return a2 + a3 + a4
+
+
+def true_pole_rotation(t_jd: float) -> np.ndarray:
+    """GCRS to the true equator and equinox of date (astropy's TETE): its z axis is the Earth's pole that day, about
+    0.15 degrees from GCRS's in 2026 because of precession. Over a few days it barely moves, so one matrix serves."""
+    import astropy.units as u
+    from astropy.coordinates import GCRS, TETE, CartesianRepresentation
+    from astropy.time import Time
+    t = Time(t_jd, format="jd", scale="utc")
+    eye = CartesianRepresentation(np.eye(3) * u.one)
+    g = GCRS(eye, obstime=t, representation_type="cartesian").transform_to(TETE(obstime=t))
+    return g.cartesian.xyz.value  # columns: the GCRS axes seen in TETE
+
+
+_POLE = {"t": None, "R": np.eye(3)}
+
+
+def _accel(r: np.ndarray, v: np.ndarray, k_drag: float, R: np.ndarray | None = None) -> np.ndarray:
+    """Two-body + J2, J3, J4 about the true pole (R: GCRS to true-of-date) + an along-track deceleration
+    proportional to speed squared (drag, with the atmosphere's density folded into k_drag)."""
+    rn = math.sqrt(r @ r)
     a = -MU_EARTH * r / rn ** 3
-    f = 1.5 * J2 * MU_EARTH * R_EARTH ** 2 / rn ** 5
-    zz = 5 * z * z / (rn * rn)
-    a = a + f * np.array([x * (zz - 1), y * (zz - 1), z * (zz - 3)])
+    if R is None:
+        a = a + zonal_accel(r)
+    else:
+        a = a + R.T @ zonal_accel(R @ r)
     sp = math.sqrt(v @ v)
     return a - k_drag * sp * v
 
@@ -284,8 +321,12 @@ def integrate(state0: np.ndarray, t0_jd: float, t_jd: np.ndarray, k_drag: float,
     in-track, cross-track km/s) applied at that instant."""
     from scipy.integrate import solve_ivp
 
+    if _POLE["t"] is None or abs(_POLE["t"] - t0_jd) > 1.0:  # one rotation per day of epochs is ample
+        _POLE.update(t=t0_jd, R=true_pole_rotation(t0_jd))
+    pole = _POLE["R"]  # (not R: the impulse below names its radial direction R)
+
     def rhs(_t, s):
-        return np.concatenate([s[3:], _accel(s[:3], s[3:], k_drag)])
+        return np.concatenate([s[3:], _accel(s[:3], s[3:], k_drag, pole)])
 
     def leg(s0: np.ndarray, ta: float, tb: float):
         return solve_ivp(rhs, (ta, max(tb, ta + 1.0)), s0, rtol=1e-10, atol=1e-9, method="DOP853", dense_output=True)

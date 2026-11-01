@@ -31,7 +31,10 @@ export function OutcomeCard({ o, exportHref }: { o: Outcome; exportHref?: (kind:
       <p className="outcome-headline">{o.headline}</p>
       <p><strong>What to do:</strong> {o.action}</p>
       {o.confidence && <p className="small"><strong>Confidence:</strong> {formatUnit(o.confidence)}</p>}
-      {o.checked_against && (
+      {o.checked_against?.text && (
+        <p className="small"><strong>Checked against:</strong> {o.checked_against.source}: {o.checked_against.text}</p>
+      )}
+      {o.checked_against && !o.checked_against.text && (
         <p className="small">
           <strong>Checked against:</strong> {o.checked_against.source}: {o.checked_against.name} ={" "}
           {o.checked_against.truth.toPrecision(5)}, measured {o.checked_against.measured.toPrecision(5)}{" "}

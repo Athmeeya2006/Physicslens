@@ -77,3 +77,22 @@ def test_identical_orbits_are_one_answer():
     twin = {**ISS, "OBJECT_NAME": "ISS (NAUKA)", "NORAD_CAT_ID": 49044, "OBJECT_ID": "2021-066A"}
     got = T.identify(obs_t, ra, dec, site, [ISS, twin], max_clock_s=1.0)
     assert got[0]["name"] == "ISS (ZARYA)" and got[0]["rms_arcsec"] < 1 and "ISS (NAUKA)" in got[0].get("same_orbit", [])
+
+
+def test_zonal_gravity_is_the_gradient_of_its_potential():
+    def potential(r):
+        rn = np.linalg.norm(r)
+        s = r[2] / rn
+        p2, p3, p4 = (3 * s ** 2 - 1) / 2, (5 * s ** 3 - 3 * s) / 2, (35 * s ** 4 - 30 * s ** 2 + 3) / 8
+        return -(T.MU_EARTH / rn) * sum(j * (T.R_EARTH / rn) ** n * p for n, j, p in ((2, T.J2, p2), (3, T.J3, p3), (4, T.J4, p4)))
+
+    r = np.array([4200.0, -3100.0, 4400.0])
+    h = 1e-3
+    grad = np.array([(potential(r + h * e) - potential(r - h * e)) / (2 * h) for e in np.eye(3)])
+    assert T.zonal_accel(r) == pytest.approx(grad, rel=1e-6)
+
+
+def test_true_pole_is_precessed_from_gcrs():
+    R = T.true_pole_rotation(2461346.0)
+    angle = np.degrees(np.arccos(R[2, 2]))  # the GCRS pole seen from the true equator of 2026
+    assert 0.12 < angle < 0.18 and np.allclose(R @ R.T, np.eye(3), atol=1e-12)  # about 20 arcsec a year since 2000

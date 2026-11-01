@@ -124,9 +124,11 @@ def main() -> None:
                      f"{unc_a['major_arcsec']:.1f} arcsec ({shrink:.1f} times smaller); the forecasts met the observations made three "
                      f"weeks later within {f_a['median_miss_arcsec']:.1f} arcsec (median)."),
         "action": "Submit your night as ADES (example below) with your own MPC code; follow-up in the first days matters most.",
-        "artifacts": [], "checked_against": {"name": "forecast miss three weeks later (arcsec, median)", "truth": 0.0,
-                                             "measured": f_a["median_miss_arcsec"], "relative_error": 0.0,
-                                             "within_interval": honest, "source": "MPC observations of 2024 YR4, 2025 January 17 to 24"},
+        "artifacts": [], "checked_against": {
+            "name": "forecast miss three weeks later (arcsec, median)", "truth": 0.0, "measured": f_a["median_miss_arcsec"],
+            "relative_error": 0.0, "within_interval": honest, "source": "MPC observations of 2024 YR4, 2025 January 17 to 24",
+            "text": (f"the {f_a['n']} positions measured then fell a median {f_a['median_miss_arcsec']:.2f} arcsec (at most "
+                     f"{f_a['max_miss_arcsec']:.2f}) from the forecast; {f_a['within_3_sigma']:.0%} within three stated sigmas")},
         "confidence": f"{f_a['within_3_sigma']:.0%} of the later observations within three of the stated sigmas",
         "status": "proven" if honest and shrink > 1.2 else "partial",
         "limits": [] if honest else ["the stated uncertainty is too small for the later observations"], "readable": None}
