@@ -88,6 +88,10 @@ def ast() -> dict:
     return load("data/astro/asteroids/results.json")
 
 
+def sat() -> dict:
+    return load("data/astro/satellites/results.json")
+
+
 def sky(key: str) -> dict:
     return load("data/sky/validation_results.json")[key]
 
@@ -297,6 +301,14 @@ CLAIMS = [
     Claim("YR4: before (arcsec)", r"shrinks from ([\d.]+) to\s+[\d.]+ arcsec", lambda: ast()["before"]["uncertainty_ahead"]["major_arcsec"]),
     Claim("YR4: after (arcsec)", r"shrinks from [\d.]+ to\s+([\d.]+) arcsec", lambda: ast()["after"]["uncertainty_ahead"]["major_arcsec"]),
     Claim("YR4: later miss (arcsec)", r"fell ([\d.]+) arcsec from the forecast", lambda: ast()["after"]["forecast_check"]["median_miss_arcsec"]),
+    Claim("ISS: one pass, catalogue behind (s)", r"measures the catalogue orbit ([\d.]+) ± [\d.]+ s behind", lambda: sat()["single_pass"]["checks"][0]["time_offset_s"]),
+    Claim("ISS: its sd", r"measures the catalogue orbit [\d.]+ ± ([\d.]+) s behind", lambda: sat()["single_pass"]["checks"][0]["time_offset_sigma_s"]),
+    Claim("ISS: NASA says (s)", r"where NASA's trajectory says ([\d.]+) s", lambda: sat()["single_pass"]["truth_catalogue_behind_s"]),
+    Claim("ISS: km per clock second", r"moves the object about ([\d.]+) km along", lambda: sat()["single_pass"]["checks"][0]["km_per_clock_second"]),
+    Claim("ISS: 0.5 m/s found in-track", r"along-track parts of ([\d.]+) and", lambda: sat()["manoeuvres"][1]["impulse"]["dv_ric_m_s"][1]),
+    Claim("ISS: 2 m/s found in-track", r"along-track parts of [\d.]+ and ([\d.]+) m/s", lambda: sat()["manoeuvres"][2]["impulse"]["dv_ric_m_s"][1]),
+    Claim("Tumble: period", r"\(synthetic: ([\d.]+) ± [\d.]+ s", lambda: sat()["tumble_synthetic"]["period_s"]),
+    Claim("Tumble: sd", r"\(synthetic: [\d.]+ ± ([\d.]+) s", lambda: sat()["tumble_synthetic"]["sigma_s"]),
 ]
 
 

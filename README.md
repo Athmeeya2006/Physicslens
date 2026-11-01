@@ -411,7 +411,7 @@ Every case at a glance (the status comes from each result file by a written rule
 | [The Sun's rotation](https://physicslens.vercel.app/sun) | space-weather watchers, radio operators, aurora chasers | the differential rotation law from real images, and return dates for active regions | 14.46 + (-3.11) sin² φ °/day against the published sunspot profile 14.44 − 3.0 sin² φ; 7 regions back a median 1.5 days from the forecast | proven | not new science; spots do not rotate exactly like the plasma; whether a region flares is out of scope |
 | [Stellar occultations](https://physicslens.vercel.app/occultation) | occultation observers (IOTA and amateur networks) | edge times with honest errors, and the outline from every observer's chord, misses included | Umbriel's radius 582.1 ± 0.9 km against the published 582.4 ± 0.8 km | proven | uses published timings, not raw videos; diffraction is not modelled |
 | [Asteroid follow-up](https://physicslens.vercel.app/asteroids) | amateur astronomers following up new objects | a submittable ADES report, and how much your night shrinks the orbit's uncertainty | 2024 YR4: one more night shrinks the uncertainty a month ahead from 2.3″ to 0.4″; observations three weeks later fell 0.6″ from the forecast (median) | proven | the core astrometry is already done well by free tools; one night cannot detect the Yarkovsky drift |
-| [Satellites](https://physicslens.vercel.app/satellites) | amateur trackers, space-safety analysts | which object a streak is, how far it is from its catalogue orbit, manoeuvre alerts, IOD reports | ISS catalogue offset 0.03 ± 0.00 s from one pass (NASA's trajectory: 0.04 s); no false manoeuvre on the real orbit, 0 of 2 injected found | partial | needs frame times good to a fraction of a second (a GPS-synced clock); one pass constrains an orbit weakly |
+| [Satellites](https://physicslens.vercel.app/satellites) | amateur trackers, space-safety analysts | which object a streak is, how far it is from its catalogue orbit, manoeuvre alerts, IOD reports | ISS catalogue offset 0.11 ± 0.01 s from one pass (NASA's trajectory: 0.11 s); no false manoeuvre on the real orbit, 2 of 2 injected found | partial | needs frame times good to a fraction of a second (a GPS-synced clock); one pass constrains an orbit weakly |
 | [Physics audit of video](https://physicslens.vercel.app/audit) | video-model builders and anyone checking footage | a verdict per clip (consistent, violates physics, or cannot judge) with the measured reason | real footage: 0 of 13 judged clips flagged; AI-generated: 2 of 14 | partial | most clips cannot be judged (no clean single object or too short); a clean audit is not proof a clip is real |
 | [Machine health](https://physicslens.vercel.app/health) | maintenance engineers | drift alerts when two recordings of the same machine disagree beyond their intervals | no result yet | not yet validated | no validation on a real machine with known wear yet: the drift test is checked on simulated recordings only |
 
@@ -494,6 +494,26 @@ observatory's next night (4 positions from ATLAS Chile). The 1-sigma uncertainty
 0.4 arcsec, and the observations made three weeks later fell 0.6 arcsec from the forecast (median), all within three
 of the stated sigmas. Started 30,000 km away, the fit lands on the same orbit. The night is also written as an ADES
 report (version 2022) for the observer to submit with their own MPC code.
+
+### Satellites: is it where its catalogue says, and did it move? (`/satellites`)
+
+`scripts/satellite_demo.py` tests on the International Space Station: NASA's published trajectory (OEM) against its
+public catalogue orbit (CelesTrak, propagated with SGP4), seen by eight observers around the world with 30 arcsec
+camera errors (the satellite sunlit, the observer in darkness).
+
+- One pass identifies it (the ISS; its docked modules, catalogued separately with the same orbit, are one answer)
+  and measures the catalogue orbit 0.110 ± 0.009 s behind, where NASA's trajectory says 0.108 s. Every second of
+  clock error moves the object about 7.7 km along its track, so the page tells observers when their clock is good
+  enough.
+- Manoeuvres: one orbit (two-body, the Earth's J2, J3 and J4 about the true pole of date, drag) against one orbit
+  with an impulse in each gap between passes. On the real orbit no manoeuvre is called; impulses of 0.5 and 2 m/s
+  added to it are found in the right gap, with along-track parts of 0.55 and 2.05 m/s. Over four days the model
+  still misses NASA's trajectory by more than the camera's noise, so an impulse may also count when it forecasts the
+  later passes at least four times better than one orbit (which then cannot forecast them at all), and the verdict
+  says so. No real recorded manoeuvre has been reproduced yet: NASA's current ephemeris lists none, and past
+  catalogue orbits need a Space-Track account.
+- Observations are written as IOD lines (the format checked against its specification), and a tumbling object's
+  period comes from its light curve with the half-period alias checked (synthetic: 37.2 ± 1.2 s, true 37.2).
 
 ---
 

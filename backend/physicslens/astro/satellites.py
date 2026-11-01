@@ -34,6 +34,7 @@ J4 = -1.61962159137e-6
 TRAIN_FRACTION = 0.75
 DECISIVE_DELTA_BIC = 10.0
 HELDOUT_CHI2 = 4.0
+RELATIVE_FORECAST = 4.0  # chi-square ratio (a halved miss) an impulse needs when one orbit cannot forecast at all
 
 
 # --- trajectories ------------------------------------------------------------------------------------------------
@@ -446,16 +447,30 @@ def detect_manoeuvre(t_jd: np.ndarray, ra: np.ndarray, dec: np.ndarray, site_pos
             chi2, rms = forecast_chi2(ft, t_jd[~tr], ra[~tr], dec[~tr], site_pos[~tr], sigma_arcsec * scale, t0)
             fa.heldout_chi2, fa.heldout_rms_arcsec = chi2, rms
     one = fits_all[0]
-    with_imp = [f for f in fits_all[1:] if np.isfinite(f.heldout_chi2) and f.heldout_chi2 <= HELDOUT_CHI2]
+    one_fails = np.isfinite(one.heldout_chi2) and one.heldout_chi2 > HELDOUT_CHI2
+
+    def forecasts(f: OrbitFit) -> bool:
+        # Within the limit every law must meet; or, when one orbit cannot forecast the later passes at all, at least
+        # RELATIVE_FORECAST times better than it (the orbit model's own small omissions keep every law above the
+        # limit then, and the verdict says so).
+        if not np.isfinite(f.heldout_chi2):
+            return False
+        return f.heldout_chi2 <= HELDOUT_CHI2 or (one_fails and f.heldout_chi2 * RELATIVE_FORECAST <= one.heldout_chi2)
+
+    with_imp = [f for f in fits_all[1:] if forecasts(f)]
     best_imp = min(fits_all[1:], key=lambda f: f.bic) if len(fits_all) > 1 else None
     passing_imp = min(with_imp, key=lambda f: f.bic) if with_imp else None
     out: dict[str, Any] = {"one_orbit": one.summary(), "best_impulse": best_imp.summary() if best_imp else None,
-                           "error_scale": scale, "gaps_tested": len(gaps)}
+                           "error_scale": scale, "gaps_tested": len(gaps),
+                           "impulses": [f.summary() for f in fits_all[1:]]}
     if (passing_imp is not None and one.bic - passing_imp.bic >= DECISIVE_DELTA_BIC
             and (not np.isfinite(one.heldout_chi2) or passing_imp.heldout_chi2 <= one.heldout_chi2)):
+        caveat = ("" if passing_imp.heldout_chi2 <= HELDOUT_CHI2 else
+                  f"; its forecast misses still exceed the measurement noise (chi-square {passing_imp.heldout_chi2:.1f} against "
+                  f"{one.heldout_chi2:.0f} for one orbit), so the size of the impulse is approximate")
         out.update(manoeuvre=True, impulse=passing_imp.summary(),
                    reason=f"an impulse of {np.linalg.norm(passing_imp.theta[7:10]) * 1000:.2f} m/s between passes fits "
-                          f"{one.bic - passing_imp.bic:.0f} BIC better and forecasts the later passes")
+                          f"{one.bic - passing_imp.bic:.0f} BIC better and forecasts the later passes{caveat}")
     else:
         out.update(manoeuvre=False, reason="one orbit explains every pass: no manoeuvre")
     return out

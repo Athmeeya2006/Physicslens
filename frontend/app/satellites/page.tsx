@@ -118,7 +118,10 @@ export default function SatellitesPage() {
             <h2 id="sat-man">Did it manoeuvre?</h2>
             <p className="small">Two laws for several days of passes: one orbit (gravity with the Earth&apos;s flattening, and drag), or one orbit with an
               impulse in a gap between passes. The impulse is accepted only if, fitted on the earlier passes, it forecasts the later
-              ones and wins by BIC.</p>
+              ones and wins by BIC. The orbit model (gravity with the Earth&apos;s J2, J3 and J4 about the true pole, and drag) still misses NASA&apos;s
+              trajectory by more than the camera&apos;s noise over four days, so when one orbit cannot forecast at all, an impulse that forecasts at least
+              four times better counts too, and the verdict says so. The push along the track is measured well; the radial and cross-track parts
+              absorb the model&apos;s leftovers and are not reliable.</p>
             <div className="table-wrap">
               <table className="cards">
                 <thead><tr><th>Injected</th><th>Passes</th><th>Verdict</th><th>Found</th></tr></thead>
@@ -128,7 +131,7 @@ export default function SatellitesPage() {
                       <td data-label="Injected">{r.injected}{r.injected_at_utc ? ` at ${r.injected_at_utc.replace("T", " ")}` : ""}</td>
                       <td data-label="Passes" className="num">{r.passes}</td>
                       <td data-label="Verdict">{r.reason}</td>
-                      <td data-label="Found" className="num">{r.manoeuvre && r.impulse ? `${r.impulse.dv_m_s.toFixed(2)} m/s${r.window_right ? ", right gap" : ", wrong gap"}` : r.dv_m_s ? "missed" : "nothing (correct)"}</td>
+                      <td data-label="Found" className="num">{r.manoeuvre && r.impulse ? `${r.impulse.dv_ric_m_s[1].toFixed(2)} m/s along the track${r.window_right ? ", right gap" : ", wrong gap"}` : r.dv_m_s ? "missed" : "nothing (correct)"}</td>
                     </tr>
                   ))}
                 </tbody>
