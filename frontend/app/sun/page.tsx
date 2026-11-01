@@ -23,7 +23,8 @@ interface Sun {
   published: Record<string, { source: string; omega: number[] }>;
   earth_rate_deg_day: { from_sunpy_L0: Record<string, number>; measured_sidereal_minus_synodic: number };
   returns: Ret[];
-  returns_summary: { forecast: number; came_back: number; median_error_days: number | null; noaa_median_error_days: number | null; noaa_compared: number };
+  returns_summary: { forecast: number; came_back: number; median_error_days: number | null; noaa_median_error_days: number | null; noaa_compared: number;
+    later_than_forecast?: number; noaa_later_than_forecast?: number };
   outcome: Outcome;
 }
 
@@ -148,7 +149,8 @@ export default function SunPage() {
             <p className="small muted">Median miss {d.returns_summary.median_error_days?.toFixed(1) ?? "n/a"} days over {d.returns_summary.came_back} returns
               {d.returns_summary.noaa_median_error_days != null ? `; NOAA's own "due to return" lists, ${d.returns_summary.noaa_median_error_days.toFixed(1)} days over ${d.returns_summary.noaa_compared}` : ""}.
               A region is listed when NOAA first numbers it, usually a day or two after it rounds the limb; the time it crossed the limb
-              is worked back from where it was first listed.</p>
+              is worked back from where it was first listed.{d.returns_summary.later_than_forecast != null &&
+              ` All misses go one way: ${d.returns_summary.later_than_forecast} of ${d.returns_summary.came_back} regions came back later than forecast here, and ${d.returns_summary.noaa_later_than_forecast} of ${d.returns_summary.noaa_compared} later than NOAA's own date.`}</p>
           </section>
           <p className="small muted">What it can&apos;t do: this is not new science (the law has been known for a century); sunspots do not
             rotate exactly like the plasma around them; and whether a region will flare is out of scope, only where it will be. Data:

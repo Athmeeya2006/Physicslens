@@ -2593,7 +2593,9 @@
   "median_error_days": 1.4958333333333333,
   "max_error_days": 1.8840277777777779,
   "noaa_median_error_days": 2.0746527777777777,
-  "noaa_compared": 6
+  "noaa_compared": 6,
+  "later_than_forecast": 7,
+  "noaa_later_than_forecast": 6
  },
  "outcome": {
   "headline": "The Sun turns faster at its equator: 14.46 + (-3.11) sin\u00b2 \u03c6 degrees per day (sidereal), from 119 sunspots in real SDO images, matching the published sunspot profile. Regions came back on the east limb a median 1.5 days from the forecast (7 returns).",

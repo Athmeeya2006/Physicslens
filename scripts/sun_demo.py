@@ -180,7 +180,9 @@ def main() -> None:
         "returns": returns,
         "returns_summary": {"forecast": len(returns), "came_back": len(errs), "median_error_days": float(np.median(errs)) if errs else None,
                             "max_error_days": float(max(errs)) if errs else None,
-                            "noaa_median_error_days": float(np.median(nerr)) if nerr else None, "noaa_compared": len(nerr)},
+                            "noaa_median_error_days": float(np.median(nerr)) if nerr else None, "noaa_compared": len(nerr),
+                            "later_than_forecast": sum(r["error_days"] > 0 for r in returns if "error_days" in r),
+                            "noaa_later_than_forecast": sum(r["noaa_error_days"] > 0 for r in returns if "noaa_error_days" in r)},
     }
     out["outcome"] = outcome(out)
     OUT.mkdir(parents=True, exist_ok=True)
