@@ -991,7 +991,7 @@ All code in this repository was written during the hackathon building period (Oc
 
 ## Roadmap
 
-3D reconstruction from two phones, more coupled multi-body systems, export to more simulators (Isaac Sim, Gazebo), tracking on open weights next to Muse Glimmer, and on-device inference with Muse Glimmer.
+3D reconstruction from two phones, more coupled multi-body systems, export to Isaac Sim (MuJoCo, URDF and SDF for Gazebo exist), rolling-shutter correction (today it is only measured and warned about), lens calibration checked on real phones (so far on synthetic boards and drops), tracking on open weights next to Muse Glimmer, and on-device inference with Muse Glimmer.
 
 ## Acknowledgements
 
