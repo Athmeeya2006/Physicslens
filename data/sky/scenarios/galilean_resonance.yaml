@@ -1,0 +1,17 @@
+name: galilean_resonance
+title: "Io, Europa and Ganymede in resonance"
+description: >
+  Jupiter's moons Io, Europa and Ganymede orbit in a 1:2:4 resonance: Io laps Europa twice for each time Europa laps
+  Ganymede, and the three never line up. With their mutual pulls and Jupiter's flattening (J2) switched on, the
+  resonance angle stays locked; the moons' orbits are the JPL ones at J2000.
+fictional: false
+system: jovian
+start: "2000-01-01 12:00"
+clip_days: 60
+frame_step_days: 0.02
+predict_until: null
+target: Io
+bodies: [Io, Europa, Ganymede, Callisto]
+j2: true
+baseline: null
+compare: none

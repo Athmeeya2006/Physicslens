@@ -1,0 +1,14 @@
+name: uranus_without_neptune
+title: "Uranus with no Neptune"
+description: >
+  The baseline for the Le Verrier scenario: the same start, Neptune removed.
+fictional: false
+start: "1780-01-01"
+clip_days: 24106
+frame_step_days: 60
+predict_until: null
+target: Uranus
+bodies: [Jupiter, Saturn, Uranus]
+seed_bodies: [Jupiter, Saturn, Uranus, Neptune, Pluto]
+baseline: null
+compare: none

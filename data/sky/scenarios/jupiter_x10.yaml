@@ -1,0 +1,15 @@
+name: jupiter_x10
+title: "Jupiter ten times heavier (fictional)"
+description: >
+  FICTIONAL. Jupiter's mass times ten, everything else real, from J2000. Earth's and Mars's orbits feel it: their
+  eccentricities and perihelia start to wander within decades. Compare with the real solar system (the baseline).
+fictional: true
+start: "2000-01-01 12:00"
+clip_days: 8766
+frame_step_days: 10
+predict_until: null
+target: Mars
+bodies: [Mercury, Venus, Earth, Moon, Mars, Jupiter, Saturn, Uranus, Neptune]
+mass_scale: {Jupiter: 10}
+baseline: real_inner_planets
+compare: none

@@ -1,0 +1,156 @@
+{
+ "truth": {
+  "gm_au3_d2": 1.5243576521132052e-08,
+  "radius_au_mean": 30.231109704011267,
+  "phase_at_start_rad": -3.056617061824042
+ },
+ "detectability_at_video_scale": "The perturbation moves the dot by at most 0.34 px over this clip; the tracker's noise is about 2 px: a video cannot see it. It would take about 18 times the zoom (or a clip long enough for the drift to grow that much).",
+ "runs": {
+  "2 px": {
+   "status": "ambiguous",
+   "reason": "Kepler plus the known pull of Jupiter, Saturn and Inverse-square gravity (Kepler) explain the data about equally well (BIC within 10).",
+   "perturbation": "No single law is singled out at this noise, so there is no accepted law to look for perturbations in: the data cannot show them (The perturbation moves the dot by at most 0.34 px over this clip; the tracker's noise is about 2 px: a video cannot see it. It would take about 18 times the zoom (or a clip long enough for the drift to grow that much).)",
+   "residual_spectrum": null,
+   "equation_diff": null,
+   "law": null,
+   "parameters": null
+  },
+  "0.02 px": {
+   "status": "accepted",
+   "reason": "Kepler plus a hidden body on a circular orbit forecasts held-out data within 0.0%; next best (Kepler plus the known pull of Jupiter, Saturn) is 160 BIC worse.",
+   "perturbation": null,
+   "residual_spectrum": {
+    "significant": true,
+    "rms": {
+     "radial": 0.0012400815601821165,
+     "along": 0.0011511056393311047,
+     "cross": 0.0
+    },
+    "peaks": [
+     {
+      "component": "radial",
+      "period": 13789.0228,
+      "power": 0.463,
+      "false_alarm_probability": 2.43e-52,
+      "amplitude": 0.001194
+     },
+     {
+      "component": "along",
+      "period": 13789.0228,
+      "power": 0.337,
+      "false_alarm_probability": 5.63e-34,
+      "amplitude": 0.0009444
+     },
+     {
+      "component": "radial",
+      "period": 6046.0391,
+      "power": 0.032,
+      "false_alarm_probability": 0.32,
+      "amplitude": 0.0003125
+     },
+     {
+      "component": "along",
+      "period": 5528.6223,
+      "power": 0.03,
+      "false_alarm_probability": 0.509,
+      "amplitude": 0.0002796
+     },
+     {
+      "component": "along",
+      "period": 122.1941,
+      "power": 0.027,
+      "false_alarm_probability": 0.781,
+      "amplitude": 0.0002695
+     },
+     {
+      "component": "radial",
+      "period": 179.6077,
+      "power": 0.021,
+      "false_alarm_probability": 1.0,
+      "amplitude": 0.0002556
+     }
+    ],
+    "along_track_trend": 3.17e-09,
+    "trend_sigma": 8.265e-09,
+    "period_matches": []
+   },
+   "equation_diff": {
+    "before": {
+     "title": "Kepler plus the known pull of Jupiter, Saturn",
+     "latex": "\\ddot{\\mathbf r} = -\\mu\\frac{\\mathbf r}{r^3} + \\sum_k G m_k\\left(\\frac{\\mathbf r_k - \\mathbf r}{|\\mathbf r_k - \\mathbf r|^3} - \\frac{\\mathbf r_k}{r_k^3}\\right)"
+    },
+    "after": {
+     "title": "Kepler plus a hidden body on a circular orbit",
+     "latex": "\\ddot{\\mathbf r} = -\\mu\\frac{\\mathbf r}{r^3} + g_p\\left(\\frac{\\mathbf r_p - \\mathbf r}{|\\mathbf r_p - \\mathbf r|^3} - \\frac{\\mathbf r_p}{R^3}\\right),\\quad \\mathbf r_p = R(\\cos(\\omega t + \\varphi), \\sin(\\omega t + \\varphi)),\\ \\omega = \\sqrt{\\mu/R^3}"
+    },
+    "added_terms": [
+     "gp",
+     "R",
+     "phi"
+    ],
+    "parameter_shifts": {
+     "mu": {
+      "before": {
+       "value": 0.0002959060479375458,
+       "std": 7.196780578019373e-09,
+       "ci95": [
+        0.00029589194224761284,
+        0.0002959201536274787
+       ]
+      },
+      "after": {
+       "value": 0.00029590219641818127,
+       "std": 5.4695964950693475e-09,
+       "ci95": [
+        0.0002958914760090509,
+        0.0002959129168273116
+       ]
+      }
+     }
+    },
+    "heldout_before": 0.0003136326340943398,
+    "heldout_after": 0.00011286311746917506,
+    "summary": "Adding a hidden body on a circular orbit (gp, R, phi) changes the held-out forecast error from 0.03% to 0.01%, and moves the central GM from 2.959060e-04 \u00b1 7.2e-09 to 2.959022e-04 \u00b1 5.5e-09."
+   },
+   "law": "Kepler plus a hidden body on a circular orbit",
+   "parameters": [
+    {
+     "name": "mu",
+     "value": 0.00029590219641818127,
+     "std": 5.4695964950693475e-09,
+     "ci95": [
+      0.0002958914760090509,
+      0.0002959129168273116
+     ]
+    },
+    {
+     "name": "gp",
+     "value": 6.955286800694065e-08,
+     "std": 2.641452369791257e-09,
+     "ci95": [
+      6.437562136214979e-08,
+      7.473011465173151e-08
+     ]
+    },
+    {
+     "name": "R",
+     "value": 30.26384215175158,
+     "std": 0.46884303878794065,
+     "ci95": [
+      29.344909795727215,
+      31.182774507775942
+     ]
+    },
+    {
+     "name": "phi",
+     "value": 0.8092345755550032,
+     "std": 0.013821578406871211,
+     "ci95": [
+      0.7821442818775356,
+      0.8363248692324708
+     ]
+    }
+   ]
+  }
+ }
+}

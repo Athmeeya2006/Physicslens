@@ -1,0 +1,13 @@
+name: real_inner_planets
+title: "The real planets from J2000"
+description: >
+  The baseline for the heavy-Jupiter scenarios: every planet with its real mass, from JPL's J2000 states.
+fictional: false
+start: "2000-01-01 12:00"
+clip_days: 8766
+frame_step_days: 10
+predict_until: null
+target: Mars
+bodies: [Mercury, Venus, Earth, Moon, Mars, Jupiter, Saturn, Uranus, Neptune]
+baseline: null
+compare: none

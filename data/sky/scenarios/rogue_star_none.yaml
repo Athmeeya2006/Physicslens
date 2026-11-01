@@ -1,0 +1,14 @@
+name: rogue_star_none
+title: "The outer solar system, no star"
+description: >
+  The baseline for the passing-star scenario.
+fictional: false
+start: "2000-01-01 12:00"
+clip_days: 73050
+frame_step_days: 100
+predict_until: null
+target: Kuiper belt object
+bodies: [Jupiter, Saturn, Uranus, Neptune]
+extra_particle: {name: Kuiper belt object, a_au: 45, e: 0.05, i_deg: 2, node_deg: 0, peri_deg: 0, M_deg: 0}
+baseline: null
+compare: none

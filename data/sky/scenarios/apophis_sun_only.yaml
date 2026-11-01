@@ -1,0 +1,15 @@
+name: apophis_sun_only
+title: "Apophis, the Sun alone"
+description: >
+  Asteroid 99942 Apophis from its JPL state at the start of 2022, moving under the Sun alone. This is the world the
+  inverse-square law found from the Apophis video describes: no planets. Compared with the next scenario it shows how
+  much of the 2029 Earth flyby the planets (and mostly Earth itself) decide.
+fictional: false
+start: "2022-01-01"
+clip_days: 1461
+frame_step_days: 2.5
+predict_until: "2029-04-16"
+target: Apophis
+bodies: []
+baseline: null
+compare: "data/orbit/cad_2029.json"

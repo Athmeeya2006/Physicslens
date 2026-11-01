@@ -1,0 +1,47 @@
+{
+ "planets_ten_years_au": {
+  "Earth": 4.085566691912605e-06,
+  "Jupiter": 4.254221065516292e-07,
+  "Saturn": 9.932007263390882e-08
+ },
+ "planets_ten_years_with_relativity_au": {
+  "Earth": 1.3434971652240031e-08,
+  "Jupiter": 3.099881204037205e-08,
+  "Saturn": 3.328551498354227e-09
+ },
+ "frames_agree_au": 1.9981879345598585e-10,
+ "mercury_relativity_arcsec_per_century": 43.02295302050691,
+ "apophis_2029_from_j2000": {
+  "hours": -0.01666952669620514,
+  "km": 38817.300821154866,
+  "jpl_km": 38011.45916295157
+ },
+ "halley_2061_from_j2000": {
+  "days": -0.3000033516436815,
+  "q_au": 0.5927809252196437
+ },
+ "halley_2061_from_j2000_sun_only": {
+  "days": 153.19999607652426,
+  "q_au": 0.5865673094510501
+ },
+ "performance": {
+  "seconds": 39.48454933999892,
+  "bodies": 8,
+  "particles": 10,
+  "years": 100.0
+ },
+ "direct_track_apophis_sun_only": {
+  "no_noise_gm_rel_error": -1.466461078125647e-07,
+  "two_px_gm_rel_error": -0.00032276074416481837,
+  "two_px_gm_rel_std": 0.000582654039957101
+ },
+ "detectability_px": {
+  "apophis_with_planets": 3.153467097773023,
+  "jupiter_x10": 5.2858436659520285,
+  "jupiter_x100": 86.65893240771389,
+  "mercury_gr_exaggerated": 107.88138583257582,
+  "uranus_neptune_hidden": 0.33648424211241557,
+  "rogue_star_flyby": 6.273564808756439
+ },
+ "seconds": 236.3497440814972
+}

@@ -1,0 +1,18 @@
+name: mercury_gr_exaggerated
+title: "Mercury with relativity made 20,000 times stronger (fictional)"
+description: >
+  FICTIONAL. General relativity turns Mercury's ellipse by 43 arcseconds a century, far too slowly to see. Here 1/c^2
+  is multiplied by 20,000, so the ellipse turns by about two and a half degrees a year and the precession shows within a
+  few years of video. The direction and the shape of the effect are relativity's; only its size is made up.
+fictional: true
+start: "2000-01-01 12:00"
+clip_days: 1461
+frame_step_days: 1
+predict_until: null
+target: Mercury
+bodies: [Mercury]
+mass_scale: {Mercury: 0}
+gr: true
+c_scale: 20000
+baseline: mercury_newton
+compare: none

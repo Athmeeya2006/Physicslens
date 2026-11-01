@@ -1,0 +1,13 @@
+name: halley_with_jupiter_saturn
+title: "Halley with Jupiter and Saturn"
+description: >
+  The same start with the two giants only: most of the planets' effect on Halley's return comes from them.
+fictional: false
+start: "1985-01-01"
+clip_days: 850
+frame_step_days: 1.44
+predict_until: "2063-12-31"
+target: Halley
+bodies: [Jupiter, Saturn]
+baseline: halley_sun_only
+compare: "data/halley/halley_2061.csv"

@@ -1,0 +1,14 @@
+name: halley_all_planets
+title: "Halley with every planet"
+description: >
+  Every planet, the Moon, Pluto and Ceres. What remains against JPL's 2061 date is mostly the comet's own outgassing,
+  which JPL models and this engine does not.
+fictional: false
+start: "1985-01-01"
+clip_days: 850
+frame_step_days: 1.44
+predict_until: "2063-12-31"
+target: Halley
+bodies: [Mercury, Venus, Earth, Moon, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Ceres]
+baseline: halley_sun_only
+compare: "data/halley/halley_2061.csv"

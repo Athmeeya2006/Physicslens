@@ -1,0 +1,14 @@
+name: halley_sun_only
+title: "Halley, the Sun alone"
+description: >
+  Comet 1P/Halley from its JPL state at the start of 1985, through the 1986 passage the Halley video shows, under the
+  Sun alone. Carried on to its next perihelion it comes back months late: Halley's period hinges on the planets.
+fictional: false
+start: "1985-01-01"
+clip_days: 850
+frame_step_days: 1.44
+predict_until: "2063-12-31"
+target: Halley
+bodies: []
+baseline: null
+compare: "data/halley/halley_2061.csv"

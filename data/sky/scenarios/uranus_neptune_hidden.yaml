@@ -1,0 +1,17 @@
+name: uranus_neptune_hidden
+title: "Uranus, with Neptune pulling but not drawn (Le Verrier)"
+description: >
+  In 1846 Le Verrier predicted Neptune from the way Uranus strayed from its expected orbit. Here Uranus is drawn from
+  1780 to 1846 while Neptune pulls on it unseen. Sun-only Kepler leaves structured residuals; the question is whether
+  they are large enough to find, and whether a hidden body on a circular orbit explains them.
+fictional: false
+start: "1780-01-01"
+clip_days: 24106
+frame_step_days: 60
+predict_until: null
+target: Uranus
+bodies: [Jupiter, Saturn, Uranus, Neptune]
+hidden: [Neptune]
+seed_bodies: [Jupiter, Saturn, Uranus, Neptune, Pluto]
+baseline: uranus_without_neptune
+compare: none

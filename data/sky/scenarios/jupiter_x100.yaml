@@ -1,0 +1,15 @@
+name: jupiter_x100
+title: "Jupiter a hundred times heavier (fictional)"
+description: >
+  FICTIONAL. Jupiter's mass times a hundred, a brown dwarf of a planet. Mars's orbit is visibly pushed around within a
+  couple of decades: a video tracker would see this one.
+fictional: true
+start: "2000-01-01 12:00"
+clip_days: 8766
+frame_step_days: 10
+predict_until: null
+target: Mars
+bodies: [Mercury, Venus, Earth, Moon, Mars, Jupiter, Saturn, Uranus, Neptune]
+mass_scale: {Jupiter: 100}
+baseline: real_inner_planets
+compare: none

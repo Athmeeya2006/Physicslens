@@ -1,0 +1,16 @@
+name: rogue_star_flyby
+title: "A passing star (fictional)"
+description: >
+  FICTIONAL. A star of half the Sun's mass passes 200 AU from the Sun at 30 km/s, closest in 2100. Neptune barely
+  notices; a body in the Kuiper belt at 45 AU is nudged onto a new orbit. Its baseline is the same system without the star.
+fictional: true
+start: "2000-01-01 12:00"
+clip_days: 73050
+frame_step_days: 100
+predict_until: null
+target: Kuiper belt object
+bodies: [Jupiter, Saturn, Uranus, Neptune]
+extra_particle: {name: Kuiper belt object, a_au: 45, e: 0.05, i_deg: 2, node_deg: 0, peri_deg: 0, M_deg: 0}
+star: {gm_suns: 0.5, closest_au: 200, speed_km_s: 30, closest: "2100-01-01"}
+baseline: rogue_star_none
+compare: none

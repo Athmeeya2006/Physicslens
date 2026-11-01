@@ -1,0 +1,15 @@
+name: mercury_newton
+title: "Mercury and the Sun, Newton only"
+description: >
+  The baseline for the exaggerated-relativity scenario: Mercury around the Sun alone, no relativity. Its ellipse does
+  not turn.
+fictional: false
+start: "2000-01-01 12:00"
+clip_days: 1461
+frame_step_days: 1
+predict_until: null
+target: Mercury
+bodies: [Mercury]
+mass_scale: {Mercury: 0}
+baseline: null
+compare: none
