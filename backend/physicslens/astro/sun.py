@@ -48,7 +48,7 @@ DAY = 86400.0
 
 def _get(url: str, timeout: float = 120.0) -> bytes:
     import urllib.request
-    with urllib.request.urlopen(url, timeout=timeout) as r:  # noqa: S310 (a fixed https host)
+    with urllib.request.urlopen(url, timeout=timeout) as r:  # a fixed https host
         return r.read()
 
 
@@ -82,7 +82,7 @@ def fetch_frame(when_utc: str, cache: Path) -> tuple[np.ndarray, dict[str, Any]]
     header = parse_header(_get(f"{HELIOVIEWER}/getJP2Header/?id={key}").decode("utf-8", "replace"))
     im = Image.open(io.BytesIO(_get(f"{HELIOVIEWER}/getJP2Image/?id={key}")))
     factor = int(header["naxis1"]) // WORK_SIZE
-    im.reduce = int(round(math.log2(factor)))  # decode at reduced resolution straight from the wavelet levels
+    im.reduce = round(math.log2(factor))  # decode at reduced resolution straight from the wavelet levels
     data = np.asarray(im, dtype=np.float32)
     if data.shape[0] != WORK_SIZE:
         data = np.asarray(Image.fromarray(data).resize((WORK_SIZE, WORK_SIZE)), dtype=np.float32)
@@ -169,7 +169,7 @@ def detect_spots(data: np.ndarray, header: dict[str, Any], t_days: float) -> lis
         if not (np.isfinite(lat) and np.isfinite(lc)):
             continue
         out.append(Spot(t_days, float(x), float(y), float(a), float(lat), float(lc) % 360, float(ls),
-                        float(mu[int(round(y)), int(round(x))])))
+                        float(mu[int(np.rint(y)), int(np.rint(x))])))
     return out
 
 
@@ -243,7 +243,7 @@ def track_rates(tr: Track) -> dict[str, float]:
     out: dict[str, float] = {"lat": tr.lat, "n": len(t), "days": float(t[-1] - t[0])}
     for name, y in (("sidereal", lc), ("synodic", ls)):
         A = np.column_stack([np.ones_like(t), t])
-        coef, res, *_ = np.linalg.lstsq(A, y, rcond=None)
+        coef, *_ = np.linalg.lstsq(A, y, rcond=None)
         resid = y - A @ coef
         s2 = float(resid @ resid) / max(len(t) - 2, 1)
         cov = s2 * np.linalg.inv(A.T @ A)
@@ -321,7 +321,7 @@ def _system(tracks: list[tuple[int, np.ndarray, np.ndarray, float]], law: Law, n
 def fit_law(law: Law, tracks: list[Track], t_cut: float | None = None) -> LawFit:
     """Fit on every point before t_cut (all when None); each track contributes its own starting longitude."""
     data = []
-    for k, tr in enumerate(tracks):
+    for tr in tracks:
         t, lc, _ = tr.arrays()
         m = t < t_cut if t_cut is not None else np.ones(len(t), bool)
         if m.sum() >= 2:
@@ -374,7 +374,7 @@ def assess(periods: list[list[Track]]) -> dict[str, Any]:
             t0 = min(s.t for tr in p for s in tr.spots)
             t1 = max(s.t for tr in p for s in tr.spots)
             cut = t0 + TRAIN_FRACTION * (t1 - t0)
-            rms, chi2, m = forecast_score(f.law, p, cut, sigma)
+            rms, _, m = forecast_score(f.law, p, cut, sigma)
             if m:
                 e2.append(rms ** 2 * m)
                 n += m

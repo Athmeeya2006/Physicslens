@@ -40,7 +40,7 @@ def cached(name: str, url: str) -> str:
     p = CACHE / name
     if not p.is_file():
         CACHE.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(url, timeout=120) as r:  # noqa: S310 (fixed https sources)
+        with urllib.request.urlopen(url, timeout=120) as r:  # fixed https sources
             p.write_bytes(r.read())
     return p.read_text()
 
@@ -157,7 +157,6 @@ def main() -> None:
 def outcome(out: dict) -> dict:
     sp = out["single_pass"]
     c0 = sp["checks"][0]
-    neg = out["manoeuvres"][0]
     pos = [r for r in out["manoeuvres"][1:]]
     found = [r for r in pos if r["manoeuvre"] and r.get("window_right")]
     top = out["identification"][0]["name"] if out["identification"] else "nothing"
@@ -175,8 +174,8 @@ def outcome(out: dict) -> dict:
                             "source": "NASA JSC ISS ephemeris (OEM) against CelesTrak GP elements"},
         "confidence": f"one pass, {sp['points']} positions at {out['sigma_arcsec']:.0f} arcsec each",
         "status": "partial",
-        "limits": ["no real recorded manoeuvre yet (the current NASA ephemeris lists none; past catalogue orbits need a Space-Track "
-                   "account), so detection is shown on impulses injected into the real orbit; tumble periods are synthetic only"],
+        "limits": [("no real recorded manoeuvre yet (the current NASA ephemeris lists none; past catalogue orbits need a Space-Track "
+                    "account), so detection is shown on impulses injected into the real orbit; tumble periods are synthetic only")],
         "readable": None}
 
 

@@ -10,7 +10,6 @@ Five 14-day periods across two solar cycles, one image every 6 hours. Frames are
 from __future__ import annotations
 
 import json
-import math
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -88,7 +87,6 @@ def validate_returns(period_start: str, tracks: list[S.Track], law: S.LawFit, ea
     """Regions alive at the end of a period: our return forecast, what NOAA recorded, and NOAA's own forecast."""
     t0 = Time(period_start)
     t_end = max(s.t for tr in tracks for s in tr.spots)
-    end_utc = (t0 + TimeDelta(t_end * S.DAY, format="sec")).isot[:19]
     # Old NOAA numbers near our regions at the end, and the summaries over the return window.
     days = {k: srs(t0 + TimeDelta((t_end + k) * S.DAY, format="sec")) for k in range(-1, RETURN_WINDOW[1] + 1)}
     parsed = {k: S.parse_srs(v, "") if v else ([], []) for k, v in days.items()}
@@ -120,7 +118,7 @@ def validate_returns(period_start: str, tracks: list[S.Track], law: S.LawFit, ea
                 break
         noaa_forecast = None
         if old is not None:
-            for k in range(0, RETURN_WINDOW[1] + 1):
+            for k in range(RETURN_WINDOW[1] + 1):
                 hit = next((x for x in parsed[k][1] if x["number"] == old), None)
                 if hit:
                     # Section II lists regions due back over the next three days from the summary's date.

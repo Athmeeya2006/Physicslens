@@ -1,7 +1,5 @@
 """Satellites: the IOD report format (checked against the specification's own examples), trajectory geometry,
 SGP4 against a NASA ephemeris excerpt, impulses, and tumble periods with the half-period alias."""
-import json
-import math
 from pathlib import Path
 
 import numpy as np
