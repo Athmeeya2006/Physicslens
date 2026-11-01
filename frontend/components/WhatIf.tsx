@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { TrackPoint } from "@/lib/api";
-import { accessCode, API_BASE, askWhatIf } from "@/lib/api";
+import { accessCode, API_BASE, askWhatIf, objectWhatIf } from "@/lib/api";
 import { micError, startMic, type Mic } from "@/lib/voice";
 
 export interface WhatIfAnswer {
@@ -15,6 +15,8 @@ export interface WhatIfAnswer {
   length_m?: number;
   model?: string;
 }
+
+const FACTORS = [0.1, 0.25, 0.5, 1, 2, 4, 10];
 
 interface Props {
   runId: string;
@@ -30,6 +32,21 @@ export function WhatIf({ runId, onGhost }: Props) {
   const [error, setError] = useState<string | null>(null);
   const mic = useRef<Mic | null>(null);
   const socket = useRef<WebSocket | null>(null);
+
+  const [mass, setMass] = useState(1);
+  const [size, setSize] = useState(1);
+
+  const tryObject = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      show(await objectWhatIf(runId, mass, size));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const show = (a: WhatIfAnswer) => {
     setAnswers((prev) => [a, ...prev].slice(0, 5));
@@ -95,6 +112,20 @@ export function WhatIf({ runId, onGhost }: Props) {
           <button type="submit" disabled={busy || !question.trim()}>{busy ? "..." : "Ask"}</button>
         </form>
       </div>
+      <fieldset className="object-whatif">
+        <legend className="small">Change the object (free, instant: no language model)</legend>
+        <label className="field">Mass
+          <select value={mass} onChange={(e) => setMass(Number(e.target.value))}>
+            {FACTORS.map((f) => <option key={f} value={f}>{f}×</option>)}
+          </select>
+        </label>
+        <label className="field">Size (same material)
+          <select value={size} onChange={(e) => setSize(Number(e.target.value))}>
+            {FACTORS.map((f) => <option key={f} value={f}>{f}×</option>)}
+          </select>
+        </label>
+        <button type="button" onClick={tryObject} disabled={busy || (mass === 1 && size === 1)}>Simulate</button>
+      </fieldset>
       {listening && <p className="transcript">{transcript || "Listening..."}</p>}
       {error && <p className="error small">{error}</p>}
       {answers.map((a, i) => (

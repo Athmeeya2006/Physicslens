@@ -185,3 +185,55 @@ def test_unparseable_answer_is_a_polite_no_not_a_500(harness, fit_state):
     harness.sdk("meta_api").script.extend([responses_result(text="not json"), responses_result(text="still not json")])
     out = run_whatif(harness.client, "what if?", {"clip": {"frames": 120, "fps": FPS}, "fit_state": fit_state}, "w3")
     assert not out["understood"] and "couldn't" in out["reply"]
+
+
+def _oscillator_state(model_id: str, params: dict) -> dict:
+    return {"model_id": model_id, "params": params, "y0": [0.05, 0.0], "ctx": {"origin_x": 0.0, "origin_y": 0.0, "axis_x": 0.0, "axis_y": 1.0}, "fps": FPS,
+            "origin_px": list(ORIGIN), "px_per_m": PPM, "first_frame": 0}
+
+
+def test_a_heavier_mass_on_a_spring_swings_slower():
+    st = _oscillator_state("damped_harmonic", {"omega": 6.0, "s0": 0.0, "zeta": 0.05})
+    out = simulate_whatif(st, [Change("object_mass", "multiply", 4.0)], 4)
+    assert out["params"]["omega"] == pytest.approx(3.0) and out["params"]["zeta"] == pytest.approx(0.025)
+    assert out["period_s"] == pytest.approx(2 * math.pi / 3.0) and "omega x0.5" in out["note"]
+
+
+def test_a_heavier_pendulum_bob_keeps_its_period_and_damps_less(fit_state):
+    base = simulate_whatif(fit_state, [], 6)
+    heavy = simulate_whatif(fit_state, [Change("object_mass", "multiply", 2.0)], 6)
+    assert heavy["period_s"] == pytest.approx(base["period_s"])
+    assert heavy["params"]["gamma"] == pytest.approx(fit_state["params"]["gamma"] / 2)
+    assert heavy["points"] != base["points"]
+
+
+def test_without_drag_mass_and_size_change_nothing_and_say_so():
+    from physicslens.physics.whatif import object_factors, object_note
+    assert object_factors("projectile", ["g"], 10.0, 3.0) == {}
+    assert "Galileo" in object_note("projectile", {}, 10.0, 1.0)
+
+
+def test_drag_scales_with_mass_and_size():
+    from physicslens.physics.whatif import object_factors
+    # Quadratic drag c = rho Cd A / (2m): heavier halves it; twice the size (8x the mass, 4x the area) halves it too.
+    assert object_factors("projectile", ["g", "c"], 2.0, 1.0) == {"c": pytest.approx(0.5)}
+    assert object_factors("projectile", ["g", "c"], 1.0, 2.0) == {"c": pytest.approx(0.5)}
+    assert object_factors("projectile", ["g", "k"], 1.0, 2.0) == {"k": pytest.approx(0.25)}
+
+
+@pytest.mark.parametrize("value", [0.0, 1000.0])
+def test_object_changes_are_bounded(fit_state, value):
+    with pytest.raises(WhatIfError):
+        simulate_whatif(fit_state, [Change("object_mass", "multiply", value)], 2)
+
+
+def test_object_whatif_endpoint_is_free(fit_state):
+    from fastapi.testclient import TestClient
+    from physicslens import app as app_module
+
+    run_id = finished_run(app_module, fit_state)
+    r = TestClient(app_module.app).post(f"/api/runs/{run_id}/whatif/object", json={"mass": 3.0, "size": 1.0})
+    body = r.json()
+    assert r.status_code == 200 and body["understood"] and len(body["points"]) == 120 and body["model"] is None
+    assert "gamma x0.333" in body["reply"]
+    assert TestClient(app_module.app).post(f"/api/runs/{run_id}/whatif/object", json={"mass": 0}).status_code == 422

@@ -586,6 +586,35 @@ def whatif(
         raise HTTPException(status_code=503, detail=detail) from e
 
 
+@app.post("/api/runs/{run_id}/whatif/object")
+def whatif_object(
+    run_id: str,
+    request: Request,
+    mass: Annotated[float, Body(ge=0.01, le=100)] = 1.0,
+    size: Annotated[float, Body(ge=0.01, le=100)] = 1.0,
+) -> dict:
+    """A heavier, lighter, bigger or smaller object, re-simulated from the fitted law. Local math, no model call:
+    free and open to everyone (rate-limited like the sky simulations)."""
+    from .physics.whatif import Change, WhatIfError, simulate_whatif
+    from .sky_api import _rate_limit
+
+    _rate_limit(request)
+    result = _finished_result(run_id)
+    fit_state = result.get("fit_state")
+    if not fit_state:
+        raise HTTPException(status_code=400, detail="This result has no fitted model to change.")
+    changes = [Change("object_mass", "multiply", mass), Change("object_size", "multiply", size)]
+    label = ", ".join(x for x in ((f"{mass:g}x the mass" if mass != 1 else ""), (f"{size:g}x the size" if size != 1 else "")) if x)
+    out: dict = {"question": label or "the same object", "understood": True, "description": label or "The same object",
+                 "changes": [c.__dict__ for c in changes], "model": None}
+    try:
+        out.update(simulate_whatif(fit_state, changes, result["clip"]["frames"] / result["clip"]["fps"]))
+    except WhatIfError as e:
+        return {**out, "understood": False, "reply": str(e)}
+    out["reply"] = out.pop("note", "The same object moves the same way.")
+    return out
+
+
 @app.post("/api/runs/{run_id}/setup-guide")
 def setup_guide(
     run_id: str,

@@ -8,7 +8,7 @@ from typing import Any
 from ..costguard import CostGuardClient
 from ..physics.custom import spec_for
 from ..physics.models import needs_scale
-from ..physics.whatif import GEOMETRY_PARAMS, Change, changeable
+from ..physics.whatif import GEOMETRY_PARAMS, OBJECT_PARAMS, Change, changeable
 from .llm import LLMCall, ask_json
 from .schemas import WhatIfPlan
 
@@ -18,7 +18,9 @@ the system is then re-simulated numerically. Use only the listed parameter names
 (e.g. "30 centimeters" for a length in m is set 0.3). If the question asks for something these parameters
 can't express, set understood to false, leave changes empty, and say briefly in reply what you can change.
 If "scale" says uncalibrated, lengths and g are in arbitrary units: change them only with "multiply" (the Moon is
-g multiplied by 0.165, "twice as long" is length multiplied by 2), never "set" or "add" an absolute value."""
+g multiplied by 0.165, "twice as long" is length multiplied by 2), never "set" or "add" an absolute value.
+"Heavier", "lighter" or a mass change is object_mass multiplied; "bigger" or "smaller" ball is object_size multiplied;
+never change the fitted parameters yourself for these: the math works out what the object's mass and size change."""
 
 
 def describe_parameters(fit_state: dict[str, Any]) -> list[dict[str, Any]]:
@@ -26,6 +28,8 @@ def describe_parameters(fit_state: dict[str, Any]) -> list[dict[str, Any]]:
     out = [{"name": p.name, "meaning": p.latex, "unit": p.unit, "current": fit_state["params"][p.name]} for p in spec.params]
     for name, key in GEOMETRY_PARAMS.get(spec.family, {}).items():
         out.append({"name": name, "meaning": "pendulum length", "unit": "m", "current": fit_state["ctx"][key]})
+    for name, meaning in OBJECT_PARAMS.items():
+        out.append({"name": name, "meaning": meaning + "; multiply only", "unit": "times", "current": 1.0})
     return out
 
 
@@ -74,6 +78,8 @@ def run_whatif(client: CostGuardClient, question: str, result: dict[str, Any], r
     seconds = result["clip"]["frames"] / result["clip"]["fps"]
     try:
         out.update(simulate_whatif(fit_state, changes, seconds))
+        if out.get("note"):
+            out["reply"] = f"{out['reply']} {out['note']}".strip()
     except WhatIfError as e:
         out.update(understood=False, reply=str(e))
     return out
