@@ -35,6 +35,7 @@ from .perception.calibration import (
     from_known_length,
     from_reference,
 )
+from .perception.lens import Lens, focal_px_at, undistort_track
 from .perception.sam_track import ObjectTrack, TrackingError, tracks_from_text
 from .perception.track_quality import assess_track, overlay_frames
 from .physics import depth3d
@@ -112,6 +113,7 @@ class RunOptions:
     blade_count: int | None = None  # fan blades (or other sound sources per turn): turns a blade-pass tone into a spin rate
     depth_3d: bool = False  # also measure a ball's depth from its apparent size (needs object_size_m and focal_px)
     focal_px: float | None = None  # camera focal length in pixels at the uploaded video's resolution
+    lens: dict[str, Any] | None = None  # this phone's lens calibration (perception.lens.Lens as a dict)
     gravity_up: tuple[float, float, float] | None = None  # the phone's "up" at capture, camera axes (X right, Y up, Z away)
     # A rendered or instrument-calibrated video (orbit mode): the image scale and the fixed point the coordinates are
     # measured from (the Sun) are part of the frame's geometry, given by whoever drew it. The law is still discovered.
@@ -224,6 +226,9 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
                   "text": f"Tracked the {scene.moving_object} in {len(moving.frames)} of {info.frames} frames."})
     moving = check_and_repair_track(client, clip, info, scene, moving, run_id, options.audience, record, trail, progress)
     tracks[MOVING_ID] = moving
+    if options.lens is not None:
+        tracks = undistort_tracks(tracks, options.lens, info, trail)
+        moving = tracks[MOVING_ID]
     if scene.motion_family != "rotation":  # a spin turns in place; everything else must actually travel
         travel = float(np.ptp(moving.centers_px, axis=0).max())
         size = float(np.median(moving.long_px))
@@ -656,6 +661,22 @@ def audit_clip(full: Trajectory, family: str, calibration: Calibration, verdict:
         return audit_cant_judge(f"the audit's own measurement failed on this track ({e}).")
 
 
+def undistort_tracks(tracks: dict[str, ObjectTrack], lens_dict: dict[str, Any], info: media.VideoInfo,
+                     trail: list[dict[str, Any]]) -> dict[str, ObjectTrack]:
+    """Every tracked point as a distortion-free camera would have seen it, before scale and fitting use them."""
+    lens = Lens.from_dict(lens_dict)
+    if lens.matrices(info.width, info.height) is None:
+        trail.append({"step": "calibration", "text": f"The lens calibration was made at {lens.width}x{lens.height}, a "
+                      f"different shape from this clip ({info.width}x{info.height}); points were left as filmed."})
+        return tracks
+    fixed = {k: undistort_track(t, lens, info.width, info.height) for k, t in tracks.items()}
+    moved = max(float(np.abs(fixed[k].centers_px - t.centers_px).max()) for k, t in tracks.items() if len(t.centers_px))
+    trail.append({"step": "calibration", "text": f"Undistorted the tracked points with this phone's lens calibration "
+                  f"(k1 = {lens.dist[0]:.3f}, {lens.views} views, {lens.rms_px:.2f} px reprojection error): points "
+                  f"moved by up to {moved:.1f} px."})
+    return fixed
+
+
 LEVEL_WARN_DEG = 3.0  # the measured limits assume a level phone; past this, "down" in the image is visibly not down
 
 
@@ -679,6 +700,12 @@ def camera_level(gravity_up: tuple[float, float, float] | None) -> dict[str, Any
 def depth_for_run(moving: ObjectTrack, traj: Trajectory, fps: float, info: media.VideoInfo, video: Path,
                   options: RunOptions, moving_object: str, family: str) -> dict[str, Any]:
     focal = options.focal_px
+    if focal is None and options.lens is not None:
+        # The lens calibration knows the focal length at this clip's own size: no rescaling from the source.
+        lens = Lens.from_dict(options.lens)
+        return depth3d.for_run(moving, traj.frames, fps=fps, width=info.width, height=info.height,
+                               focal_px=focal_px_at(lens, info.width, info.height), size_m=options.object_size_m,
+                               moving_object=moving_object, family=family, gravity_up=options.gravity_up)
     if focal is not None and options.prepared is None:
         # The focal length is measured on the phone's own frames; the clip SAM tracked may be downscaled. A prepared
         # bundle has no original beside it, so there the focal length is taken as given for the stored clip.

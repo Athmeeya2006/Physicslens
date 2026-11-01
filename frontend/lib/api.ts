@@ -64,7 +64,9 @@ export function connectBackend(): Promise<boolean> {
       if (await attempt(cfg.api_base ?? "")) return true;
       if (cfg.pointer_gist) return attempt(await gistAddress(cfg.pointer_gist).catch(() => ""));
       return false;
-    } catch {
+    } catch (err) {
+      // The page then says the server is between sessions; the reason is only useful while developing.
+      if (process.env.NODE_ENV !== "production") console.error("server search failed", err);
       return false;
     }
   })();
@@ -311,6 +313,7 @@ export interface Health {
   can_go_live: boolean;
   turnstile_site_key: string;
   reasoning?: { provider: string; model: string } | null;
+  sandbox_isolation?: "bubblewrap" | "unshare" | "none";
 }
 
 export interface GalleryItem {
@@ -447,6 +450,19 @@ export function makeShareVideo(id: string): Promise<string> {
     .then((r) => `${API_BASE}${r.url}`);
 }
 
+export interface LensCalibration {
+  width: number; height: number; fx: number; fy: number; cx: number; cy: number;
+  dist: number[]; rms_px: number; views: number;
+}
+
+// Measure this phone's lens from a video of the printed board (local math on the server: no model calls).
+export function calibrateLens(video: File): Promise<{ lens: LensCalibration; focal_px: number }> {
+  const form = new FormData();
+  form.append("video", video);
+  return fetch(`${API_BASE}/api/lens/calibrate`, { method: "POST", body: form, headers: codeHeaders() })
+    .then((r) => json<{ lens: LensCalibration; focal_px: number }>(r));
+}
+
 export interface RunInputs {
   pendulumLengthM: number | null;
   objectSizeM: number | null;
@@ -455,7 +471,8 @@ export interface RunInputs {
   setting?: number | null;
   depth3d?: boolean;
   focalPx?: number | null;
-  gravityUp?: [number, number, number] | null;  // the phone's "up" in camera axes when the clip was filmed
+  gravityUp?: [number, number, number] | null;
+  lens?: LensCalibration | null;  // the phone's "up" in camera axes when the clip was filmed
   knownMover?: string | null;  // a second object to track whose path laws may use (x2, y2)
   inputsCsv?: File | null;     // known signals: t (seconds from the clip's start), then named columns
 }
@@ -472,6 +489,7 @@ export function startRun(file: File, inputs: RunInputs, turnstileToken: string |
   if (turnstileToken) form.append("turnstile_token", turnstileToken);
   if (inputs.depth3d) form.append("depth_3d", "true");
   if (inputs.focalPx) form.append("focal_px", String(inputs.focalPx));
+  if (inputs.lens) form.append("lens", JSON.stringify(inputs.lens));
   if (inputs.gravityUp) form.append("gravity_up", inputs.gravityUp.map((v) => v.toFixed(4)).join(","));
   if (inputs.knownMover?.trim()) form.append("known_mover", inputs.knownMover.trim().slice(0, 60));
   if (inputs.inputsCsv) form.append("inputs_csv", inputs.inputsCsv);

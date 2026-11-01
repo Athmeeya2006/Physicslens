@@ -3,8 +3,8 @@ import json
 from html.parser import HTMLParser
 from pathlib import Path
 
-from PIL import Image
 from physicslens.export.og import H, W, headline, render, share_page
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 PENDULUM = ROOT / "gallery" / "gallery-pendulum"
@@ -27,7 +27,7 @@ def test_unreadable_law_and_missing_poster_still_give_an_image(tmp_path):
 
 
 def test_headline_reports_the_first_parameter_or_the_honest_outcome():
-    assert headline(_result()).startswith("g = 9.9")
+    assert headline(_result()).startswith("g = 9.9") and headline(_result()).endswith("m/s²")
     assert headline({"status": "no_fit", "parameters": []}) == "No clean equation: the honest answer"
 
 

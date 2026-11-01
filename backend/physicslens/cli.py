@@ -1,12 +1,16 @@
 """The command line: the same analysis as the web app, and the Solar System Lab, from a terminal.
 
   physicslens analyze clip.mp4 [--length 0.5] [--size 0.06] [--export mjcf,json,py,urdf,sdf] [--out DIR]
+                              [--lens lens.json] [--mock]
+  physicslens lens calibrate board.mp4 [--out lens.json]
   physicslens sky list
   physicslens sky simulate SCENARIO [--mass Jupiter=10] [--years 20]
   physicslens sky discover SCENARIO [--noise-px 2]
 
 `analyze` makes the same paid model calls as an upload (SAM 3.1 and the reasoning model), every one through the
-cost guard and its budgets; set PHYSICSLENS_KILL=1 to block them all. `sky` is local math on cached JPL data: free.
+cost guard and its budgets; set PHYSICSLENS_KILL=1 to block them all. --mock replaces every model call with a canned
+test answer (a dry run of the plumbing, never a real result; refused when APP_ENV is demo or prod). `sky` and `lens`
+are local math: free.
 """
 
 from __future__ import annotations
@@ -20,11 +24,16 @@ from typing import Any
 
 
 def _analyze(a: argparse.Namespace) -> int:
-    from .costguard import CostGuardClient
+    import os
+    if a.mock:
+        os.environ["MOCK_MODELS"] = "1"  # before settings load; settings refuse it outside dev and test
+    from .agent.llm import LLMError
+    from .costguard import CostGuardClient, CostGuardError
     from .export.mjcf import build_mjcf
     from .export.robot import sdf, urdf
     from .export.script import parameters_json, python_script
-    from .pipeline import RunOptions, analyze
+    from .perception.media import MediaError
+    from .pipeline import AnalysisError, RunOptions, analyze
     from .settings import load_settings
     video = Path(a.video)
     if not video.is_file():
@@ -32,10 +41,23 @@ def _analyze(a: argparse.Namespace) -> int:
         return 2
     out = Path(a.out or f"physicslens-{video.stem}")
     out.mkdir(parents=True, exist_ok=True)
+    lens = None
+    if a.lens:
+        from .perception.lens import Lens, LensError
+        try:
+            lens = Lens.from_dict(json.loads(Path(a.lens).read_text())).as_dict()
+        except (OSError, ValueError, LensError) as e:
+            print(f"Lens calibration {a.lens}: {e}", file=sys.stderr)
+            return 2
     client = CostGuardClient(load_settings())
-    result = analyze(client, video, out / "run", f"cli-{uuid.uuid4().hex[:8]}",
-                     RunOptions(pendulum_length_m=a.length, object_size_m=a.size, object_hint=a.hint),
-                     lambda m: print("  ", m, file=sys.stderr, flush=True))
+    try:
+        result = analyze(client, video, out / "run", f"cli-{uuid.uuid4().hex[:8]}",
+                         RunOptions(pendulum_length_m=a.length, object_size_m=a.size, object_hint=a.hint, lens=lens),
+                         lambda m: print("  ", m, file=sys.stderr, flush=True))
+    except (AnalysisError, LLMError, MediaError, CostGuardError) as e:
+        # The same stops the web runner reports: said plainly, with a failing exit code, never a traceback.
+        print(f"stopped: {e}", file=sys.stderr)
+        return 1
     (out / "result.json").write_text(json.dumps(result, indent=1, default=float))
     eq = (result.get("equation") or {}).get("title")
     print(f"{result['status']}: {eq or ''}  {result['reason']}")
@@ -56,6 +78,19 @@ def _analyze(a: argparse.Namespace) -> int:
         path.write_text(writers[kind]())
         print(f"  wrote {path}")
     return 0 if result["status"] == "accepted" else 1
+
+
+def _lens(a: argparse.Namespace) -> int:
+    from .perception.lens import LensError, calibrate_video
+    try:
+        lens = calibrate_video(Path(a.video))
+    except LensError as e:
+        print(f"Calibration failed: {e}", file=sys.stderr)
+        return 1
+    Path(a.out).write_text(json.dumps(lens.as_dict(), indent=1))
+    print(f"focal {(lens.fx + lens.fy) / 2:.1f} px, k1 {lens.dist[0]:.4f}, {lens.views} views, "
+          f"{lens.rms_px:.2f} px error: wrote {a.out}")
+    return 0
 
 
 def _sky(a: argparse.Namespace) -> int:
@@ -102,6 +137,12 @@ def main(argv: list[str] | None = None) -> int:
     an.add_argument("--hint", help="what to track, e.g. 'the red ball'")
     an.add_argument("--export", help="comma-separated: json, py, mjcf, urdf, sdf")
     an.add_argument("--out", help="output folder (default physicslens-<clip name>)")
+    an.add_argument("--lens", help="a lens calibration JSON from 'physicslens lens calibrate'")
+    an.add_argument("--mock", action="store_true", help="canned model answers: test the plumbing, spend nothing")
+    lens = sub.add_parser("lens", help="measure a phone's lens from a video of the printed board: free, local")
+    lens.add_argument("action", choices=["calibrate"])
+    lens.add_argument("video")
+    lens.add_argument("--out", default="lens.json")
     sky = sub.add_parser("sky", help="the Solar System Lab: free, local, from cached JPL data")
     sky.add_argument("action", choices=["list", "simulate", "discover"])
     sky.add_argument("scenario", nargs="?")
@@ -109,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
     sky.add_argument("--years", type=float)
     sky.add_argument("--noise-px", type=float, default=2.0)
     a = ap.parse_args(argv)
-    return _analyze(a) if a.command == "analyze" else _sky(a)
+    return {"analyze": _analyze, "lens": _lens, "sky": _sky}[a.command](a)
 
 
 if __name__ == "__main__":

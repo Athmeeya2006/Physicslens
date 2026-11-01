@@ -53,6 +53,9 @@ In every result, read the decision trail beside the video: each step is tagged w
 **Part II: Measure**
 - [Systems it identifies](#systems-it-identifies)
 - [Proof it discovers, not recalls](#proof-it-discovers-not-recalls)
+- [Our own solar-system engine, checked against JPL](#our-own-solar-system-engine-checked-against-jpl)
+- [Is something else pulling? Perturbation discovery](#is-something-else-pulling-perturbation-discovery)
+- [Solar System Lab](#solar-system-lab)
 
 **Part III: Prove**
 - [How an equation is accepted](#how-an-equation-is-accepted)
@@ -204,6 +207,17 @@ What happened, in order: three independent proposals each wrote the inverse-squa
 
 With the planets and the Moon, the integration lands the flyby within a minute of JPL's time and 360 km (under 1%) from its distance after 3.3 years; the rest is what JPL also models (the Yarkovsky push of sunlight, relativity) and we do not. Earth's own pull is what bends the pass: without Earth and the Moon the same integration misses by 3.5 hours. What remains in the video's prediction is the Sun's GM, measured to 0.023%, and a 2D track that cannot show the planets' pull from outside the orbital plane. `tests/test_apophis.py` checks the within-a-minute result offline.
 
+**The law found from the video, with the planets added** (`data/orbit/prediction_table.json`, `python scripts/orbit_demo.py prediction`). Starting instead from what the video measured (its GM, its small velocity term, its fitted starting state) and adding the planets as known forcing from JPL:
+
+| Integrated to the 2029 flyby | Time against JPL | Closest distance (JPL: 38,011 km) |
+|---|---|---|
+| The discovered law alone | 13.0 h late | 2.18 million km |
+| The discovered law with the planets added | 14.3 h late | 4.47 million km |
+
+Here the planets do not help, and the error budget says why: the video's GM alone, plus or minus one standard deviation, is worth 2.2 hours and 3.0 million km at the flyby, more than the planets' whole effect over these years (the detectability check above: at most 3.2 px in the video). Relativity is worth a minute and 263 km; from JPL's own state the integration lands 543 km from JPL's distance, the rest being the Yarkovsky push of sunlight, which JPL models and we do not. For Apophis the limit is the measurement, not missing physics.
+
+**The flyby changes Apophis's orbit** (`data/orbit/aftermath.json`, `python scripts/orbit_demo.py aftermath`). Its year goes from 324 days to 421 in our engine and to 423 in JPL's ephemeris (a change of 97.6 days against JPL's 99.6, the difference following from our pass being 806 km wider), and its semi-major axis goes from 0.92 to 1.10 AU: it crosses 1 AU and changes class, from an Aten to an Apollo asteroid.
+
 Reproduce: `python scripts/orbit_demo.py all` (fetch and render are free; analyze calls SAM 3.1 and Muse Spark Open once; predict is local), then `fetch-planets` and `planets` (free). Data sources and credits: `data/orbit/SOURCES.md`.
 
 ### Jupiter: one planet weighed four ways
@@ -242,6 +256,67 @@ The honest limit: carried 75 years forward with the Sun alone, the law brings Ha
 | The Sun and the four giant planets, the GM measured from the video | 236 days late |
 
 So the planets account for most of the miss: Newton's pull of Jupiter, Saturn, Uranus and Neptune (positions and masses from JPL Horizons) brings our integration within four days of JPL's date after 76 years, at JPL's perihelion distance (0.5927 AU against 0.5928); the four days are about what the comet's own outgassing shifts it, which JPL models and we do not. What remains is the Sun's GM: the video measured it to 0.095%, and so long an ellipse turns that into about eight months over one orbit. Reproduce: `python scripts/halley_demo.py fetch|render|analyze|predict|planets` (`tests/test_halley.py` checks the four-day result offline). Data credits: `data/halley/SOURCES.md`.
+
+**The law found from the video, with the planets added** (`data/halley/prediction_table.json`, `python scripts/halley_demo.py prediction`). The table above starts from JPL's state; this one starts from what the video measured (its own GM for the Sun and its own fitted starting state, lifted back from the video's plane) and adds the planets as known forcing, their paths and masses from JPL, labelled "planets added from JPL, not discovered from the video":
+
+| Integrated to the 2061 perihelion | Against JPL's date |
+|---|---|
+| The discovered law alone | 838 days late |
+| The discovered law with the planets added | 560 days late |
+| JPL | 2061-07-29 |
+
+Error budget for what remains: the video's GM, plus or minus one standard deviation of its bootstrap interval, moves the date by 174 days either way; a Monte Carlo of the fit's own covariance of GM and starting state (12 draws) spreads it by 43 days (smaller, because that covariance treats the residuals as independent, the bootstrap does not); relativity moves it by less than the 0.05-day search step; and from JPL's own state with every planet the integration lands within 0.3 days, the rest being the comet's outgassing. So with the planets in, the 2061 miss is the video's own measurement of the Sun's GM, about three of its standard deviations. The gallery result shows both curves, with the planets as a toggle.
+
+**Why one passage cannot do better** (`data/halley/apparitions.json`, `python scripts/halley_demo.py apparitions`). Carried backward and forward from JPL's J2000 state with every planet, our engine puts Halley's perihelia of 1986 and 2061 within 0.01 days of JPL's, 1910's 4.1 days early and 1835's 7.7 days early (the outgassing JPL models accumulates over centuries); in between, the orbit-to-orbit period ranges from 74.4 to 75.8 years. The planets change Halley's period by more than a year from one orbit to the next, which is why no single passage can pin down the next return better than the planets allow.
+
+## Our own solar-system engine, checked against JPL
+
+The planets' part of the Apophis and Halley results needs an N-body simulator, so PhysicsLens has its own (`backend/physicslens/sky/`), built from scratch and checked against NASA/JPL rather than trusted because it "looks right". Newtonian gravity in AU and days, integrated with SciPy's DOP853 at a relative tolerance of 1e-12; massive bodies pull on each other in one vectorised pairwise sum, and test particles (asteroids, comets) feel every massive body and pull on none. Two frames: centred on the Sun, with the indirect term (every planet pulls the Sun too, and the frame moves with it), or around the barycentre. Optional terms, each off by default: the Sun's general relativity at first post-Newtonian order, the central body's oblateness J2 (for Jupiter's moons), bodies on a prescribed path (a passing star), a hypothetical extra body, and per-body mass scaling. Energy and angular momentum are monitored, and a run that drifts more than 1e-9 per century says so. REBOUND is supported as an optional backend when installed, never required.
+
+The catalogue: the Sun, every planet (outer planets as system barycentres, with system masses that add the planet and its major moons, each from JPL Horizons' physical data), the Moon, Pluto, Ceres, Apophis, Halley, and the Galilean moons around Jupiter. Initial states at J2000 and every mass are cached in `data/sky/` with their sources (`data/sky/SOURCES.md`), so everything runs offline.
+
+**Checked against JPL** (numbers from `data/sky/validation_results.json`, written by `python scripts/sky_demo.py validate`; every one is also a test in `tests/test_sky.py`):
+
+| Check | Result |
+|---|---|
+| Earth, Jupiter and Saturn, 10 years from JPL's J2000 states, Newton only | largest error 4.1e-6 AU (Earth), 4.3e-7 AU (Jupiter), 9.9e-8 AU (Saturn) |
+| The same with the Sun's relativity switched on | 1.3e-8 AU (Earth, about 2 km), 3.1e-8 AU (Jupiter), 3.3e-9 AU (Saturn) |
+| Sun-centred against barycentric frame, 10 years | agree to 2.0e-10 AU |
+| Mercury's perihelion advance from relativity alone, over a century | 43.02 arcseconds per century (Einstein's value: 42.98) |
+| Apophis from its J2000 state to the 2029 Earth flyby, every planet and the Moon | closest approach 1 minute from JPL's time, at 38,817 km (JPL: 38,011 km) |
+| Halley from its J2000 state to its 2061 perihelion | within 0.01 days of JPL's perihelion time with every planet (0.30 days against the nearest day of JPL's daily table); 153 days late with the Sun alone |
+| Eight planets and ten test particles for a century, daily output | 22.6 s on one core of an i7-13620H when idle (the plan's budget was 20 s; the same run measured 39 s while other jobs ran) |
+
+The Earth row is worth reading twice: Newton alone leaves 4 parts in a million after ten years, and that is exactly relativity's share; with it, the integration stays within a few kilometres of JPL's ephemeris.
+
+**Scenarios** (`data/sky/scenarios/*.yaml`, run with `python scripts/sky_demo.py`). Each is a system, a clip and what to compare with, with a paragraph of physics in the file: Apophis under the Sun alone and with every planet; Halley under the Sun alone, with Jupiter and Saturn, and with every planet; Jupiter ten and a hundred times heavier (fictional); Mercury with relativity made 20,000 times stronger (fictional, so the precession shows within a few years of video); Uranus from 1780 to 1846 with Neptune pulling but not drawn (Le Verrier's problem); a star of half the Sun's mass passing at 200 AU (fictional); and Io, Europa and Ganymede in their resonance with Jupiter's J2. A real scenario starts where the body really was: JPL's J2000 states carried to the scenario's start with every planet, and only then switched to the scenario's own physics. Fictional ones say so in their title, their video and their results.
+
+**One renderer, two modes.** The Apophis, Halley and Jupiter demos and every scenario now draw their videos with one renderer (`sky/render.py`: discs drawn at 8x and averaged down, H.264 at crf 16), which places each dot within 1/16 of a pixel of its projection (`tests/test_sky_scenarios.py`); the three demos' frames are unchanged by the move. A scenario can then be analysed two ways, kept apart on purpose: *pixel mode* renders it and runs the normal pipeline (SAM 3.1 and Muse Spark Open, paid, and the script asks first), and *direct-track mode* fits the simulated track with Gaussian noise the size of a video tracker's (2 px at the video's scale), through the same fitting, rolling-origin forecasts and BIC, from a fixed list of laws instead of the reasoning model's proposals, so it is free and instant. Every direct-track result carries "simulation, no pixels". On Apophis under the Sun alone it recovers the Sun's GM to 1.5e-7 with no noise and to 0.032% (plus or minus 0.058%) with tracker noise.
+
+**Detectability, before any video.** Before rendering, the engine compares the target's path with and without the effect in question, at the video's scale, against the tracker's noise, and says plainly whether a video could show it (`sky/render.py`, `detectability`): the planets move Apophis's 2022 to 2026 track by at most 3.2 px (cannot see, with about 2 px of noise), a hundred-times-heavier Jupiter moves Mars by 87 px (can see), Neptune moves Uranus by 0.34 px over 66 years (cannot see).
+
+## Is something else pulling? Perturbation discovery
+
+The Apophis run already hinted at it: the referee's tiny velocity term was the data saying the Sun is not the whole story. Now that is deliberate. When a law in the plane is accepted, its residuals are split into radial, along-track and cross-track components and searched for periodic structure (a Lomb-Scargle periodogram, the three strongest peaks with their false-alarm probabilities) and for a secular drift (`physics/residuals.py`). Significant peaks are matched with periods of known bodies (their own, half, and synodic with the target) as hints, never verdicts. The agent can call this as a tool ("residual_spectrum"), the referee receives it, and its prompt describes the three kinds of perturbing law to try: a known body with a known path (its position as an input, one fitted GM), a hidden body on a circular orbit (mass, radius and phase fitted; its speed follows from Kepler's third law), or a small constant push along the motion. The indirect term is spelled out in the prompt, and a written law that pulls toward a known body without it gets a warning in the trail. Acceptance is unchanged: held-out forecast, rolling origins, BIC with the effective sample size. When a perturbation is accepted, the result carries an *equation diff*: the law before and after, the terms added, each parameter's shift with its interval, the forecast error before and after, and one sentence made from those numbers by a template, not by the language model.
+
+**Le Verrier's test** (`data/sky/leverrier.json`, `python scripts/sky_demo.py leverrier`). Uranus from 1780 to 1846, with Jupiter and Saturn known (as they were to Le Verrier) and Neptune pulling but hidden. At a phone tracker's noise (2 px) Neptune moves Uranus by a third of a pixel, and the system says the data cannot show a perturbation rather than inventing a planet. At astrometric precision (0.02 px at the same scale) the residuals of "Kepler plus the known planets" are strongly structured, and the hidden-body law is accepted on held-out motion: it puts the unseen planet at 30.3 plus or minus 0.5 AU from the Sun, where Neptune is (30.2 AU on average over those years). Its fitted mass, though, is 4.6 times Neptune's and its phase is off by about 220 degrees: over 66 years, less than half the two planets' synodic period, mass and position along the orbit trade against each other, so only the distance is pinned down. Stated, not tuned away.
+
+**No planet from noise.** A pure Sun-only orbit with tracker noise must end with "no perturbation needed": it does for all 20 of 20 noise seeds (`tests/test_perturbation.py` requires at least 19).
+
+## Solar System Lab
+
+![The lab with Jupiter switched off: Halley's hairpin, the changed run dashed over the original](frontend/public/readme/lab-desktop.png)
+
+[physicslens.vercel.app/sky](https://physicslens.vercel.app/sky): change the solar system and watch both the orbits and the law change. Pick a scenario, switch bodies off or hide them from the "video", scale a body's mass from a hundredth to a hundred times, add a planet that isn't there, turn on the Sun's relativity and exaggerate it (marked FICTIONAL whenever the system is no longer the real one), and play the result: a top-down view in the target's orbital plane, zoom and pan with the wheel, a pinch or the keyboard, a timeline, a speed control and a camera that can follow any body. The scenario as written stays on screen, solid, under the changed run, dashed, in the same visual language as a video result's ghost.
+
+- **What changed:** the target's semi-major axis, eccentricity, perihelion longitude and period over time, original against changed, and the perihelion's precession in arcseconds per century.
+- **The law:** with the analysis server online, every change also finds the target's law from its simulated track with tracker-like noise (the direct-track mode above: free, labelled "simulation, no pixels", not a video discovery), with its parameters and intervals, the residual search and, when a perturbation is accepted, how the equation changed. "Film it" renders the scenario and runs the normal, paid video analysis on it, only when the server offers uploads.
+- **Detectability:** a badge says whether a phone-video tracker would see the change, in pixels.
+- **Offline too:** every scenario is precomputed into the static site (`scripts/build_sky_static.py`), and a change is re-integrated in the browser (a small RK4 integrator with the indirect term and optional relativity) as an instant preview; with a server, its run replaces the preview. Without a server the page says the law cannot be found right now.
+- **Links:** `#halley_all_planets` opens a scenario; every change is kept in a short `?s=` parameter, so a link reproduces exactly what you see.
+- **Accessible:** every control is labelled and works from the keyboard, the view has a text description, a live region announces the law when it changes, and motion waits for a press of Play when the system asks for reduced motion.
+
+`scripts/lab_smoke.py` checks it in a real browser against a mocked API (pick Halley with Jupiter and Saturn, switch Jupiter off, see the law), and `scripts/lab_screenshots.py` takes the screenshots above.
 
 ---
 
@@ -300,6 +375,8 @@ A study turns a goal into a measurement campaign (`studies.py`, `physics/combine
 - Scale: an A4 sheet in view is read automatically; otherwise give the pendulum length or the moving object's longest side (the object's own size in SAM's masks then sets the scale). A length spoken or typed during the session applies immediately. Without a scale, a nominal scale is used and a notice says so once.
 - Live sessions, studies, uploads and what-if or voice questions cost money per use. During judging they are open to everyone with no code, under one spending allowance for the period and a per-visitor allowance (so one visitor or a bot can't use it all); an access code still lifts the per-visitor allowance. The gallery, dataset and machine-health comparisons cost nothing and are always open.
 - If a rate limit or budget cap is hit, tracking and fitting continue locally and only the model features pause, with a visible notice.
+- **Save and stop** turns a session into a normal result with its own `?run=` link, exports and what-ifs: the track, its capture times and the last accepted law with its trail. The frames are kept only if you tick "keep the video" (otherwise the result has the track and no clip).
+- On a phone, a bubble level shows the tilt from the accelerometer and says "hold still" or "tilted 4°: turn left" until the phone is still and within 3° of level, because the measured limits assume exactly that.
 - **Predict the future, then prove it.** Once the law is verified and its parameters have settled, the app predicts when the swing will next pass its rest point about 20 s ahead (10 s or 5 s if it will have died out), with a 95% timing window from bootstrap refits of the law plus one sample of time resolution. A countdown runs on screen, and when the moment comes the measured track says hit or miss, with the error. Each prediction is written to `predictions.json` with its wall-clock time before the event happens, so the claim is auditable.
 - **Control it by hand.** Once a swing's law is verified, set a target ("pump it to 30°" or "stop it") and the phone tells you when to push: three ticks one period apart, then a beep on the push, timed from the law to the moment the bob passes the bottom (where a push changes its energy most), corrected for the device's audio latency. People anticipate a beat far better than they react to a beep. The app also finds each push on the track (where the motion leaves the law's prediction), learns how late this person's pushes land, and moves the beats that much earlier. Fits use only the motion since the last push, because a push is outside the law. Pumping cues a train of three pushes; stopping re-measures after every push.
 
@@ -330,7 +407,10 @@ Every row runs the same loop: the agent proposes laws, numerical fits decide on 
 | Python script | a standalone simulation with the fitted law, including agent-written laws translated from the parsed tree | matches the fitted motion to 1e-9 |
 | JSON | parameters, intervals, units, model id, calibration source and scale basis | |
 | Report | a one-page Markdown report for a colleague: what was filmed, the law, values, the decision trail, caveats | |
+| URDF | the pendulum, spring or projectile as links and a joint with the fitted damping and friction; what URDF cannot hold (gravity, a joint spring, drag) is written in the file as a comment with the fitted value | parsed back, required elements checked |
+| SDF | the same as a Gazebo world, with the measured gravity and, for springs, `spring_stiffness` and `spring_reference` | parsed back, gravity and links checked |
 | Shareable MP4 | the clip with the measured trail, the ghost and the typeset equation burned in (ffmpeg) | |
+| Share image | a 1200 x 630 picture for link previews: the clip's frame, the typeset law and its first parameter with its interval; each gallery result also has a share page, `/r/<id>.html`, that carries it and opens the result | |
 
 ## Sim-to-real gap, made visible
 
@@ -344,8 +424,8 @@ Every accepted result gets a "Sim-to-real" panel (computed on request with local
 On an accepted pendulum or spring result, a judge (or a developer) can set a control goal: move to an angle or position and hold it, swing a pendulum up and balance it upright, stop the motion seen in the clip, or follow a sine. Each goal has a tolerance, a motor limit and a time limit; success means the error is inside the tolerance by the time limit and stays there for at least one more second. Everything in this section is **simulation**: the "plant" is the identified model in MuJoCo, never the real object.
 
 1. **Muse Wonder writes the code** (Meta Model API, Responses API, structured output `{code, approach}`, low reasoning effort). The contract is one function, `control(t, q, qdot, params) -> list[float]`, with only `math` and `numpy`.
-2. **A static check** (`control/codecheck.py`) parses the code and rejects anything outside a small subset of Python: other imports, `eval`/`exec`/`open`/`getattr` and friends, names or attributes starting with an underscore, attribute assignment, classes, `try`, more than 300 lines.
-3. **An isolated process** (`control/harness.py`, `control/worker.py`) runs it: `python -I` with an empty environment and working directory, CPU, memory, file-size and process limits set before the code is compiled, a wall-clock timeout, restricted builtins, and a result channel the code cannot write to. Generated code is never imported into the server. The harness clamps every command to the motor limit and reports how often it saturates.
+2. **A static check** (`control/codecheck.py`) parses the code and rejects anything outside a small subset of Python: other imports, `eval`/`exec`/`open`/`getattr` and friends, names or attributes starting with an underscore, attribute assignment, classes, `try`, more than 300 lines. numpy and math are reached only through an allowlist of full paths (`np.clip`, `np.linalg.norm`, `math.sin`: elementwise maths, reductions and small linear algebra), and a module can never be stored in a variable, so nothing like `np.lib` or `np.ctypeslib` is reachable.
+3. **An isolated process** (`control/harness.py`, `control/worker.py`) runs it: `python -I` with an empty environment and working directory, CPU, memory, file-size and process limits set before the code is compiled, a wall-clock timeout, restricted builtins, and a result channel the code cannot write to. Where the machine allows it, bubblewrap adds the operating system's wall: new namespaces with no network, only the system libraries and Python install visible (read-only), and the project, its keys and the home directory absent (tested by running a probe inside it). Generated code is never imported into the server. The harness clamps every command to the motor limit and reports how often it saturates.
 4. **Robustness set:** the nominal identified parameters plus 50 bootstrap refits (fixed seed, stored with the run), the same spread the result's uncertainty intervals come from. The controller is accepted only if at least 90% of these 51 variants succeed, the nominal one included.
 5. **Repair loop** (`control/loop.py`): a failed attempt goes back to the model as a short report (success rate, the three worst variants with their parameters and metrics, truncated error text). At most three attempts; after that the result is the honest "No controller met the goal within the actuator limit", with the best attempt's numbers. When a simple torque or force bound already shows the goal is impossible (holding a pendulum at an angle needs m g L sin(target), more than the motor gives), no model call is made and the bound is shown instead.
 6. **Baseline:** a textbook controller (computed-torque PD, or energy pumping then PD for a swing-up) tuned on the textbook model is scored on the same 51 variants, so the panel can say, for example, "Muse Wonder's controller: 49 of 51 succeed; textbook controller: 12 of 51".
@@ -380,6 +460,9 @@ Any MCP client (an AI coding assistant, an agent framework) can call PhysicsLens
 | `get_result(run_id)` | an earlier result |
 | `export(run_id, kind)` | `json`, `py`, `mjcf`, `contact` or `report` |
 | `what_if(run_id, question)` | re-simulates a verified result with a changed parameter |
+| `list_sky_scenarios()` | the Solar System Lab's scenarios, real or fictional |
+| `simulate_system(scenario, mass_scale?, disabled?, relativity_scale?, years?)` | runs a scenario in our N-body engine, optionally changed; returns the target's orbital elements over time, its precession and whether a video could see the change (free) |
+| `discover_orbit_law(scenario, noise_px?, mass_scale?, disabled?)` | finds the target's law from its simulated track (free, "simulation, no pixels"), with the residual search for something else pulling |
 
 Client configuration (stdio):
 
@@ -483,7 +566,9 @@ Every verified measurement in the gallery also becomes a row of an open dataset 
 ## Limitations
 
 - 2D motion in the camera plane; best results with the camera side-on and held still.
-- The 3D mode works only for balls, needs a focal length you measure yourself, assumes the principal point at the image centre and gravity straight down the image (phone upright and level), and scales every length and g with the diameter you enter. It has been checked on synthetic throws only.
+- The 3D mode works only for balls, needs a focal length (entered, or from a lens calibration), assumes the principal point at the image centre, takes gravity as straight down the image unless the phone's tilt was saved with the clip, and scales every length and g with the diameter you enter. It has been checked on synthetic throws only.
+- Lens distortion is removed from the tracked points only when this phone has been calibrated (a printed board filmed once), and only for clips of the same shape as the calibration. Uncalibrated, a phone's barrel distortion can bias g by a few percent for motion near the edge of the frame (3.1% in the synthetic test, 0.15% after correction) and by much less through the centre.
+- Phone sensors read rows one after another (rolling shutter), so a fast object is slightly skewed; the result warns when the predicted skew passes 1 px, but does not correct it.
 - One object, or two for a double pendulum. Live mode follows one object.
 - Deformable and fluid motion (cloth, water, smoke) is reported as "no clean equation," not modeled.
 - Accuracy depends on frame rate, lighting and a visible reference of known size (or a known pendulum length).
@@ -492,8 +577,7 @@ Every verified measurement in the gallery also becomes a row of an open dataset 
 - Laws the agent writes may use the time and known input signals (a second tracked object, an uploaded CSV, a simulation), but an input is only valid where it was measured, and a driver that is neither tracked nor logged (a hand push you can't see) is still out of reach. The known mover is tracked in the same 2D image plane as the measured object.
 - Driven motion (a car under throttle, a person walking) has no single governing law; at most its kinematics can be fitted.
 - A full analysis on the open-weight model takes minutes, not seconds; the live mode's one-tap family choice is the fast path.
-- Stopping a live session doesn't save it as a result yet; record a clip for something you can keep and export.
-- Generated controllers are tested only in simulation, on pendulums and springs (rotation is not supported yet). The sandbox has no network namespace; network access is blocked by the static check and the restricted imports, not by the operating system.
+- Generated controllers are tested only in simulation, on pendulums and springs (rotation is not supported yet). Where the machine allows unprivileged namespaces, the sandbox process runs under bubblewrap (no network, its own process tree, only the Python install visible and read-only); otherwise under `unshare -rn` (no network), and otherwise with the static allowlist and resource limits only, which `/api/health` reports as `sandbox_isolation` and the controller panel states.
 
 ## Meta models used
 
@@ -610,6 +694,21 @@ make dev-frontend             # Next.js on http://localhost:3000
 
 Open `http://localhost:3000` for the gallery and uploads, `/live` for the camera, `/study` for goal-driven studies, `/health` for machine-health comparisons. Live mode needs HTTPS (or localhost) for camera access.
 
+### Command line
+
+`pip install -e .` installs a `physicslens` command with the same engine as the site:
+
+```bash
+physicslens analyze clip.mp4 --length 0.5 --export mjcf,urdf,json   # paid model calls, through the cost guard
+physicslens analyze clip.mp4 --mock                                  # canned model answers: checks the plumbing, spends nothing
+physicslens lens calibrate board.mp4 --out lens.json                 # free; then: analyze clip.mp4 --lens lens.json
+physicslens sky list                                                 # free, from cached JPL data
+physicslens sky simulate halley_all_planets --mass Jupiter=10
+physicslens sky discover apophis_sun_only --noise-px 2
+```
+
+Exit codes: 0 for a verified law, 1 for no law or a stop (with the reason on stderr), 2 for bad input.
+
 ### Cost controls
 
 ```bash
@@ -679,13 +778,18 @@ All routes are in `backend/physicslens/app.py`. Routes that start paid work are 
 | `GET /api/health` | status, environment, mock mode, and what this visitor may do |
 | `GET /api/gallery` | the curated results |
 | `GET /api/budget` | spent and remaining per provider (development UI) |
-| `POST /api/runs` | upload a clip with optional settings (length, object size, hint, slow-motion factor, blade count for sound, a `known_mover` to track as an input, an `inputs_csv` of known signals); returns a run id |
+| `POST /api/runs` | upload a clip with optional settings (length, object size, hint, slow-motion factor, blade count for sound, a `known_mover` to track as an input, an `inputs_csv` of known signals, `gravity_up` from the phone's accelerometer, a `lens` calibration); the file is read with ffprobe first and a clip under 2 s or too few frames is refused with its length, before anything is spent; returns a run id |
+| `POST /api/lens/calibrate`, `GET /api/lens/checkerboard.svg` | a lens calibration (focal length, distortion, reprojection error) from a video of the printed board, and the board to print. Local math, no model calls |
 | `POST /api/audit` | the same upload as `POST /api/runs`; the result's `audit` field holds the physics audit |
+| `GET /api/sky/scenarios`, `GET /api/sky/bodies` | the Solar System Lab's scenarios, and the catalogue with each GM and its source |
+| `POST /api/sky/simulate` | a scenario, optionally changed (mass_scale 0 to 1000 per body, disabled and hidden bodies, relativity and its strength, a hypothetical body, a passing star, a shorter span); returns each body's path in the target's plane (at most 2000 points), the target's orbital elements over time, its precession, the energy drift and detectability. Free, rate-limited per address, cached by the canonical request |
+| `POST /api/sky/discover` | the same request plus `noise_px`: the target's law from its simulated track, verified as a clip would be, with the residual search and the equation diff. Free; every result says "simulation, no pixels" |
+| `POST /api/sky/render` | films a scenario: renders its video and runs the normal (paid) pipeline on it, behind the same access rules as an upload; returns a run id |
 | `GET /api/runs/{id}` | progress and, when done, the full result |
-| `GET /api/runs/{id}/clip.mp4`, `/poster.jpg`, `/share.mp4` | media for a run; `POST /api/runs/{id}/share` renders the shareable MP4 |
+| `GET /api/runs/{id}/clip.mp4`, `/poster.jpg`, `/share.mp4`, `/og.jpg` | media for a run; `POST /api/runs/{id}/share` renders the shareable MP4; `og.jpg` is its link-preview image, drawn on first request |
 | `GET /api/runs/{id}/sim2real` | the sim-to-real comparison, computed on first request and cached |
 | `POST /api/runs/{id}/control`, `GET /api/runs/{id}/control/{task_id}` | a control goal for an accepted result: Muse Wonder writes a controller, MuJoCo tests it in the background (access code required) |
-| `GET /api/runs/{id}/export/{kind}` | `json`, `py` (Python script), `mjcf`, `contact`, `report` |
+| `GET /api/runs/{id}/export/{kind}` | `json`, `py` (Python script), `mjcf`, `urdf`, `sdf`, `contact`, `report` |
 | `POST /api/runs/{id}/whatif` | a typed what-if question |
 | `POST /api/compare`, `POST /api/health/trend` | machine-health comparison and trend |
 | `POST /api/studies`, `GET /api/studies/{id}` | create a study from a goal, read it |
@@ -736,14 +840,16 @@ CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (527 tests, counted by `pytest --collect-only -q`; 49 marked slow in `tests/conftest.py`) covers:
+The suite (633 tests, counted by `pytest --collect-only -q`; 61 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.
 - **SAM parsing:** recorded real responses as fixtures, out-of-order and missing frames, malformed lines.
 - **Agent:** schema validation, retries on malformed output, echoed schema keywords, refusal to fall back in demo mode.
 - **Free-form laws:** the grammar parser, LaTeX and Python generation, rejection of anything outside the grammar.
-- **Exports, studies, live mode, voice notes and what-ifs.**
+- **Exports, studies, live mode, voice notes and what-ifs**, including URDF and SDF parsed back, saved live sessions, and the command line.
+- **Measurement:** lens calibration recovering a known lens and removing the bias it puts into g, the 3D mode corrected by a tilted phone's measured gravity, rolling-shutter skew, and uploads refused before they are queued.
+- **Solar system:** the engine against JPL Horizons, frames, relativity, scenarios, the renderer to 1/16 px, discovery with and without noise, a negative control, and the Lab's API.
 - **Generated controllers:** unsafe code rejected before it runs, an endless loop and a huge allocation stopped by the sandbox limits, a wrong-sign controller fixed through the failure report, the honest result after three failures, infeasible goals reported without a call, no call once the budget cap is reached, and identical metrics from the same seed.
 
 ## What we built during the hackathon
@@ -811,6 +917,13 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Site quality pass: every page checked by script at phone and desktop width for errors, overflow and hover contrast (judge and public views), card layout for wide tables on phones, readable scientific notation, units of the result on every chart, a styled not-found page, and access shown before anyone tries a judge-only feature
 - [x] Force and velocity vectors and the law's own prediction drawn on the video, in the web player and the shareable MP4
 - [x] Faster analysis: SAM masks decoded in parallel (a 450-frame clip from about 280 s to 10 s), and a time budget per fitted model
+- [x] A solar-system engine of our own: JPL Horizons states, heliocentric N-body with the indirect term, optional relativity, J2 and passing bodies, checked against JPL over 10 years
+- [x] Perturbation discovery: residual spectra with false-alarm probabilities, hidden-body and known-body laws, an equation diff, and Le Verrier's Neptune found from Uranus when the data can show it
+- [x] Solar System Lab: a 3D solar system with glowing orbits and an asteroid swarm; change masses, add or hide bodies, see each perturbation's equation and run discovery in the browser
+- [x] Halley and Apophis forecasts with the planets: return dates, past apparitions, and the 2029 flyby's change to Apophis's orbit
+- [x] Live sessions saved as results, uploads checked before they are queued, and specific error messages instead of silent failures
+- [x] Capture quality: a bubble level from the accelerometer, the phone's measured gravity in the 3D mode, lens calibration from a printed board, and a rolling-shutter warning
+- [x] URDF and SDF exports next to MuJoCo, a command line, and a share image per result
 
 ## Roadmap
 

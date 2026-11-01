@@ -29,6 +29,34 @@ def _font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
+GREEK = {f"\\{n}": c for n, c in zip(("alpha", "beta", "gamma", "delta", "zeta", "theta", "lambda", "mu", "nu", "omega",
+                                       "tau", "phi", "sigma", "kappa", "rho"), "αβγδζθλμνωτφσκρ", strict=True)}
+SUPERSCRIPT = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
+
+
+def _unit(text: str) -> str:
+    """m/s^2 as m/s², 1/s^-1 as s⁻¹: how the site writes units."""
+    out, i = [], 0
+    while i < len(text):
+        if text[i] == "^":
+            j = i + 1
+            while j < len(text) and (text[j].isdigit() or (text[j] == "-" and j == i + 1)):
+                j += 1
+            out.append(text[i + 1:j].translate(SUPERSCRIPT))
+            i = j
+        else:
+            out.append(text[i])
+            i += 1
+    return "".join(out)
+
+
+def _fitted(d: ImageDraw.ImageDraw, text: str, width: int, size: int, smallest: int = 18) -> ImageFont.ImageFont:
+    """The largest font up to size that keeps text within width."""
+    while size > smallest and d.textlength(text, font=_font(size)) > width:
+        size -= 2
+    return _font(size)
+
+
 def _law_image(latex: str, width: int) -> Image.Image | None:
     """The law as white-on-transparent mathtext, scaled to fit width; None when mathtext cannot read it."""
     import matplotlib
@@ -57,7 +85,8 @@ def headline(result: dict[str, Any]) -> str:
         return {"no_fit": "No clean equation: the honest answer", "ambiguous": "Two laws tie: an experiment is asked for"}.get(
             result.get("status", ""), result.get("reason", "")[:70])
     p = params[0]
-    return f"{p['name']} = {p['value']:.5g} ± {p['std']:.2g} {p.get('unit', '')}".strip()
+    name = GREEK.get((p.get("latex") or "").strip(), p["name"])
+    return f"{name} = {p['value']:.5g} ± {p['std']:.2g} {_unit(p.get('unit', ''))}".strip()
 
 
 def share_page(gid: str, result: dict[str, Any], site: str) -> str:
@@ -77,24 +106,27 @@ def share_page(gid: str, result: dict[str, Any], site: str) -> str:
 
 def render(result: dict[str, Any], poster: Path | None, out: Path) -> Path:
     img = Image.new("RGB", (W, H), BG)
+    column = W - 96  # the text's width: all of it without a picture, the left part with one
     if poster is not None and poster.is_file():
         frame = Image.open(poster).convert("RGB")
         # Below the title band, so a long title never runs over the picture.
         frame.thumbnail((W // 2 - 20, H - 220))
         img.paste(frame, (W - frame.width - 40, 175 + (H - 215 - frame.height) // 2))
+        column = W - frame.width - 40 - 48 - 28
     d = ImageDraw.Draw(img)
     d.text((48, 40), "PhysicsLens", font=_font(34), fill=ACCENT)
     title = ((result.get("equation") or {}).get("title") or {"accepted": "Verified equation"}.get(result.get("status", ""),
                                                                                                      "Measured motion"))
-    d.text((48, 100), title[:46], font=_font(40), fill=INK)
+    d.text((48, 100), title[:60], font=_fitted(d, title[:60], W - 96, 40), fill=INK)
     law = (result.get("equation") or {}).get("latex")
     y = 180
     if law:
-        typeset = _law_image(law, W // 2 - 60)
+        typeset = _law_image(law, column)
         if typeset is not None:
             img.paste(typeset, (48, y), typeset)
             y += typeset.height + 30
-    d.text((48, max(y, 300)), headline(result), font=_font(30), fill=INK)
+    line = headline(result)
+    d.text((48, max(y, 300)), line, font=_fitted(d, line, column, 30), fill=INK)
     verdict = {"accepted": "Verified on motion it never saw", "ambiguous": "A tie, settled by the next experiment",
                "no_fit": "No law forecasts it: said plainly"}.get(result.get("status", ""), "")
     d.text((48, H - 70), verdict, font=_font(24), fill=MUTED)

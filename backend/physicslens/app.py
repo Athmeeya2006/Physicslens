@@ -9,6 +9,8 @@ import logging
 import math
 import os
 import shutil
+import tempfile
+import threading
 import uuid
 from pathlib import Path
 from typing import Annotated, Any
@@ -34,6 +36,7 @@ from .agent.notes import interpret_notes
 from .agent.schemas import ControlTask
 from .agent.setup_guide import GUIDE_FRAME, GUIDE_JPG, SetupGuideError, make_setup_guide
 from .agent.whatif import run_whatif
+from .control.harness import isolation as sandbox_isolation
 from .control.manager import ControlManager
 from .control.system import ControlUnsupported
 from .costguard import CostGuardClient, CostGuardError
@@ -47,6 +50,7 @@ from .export.sim2real import Sim2RealError, sim2real
 from .inputs import MAX_INPUT_BYTES, InputError, parse_inputs_csv
 from .live import LiveConfig, LiveSession
 from .perception import media
+from .perception.lens import Lens, LensError, calibrate_video, checkerboard_svg
 from .physics.health import (
     HealthError,
     HealthMetrics,
@@ -88,6 +92,8 @@ MAX_LIVE_FRAMES = 25 * 60 * 10  # 10 minutes at 25 fps; budget caps normally end
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".webm", ".mkv"}
 
 app = FastAPI(title="PhysicsLens")
+# Probe the controller sandbox's OS isolation now, off the request path, so a missing wall is in the log at startup.
+threading.Thread(target=sandbox_isolation, name="sandbox-probe", daemon=True).start()
 app.include_router(sky_router)
 app.add_middleware(
     CORSMiddleware,
@@ -118,7 +124,8 @@ def audience_for(access_code: str | None) -> str:
 
 # Per visitor, for the whole period, under open access: generous for a judge trying everything twice.
 # "question": a typed or spoken what-if, or spoken settings: one short text call each, so many more than analyses.
-OPEN_ACCESS_DEFAULTS = {"analysis": 15, "live": 5, "picture": 5, "controller": 3, "study": 3, "question": 40}
+OPEN_ACCESS_DEFAULTS = {"analysis": 15, "live": 5, "picture": 5, "controller": 3, "study": 3, "question": 40,
+                       "lens": 10}  # lens: free local math, limited only because it is CPU-heavy
 configure_sky(client.limits.get("sky"))
 visitors = VisitorAllowance(settings.data_dir / "public.db",
                             {**OPEN_ACCESS_DEFAULTS, **(client.guard.budget.get("open_access_per_visitor") or {})})
@@ -147,6 +154,8 @@ def health(x_access_code: Annotated[str | None, Header()] = None) -> dict[str, o
             "reasoning": {"provider": provider, "model": OPEN_WEIGHT_MODELS[provider]} if provider else None,
             "can_upload": audience != "public" or public_try_enabled(), "can_go_live": audience != "public",
             "open_access": open_access(),
+            # The OS wall around generated controller code: "bubblewrap", "unshare" (network only) or "none".
+            "sandbox_isolation": sandbox_isolation(),
             "turnstile_site_key": os.environ.get("TURNSTILE_SITE_KEY", "") if audience == "public" else ""}
 
 
@@ -181,6 +190,7 @@ def create_run(
     depth_3d: Annotated[bool, Form()] = False,
     focal_px: Annotated[float | None, Form()] = None,
     gravity_up: Annotated[str | None, Form(max_length=80)] = None,
+    lens: Annotated[str | None, Form(max_length=600)] = None,
     inputs_csv: Annotated[UploadFile | None, File()] = None,
     known_mover: Annotated[str | None, Form(max_length=60)] = None,
 ) -> dict[str, object]:
@@ -195,6 +205,7 @@ def create_run(
     if focal_px is not None and not 50 <= focal_px <= 50000:
         raise HTTPException(status_code=400, detail="The focal length should be between 50 and 50000 pixels.")
     up = parse_gravity_up(gravity_up)
+    lens_dict = parse_lens(lens)
     for name, value in (("pendulum length", pendulum_length_m), ("object size", object_size_m)):
         if value is not None and not 0.005 <= value <= 100:
             raise HTTPException(status_code=400, detail=f"The {name} should be between 0.5 cm and 100 m.")
@@ -239,7 +250,7 @@ def create_run(
                                                     f"frames at {info.fps:.3g} fps).")
     state = runs.start(dest, RunOptions(audience=audience, pendulum_length_m=pendulum_length_m, object_size_m=object_size_m,
                                          slow_motion=slow_motion, object_hint=object_hint, blade_count=blade_count,
-                                         depth_3d=depth_3d, focal_px=focal_px, gravity_up=up, inputs=inputs,
+                                         depth_3d=depth_3d, focal_px=focal_px, gravity_up=up, lens=lens_dict, inputs=inputs,
                                          known_mover=known_mover))
     return runs.public_view(state)
 
@@ -255,6 +266,45 @@ def parse_gravity_up(text: str | None) -> tuple[float, float, float] | None:
     if not all(math.isfinite(v) for v in (x, y, z)) or math.hypot(x, y, z) < 1e-3:
         raise HTTPException(status_code=400, detail="The gravity reading is empty or not a number.")
     return (x, y, z)
+
+
+def parse_lens(text: str | None) -> dict[str, object] | None:
+    """A lens calibration sent with an upload (JSON from /api/lens/calibrate, kept in the visitor's browser)."""
+    if not text:
+        return None
+    try:
+        return Lens.from_dict(json.loads(text)).as_dict()
+    except (ValueError, LensError) as e:
+        raise HTTPException(status_code=400, detail=f"Lens calibration: {e}") from e
+
+
+@app.post("/api/lens/calibrate")
+def calibrate_lens(request: Request, video: Annotated[UploadFile, File()],
+                   x_access_code: Annotated[str | None, Header()] = None) -> dict[str, object]:
+    """Focal length and distortion from a short video of the printed board. Local math only: no model calls."""
+    allow_visitor("lens", x_access_code, request.headers, request.client.host if request.client else None)
+    suffix = Path(video.filename or "").suffix.lower()
+    if suffix not in VIDEO_SUFFIXES:
+        raise HTTPException(status_code=400, detail="Please upload a video file (MP4 or MOV).")
+    with tempfile.TemporaryDirectory() as tmp:
+        dest = Path(tmp) / f"board{suffix}"
+        written = 0
+        with dest.open("wb") as out:
+            while chunk := video.file.read(1 << 20):
+                written += len(chunk)
+                if written > MAX_UPLOAD_BYTES:
+                    raise HTTPException(status_code=413, detail="That video is too large; 10 to 20 seconds is plenty.")
+                out.write(chunk)
+        try:
+            lens_cal = calibrate_video(dest)
+        except LensError as e:
+            raise HTTPException(status_code=400, detail=f"Calibration failed: {e}") from e
+    return {"lens": lens_cal.as_dict(), "focal_px": (lens_cal.fx + lens_cal.fy) / 2}
+
+
+@app.get("/api/lens/checkerboard.svg")
+def lens_checkerboard() -> Response:
+    return Response(checkerboard_svg(), media_type="image/svg+xml")
 
 
 @app.post("/api/sky/render")

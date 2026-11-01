@@ -204,8 +204,9 @@ export function GhostPlayer({ src, width, height, fps, real, secondReal, objectS
   return (
     <div className="player">
       <div className="stage" style={{ aspectRatio: `${width} / ${height}` }}>
-        <video ref={video} src={src} controls playsInline muted loop />
-        <canvas ref={canvas} width={width} height={height} />
+        <video ref={video} src={src} controls playsInline muted loop
+               aria-label={`The clip with ${ghosts.length ? `the fitted law's prediction (${ghosts[0].model_id}) drawn over it` : "the measured trail drawn over it"}`} />
+        <canvas ref={canvas} width={width} height={height} aria-hidden="true" />
       </div>
       <div className="legend">
         {ghosts.map((g, i) => (

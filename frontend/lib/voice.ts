@@ -41,6 +41,18 @@ class PcmChunker extends AudioWorkletProcessor {
 registerProcessor("pcm-chunker", PcmChunker);
 `;
 
+// Why the microphone did not start, in words a visitor can act on.
+export function micError(err: unknown): string {
+  if (process.env.NODE_ENV !== "production") console.error(err);
+  const name = (err as { name?: string })?.name;
+  if (name === "NotAllowedError" || name === "SecurityError")
+    return window.isSecureContext ? "Microphone access was refused: allow it in the browser's site settings and try again."
+      : "The microphone only works when this page is opened over HTTPS.";
+  if (name === "NotFoundError" || name === "OverconstrainedError") return "No microphone was found on this device.";
+  if (name === "NotReadableError") return "The microphone is in use by another app; close it and try again.";
+  return `The microphone could not start (${(err as Error)?.message || name || "unknown error"}).`;
+}
+
 export interface Mic {
   stop: () => void;
 }

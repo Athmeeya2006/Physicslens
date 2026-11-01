@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type { TrackPoint } from "@/lib/api";
 import { accessCode, API_BASE, askWhatIf } from "@/lib/api";
-import { startMic, type Mic } from "@/lib/voice";
+import { micError, startMic, type Mic } from "@/lib/voice";
 
 export interface WhatIfAnswer {
   question: string;
@@ -75,8 +75,8 @@ export function WhatIf({ runId, onGhost }: Props) {
       try {
         mic.current = await startMic((pcm) => ws.readyState === WebSocket.OPEN && ws.send(pcm));
         setListening(true);
-      } catch {
-        setError("Microphone unavailable (on a phone this page must be opened over HTTPS).");
+      } catch (err) {
+        setError(micError(err));
         ws.close();
       }
     };

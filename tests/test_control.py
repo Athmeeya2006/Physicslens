@@ -99,6 +99,50 @@ def test_static_check_rejects_unsafe_code(code, why):
     assert not r.ok and why in r.reason
 
 
+HEAD = "import numpy as np\nimport math\n\ndef control(t, q, qdot, params):\n"
+
+
+@pytest.mark.parametrize("body, why", [
+    # Reaching files, the network, processes or the interpreter through numpy: none of these paths is allowed.
+    ("    np.lib.npyio.DataSource('/etc').open('passwd')\n", "np.lib.npyio.DataSource is not allowed"),
+    ("    np.ctypeslib.as_array(0)\n", "np.ctypeslib.as_array is not allowed"),
+    ("    np.testing.assert_equal(1, 1)\n", "np.testing.assert_equal is not allowed"),
+    ("    np.fromfile('/etc/passwd')\n", "np.fromfile is not allowed"),
+    ("    np.loadtxt('/etc/passwd')\n", "np.loadtxt is not allowed"),
+    ("    np.f2py.compile('x')\n", "np.f2py.compile is not allowed"),
+    ("    np.linalg.lapack_lite\n", "np.linalg.lapack_lite is not allowed"),
+    ("    np.core.multiarray\n", "np.core.multiarray is not allowed"),
+    ("    np.show_runtime()\n", "np.show_runtime is not allowed"),
+    # Keeping a module in a variable would let later attribute access escape the allowlist.
+    ("    m = np\n    m.save('x', q)\n", "np itself cannot be passed or stored"),
+    ("    la = np.linalg\n", "np.linalg is not allowed"),
+    ("    f = [math][0]\n", "math itself cannot be passed or stored"),
+    ("    math.sys\n", "math.sys is not allowed"),
+])
+def test_numpy_and_math_are_allowlisted(body, why):
+    r = check_controller(HEAD + body + "    return [0.0]\n")
+    assert not r.ok and why in r.reason
+    assert "offers only" in r.reason or "itself" in r.reason
+
+
+@pytest.mark.parametrize("code, why", [
+    ("from numpy import load\n\ndef control(t, q, qdot, params):\n    return [0.0]\n", "importing 'load' from numpy"),
+    ("from numpy import lib\n\ndef control(t, q, qdot, params):\n    return [0.0]\n", "importing 'lib' from numpy"),
+    ("import numpy.linalg\n\ndef control(t, q, qdot, params):\n    return [0.0]\n", "import 'numpy.linalg'"),
+])
+def test_imports_follow_the_allowlist(code, why):
+    r = check_controller(code)
+    assert not r.ok and why in r.reason
+
+
+def test_allowed_paths_pass():
+    code = HEAD + ("    v = np.array([q[0], qdot[0]])\n    n = np.linalg.norm(v) + math.hypot(1.0, 2.0)\n"
+                   "    return [float(np.clip(-np.tanh(n) * math.pi, -1, 1))]\n")
+    assert check_controller(code).ok
+    assert check_controller("from math import sin, pi\n\ndef control(t, q, qdot, params):\n"
+                            "    return [sin(pi * t)]\n").ok
+
+
 def test_static_check_accepts_the_contract():
     assert check_controller(GOOD).ok
     assert check_controller("import numpy as np\nSTATE = {'i': 0.0}\n\ndef control(t, q, qdot, params):\n"
@@ -278,3 +322,31 @@ def test_unusable_answer_counts_as_an_attempt(wonder, tmp_path):
     out = run_solve(wonder, tmp_path, n=3)
     assert out["attempts"][0]["check"]["ok"] is False and out["accepted_attempt"] == 2
     assert "not JSON" in wonder.sdk().calls[1]["input"][0]["content"][0]["text"]
+
+
+def test_the_os_wall_blocks_network_and_project_files(tmp_path):
+    """Past the static check and the restricted builtins, the namespace itself: tested with the walls' own command."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    from physicslens.control import harness
+    if harness.isolation() != "bubblewrap":
+        pytest.skip("bubblewrap is not usable on this machine")
+    repo = Path(__file__).resolve().parents[1]
+    probe = ("import socket, os, pathlib\n"
+             "try:\n    socket.create_connection(('1.1.1.1', 53), timeout=2); print('NET')\n"
+             "except OSError:\n    print('no-net')\n"
+             f"print('project' if os.path.exists({str(repo / 'backend')!r}) else 'no-project')\n"
+             # Only the Python install is bound; when it is a virtualenv inside the project, that is all of it.
+             f"seen = os.listdir({str(repo)!r}) if os.path.isdir({str(repo)!r}) else []\n"
+             "print('only-python' if set(seen) <= {'.venv'} else 'LEAK ' + ','.join(seen))\n"
+             "try:\n    pathlib.Path('/usr/x').write_text('x'); print('WROTE')\n"
+             "except OSError:\n    print('read-only')\n"
+             "pathlib.Path('ok.txt').write_text('fine'); print('work-ok')\n")
+    cmd = harness._command(str(tmp_path), harness.SandboxLimits(), "bubblewrap")
+    cmd = [*cmd[:cmd.index("-I") + 1], "-c", probe]
+    out = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=30, env=dict(harness.CHILD_ENV)).stdout
+    assert out.split() == ["no-net", "no-project", "only-python", "read-only", "work-ok"]
+    assert (tmp_path / "ok.txt").read_text() == "fine"
+    assert sys.executable  # the interpreter ran from its read-only bind

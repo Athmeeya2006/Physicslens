@@ -3,7 +3,7 @@
 import { Mic, Square } from "lucide-react";
 import { useRef, useState } from "react";
 import { accessCode, API_BASE } from "@/lib/api";
-import { startMic, type Mic as MicHandle } from "@/lib/voice";
+import { micError, startMic, type Mic as MicHandle } from "@/lib/voice";
 
 export interface SpokenNotes {
   understood: boolean;
@@ -51,8 +51,8 @@ export function VoiceNotes({ onNotes }: { onNotes: (n: SpokenNotes) => void }) {
       try {
         mic.current = await startMic((pcm) => ws.readyState === WebSocket.OPEN && ws.send(pcm));
         setListening(true);
-      } catch {
-        setReply("Microphone unavailable (on a phone this page must be opened over HTTPS).");
+      } catch (err) {
+        setReply(micError(err));
         ws.close();
       }
     };

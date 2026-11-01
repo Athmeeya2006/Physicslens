@@ -8,6 +8,12 @@ import { AgentTrail } from "./AgentTrail";
 // Muse Wonder writes a controller for the identified system; only MuJoCo runs on the identified model and its
 // bootstrap variants decide whether it is accepted. Everything shown here is simulation, and is labeled so.
 
+const ISOLATION_TEXT: Record<string, string> = {
+  bubblewrap: "On this server the process also runs in its own namespaces: no network, and no files but Python's.",
+  unshare: "On this server the process also runs with no network.",
+  none: "This server offers no operating-system isolation, so the static check and resource limits are the walls.",
+};
+
 export type ControlGoal = "reach_and_hold" | "swing_up" | "stop" | "track_sine";
 
 export interface ControlTask {
@@ -80,12 +86,17 @@ export function ControlPanel({ runId, family, params, length }: {
   const [view, setView] = useState<ControlView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [allowed, setAllowed] = useState<boolean | null>(null);
+  const [isolation, setIsolation] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let live = true;
     // Public visitors don't get this panel: controller writing is for judges and development only.
-    getHealth().then((h) => live && setAllowed(h.audience !== "public")).catch(() => live && setAllowed(false));
+    getHealth().then((h) => {
+      if (!live) return;
+      setAllowed(h.audience !== "public");
+      setIsolation(h.sandbox_isolation ?? null);
+    }).catch(() => live && setAllowed(false));
     return () => {
       live = false;
       if (timer.current) clearTimeout(timer.current);
@@ -131,6 +142,7 @@ export function ControlPanel({ runId, family, params, length }: {
         Muse Wonder writes Python code for a motor {pendulum ? "at the pivot" : "on the spring axis"}. The code is checked, then run
         in an isolated process on the nominal model plus 50 bootstrap variants; it is accepted only if at least 90% of them,
         including the nominal one, meet the goal. Up to three attempts, each failure reported back to the model.
+        {isolation && ` ${ISOLATION_TEXT[isolation]}`}
       </p>
       <form onSubmit={submit} className="control-form" style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
         <label className="small">Goal
