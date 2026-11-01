@@ -1,4 +1,6 @@
 """The Solar System Lab's API: free, bounded, cached, and never a paid call (except /render, an upload)."""
+import time
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -8,7 +10,13 @@ def lab(monkeypatch):
     from physicslens import app as app_module
     from physicslens import sky_api
     sky_api.CACHE.items.clear()
-    sky_api._seen.clear()
+    sky_api.WINDOWS = sky_api._windows()  # a fresh minute for each test
+    # Another test's upload may still be analysing in the background: let it finish before counting paid calls.
+    deadline = time.monotonic() + 120
+    while any(r.status in ("queued", "running") for r in list(app_module.runs._runs.values())):
+        if time.monotonic() > deadline:
+            break
+        time.sleep(0.2)
     paid = []
     for name in ("meta_text", "open_weight_chat", "sam_video"):
         if hasattr(app_module.client, name):
@@ -61,13 +69,14 @@ def test_bad_requests_are_refused_with_a_reason(lab, body, status):
 
 def test_each_address_is_rate_limited(lab):
     client, sky_api, _ = lab
-    sky_api.LIMITS["per_ip_per_minute"] = 2
+    sky_api.configure({"per_ip_per_minute": 2})
     try:
-        codes = [client.post("/api/sky/simulate", json={"scenario": "mercury_newton", "years": 1},
-                             headers={"x-forwarded-for": "8.8.8.8"}).status_code for _ in range(3)]
+        replies = [client.post("/api/sky/simulate", json={"scenario": "mercury_newton", "years": 1},
+                               headers={"x-forwarded-for": "8.8.8.8"}) for _ in range(3)]
     finally:
-        sky_api.LIMITS["per_ip_per_minute"] = 20
-    assert codes[:2] == [200, 200] and codes[2] == 429
+        sky_api.configure({"per_ip_per_minute": 20})
+    assert [r.status_code for r in replies] == [200, 200, 429]
+    assert 1 <= int(replies[2].headers["retry-after"]) <= 60
 
 
 @pytest.mark.slow

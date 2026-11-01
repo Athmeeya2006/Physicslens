@@ -32,6 +32,15 @@ fitting:
   # threads, at most 4. PHYSICSLENS_FIT_WORKERS overrides for one run.
   workers: null
 
+requests:
+  # Incoming requests per route group over a sliding minute, per visitor address and for everyone together.
+  # Refused with 429 and Retry-After before any work or spend starts. Omitted groups use the defaults in app.py.
+  uploads: {per_ip_per_minute: 6, global_per_minute: 30}    # /api/runs, /api/audit, /api/sky/render
+  studies: {per_ip_per_minute: 10, global_per_minute: 60}   # creating studies, adding recordings, reviews
+  live: {per_ip_per_minute: 6, global_per_minute: 20}       # /ws/live sessions
+  voice: {per_ip_per_minute: 12, global_per_minute: 60}     # /ws/voice, /ws/voice/notes
+  lens: {per_ip_per_minute: 4, global_per_minute: 12}       # /api/lens/calibrate (CPU-heavy, free)
+
 sky:
   # The Solar System Lab (/api/sky/*): free CPU work on cached JPL data, still bounded.
   max_bodies: 30
@@ -39,6 +48,7 @@ sky:
   max_years: 300
   max_points: 2000        # per body in a simulate response
   per_ip_per_minute: 20
+  global_per_minute: 120
   max_concurrent: 2
   max_seconds: 90
   cache_entries: 64

@@ -626,6 +626,8 @@ Other rules: the language model never receives video, only up to four keyframes 
 
 **Judging allowance.** Judges get one allowance per provider for the whole judging period instead of a daily limit, so a busy first day cannot lock them out while later days' money sits unused. The judging server restarts every day with an empty ledger, so it reads the judges' spend so far from a private gist at startup (`JUDGE_SPENT_BEFORE`) and writes its own back every few minutes; the caps themselves come from that private gist too, never from this public repository. If the allowance is used up, judges see "temporarily busy, please retry later", never a quota.
 
+**Floods and wrong files.** Before any work starts, every route that can cost money or CPU (uploads and audits, studies, live and voice sockets, lens calibration, the Solar System Lab) counts requests over a sliding minute per visitor address and for everyone together (`requests:` in `config/limits.yaml`), answering 429 with `Retry-After` (sockets close with code 1013). An upload must start like an MP4, MOV or WebM file before a byte of it is written, is saved under a name the server chooses, and is read with ffprobe before it is queued. Outside development the server refuses to start with a wildcard or non-https CORS origin.
+
 **Secrets.** Keys live only in `.env` (gitignored), read from environment variables. The public site never holds a key; it only learns the address of the analysis server at runtime from `/backend.json`.
 
 **Mocks.** `MOCK_MODELS=1` exists for automated tests only. The app refuses to start with mocks in demo or production, and the UI shows a red mock-mode banner whenever they are active.
@@ -753,7 +755,7 @@ The public gallery is a static export that needs no server: `python scripts/buil
 | `OPEN_ACCESS` | `1` gives every visitor uploads, live mode, voice and studies, under the period's spending allowance and a per-visitor allowance |
 | `PUBLIC_TRY_ENABLED` | `1` lets visitors without a code analyze a few short clips per day under their own cap; otherwise gallery only |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Optional Cloudflare Turnstile check on public uploads |
-| `FRONTEND_ORIGINS` | Allowed CORS origins for the backend |
+| `FRONTEND_ORIGINS` | Allowed CORS origins for the backend, comma-separated; outside development a wildcard or a non-https origin stops the server at startup |
 | `TRUST_PROXY` | `1` to read the client address from proxy headers (per-visitor limits behind a tunnel) |
 | `PHYSICSLENS_FIT_WORKERS` | Processes that fit candidate laws side by side (default half the CPU threads, at most 4; `1` fits one after another). The numbers are identical either way |
 | `PHYSICSLENS_DECODE_WORKERS` | Processes that decode SAM masks (same default) |
@@ -834,6 +836,7 @@ tests/                   unit tests (mocked models; recorded real responses as f
 make test                     # every test, mocked models, in parallel (pytest-xdist): no network, no spend
 make test-fast                # the same without the tests marked slow (over 10 s each)
 make lint                     # ruff over backend, tests and scripts
+make audit                    # pip-audit and npm audit over the pinned dependencies (none known on Nov 1)
 ```
 
 CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.11 and 3.12, and the frontend typecheck, build and static build, on every push; it needs no secrets and makes no paid calls. Optional local hooks run the same checks before a commit: `pip install pre-commit && pre-commit install` (`.pre-commit-config.yaml`). Dependabot proposes grouped weekly updates for the pinned dependencies. Each test process keeps its own ledger, cache and runs (`PHYSICSLENS_VAR_DIR`), and the agent's laws registered by one test are removed after it, so tests are independent in any order.
@@ -850,6 +853,7 @@ The suite (633 tests, counted by `pytest --collect-only -q`; 61 marked slow in `
 - **Exports, studies, live mode, voice notes and what-ifs**, including URDF and SDF parsed back, saved live sessions, and the command line.
 - **Measurement:** lens calibration recovering a known lens and removing the bias it puts into g, the 3D mode corrected by a tilted phone's measured gravity, rolling-shutter skew, and uploads refused before they are queued.
 - **Solar system:** the engine against JPL Horizons, frames, relativity, scenarios, the renderer to 1/16 px, discovery with and without noise, a negative control, and the Lab's API.
+- **Security:** request limits per address and overall (429 with Retry-After, close code 1013 on sockets), uploads sniffed by their first bytes before anything is written, CORS wildcards refused outside development, numpy and math reached only through the allowlist, and, where bubblewrap runs, a probe inside the sandbox that finds no network, no project files and a read-only system.
 - **Generated controllers:** unsafe code rejected before it runs, an endless loop and a huge allocation stopped by the sandbox limits, a wrong-sign controller fixed through the failure report, the honest result after three failures, infeasible goals reported without a call, no call once the budget cap is reached, and identical metrics from the same seed.
 
 ## What we built during the hackathon

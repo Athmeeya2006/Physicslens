@@ -80,6 +80,20 @@ def validate(settings: Settings) -> Settings:
     return settings
 
 
+def cors_origins(app_env: str, raw: str | None) -> list[str]:
+    """FRONTEND_ORIGINS as a list. A wildcard would let any site call the paid endpoints from a visitor's browser, so
+    it is refused outside development; so is an origin that is not a plain http(s) scheme and host."""
+    origins = [o.strip().rstrip("/") for o in (raw or "http://localhost:3000").split(",") if o.strip()]
+    if app_env != "dev":
+        for o in origins:
+            if "*" in o:
+                raise ConfigError(f"FRONTEND_ORIGINS may not contain a wildcard when APP_ENV={app_env} (got {o!r}); "
+                                  "list the site's exact origins.")
+            if not o.startswith(("https://", "http://localhost", "http://127.0.0.1")):
+                raise ConfigError(f"FRONTEND_ORIGINS entry {o!r} must be an https:// origin when APP_ENV={app_env}.")
+    return origins
+
+
 def load_settings(read_env_file: bool = True) -> Settings:
     if read_env_file:
         load_dotenv(REPO_ROOT / ".env", override=False)

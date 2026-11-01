@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections import deque
 from collections.abc import Callable, Mapping
 from contextlib import contextmanager
 from typing import Any
@@ -127,3 +128,42 @@ def _num(value: str | None) -> float | None:
         return float(value) if value is not None else None
     except ValueError:
         return None
+
+
+class RequestWindows:
+    """Incoming requests per route group: at most N per address and M in total over a sliding minute.
+
+    Separate from the model-call limits above: these protect the server from a flood (a bot, a stuck client) before
+    any work or spend starts. check() records the request and returns None, or the seconds to wait (Retry-After).
+    """
+
+    WINDOW_S = 60.0
+
+    def __init__(self, limits: Mapping[str, Mapping[str, Any]], clock: Callable[[], float] = time.monotonic):
+        self.limits = {g: (int(v.get("per_ip_per_minute", 0)), int(v.get("global_per_minute", 0))) for g, v in limits.items()}
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._per_ip: dict[tuple[str, str], deque[float]] = {}
+        self._all: dict[str, deque[float]] = {}
+
+    def _wait(self, q: deque[float], limit: int, now: float) -> float | None:
+        while q and now - q[0] >= self.WINDOW_S:
+            q.popleft()
+        return None if not limit or len(q) < limit else self.WINDOW_S - (now - q[0])
+
+    def check(self, group: str, addr: str) -> float | None:
+        per_ip, total = self.limits.get(group, (0, 0))
+        now = self._clock()
+        with self._lock:
+            mine = self._per_ip.setdefault((group, addr), deque())
+            everyone = self._all.setdefault(group, deque())
+            wait = max((w for w in (self._wait(mine, per_ip, now), self._wait(everyone, total, now)) if w is not None),
+                       default=None)
+            if wait is not None:
+                return max(1.0, wait)
+            mine.append(now)
+            everyone.append(now)
+            if len(self._per_ip) > 10_000:  # forget idle addresses so a scan of many addresses can't grow this forever
+                for key in [k for k, q in self._per_ip.items() if not q or now - q[-1] >= self.WINDOW_S]:
+                    del self._per_ip[key]
+            return None

@@ -40,6 +40,7 @@ from .control.harness import isolation as sandbox_isolation
 from .control.manager import ControlManager
 from .control.system import ControlUnsupported
 from .costguard import CostGuardClient, CostGuardError
+from .costguard.limiter import RequestWindows
 from .export.mjcf import bounce_mjcf, build_mjcf
 from .export.mp4 import ExportError, render_share_video
 from .export.og import render as render_og
@@ -63,7 +64,7 @@ from .physics.health import (
 from .pipeline import MIN_CLIP_FRAMES, MIN_CLIP_SECONDS, AnalysisError, RunOptions, trajectory_from_result
 from .public import PublicQuota, VisitorAllowance, client_address, turnstile_ok
 from .runs import RunManager
-from .settings import OPEN_WEIGHT_MODELS, load_settings
+from .settings import OPEN_WEIGHT_MODELS, cors_origins, load_settings
 from .sky.nbody import SkyTooSlow
 from .sky.scenarios import FRAME_NOTE as SKY_FRAME_NOTE
 from .sky.scenarios import render_scenario
@@ -97,7 +98,7 @@ threading.Thread(target=sandbox_isolation, name="sandbox-probe", daemon=True).st
 app.include_router(sky_router)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o for o in os.environ.get("FRONTEND_ORIGINS", "http://localhost:3000").split(",") if o],
+    allow_origins=cors_origins(settings.app_env, os.environ.get("FRONTEND_ORIGINS")),
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
@@ -129,6 +130,41 @@ OPEN_ACCESS_DEFAULTS = {"analysis": 15, "live": 5, "picture": 5, "controller": 3
 configure_sky(client.limits.get("sky"))
 visitors = VisitorAllowance(settings.data_dir / "public.db",
                             {**OPEN_ACCESS_DEFAULTS, **(client.guard.budget.get("open_access_per_visitor") or {})})
+
+
+# Incoming requests per route group over a sliding minute, per visitor address and for everyone: a flood is refused
+# before any work starts. Generous for people; config/limits.yaml (requests:) can change them.
+REQUEST_DEFAULTS = {
+    "uploads": {"per_ip_per_minute": 6, "global_per_minute": 30},   # /api/runs, /api/audit, /api/sky/render
+    "studies": {"per_ip_per_minute": 10, "global_per_minute": 60},  # creating studies, adding recordings, reviews
+    "live": {"per_ip_per_minute": 6, "global_per_minute": 20},      # /ws/live sessions
+    "voice": {"per_ip_per_minute": 12, "global_per_minute": 60},    # /ws/voice, /ws/voice/notes
+    "lens": {"per_ip_per_minute": 4, "global_per_minute": 12},      # /api/lens/calibrate (CPU-heavy)
+}
+request_windows = RequestWindows({**REQUEST_DEFAULTS, **(client.limits.get("requests") or {})})
+
+
+def _address(remote: str | None, headers: Any) -> str:
+    return client_address(remote, headers.get("x-forwarded-for"), headers.get("cf-connecting-ip"))
+
+
+def limit_requests(group: str, request: Request) -> None:
+    """429 with Retry-After when this address, or everyone together, sent too many of these in the last minute."""
+    wait = request_windows.check(group, _address(request.client.host if request.client else None, request.headers))
+    if wait is not None:
+        raise HTTPException(status_code=429, detail="Too many requests in a minute; please wait a moment and try again.",
+                            headers={"Retry-After": str(math.ceil(wait))})
+
+
+async def ws_allowed(group: str, ws: WebSocket) -> bool:
+    """The socket form of limit_requests: a notice, then close code 1013 (try again later)."""
+    wait = request_windows.check(group, _address(ws.client.host if ws.client else None, ws.headers))
+    if wait is None:
+        return True
+    await ws.send_json({"type": "notice", "level": "error",
+                        "message": f"Too many sessions in a minute; please try again in {math.ceil(wait)} s."})
+    await ws.close(code=1013)
+    return False
 
 
 def allow_visitor(kind: str, access_code: str | None, headers: Any, remote: str | None) -> None:
@@ -194,6 +230,7 @@ def create_run(
     inputs_csv: Annotated[UploadFile | None, File()] = None,
     known_mover: Annotated[str | None, Form(max_length=60)] = None,
 ) -> dict[str, object]:
+    limit_requests("uploads", request)
     audience = audience_for(x_access_code)
     inputs = None
     if inputs_csv is not None and inputs_csv.filename:
@@ -226,16 +263,11 @@ def create_run(
             raise HTTPException(status_code=429, detail="You've used today's free analyses. Browse the gallery, or come back tomorrow.")
     run_dir = runs.new_run_dir()
     dest = run_dir / f"input{suffix}"
-    written = 0
-    with dest.open("wb") as out:
-        while chunk := video.file.read(1 << 20):
-            written += len(chunk)
-            if written > MAX_UPLOAD_BYTES:
-                break
-            out.write(chunk)
-    if written > MAX_UPLOAD_BYTES:
+    try:
+        save_upload(video, dest, "That video is too large; trim it to under 30 seconds.")
+    except HTTPException:
         shutil.rmtree(run_dir)
-        raise HTTPException(status_code=413, detail="That video is too large; trim it to under 30 seconds.")
+        raise
     # Read it now (ffprobe: length, frames, rotation), so a file that cannot work is refused with a reason before it
     # is queued and before anything is spent on it.
     try:
@@ -253,6 +285,27 @@ def create_run(
                                          depth_3d=depth_3d, focal_px=focal_px, gravity_up=up, lens=lens_dict, inputs=inputs,
                                          known_mover=known_mover))
     return runs.public_view(state)
+
+
+def save_upload(video: UploadFile, dest: Path, too_large: str) -> None:
+    """Stream an upload to dest (a name we chose, never the client's), refusing a non-video before writing anything.
+
+    The first chunk must start like an MP4, MOV or WebM file; past MAX_UPLOAD_BYTES the copy stops. The caller removes
+    dest's directory when this raises.
+    """
+    head = video.file.read(1 << 20)
+    if not media.looks_like_video(head):
+        raise HTTPException(status_code=400, detail="That file could not be read as a video (it does not start like "
+                                                    "an MP4, MOV or WebM file).")
+    written = 0
+    with dest.open("wb") as out:
+        chunk = head
+        while chunk:
+            written += len(chunk)
+            if written > MAX_UPLOAD_BYTES:
+                raise HTTPException(status_code=413, detail=too_large)
+            out.write(chunk)
+            chunk = video.file.read(1 << 20)
 
 
 def parse_gravity_up(text: str | None) -> tuple[float, float, float] | None:
@@ -282,19 +335,14 @@ def parse_lens(text: str | None) -> dict[str, object] | None:
 def calibrate_lens(request: Request, video: Annotated[UploadFile, File()],
                    x_access_code: Annotated[str | None, Header()] = None) -> dict[str, object]:
     """Focal length and distortion from a short video of the printed board. Local math only: no model calls."""
+    limit_requests("lens", request)
     allow_visitor("lens", x_access_code, request.headers, request.client.host if request.client else None)
     suffix = Path(video.filename or "").suffix.lower()
     if suffix not in VIDEO_SUFFIXES:
         raise HTTPException(status_code=400, detail="Please upload a video file (MP4 or MOV).")
     with tempfile.TemporaryDirectory() as tmp:
         dest = Path(tmp) / f"board{suffix}"
-        written = 0
-        with dest.open("wb") as out:
-            while chunk := video.file.read(1 << 20):
-                written += len(chunk)
-                if written > MAX_UPLOAD_BYTES:
-                    raise HTTPException(status_code=413, detail="That video is too large; 10 to 20 seconds is plenty.")
-                out.write(chunk)
+        save_upload(video, dest, "That video is too large; 10 to 20 seconds is plenty.")
         try:
             lens_cal = calibrate_video(dest)
         except LensError as e:
@@ -315,6 +363,7 @@ def sky_render(
 ) -> dict[str, object]:
     """Film a lab scenario: render its video and run the normal (paid) pipeline on it, exactly like an upload, behind
     the same access rules and per-visitor allowance. The lab's own simulate and discover endpoints are free."""
+    limit_requests("uploads", request)
     audience = audience_for(x_access_code)
     if audience == "public" and not public_try_enabled():
         raise HTTPException(status_code=403, detail="Filming a scenario is paused right now; the lab itself is open.")
@@ -429,6 +478,8 @@ async def _first_message(ws: WebSocket) -> dict | None:
 async def live(ws: WebSocket) -> None:
     """First message: JSON {fps, pendulum_length_m?, object_size_m?, access_code?}. Then one binary JPEG per camera frame."""
     await ws.accept()
+    if not await ws_allowed("live", ws):
+        return
     init = await _first_message(ws)
     if init is None:
         return
@@ -598,6 +649,8 @@ def _visitor_may_ask(ws: WebSocket, init: dict) -> bool:
 async def voice(ws: WebSocket) -> None:
     """First message: JSON {run_id, access_code?}. Then binary 24 kHz s16le mono PCM; text {"type": "stop"} ends it."""
     await ws.accept()
+    if not await ws_allowed("voice", ws):
+        return
     init = await _first_message(ws)
     if init is None:
         return
@@ -854,6 +907,7 @@ def _study_call(fn, *args):
 @app.post("/api/studies")
 def create_study(goal: Annotated[str, Body(embed=True)], request: Request,
                  x_access_code: Annotated[str | None, Header()] = None) -> dict:
+    limit_requests("studies", request)
     audience = _study_audience(x_access_code)
     allow_visitor("study", x_access_code, request.headers, request.client.host if request.client else None)
     return _study_call(studies.create, goal, audience)
@@ -877,6 +931,7 @@ def add_study_run(
     setting: Annotated[float | None, Form(gt=0)] = None,
     x_access_code: Annotated[str | None, Header()] = None,
 ) -> dict:
+    limit_requests("studies", request)
     _study_audience(x_access_code)
     _study_call(studies.get, study_id)  # fail before accepting the upload
     run = create_run(request, video, pendulum_length_m, object_size_m, slow_motion, object_hint, None, x_access_code, None)
@@ -885,7 +940,8 @@ def add_study_run(
 
 
 @app.post("/api/studies/{study_id}/review")
-def review_study(study_id: str, x_access_code: Annotated[str | None, Header()] = None) -> dict:
+def review_study(study_id: str, request: Request, x_access_code: Annotated[str | None, Header()] = None) -> dict:
+    limit_requests("studies", request)
     return _study_call(studies.review, study_id, _result_or_none, _health_series, _study_audience(x_access_code))
 
 
@@ -910,6 +966,8 @@ NOTES_KEYWORDS = ["string", "length", "centimeters", "meters", "inches", "feet",
 async def voice_notes(ws: WebSocket) -> None:
     """Spoken settings while filming. First message: JSON {access_code?}; then 24 kHz s16le mono PCM; {"type": "stop"}."""
     await ws.accept()
+    if not await ws_allowed("voice", ws):
+        return
     init = await _first_message(ws)
     if init is None:
         return

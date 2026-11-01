@@ -39,6 +39,11 @@ def pytest_configure(config):
     tmp = Path(tempfile.mkdtemp(prefix="physicslens-test-config-"))
     for name in ("models.yaml", "prices.yaml", "limits.yaml"):
         shutil.copy(REPO_CONFIG / name, tmp / name)
+    # Every test client comes from one address; the request limits have their own tests (tests/test_security.py).
+    limits = yaml.safe_load((tmp / "limits.yaml").read_text())
+    limits["requests"] = {g: {"per_ip_per_minute": 100_000, "global_per_minute": 100_000}
+                          for g in ("uploads", "studies", "live", "voice", "lens")}
+    (tmp / "limits.yaml").write_text(yaml.safe_dump(limits))
     (tmp / "budget.yaml").write_text(yaml.safe_dump(TEST_BUDGET))
     os.environ["PHYSICSLENS_CONFIG_DIR"] = str(tmp)
 

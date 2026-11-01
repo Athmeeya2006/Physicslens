@@ -6,7 +6,7 @@ VENV ?= .venv
 BIN := $(VENV)/bin
 export PYTHONPATH := backend
 
-.PHONY: help setup test test-fast smoke report kill unkill dev-backend dev-frontend lint
+.PHONY: help setup test test-fast smoke report kill unkill dev-backend dev-frontend lint audit
 
 help:
 	@echo "setup         create venv and install backend deps"
@@ -17,6 +17,8 @@ help:
 	@echo "kill / unkill block / unblock every paid API call"
 	@echo "dev-backend   run FastAPI on :8000"
 	@echo "dev-frontend  run Next.js on :3000"
+	@echo "lint          ruff over backend, tests and scripts"
+	@echo "audit         known vulnerabilities in the pinned Python and npm dependencies"
 
 setup:
 	@test -f config/budget.yaml || cp config/budget.example.yaml config/budget.yaml
@@ -52,3 +54,8 @@ dev-frontend:
 
 lint:
 	$(BIN)/ruff check backend tests scripts
+
+# Known vulnerabilities in the pinned dependencies (queries the public advisory databases; no keys, no spend).
+audit:
+	$(BIN)/pip install -q pip-audit && $(BIN)/pip-audit -r backend/requirements.txt --progress-spinner off
+	cd frontend && npm audit

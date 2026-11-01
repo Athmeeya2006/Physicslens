@@ -11,8 +11,7 @@ from __future__ import annotations
 import json
 import math
 import threading
-import time
-from collections import OrderedDict, deque
+from collections import OrderedDict
 from dataclasses import replace
 from typing import Annotated, Any
 
@@ -20,6 +19,7 @@ import numpy as np
 from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from .costguard.limiter import RequestWindows
 from .sky import scenarios as S
 from .sky.bodies import BY_NAME, GALILEAN_COLOURS
 from .sky.discover import discover
@@ -30,12 +30,21 @@ from .sky.nbody import SkyTooSlow
 router = APIRouter(prefix="/api/sky")
 
 LIMITS = {"max_bodies": 30, "max_particles": 200, "max_years": 300.0, "max_points": 2000, "per_ip_per_minute": 20,
-          "max_concurrent": 2, "max_seconds": 90.0, "cache_entries": 64}
+          "global_per_minute": 120, "max_concurrent": 2, "max_seconds": 90.0, "cache_entries": 64}
+
+
+def _windows() -> RequestWindows:
+    return RequestWindows({"sky": {k: LIMITS[k] for k in ("per_ip_per_minute", "global_per_minute")}})
+
+
+WINDOWS = _windows()
 
 
 def configure(limits: dict[str, Any] | None) -> None:
     """From config/limits.yaml (sky:)."""
+    global WINDOWS
     LIMITS.update({k: v for k, v in (limits or {}).items() if k in LIMITS})
+    WINDOWS = _windows()
 
 
 class Lax(BaseModel):
@@ -95,24 +104,16 @@ class _Cache:
 
 CACHE = _Cache()
 _running = threading.BoundedSemaphore(int(LIMITS["max_concurrent"]))
-_seen: dict[str, deque[float]] = {}
-_seen_lock = threading.Lock()
 
 
 def _rate_limit(request: Request) -> None:
     from .public import client_address
     addr = client_address(request.client.host if request.client else None, request.headers.get("x-forwarded-for"),
                           request.headers.get("cf-connecting-ip"))
-    now = time.monotonic()
-    with _seen_lock:
-        q = _seen.setdefault(addr, deque())
-        while q and now - q[0] > 60:
-            q.popleft()
-        if len(q) >= int(LIMITS["per_ip_per_minute"]):
-            retry = int(60 - (now - q[0])) + 1
-            raise HTTPException(status_code=429, detail="Too many simulations in a minute; please wait a moment.",
-                                headers={"Retry-After": str(retry)})
-        q.append(now)
+    wait = WINDOWS.check("sky", addr)
+    if wait is not None:
+        raise HTTPException(status_code=429, detail="Too many simulations in a minute; please wait a moment.",
+                            headers={"Retry-After": str(math.ceil(wait))})
 
 
 def scenario_for(req: SimulateRequest) -> S.Scenario:

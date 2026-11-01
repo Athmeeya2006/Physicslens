@@ -18,6 +18,16 @@ class MediaError(RuntimeError):
     pass
 
 
+# The first bytes of the containers we accept: ISO media (MP4, MOV, M4V) names a box at offset 4, Matroska and WebM
+# start with the EBML magic. Checked on the first chunk, before an upload is written to disk.
+ISO_BOXES = (b"ftyp", b"moov", b"mdat", b"wide", b"free", b"skip", b"pnot")
+EBML_MAGIC = b"\x1a\x45\xdf\xa3"
+
+
+def looks_like_video(head: bytes) -> bool:
+    return len(head) >= 8 and (head[4:8] in ISO_BOXES or head[:4] == EBML_MAGIC)
+
+
 @dataclass(frozen=True)
 class VideoInfo:
     width: int  # displayed size, after any rotation metadata

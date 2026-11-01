@@ -27,7 +27,15 @@ def test_a_clip_under_two_seconds_is_refused_with_its_length(tmp_path):
 
 
 def test_a_real_clip_is_accepted():
-    assert post(CLIP.read_bytes()).status_code == 200
+    import time
+
+    from physicslens import app as app_module
+    r = post(CLIP.read_bytes())
+    assert r.status_code == 200
+    # Let the queued run finish here, so its background model calls never land in another test's counters.
+    deadline = time.monotonic() + 120
+    while app_module.runs.get(r.json()["run_id"]).status in ("queued", "running") and time.monotonic() < deadline:
+        time.sleep(0.2)
 
 
 def test_a_gravity_reading_must_be_three_finite_numbers():
