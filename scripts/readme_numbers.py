@@ -47,7 +47,9 @@ def gallery(name: str) -> dict:
 
 
 def param(name: str, p: str, field: str = "value") -> float:
-    return next(x[field] for x in gallery(name)["parameters"] if x["name"] == p)
+    """A fitted parameter of the accepted law, or (when laws tie) the value they all agree on."""
+    r = gallery(name)
+    return next(x[field] for x in r.get("parameters") or r.get("agreed_parameters") or [] if x["name"] == p)
 
 
 def ranked(name: str, model: str, field: str = "heldout_nrmse") -> float:
@@ -56,6 +58,18 @@ def ranked(name: str, model: str, field: str = "heldout_nrmse") -> float:
 
 def ranked_param(name: str, p: str) -> float:
     return next(x["params"][p] for x in gallery(name)["ranking"] if p in (x.get("params") or {}))
+
+
+def timing(case: str) -> dict:
+    return load("data/astro/timing/results.json")[case]
+
+
+def timing_law(case: str, law: str, field: str) -> float:
+    return next(x[field] for x in timing(case)["laws"] if x["law"] == law)
+
+
+def fireball() -> dict:
+    return load("data/astro/fireball/results.json")
 
 
 def sky(key: str) -> dict:
@@ -156,10 +170,12 @@ CLAIMS = [
     # Validation on real footage
     Claim("Validation: pendulum g", r"length given\): g = ([\d.]+) ± [\d.]+ m/s²", lambda: param("pendulum", "g")),
     Claim("Validation: pendulum g, 1 sd", r"length given\): g = [\d.]+ ± ([\d.]+) m/s²", lambda: param("pendulum", "g", "std")),
-    Claim("Validation: pendulum damping beats the exact law (BIC)", r"fits the whole swing (\d+) BIC better",
+    Claim("Validation: pendulum damping's BIC lead", r"fits the whole swing (\d+) BIC better",
           lambda: ranked("pendulum", "pendulum", "bic") - ranked("pendulum", "pendulum_linear_damping", "bic")),
-    Claim("Validation: pendulum held-out forecast, %", r"forecasts the held-out quarter \(within ([\d.]+)%\)",
+    Claim("Validation: pendulum damping's held-out forecast, %", r"forecasts the held-out quarter worse \(within ([\d.]+)% against",
           lambda: ranked("pendulum", "pendulum_linear_damping") * 100),
+    Claim("Validation: simple pendulum's held-out forecast, %", r"against ([\d.]+)% for the simple pendulum\)",
+          lambda: ranked("pendulum", "pendulum") * 100),
     Claim("Validation: paper bag, free fall misses by %", r"free fall misses the held-out last quarter by (\d+)%",
           lambda: ranked("paperbag", "free_fall") * 100),
     Claim("Validation: paper bag, linear drag within %", r"linear air drag forecasts it within ([\d.]+)%",
@@ -203,6 +219,40 @@ CLAIMS = [
     # Testing
     Claim("Tests collected", r"The suite \((\d+) tests", lambda: collected(), tests=True),
     Claim("Tests marked slow", r"; (\d+) marked slow", lambda: collected("slow"), tests=True),
+    # Real-world cases on public data
+    Claim("WASP-12b: period change (ms/yr)", r"The orbit shrinks by ([\d.]+) ± [\d.]+ ms per year",
+          lambda: -timing("wasp12b")["period_change_ms_per_year"][0]),
+    Claim("WASP-12b: its 1 sd", r"The orbit shrinks by [\d.]+ ± ([\d.]+) ms per year",
+          lambda: timing("wasp12b")["period_change_ms_per_year"][1]),
+    Claim("WASP-12b: decay held-out chi-square", r"\(held-out chi-square ([\d.]+) per event; a constant period",
+          lambda: timing_law("wasp12b", "decay", "heldout_chi2")),
+    Claim("WASP-12b: linear held-out chi-square", r"per event; a constant period ([\d.]+)\)",
+          lambda: timing_law("wasp12b", "linear", "heldout_chi2")),
+    Claim("Kepler-88: transits measured", r"\(KOI-142\): (\d+) transit times", lambda: timing("kepler88b")["transits_used"]),
+    Claim("Kepler-88: TTV amplitude (h)", r"arrive up to ([\d.]+) hours", lambda: timing("kepler88b")["measured_ttv_amplitude_h"]),
+    Claim("Kepler-88: TTV period (d)", r"repeating every (\d+) days", lambda: timing("kepler88b")["measured_ttv_period_days"]),
+    Claim("Kepler-88: sine's miss (min)", r"a sine misses the later transits by (\d+)",
+          lambda: timing_law("kepler88b", "sinusoid", "heldout_rms_min")),
+    Claim("Kepler-88: N-body forecast (min)", r"forecasts them to (\d+) min and puts", lambda: timing("kepler88b")["companion"]["heldout_rms_min"]),
+    Claim("Kepler-88 c: period (d)", r"unseen planet at\s+([\d.]+) ± [\d.]+ days", lambda: timing("kepler88b")["companion"]["Pc"]),
+    Claim("Kepler-88 c: period 1 sd", r"unseen planet at\s+[\d.]+ ± ([\d.]+) days", lambda: timing("kepler88b")["companion"]["Pc_sigma"]),
+    Claim("Kepler-88 c: mass (Earths)", r"days and (\d+) ± \d+ Earth masses", lambda: timing("kepler88b")["companion"]["mc_earth"]),
+    Claim("Kepler-88 c: mass 1 sd", r"days and \d+ ± (\d+) Earth masses", lambda: timing("kepler88b")["companion"]["mc_earth_sigma"]),
+    Claim("Ephemeris rot: planets with uncertainties", r"of ([\d,]+) transiting planets", lambda: timing("rot")["with_uncertainties"]),
+    Claim("Ephemeris rot: over 10 min", r"worse than 10 minutes for ([\d,]+)", lambda: timing("rot")["over_10_min"]),
+    Claim("Ephemeris rot: over 1 h", r"worse than an hour for\s+([\d,]+)", lambda: timing("rot")["over_1_h"]),
+    Claim("Ephemeris rot: bright, over 1 h", r"\((\d+) of those around stars brighter", lambda: timing("rot")["bright_over_1_h"]),
+    Claim("Winchcombe: worst orbit pull (sigma)", r"matches every published element within\s+([\d.]+) sigma",
+          lambda: max(abs(v) for v in fireball()["orbit"]["pulls"].values())),
+    Claim("Winchcombe: perihelion (AU)", r"\(perihelion ([\d.]+) AU against", lambda: fireball()["orbit"]["ours"]["q_au"]),
+    Claim("Winchcombe: main mass impact (m/s)", r"main mass hits at (\d+) m/s",
+          lambda: fireball()["dark_flight_vs_paper"][0]["ours_impact_ms"]),
+    Claim("Winchcombe: main mass minutes", r"main mass hits at \d+ m/s after ([\d.]+) minutes",
+          lambda: fireball()["dark_flight_vs_paper"][0]["ours_minutes"]),
+    Claim("Winchcombe: farthest find across the track (m)", r"runs within (\d+) m of all ten", lambda: fireball()["summary"]["max_across_m"]),
+    Claim("Winchcombe: finds matched, release at the end", r"Along it, (\d+) match stones released", lambda: fireball()["summary"]["along_at_end"]),
+    Claim("Winchcombe: more matched, release after the flare", r"luminous end and (\d+) more match",
+          lambda: fireball()["summary"]["along_either"] - fireball()["summary"]["along_at_end"]),
 ]
 
 

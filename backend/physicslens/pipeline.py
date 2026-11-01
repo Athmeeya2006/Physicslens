@@ -73,7 +73,7 @@ from .physics.regime import RegimeChange, detect_change
 from .physics.residuals import spectrum
 from .physics.rotation import RotationError, rotation_coordinates
 from .physics.sindy import vet
-from .physics.uncertainty import bootstrap_full
+from .physics.uncertainty import agreed_parameters, bootstrap_full
 from .physics.verify import Verdict, assess, judge_candidates, window_indices
 from .sigproc.cleanup import detect_impacts, differentiate, fill_short_gaps, split_at
 from .sigproc.shutter import note as shutter_warning
@@ -588,6 +588,15 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
              "ci95": [est[p.name].ci_low, est[p.name].ci_high]}
             for p in spec.params
         ] + derived_parameters(coords)
+    elif verdict.status == "ambiguous" and len(verdict.contenders) >= 2 and coords is not None:
+        progress("Measuring what the tied laws agree on")
+        laws = [(MODELS[f.model_id], f) for f in verdict.contenders if f.model_id in MODELS]
+        if (agreed := agreed_parameters(laws, coords)):
+            result["agreed_parameters"] = agreed
+            trail.append({"step": "agreed", "provider": None, "model": "bootstrap refits of each tied law",
+                          "text": "The tied laws agree on " + ", ".join(
+                              f"{a['name']} = {a['value']:.4g} ± {a['std']:.2g}" + (f" {a['unit']}" if a["unit"] else "")
+                              for a in agreed) + ": measured whichever law is right."})
     g_fit = next((p for p in result.get("parameters", []) if p["name"] == "g"), None)
     if (calibration.source == "none" and gravity_ruler_applies(verdict.winner, family) and g_fit is not None
             and g_fit["std"] < RULER_MAX_REL_STD * g_fit["value"]):
@@ -598,9 +607,10 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
             except MjcfError as e:
                 log.warning("MuJoCo check skipped after rescaling: %s", e)
     add_scale_error(result.get("parameters", []), calibration.rel_std)
+    add_scale_error(result.get("agreed_parameters", []), calibration.rel_std)
     if calibration.source == "none":
         result["scale_note"] = SCALE_NOTE
-        for p in result.get("parameters", []):
+        for p in [*result.get("parameters", []), *result.get("agreed_parameters", [])]:
             p["uncalibrated"] = needs_scale(p["unit"])
     progress("Listening to the soundtrack")
     result["audio"] = listen(video, run_dir, info.frames / info.fps, options.slow_motion, family, result, options.blade_count,

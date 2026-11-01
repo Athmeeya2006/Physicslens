@@ -31,7 +31,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
 - **Proof it discovers rather than recalls:** from rendered videos of asteroid Apophis and of Jupiter's four large moons it found the inverse-square law, the Sun's GM within 0.023% and Jupiter's within 0.012% of NASA/JPL, and Kepler's third law (exponent 1.4991 ± 0.0032) from the tracks alone; on Halley's comet a force law with the exponent left free fitted 1.9998.
-- **On real footage:** a 0.5 m pendulum gives g = 9.91 ± 0.04 m/s² (1.0% from 9.81); a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
+- **On real footage:** a 0.5 m pendulum gives g = 9.91 ± 0.04 m/s² (0.99% from 9.81); a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
 - **Meta models doing real work:** Muse Spark Open (open weights, on Baseten) reasons, SAM 3.1 tracks, Muse Voice Transcribe listens, Muse Image draws setup guides, Muse Wonder writes controllers that only simulation can accept, and Muse Glimmer 30B is the fully offline open-weight path.
 
 ## Judging guide (5 minutes)
@@ -42,7 +42,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | 1 | [Asteroid Apophis](https://physicslens.vercel.app/?run=gallery-apophis) | a dot moving around the Sun becomes the inverse-square law; the force arrow points at the Sun in every frame |
 | 1b | [Halley's comet](https://physicslens.vercel.app/?run=gallery-halley) | the 1986 hairpin around the Sun: inverse-square gravity, the exponent left free fits 1.9998 |
 | 2 | [Weighing Jupiter](https://physicslens.vercel.app/?run=gallery-jupiter) | Jupiter's GM from Io's orbit, within 0.018% of JPL |
-| 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | the referee proposes damping and the verdict changes, on screen, with the reason |
+| 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | damping fits better but forecasts worse, so it is not confirmed; both laws give the same g, and the agent designs the swing that would decide |
 | 4 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | free fall rejected; a drag law accepted on held-out motion |
 | 4b | [Physics audit at scale](https://physicslens.vercel.app/audit) | 149 clips: real motion has a forecasting law 47% of the time, AI-generated 17%; no real clip falsely accused |
 | 5 | [Open dataset](https://physicslens.vercel.app/dataset) | every verified parameter, with its uncertainty, clip and licence |
@@ -70,6 +70,7 @@ In every result, read the decision trail beside the video: each step is tagged w
 - [Is something else pulling? Perturbation discovery](#is-something-else-pulling-perturbation-discovery)
 - [Solar System Lab](#solar-system-lab)
 - [Real sky data: telescope frames, sky videos and light curves](#real-sky-data-telescope-frames-sky-videos-and-light-curves)
+- [Real-world cases on public data](#real-world-cases-on-public-data)
 
 **Part IV: Prove**
 - [How an equation is accepted](#how-an-equation-is-accepted)
@@ -390,6 +391,55 @@ your field size: for fields of about 0.1 to 2 degrees, the 4200 series (`astrome
 or the files from http://data.astrometry.net/4200/ into `/usr/share/astrometry`). Without it, refinement from a
 FITS header's pointing still works, and the web service is the fallback.
 
+## Real-world cases on public data
+
+Each case ends in something a person can act on (a calendar of transits, a search map), is checked against an
+independent published answer, and says on the same page what it cannot do. All of it is local math on free data:
+no model calls. Data sources, licences and the values compared against are listed beside the data
+(`data/astro/timing/SOURCES.md`, `data/astro/fireball/SOURCES.md`).
+
+### Transit timing: a shrinking orbit and an unseen planet (`/timing`)
+
+Telescopes schedule exoplanet observations from predicted transit times, and those predictions go stale.
+`scripts/timing_demo.py` fits four laws for transit times against orbit number (constant period, a steadily
+changing period, a turning eccentric orbit, a periodic wobble; forms from Yee et al. 2020), each on the earlier 75%
+of the events, and each must forecast the rest (held-out chi-square per event at most 4, every law's errors scaled
+by the same factor) before BIC decides.
+
+- **WASP-12b** (158 published mid-times, 2008 to 2019): only the changing period forecasts the later transits
+  (held-out chi-square 1.79 per event; a constant period 10.6). The orbit shrinks by 28.6 ± 2.1 ms per year, against
+  the published 29 ± 2 (Yee et al. 2020). The page gives the next transits as a calendar file and a CSV.
+- **Kepler-88 b** (KOI-142): 74 transit times measured here from the Kepler light curves arrive up to 11.0 hours
+  early or late, repeating every 598 days. No simple law forecasts them (a sine misses the later transits by 200
+  min). An N-body fit with a second planet near the 2:1 resonance (REBOUND, starting periods from the TTV
+  super-period formula of Lithwick, Xie and Wu 2012) forecasts them to 15 min and puts the unseen planet at
+  22.265 ± 0.007 days and 244 ± 10 Earth masses, against the published 22.338 days and 216 ± 8 (Nesvorny et al.
+  2013, later confirmed by radial velocities). The status is partial, and the page says why: the forecast misses
+  by more than the 3-minute timing errors allow.
+- **Ephemeris rot:** of 4,770 transiting planets in the NASA Exoplanet Archive with uncertainties, the published
+  ephemeris predicts the transit on 2027-01-01 to worse than 10 minutes for 3,248 and worse than an hour for
+  1,363 (224 of those around stars brighter than V = 12).
+
+### Fireballs: from a bright flight to where the meteorites landed (`/fireball`)
+
+`scripts/fireball_demo.py` runs the published trajectory of the Winchcombe fireball (28 February 2021; the
+UK Fireball Alliance's data, CC BY 4.0) through the whole chain and checks every step against what is known:
+
+- **Did anything survive?** The alpha-beta method (Gritsevich; Sansom et al. 2019) from heights and speeds alone
+  places it below the 50 g line: a likely meteorite dropper (602 g were found). On the Desert Fireball Network's
+  example event the same fit reaches a lower value of the objective than the notebook's printed answer, on the
+  same side of the lines.
+- **Where it came from:** the orbit before it met the Earth, from the radiant and entry speed with the Earth's pull
+  undone exactly (the geocentric hyperbola followed back to its asymptote), matches every published element within
+  0.4 sigma (perihelion 0.986841 AU against 0.986839 ± 0.000012).
+- **Where to search:** dark flight with a drag coefficient that changes with the Mach number (Carter et al. 2011
+  curves, sphere to cube), NRLMSIS 2.1 air density for that night and the nearest radiosonde's winds reproduces the
+  published model's stones (the 0.32 kg main mass hits at 46 m/s after 4.5 minutes, published 46 to 49 m/s after
+  about 4.5). A Monte Carlo strewn field (GeoJSON and KML) runs within 563 m of all ten recovered stones across
+  the track (Russell et al. 2024). Along it, 5 match stones released at the luminous end and 4 more match release
+  after the last flare at 34.9 km; one 20.6 g stone found beside the main mass is not reproduced, and the page
+  says so.
+
 ---
 
 # Part IV: Prove
@@ -402,7 +452,7 @@ Only code decides, never the language model:
 
 - **Held-out forecast.** Each model is fitted on the first 75% of the motion and must forecast the last 25%. The normalized RMS error on that held-out part must be at most 15%, or at most 30% when the error is also within 3 times the measured tracking noise.
 - **Rolling-origin forecasts.** One 75/25 split can be lucky, so each law that passes it is also restarted from four later points of the clip (55%, 65%, 75% and 85%), with its fitted parameters fixed and only the starting state refitted on the data before each point, and must forecast the following 15%. The median of those four errors must pass the same rule. The accepted law's trail line reports them, and a law that forecasts the last quarter but not from the later starting points is rejected with that reason (`physics/rigor.py`, `tests/test_rigor.py`). Live mode, which refits every second, skips them.
-- **Model selection by BIC, with honest evidence.** Among the models that pass, the lowest Bayesian Information Criterion wins. Residuals of a smooth model are correlated frame to frame, so N samples carry far fewer than N independent pieces of evidence: BIC is computed with the effective sample size n_eff = N(1 - rho)/(1 + rho) from the best model's residual lag-1 autocorrelation rho, the same n_eff for every law (the raw-N BIC stays in the result as `bic_raw`). A winner must beat every other passing model by at least 10 BIC (strong evidence on the Kass and Raftery scale) unless the rival has more parameters. On a barely damped spring under smoothly wandering tracking error, raw-N BIC calls the damping term decisive (142 BIC) while n_eff BIC leaves it ambiguous (5 BIC), which is the honest answer (`tests/test_rigor.py`).
+- **Model selection by BIC, with honest evidence.** Among the models that pass, the lowest Bayesian Information Criterion wins. Residuals of a smooth model are correlated frame to frame, so N samples carry far fewer than N independent pieces of evidence: BIC is computed with the effective sample size n_eff = N(1 - rho)/(1 + rho) from the best model's residual lag-1 autocorrelation rho, the same n_eff for every law (the raw-N BIC stays in the result as `bic_raw`). A winner must beat every other passing model by at least 10 BIC (strong evidence on the Kass and Raftery scale) unless the rival has more parameters. An extra term must also earn its place in the forecast: a law that wins on BIC but forecasts the held-out motion clearly worse (by a fifth and by more than a percent of the motion) than a simpler passing law is not accepted; the two tie and the verdict says the term is not confirmed. When laws tie, the parameters they share and agree on (each law's bootstrap interval overlapping the others') are still reported, since they are measured whichever law is right. On a barely damped spring under smoothly wandering tracking error, raw-N BIC calls the damping term decisive (142 BIC) while n_eff BIC leaves it ambiguous (5 BIC), which is the honest answer (`tests/test_rigor.py`).
 - **A law never loses to its own special case.** Each law in the library declares which simpler law it becomes when a term is switched off (a spring with both frictions becomes the damped spring at f = 0). Special cases are fitted first, and each larger law also starts from their solutions, so it can only match or beat them; if it still could not, the trail says so (`ModelSpec.nests`, `tests/test_nesting.py`). Friction corners (sign of the velocity) are smoothed on the fit's first, short windows and exact on the last, so the solver's gradients stay usable.
 - **Ties become experiments.** If genuinely different laws are within 10 BIC, the agent is asked which recording would separate them (for a small-angle pendulum tie: "swing it wider"), and the user sees that request.
 - **Approximations are named, not rejected.** When a law ties with its own approximation (sin θ versus θ at small angles) the exact law is kept and the other is labeled "Same law: the small-angle approximation", not "Rejected".
@@ -417,11 +467,11 @@ Only code decides, never the language model:
 - **It looks twice.** The four-frame scene call names the object; a second call on one frame alone boxes it tightly for SAM (`pipeline.locate_precisely`). On a real pendulum clip the four-frame box sat on the stopwatch beside the bob; the single-frame box sat on the bob. If the object is not in view yet (a throw), later frames are tried and SAM starts there.
 - **Independent proposals.** The hypotheses step samples the model three times in parallel; the union of the majority family's candidates is fitted, and the result says how many samples proposed the law that won (`agent/reasoning.propose_hypotheses_sampled`).
 - **Tools before a decision.** Before its final action the agent may spend up to four steps testing models of its own choosing or inspecting part of the motion; each step records what it expected, what code measured and how the verdict moved (`test_models`, `inspect`). A step budget and a wall-clock limit are enforced in code, and a final action that does not match the verdict is shown, never acted on.
-- **A referee tries to break every accepted law.** A second call with a different brief proposes up to three alternatives; each is fitted and judged by the same rule (`agent/skeptic.py`). A challenger takes over only by the same rule as the first candidates: it must forecast the held-out motion within the threshold and then fit better by BIC; the trail says so either way, and a law that holds carries "survived N challenges". On the real Rhetos pendulum clip the referee proposed linear damping; it passed the held-out test (13.8% against 9.9% for the simple pendulum) and fit the whole swing better by BIC, so the verdict changed to it (g = 9.91 m/s² for a 0.5 m string).
+- **A referee tries to break every accepted law.** A second call with a different brief proposes up to three alternatives; each is fitted and judged by the same rule (`agent/skeptic.py`). A challenger takes over only by the same rule as the first candidates: it must forecast the held-out motion within the threshold and then fit better by BIC; the trail says so either way, and a law that holds carries "survived N challenges". On the real Rhetos pendulum clip, linear damping fits the whole swing slightly better but forecasts the held-out quarter worse than the simple pendulum, so it is not confirmed (next point).
 - **Reasoning effort per step.** Muse Spark Open thinks harder where it decides more: high for hypotheses and the referee, medium for locating and explaining, low for naming the scene (`config/limits.yaml`).
 - **Decision trail.** Every step records who decided (`model` with provider and model id, or `math`), what was decided and why. The UI shows it prominently: candidates proposed, rejections with their held-out error, the track check, the gravity-ruler assumption, experiment requests and study decisions.
 - **Spoken settings.** Muse Voice Transcribe turns speech into text; the reasoning model turns "the string is half a meter, film from the left" into validated settings (`agent/notes.py`), and out-of-range values are dropped rather than trusted.
-- **What-ifs.** A question ("what if it were on the Moon?") becomes a validated parameter change (`agent/whatif.py`), the fitted law is re-simulated from the same starting state, and a second ghost is drawn. For uncalibrated clips, only relative changes to length-dependent parameters are allowed.
+- **What-ifs.** A question ("what if it were on the Moon?") becomes a validated parameter change (`agent/whatif.py`), the fitted law is re-simulated from the same starting state, and a second ghost is drawn. For uncalibrated clips, only relative changes to length-dependent parameters are allowed. Changing the object itself ("twice as heavy", "a bigger ball") needs no language model: each fitted parameter is per unit mass or inertia, so it scales with the object's mass and size by its physics (a spring's frequency as one over the square root of the mass, quadratic air drag as area over mass), and when nothing depends on them (a pendulum's period, a fall without drag) the result says so.
 - **Refusal to fake.** If the reasoning server is unavailable in demo or production, the app says it is busy. It never substitutes another model or a canned answer.
 
 ## Studies: asking for the experiment that settles it
@@ -616,7 +666,7 @@ The dataset has a card (`gallery/DATASET_CARD.md`: fields, units, how each value
 
 **On real footage**, with every reasoning step on Muse Spark Open (open weights, on Baseten) and tracking by SAM 3.1 (clips and licenses in `gallery/README.md`; the numbers are the gallery results, checked by `scripts/readme_numbers.py`):
 
-- **Pendulum** (0.5 m string, length given): g = 9.91 ± 0.04 m/s², against 9.81 (1.0% high). The first verdict was the exact pendulum; the referee proposed linear damping, which fits the whole swing 34 BIC better and also forecasts the held-out quarter (within 13.8%), so the verdict changed on screen. A small swing can't tell sin θ from θ, so the exact law is kept over the small-angle one. The result rests on the given length: with the pivot out of frame the arc alone can't fix it (two stretches of the same swing gave radii 50% apart), so the app does not re-measure a length you supply.
+- **Pendulum** (0.5 m string, length given): g = 9.91 ± 0.04 m/s², against 9.81 (0.99% high), from both tied laws. Linear damping fits the whole swing 4 BIC better, short of the 10 needed to decide, and forecasts the held-out quarter worse (within 13.8% against 9.9% for the simple pendulum), so it is not confirmed; the agent asks for a release from about 35 degrees filmed for 7 s, where the two forecasts separate by about 8 times the tracking noise. A small swing can't tell sin θ from θ, so the exact law is kept over the small-angle one. The result rests on the given length: with the pivot out of frame the arc alone can't fix it (two stretches of the same swing gave radii 50% apart), so the app does not re-measure a length you supply.
 - **Paper bag thrown across a blackboard** (filmed at 200 fps, analyzed with a slow-motion factor of 20): free fall misses the held-out last quarter by 35% and is rejected; linear air drag forecasts it within 2.9%, with a velocity time constant of 0.41 s (scale-free); quadratic drag forecasts within 5.9% but scores 883 BIC worse.
 - **Air-track spring cart** (nothing of known size in view): a spring with dry (sliding) friction, ω = 2.7387 ± 0.0012 rad/s; the swing shrinks by about the same amount every cycle, so dry friction forecasts the held-out motion within 5.9% while viscous damping misses by 10.9% and the undamped model by 48%.
 - What didn't work, honestly: on 240p Apollo 16 TV footage of an astronaut jumping, with two jumps separated by standing and no usable scale, no equation passed, and the result is not in the gallery.
@@ -894,6 +944,7 @@ All routes are in `backend/physicslens/app.py`. Routes that start paid work are 
 | `POST /api/runs/{id}/control`, `GET /api/runs/{id}/control/{task_id}` | a control goal for an accepted result: Muse Wonder writes a controller, MuJoCo tests it in the background (access code required) |
 | `GET /api/runs/{id}/export/{kind}` | `json`, `py` (Python script), `mjcf`, `urdf`, `sdf`, `contact`, `report` |
 | `POST /api/runs/{id}/whatif` | a typed what-if question |
+| `POST /api/runs/{id}/whatif/object` | the same object heavier, lighter, bigger or smaller (`mass`, `size` factors; local math, free) |
 | `POST /api/compare`, `POST /api/health/trend` | machine-health comparison and trend |
 | `POST /api/studies`, `GET /api/studies/{id}` | create a study from a goal, read it |
 | `POST /api/studies/{id}/runs`, `POST /api/studies/{id}/review` | add a recording, ask the agent to review |
@@ -945,7 +996,7 @@ CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (696 tests, counted by `pytest --collect-only -q`; 62 marked slow in `tests/conftest.py`) covers:
+The suite (729 tests, counted by `pytest --collect-only -q`; 62 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.
@@ -1033,6 +1084,9 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Security: numpy and math reached through an allowlist in generated controllers, bubblewrap isolation where available, request limits on every costly route, uploads sniffed before they are written, CORS checked at startup, and a dependency audit
 - [x] Real sky data without SAM: FITS, image and video frames with UTC times and their uncertainty, PSF centroids (0.13 px at SNR 20 against 0.26 px for a mask), streak fits, plate solving (astrometry.net, its web service, or refinement against Gaia DR3), moving-object linking, the observer's light time and aberration, photometry and event timing, and astro modes of the pipeline
 - [x] An outcome card on every result: a plain headline, what to do, the files, what it was checked against and how confident it is (from the bootstrap), above a readable law with the fitted numbers written in, one sentence per term, the forecast without each term, and why the rivals lost
+- [x] Transit timing on real data: WASP-12b's shrinking orbit, Kepler-88's unseen planet from transit times measured in the Kepler light curves and an N-body fit, and the list of stale ephemerides, with transit windows as a calendar
+- [x] Fireballs on real data: alpha-beta triage, the orbit before entry, dark flight with Mach-dependent drag and the night's winds, and a strewn field checked against every recovered Winchcombe stone, on a map
+- [x] What-ifs for the object itself (heavier, lighter, bigger, smaller), free and instant; laws that tie still report what they agree on; an extra term that makes the forecast worse is not accepted
 - [x] Classical baselines on the gallery tracks (textbook curve fit, PySINDy alone) and the reasoning model alone on the same frames, a dataset card with Croissant metadata, a filming checklist for new clips, and every README number checked against its source in CI
 
 ## Roadmap

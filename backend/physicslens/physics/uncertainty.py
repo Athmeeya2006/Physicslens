@@ -128,3 +128,24 @@ def bootstrap_full(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 
         v, sd = fit.params[name], float(arr[:, i].std(ddof=1)) if len(arr) >= 2 else float("nan")
         out[name] = ParamEstimate(v, sd, v - 1.96 * sd, v + 1.96 * sd)
     return Bootstrap(out, identifiability(spec.param_names, arr), len(arr))
+
+
+def agreed_parameters(laws: list[tuple[ModelSpec, FitResult]], c: Coordinates, reps: int = 40) -> list[dict]:
+    """When laws tie, the parameters they share and agree on: each law's bootstrap interval for the parameter must
+    overlap every other's. Such a parameter is measured whichever law turns out right (a pendulum's g, when the laws
+    differ only in damping). The interval reported spans all of theirs."""
+    if len(laws) < 2:
+        return []
+    per = [(spec, bootstrap_full(spec, c, fit, reps=reps).estimates) for spec, fit in laws]
+    first = per[0][0]
+    out = []
+    for p in first.params:
+        ests = [e.get(p.name) for _, e in per]
+        if any(x is None for x in ests):
+            continue
+        if max(x.ci_low for x in ests) > min(x.ci_high for x in ests):
+            continue  # some law's interval misses another's: they disagree on it
+        out.append({"name": p.name, "latex": p.latex, "unit": p.unit, "value": float(np.mean([x.value for x in ests])),
+                    "std": float(max(x.std for x in ests)), "ci95": [float(min(x.ci_low for x in ests)), float(max(x.ci_high for x in ests))],
+                    "per_law": [{"title": spec.title, "value": e[p.name].value, "std": e[p.name].std} for spec, e in per]})
+    return out

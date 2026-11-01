@@ -127,6 +127,17 @@ def _confidence(result: dict[str, Any]) -> str | None:
             + (f", from {reps} bootstrap refits" if reps else "") + ")")
 
 
+def _agreed_confidence(result: dict[str, Any]) -> str | None:
+    agreed = result.get("agreed_parameters") or []
+    if not agreed:
+        return None
+    a = agreed[0]
+    lo, hi = a["ci95"]
+    unit = f" {a['unit']}" if a.get("unit") and not a.get("uncalibrated") else ""
+    return (f"{a['name']} between {_fmt(lo, a['std'])} and {_fmt(hi, a['std'])}{unit} (95%, spanning every tied law's "
+            "bootstrap interval)")
+
+
 def build_outcome(result: dict[str, Any], truth: dict[str, Any] | None = None, action: str | None = None,
                   artifacts: list[dict[str, str]] | None = None) -> dict[str, Any]:
     """truth: {"name", "value", "source"} for the parameter an independent measurement exists for."""
@@ -156,6 +167,18 @@ def build_outcome(result: dict[str, Any], truth: dict[str, Any] | None = None, a
                           if family in EXPORTS else "Use the fitted law and its intervals; the report has every step.")
     elif status == "ambiguous":
         headline = f"Two laws describe this {noun} equally well; the data cannot tell them apart yet."
+        agreed = result.get("agreed_parameters") or []
+        if agreed:
+            a = agreed[0]
+            unit = f" {a['unit']}" if a.get("unit") and not a.get("uncalibrated") else ""
+            headline += f" Both give {a['name']} = {_fmt(a['value'], a['std'])} ± {_fmt(a['std'], a['std'])}{unit}, so that is measured either way."
+            if truth:
+                p = next((q for q in agreed if q["name"] == truth["name"]), None)
+                if p is not None:
+                    lo, hi = p["ci95"]
+                    checked = {"name": truth["name"], "truth": truth["value"], "measured": p["value"],
+                               "relative_error": (p["value"] - truth["value"]) / truth["value"],
+                               "within_interval": bool(lo <= truth["value"] <= hi), "source": truth.get("source", "")}
         default_action = ((result.get("agent") or {}).get("message")
                           or "Record again with a larger motion, so the laws make different predictions.")
     else:
@@ -163,5 +186,5 @@ def build_outcome(result: dict[str, Any], truth: dict[str, Any] | None = None, a
         default_action = "Record again: longer, steadier, side-on, with the whole motion in view."
     files = artifacts if artifacts is not None else [{"kind": k} for k in EXPORTS.get(family, ["report"])] if status == "accepted" else []
     return {"headline": headline, "action": action or default_action, "artifacts": files, "checked_against": checked,
-            "confidence": _confidence(result) if status == "accepted" else None, "status": outcome_status,
+            "confidence": _confidence(result) if status == "accepted" else _agreed_confidence(result), "status": outcome_status,
             "readable": readable(result) if status == "accepted" else None}

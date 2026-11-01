@@ -1,6 +1,6 @@
 {
- "title": "Pendulum: the referee overturns the first answer",
- "description": "A 0.5 m pendulum swinging for 6.5 s. Three independent proposals and verification first accepted the undamped pendulum; a referee model then proposed linear damping, which also forecast the held-out motion and fit the whole swing better by BIC, so the verdict changed. g = 9.91 \u00b1 0.04 m/s\u00b2 from the period, 1% above 9.81 (the length is the uploader's stated 0.5 m).",
+ "title": "Pendulum: damping not confirmed, so the agent asks for a bigger swing",
+ "description": "A 0.5 m pendulum swinging for 6.5 s. Linear damping fits the whole swing slightly better, but forecasts the held-out quarter worse than the simple pendulum (13.8% against 9.9%), so verification does not pick it: the two laws tie. Both give g = 9.91 ± 0.04 m/s², 1% above 9.81 (the length is the uploader's stated 0.5 m), so g is measured either way. The agent designs the recording that would decide: release from about 35 degrees and film 7 s, where the two forecasts separate by 24 mm against 2.9 mm of tracking noise.",
  "credit": "Video: Rhetos / Mathe-AC Lernwerkstatt, Wikimedia Commons, CC BY-SA 4.0 (trimmed and downscaled)",
  "order": 3,
  "truth": {

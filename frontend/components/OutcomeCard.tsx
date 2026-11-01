@@ -19,7 +19,9 @@ export function OutcomeCard({ o, exportHref }: { o: Outcome; exportHref?: (kind:
   const titleId = useId();
   // Verified, with a truth to compare: say it was checked, and that the truth sits just outside the interval.
   // With a stated limit, the limit is the reason (shown below); the gloss only says it was checked.
-  const gloss = o.status === "partial" && o.checked_against
+  const gloss = o.status === "not yet validated" && o.checked_against
+    ? "the laws tie, but what they agree on was checked (below)"
+    : o.status === "partial" && o.checked_against
     ? (o.limits?.length ? "checked against independent measurements; part of it is not reproduced (below)"
       : "predicted motion it never saw; an independent measurement lies just outside its 95% interval")
     : base;

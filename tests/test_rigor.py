@@ -82,3 +82,21 @@ def test_tiny_forecast_differences_do_not_count():
     # 0.11% against 0.08%: relatively worse, but far below a percent of the motion.
     v = decide([_fake("damped_harmonic", 3, -600.0, 0.0011, 0.0), _fake("harmonic", 2, -50.0, 0.0008, 0.1)])
     assert v.status == "accepted" and v.winner.model_id == "damped_harmonic"
+
+
+def test_tied_laws_report_the_parameter_they_agree_on():
+    from physicslens.export.outcome import build_outcome
+    from physicslens.physics.coords import to_coordinates
+    from physicslens.physics.fit import fit_model
+    from physicslens.physics.uncertainty import agreed_parameters
+
+    from .test_regime import pendulum
+    c = to_coordinates(pendulum([(6, 0.5, 0.0)]), "pendulum")
+    laws = [(MODELS[m], fit_model(MODELS[m], c)) for m in ("pendulum", "pendulum_linear_damping")]
+    agreed = agreed_parameters(laws, c, reps=12)
+    g = next(a for a in agreed if a["name"] == "g")
+    assert g["ci95"][0] <= 9.81 <= g["ci95"][1] and len(g["per_law"]) == 2
+    result = {"status": "ambiguous", "family": "pendulum", "ranking": [], "agreed_parameters": agreed}
+    o = build_outcome(result, truth={"name": "g", "value": 9.81, "source": "test"})
+    assert "measured either way" in o["headline"] and o["checked_against"]["within_interval"]
+    assert o["status"] == "not yet validated" and o["confidence"].startswith("g between")
