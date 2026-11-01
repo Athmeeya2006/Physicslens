@@ -81,6 +81,11 @@ def _law_image(latex: str, width: int) -> Image.Image | None:
 
 def headline(result: dict[str, Any]) -> str:
     params = result.get("parameters") or []
+    agreed = result.get("agreed_parameters") or []
+    if not params and agreed:  # the laws tie, but they agree on this value: it is measured either way
+        p = agreed[0]
+        name = GREEK.get((p.get("latex") or "").strip(), p["name"])
+        return f"{name} = {p['value']:.5g} ± {p['std']:.2g} {_unit(p.get('unit', ''))}, two laws tie".replace("  ", " ")
     if not params:
         return {"no_fit": "No clean equation: the honest answer", "ambiguous": "Two laws tie: an experiment is asked for"}.get(
             result.get("status", ""), result.get("reason", "")[:70])

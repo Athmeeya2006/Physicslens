@@ -27,7 +27,8 @@ def test_unreadable_law_and_missing_poster_still_give_an_image(tmp_path):
 
 
 def test_headline_reports_the_first_parameter_or_the_honest_outcome():
-    assert headline(_result()).startswith("g = 9.9") and headline(_result()).endswith("m/s²")
+    assert headline(_result()).startswith("g = 9.9") and headline(_result()).endswith("m/s², two laws tie")
+    assert headline({"status": "ambiguous", "parameters": []}) == "Two laws tie: an experiment is asked for"
     assert headline({"status": "no_fit", "parameters": []}) == "No clean equation: the honest answer"
 
 
