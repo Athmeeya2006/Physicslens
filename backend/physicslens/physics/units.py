@@ -181,7 +181,9 @@ def dim_of(node: Node, dims: dict[str, Dim | None]) -> Dim | None:
         if base.dimensionless:
             return NONE
         if exponent is None:
-            raise _Mismatch(f"raises a quantity with units ({base}) to a power that is not a constant number")
+            # A fitted exponent (a central force with a free power: the law that found Kepler's 3/2 and Newton's 2)
+            # has no fixed unit: the term is not checked, never rejected. A power with units is still an error above.
+            return None
         return base ** exponent
     name = str(node.value)
     args = [dim_of(a, dims) for a in node.args]

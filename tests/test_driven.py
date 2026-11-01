@@ -140,6 +140,13 @@ def test_dimensionally_wrong_laws_are_rejected_before_fitting(family, acc, param
     assert needle in str(e.value)
 
 
+def test_a_fitted_exponent_leaves_its_term_unchecked_not_rejected():
+    # The free power law that measured Kepler's exponent: mu's unit then depends on n, so the term is not checked.
+    m = build("plane", "free power", ["-mu*x/(x^2+y^2)^(n/2)", "-mu*y/(x^2+y^2)^(n/2)"],
+              [p("mu", "AU^3/day^2", 0, 1, 3e-4), p("n", "", 2, 4, 3)], max_params=MAX_PARAMS_ORBIT)
+    assert m.spec.params[1].name == "n"
+
+
 def test_unknown_unit_text_warns_instead_of_rejecting():
     m = build("line", "odd units", ["-k*v"], [p("k", "furlongs per fortnight", 0, 5, 1)])
     assert m.unit_warnings and "not understood" in m.unit_warnings[0]
@@ -202,3 +209,15 @@ def test_a_known_movers_track_becomes_inputs_in_the_subjects_frame():
     assert sig.provenance["x2"] == "second tracked object (cart)" and sig.units["y2"] == "m"
     both = merge_signals(attractor_inputs(), sig, np.arange(0, 0.9, 1 / 30))
     assert set(both.values) == {"x1", "y1", "x2", "y2"} and both.t[0] >= 0
+
+
+def test_a_perturber_law_without_the_indirect_term_is_flagged():
+    sig = attractor_inputs()
+    kw = [p("mu", "m^3/s^2", 0, 10, 1), p("gk", "m^3/s^2", 0, 1, 0.1)]
+    direct_only = build("plane", "direct only", ["-mu*x/hypot(x,y)^3 + gk*(x1 - x)/hypot(x1 - x, y1 - y)^3",
+                                                 "-mu*y/hypot(x,y)^3 + gk*(y1 - y)/hypot(x1 - x, y1 - y)^3"], kw, sig)
+    assert direct_only.indirect_warning and "indirect term" in direct_only.indirect_warning
+    full = build("plane", "with the indirect term",
+                 ["-mu*x/hypot(x,y)^3 + gk*((x1 - x)/hypot(x1 - x, y1 - y)^3 - x1/hypot(x1, y1)^3)",
+                  "-mu*y/hypot(x,y)^3 + gk*((y1 - y)/hypot(x1 - x, y1 - y)^3 - y1/hypot(x1, y1)^3)"], kw, sig)
+    assert full.indirect_warning is None

@@ -59,6 +59,23 @@ def derivative(spec: ModelSpec, s: np.ndarray, params: dict[str, float], ctx: di
     return spec.rhs(s, params, ctx, t) if spec.time_dependent else spec.rhs(s, params, ctx)  # type: ignore[call-arg]
 
 
+def accelerations(spec: ModelSpec, states: np.ndarray, params: dict[str, float], ctx: dict[str, float],
+                  times: np.ndarray) -> np.ndarray:
+    """The law's accelerations at many states (N, 2d) at once: (N, d). Library laws written with NumPy take every
+    state as columns in one call (derivative_match evaluates hundreds per step); a law that cannot (scalar math, a time
+    or known input, a norm over the whole state) is evaluated state by state with the same numbers."""
+    d = states.shape[1] // 2
+    if not spec.time_dependent and not spec.id.startswith("custom_"):
+        try:
+            with np.errstate(all="ignore"):
+                out = np.asarray(spec.rhs(states.T, params, ctx), dtype=float)
+            if out.shape == (2 * d, len(states)):
+                return out[d:].T
+        except (TypeError, ValueError):
+            pass  # scalar-only arithmetic in this law: one state at a time below
+    return np.array([derivative(spec, s, params, ctx, t)[d:] for s, t in zip(states, times, strict=True)], dtype=float)
+
+
 def smoothing(ctx: dict[str, float]) -> float:
     """Width multiplier for the smoothed sign() of friction laws. The fit starts on short windows with a wide, gentle
     corner (ctx["v_eps_scale"] 20, then 5) and ends on the true law (1): a near-discontinuous right-hand side makes

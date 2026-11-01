@@ -18,7 +18,7 @@ from scipy.optimize import least_squares
 
 from ..sigproc.cleanup import differentiate, savgol_window
 from .coords import Coordinates
-from .models import BUILTIN_MODELS, ModelSpec, derivative
+from .models import BUILTIN_MODELS, ModelSpec, accelerations, derivative
 
 log = logging.getLogger(__name__)
 
@@ -146,7 +146,6 @@ MAX_FIT_SECONDS = 45.0
 SMOOTHING = {0.25: 20.0, 0.5: 5.0, 1.0: 1.0}
 def derivative_match(spec: ModelSpec, c: Coordinates, kin, guess: dict[str, float]) -> dict[str, float]:
     """Parameters that best make the law's acceleration match the smoothed measured acceleration."""
-    d = c.q.shape[1]
     idx = np.unique(np.linspace(2, len(c.q) - 3, min(400, len(c.q) - 4)).astype(int))
     states = np.column_stack([kin.pos, kin.vel])[idx]
     acc = kin.acc[idx]
@@ -159,7 +158,7 @@ def derivative_match(spec: ModelSpec, c: Coordinates, kin, guess: dict[str, floa
     def residual(theta: np.ndarray) -> np.ndarray:
         params = dict(zip(spec.param_names, theta, strict=True))
         with np.errstate(all="ignore"):
-            pred = np.array([derivative(spec, s, params, c.ctx, c.t[i])[d:] for s, i in zip(states, idx, strict=True)])
+            pred = accelerations(spec, states, params, c.ctx, c.t[idx])
         r = ((pred - acc) / scale).ravel()
         return np.where(np.isfinite(r), r, FAILED_RESIDUAL)
 

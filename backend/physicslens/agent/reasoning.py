@@ -80,6 +80,9 @@ Before that final action you may run tool steps while "tool_steps_left" is above
   the others and recomputes the verdict by the same rule; you cannot change it any other way.
 - inspect: a window (start_s, end_s, reason) of the clip; you get its trajectory numbers (e.g. to see whether an
   amplitude decays exponentially or linearly, or whether the start is still a hand throwing).
+- residual_spectrum: for motion in the plane (an orbit), the periodic structure and drift the leading law leaves in
+  its residuals, with the known periods they match: a significant peak means something else is pulling, and
+  test_models with a perturbing law is the next step.
 For a tool step, give "expectation": what you expect and what result would change your mind. Use tools when the
 evidence points at something untested; when the verdict is already clear, go straight to the final action.
 Never claim an equation is correct beyond what the verdict says. Never invent numbers.
@@ -234,6 +237,13 @@ fits better by BIC (the same rule as the first candidates), the verdict changes.
   hypotheses step: acceleration in s and v (line) or x, y, vx, vy (plane), the time t and any known_inputs, at most
   4 fitted params (6 in orbit mode), units checked before fitting.
 - Aim at real weaknesses: damping the accepted law leaves out, a nonlinearity at large amplitude, friction, drag.
+- When residual_spectrum is significant (a peak with false_alarm_probability below 1e-3, or an along-track trend), the
+  accepted law leaves something out: propose up to three perturbing laws. A known body with a known path (its
+  position given as known_inputs, one fitted GM); a hidden body on a circular orbit (fitted GM_p, radius R_p and phase
+  phi_p, its angular speed sqrt(mu/R_p^3) from Kepler's third law, not a free parameter); or a small constant
+  along-track push (one parameter). In a frame centred on the Sun, a perturber at (xk, yk) also pulls the Sun, so its
+  term must be gk*((xk - x)/d^3 - xk/rk^3) with d the distance to the body and rk its distance from the Sun (and the
+  same for y); without the second part (the indirect term) the law is wrong. period_matches are hints, not answers.
 - Put confounds code cannot test from one clip (camera tilt, a moving pivot, a scale reference out of the plane)
   in concerns, each tied to a number you were given. Never invent numbers. Do not repeat a model already tested."""
 

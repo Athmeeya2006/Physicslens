@@ -189,7 +189,7 @@ def _plain_dashes(text: str) -> str:
 
 
 class AgentTurn(Strict):
-    action: Literal["explain", "request_experiment", "try_family", "give_up", "test_models", "inspect"]
+    action: Literal["explain", "request_experiment", "try_family", "give_up", "test_models", "inspect", "residual_spectrum"]
     message: str = Field(description=(
         "Plain-language text for the user: explanation, experiment request, or why no equation fits. For test_models "
         "and inspect: one sentence on what you are checking."))

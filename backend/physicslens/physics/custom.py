@@ -93,6 +93,10 @@ class FreeModel:
     inputs: InputSignals | None = None
     inputs_used: tuple[str, ...] = ()
     unit_warnings: tuple[str, ...] = ()  # unit text that was not understood: those terms were not checked
+    # Set when a law pulls toward a known body's path but has no term for that body's pull on the Sun (the indirect
+    # term of a heliocentric frame): a warning in the trail, not a rejection (in a non-rotating, non-solar frame there
+    # is none).
+    indirect_warning: str | None = None
 
     def definition(self) -> dict[str, Any]:
         """Everything needed to rebuild the model later (stored with the result, e.g. for what-ifs after a restart)."""
@@ -225,7 +229,25 @@ def build(family: str, title: str, acceleration: list[str], params: list[FreePar
                                  float(min(max(p.guess, p.lower), p.upper))) for p in params), rhs,
                      time_dependent=time_dependent)
     return FreeModel(spec, family, tuple(acceleration), tuple(params), tuple(to_python(t) for t in trees),
-                     inputs if inputs_used else None, inputs_used, warnings)
+                     inputs if inputs_used else None, inputs_used, warnings, _indirect_check(trees, set(inputs_used)))
+
+
+def _indirect_check(trees: list, inputs: set[str]) -> str | None:
+    """A perturber's indirect term divides an input by an expression of inputs alone (xk / (xk^2 + yk^2)^1.5)."""
+    if not inputs:
+        return None
+
+    def found(node) -> bool:
+        if node.kind == "div":
+            num, den = names_used(node.args[0]), names_used(node.args[1])
+            if num & inputs and den and den <= inputs:
+                return True
+        return any(found(a) for a in node.args)
+
+    if all(found(t) for t in trees):
+        return None
+    return ("This law pulls toward a known body but has no term for that body's pull on the Sun (the indirect term, "
+            "e.g. - xk/(xk^2 + yk^2)^1.5): in a frame centred on the Sun it is incomplete.")
 
 
 FREE_MODELS: dict[str, FreeModel] = {}

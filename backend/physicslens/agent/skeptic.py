@@ -9,12 +9,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
+
 from ..costguard import CostGuardClient
 from ..physics.coords import Coordinates
 from ..physics.custom import FreeParam, build, register
 from ..physics.expr import ExprError
 from ..physics.fit import fit_family
 from ..physics.models import MODELS, models_for
+from ..physics.residuals import spectrum
 from ..physics.verify import Verdict, assess, judge_candidates
 from .llm import LLMCall
 from .reasoning import skeptic_review
@@ -47,6 +50,10 @@ def challenge(client: CostGuardClient, coords: Coordinates, verdict: Verdict, fa
                                       if m.id not in tested and not m.id.startswith("custom_")],
         "trajectory_summary": summary,
     }
+    if family == "plane" and verdict.winner.sim is not None and verdict.winner.sim.shape == coords.q.shape:
+        # What the accepted law leaves behind: structured residuals say something else is pulling (physics/residuals.py).
+        vel = np.gradient(verdict.winner.sim, coords.t, axis=0)
+        context["residual_spectrum"] = spectrum(coords.t, verdict.winner.sim, vel, coords.q - verdict.winner.sim).summary()
     review, call = skeptic_review(client, context, run_id, audience)
 
     new_verdict, items, rationales = fit_more(coords, verdict, family, [(c.model_id, c.free_model, c.why) for c in review.challenges],
