@@ -2,7 +2,7 @@
 
 Writes frontend/public/gallery/<id>/ (result, clip, share video, poster, share image, the three exports, the sim-to-real comparison and any
 stored setup guide) plus
-frontend/public/r/<id>.html (a share page per result), frontend/public/gallery/index.json and the open dataset (dataset.json, dataset.csv). Run before building the static site.
+frontend/public/r/<id>.html (a share page per result, served as /r/<id>), frontend/public/gallery/index.json and the open dataset (dataset.json, dataset.csv). Run before building the static site.
 """
 
 import json
@@ -77,7 +77,7 @@ def main() -> None:
                     (dst / "sim2real.json").write_text(json.dumps(sim2real(result)))
                 except Sim2RealError as e:
                     print(f"{gid}: no sim-to-real comparison ({e})")
-        # A link to /r/<id>.html previews as this result's own picture, then opens the result.
+        # A link to /r/<id> previews as this result's own picture, then opens the result.
         render_og(result, src / "poster.jpg", dst / "og.jpg")
         (SHARE / f"{gid}.html").write_text(share_page(gid, result, SITE))
         dataset += dataset_entries(gid, result, meta)

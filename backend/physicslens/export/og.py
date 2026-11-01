@@ -99,7 +99,7 @@ def share_page(gid: str, result: dict[str, Any], site: str) -> str:
             f'<meta name="description" content="{desc}">\n<meta property="og:title" content="{title}">\n'
             f'<meta property="og:description" content="{desc}">\n<meta property="og:image" content="{image}">\n'
             f'<meta property="og:image:width" content="{W}">\n<meta property="og:image:height" content="{H}">\n'
-            f'<meta property="og:url" content="{site}/r/{gid}.html">\n<meta name="twitter:card" content="summary_large_image">\n'
+            f'<meta property="og:url" content="{site}/r/{gid}">\n<meta name="twitter:card" content="summary_large_image">\n'
             f'<meta http-equiv="refresh" content="0; url={target}">\n<link rel="canonical" href="{site}{target}">\n'
             f'</head><body><p><a href="{target}">Open the result</a></p></body></html>\n')
 

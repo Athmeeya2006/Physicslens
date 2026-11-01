@@ -440,7 +440,7 @@ Every row runs the same loop: the agent proposes laws, numerical fits decide on 
 | URDF | the pendulum, spring or projectile as links and a joint with the fitted damping and friction; what URDF cannot hold (gravity, a joint spring, drag) is written in the file as a comment with the fitted value | parsed back, required elements checked |
 | SDF | the same as a Gazebo world, with the measured gravity and, for springs, `spring_stiffness` and `spring_reference` | parsed back, gravity and links checked |
 | Shareable MP4 | the clip with the measured trail, the ghost and the typeset equation burned in (ffmpeg) | |
-| Share image | a 1200 x 630 picture for link previews: the clip's frame, the typeset law and its first parameter with its interval; each gallery result also has a share page, `/r/<id>.html`, that carries it and opens the result | |
+| Share image | a 1200 x 630 picture for link previews: the clip's frame, the typeset law and its first parameter with its interval; each gallery result also has a share page, `/r/<id>`, that carries it and opens the result | |
 
 ## Sim-to-real gap, made visible
 
