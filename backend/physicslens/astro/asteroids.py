@@ -197,6 +197,26 @@ def fit(obs: Observations, state0: np.ndarray, epoch_tdb: float, bodies: list[Bo
         if np.array_equal(new, used):
             break
         used = new
+    else:
+        # The last round still changed which observations count: refit once on that set, so the state and its
+        # covariance describe the observations the solution keeps.
+        sub = obs.subset(used)
+
+        def resid(x, sub=sub):
+            ra_c, dec_c = predict(x, epoch_tdb, sub, bodies)
+            a, b = residuals(ra_c, dec_c, sub)
+            return np.concatenate([a / sub.sigma_ra, b / sub.sigma_dec])
+
+        def jac(x, resid=resid):
+            base, cols = resid(x), []
+            for i, h in enumerate(steps):
+                q = x.copy()
+                q[i] += h
+                cols.append((resid(q) - base) / h)
+            return np.column_stack(cols)
+
+        sol = least_squares(resid, state, jac=jac, x_scale=steps * 1e4, max_nfev=30)
+        state = sol.x
     J = sol.jac
     dof = max(len(sol.fun) - 6, 1)
     chi2 = float(sol.fun @ sol.fun) / dof

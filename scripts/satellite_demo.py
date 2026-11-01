@@ -53,7 +53,10 @@ def observe(truth: T.Trajectory, t: np.ndarray, rng, extra=None) -> dict:
     for site in SITES:
         rs = T.site_gcrs(site, t)
         r = truth.r if extra is None else truth.r + extra
-        ra, dec, el = T.radec(r, rs)
+        # Astrometric positions: where the satellite was when the light left it (the light time, 2 to 7 ms).
+        lt = T.light_time_jd(r, rs)
+        back = T.interpolate(truth, t - lt).r if extra is None else T.interpolate(truth, t - lt).r + extra
+        ra, dec, el = T.radec(back, rs)
         visible = T.sunlit(r, t) & T.dark_sky(rs, t)  # the satellite in sunlight, the observer in darkness
         for p in T.passes(t, np.where(visible, el, -90)):
             n = len(p)

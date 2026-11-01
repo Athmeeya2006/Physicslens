@@ -92,3 +92,18 @@ def test_strewn_field_exports():
     kinds = {f["properties"]["kind"] for f in gj["features"]}
     assert {"simulated", "2-sigma area", "recovered"} <= kinds
     assert F.to_kml(fld, "t").count("<Placemark>") == 2
+
+
+def test_standard_atmosphere_above_86_km():
+    # US Standard Atmosphere 1976 table: 6.958e-6 kg/m^3 at 86 km, 3.416e-6 at 90 km.
+    rho = F.us76_density([86000.0, 90000.0])
+    assert rho[0] == pytest.approx(6.958e-6, rel=0.01) and rho[1] == pytest.approx(3.416e-6, rel=0.03)
+
+
+def test_strewn_field_spots_follow_where_the_stones_started():
+    end = _winchcombe_end()
+    fld = F.strewn_field(end, F.standard_atmosphere(), [0.1], n_per_mass=12, rho_m=2090.0,
+                         release=(end.h_m, 34900.0, lambda h: 3500.0 + 0.0 * h))
+    b = fld["by_mass"][0]
+    en = np.array([F._east_north(end, p["lat"], p["lon"]) for p in fld["points"]])
+    assert (b["east_m"], b["north_m"]) == pytest.approx(tuple(np.median(en, axis=0)), abs=1.0)

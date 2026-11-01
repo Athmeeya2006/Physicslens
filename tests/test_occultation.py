@@ -80,3 +80,13 @@ def test_a_miss_bounds_the_outline():
     bound = O.fit_outline([*chords, miss], "circle")
     assert bound["misses_crossed"] == 0 and bound["params"]["gc"] + bound["params"]["radius"] <= 102.0 + 3.0
     assert free["params"]["radius"] == pytest.approx(100.0, abs=25.0)
+
+
+def test_a_short_event_in_a_long_recording():
+    # A few seconds inside two minutes of video, the normal case for an asteroid: the dip must be found where it is.
+    rng = np.random.default_rng(0)
+    t = np.arange(0, 120, 0.1)
+    f = O._model(t, 0.1, 60.03, 62.07, 1.0, 0.1) + rng.normal(0, 0.08, len(t))
+    for sigma in (0.08, None):
+        e = O.edge_times(t, f, 0.1, sigma)
+        assert e["disappear"] == pytest.approx(60.03, abs=0.05) and e["reappear"] == pytest.approx(62.07, abs=0.05)

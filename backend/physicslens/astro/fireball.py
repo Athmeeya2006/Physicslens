@@ -93,9 +93,10 @@ def us76_density(h_m: np.ndarray | float) -> np.ndarray:
             t = tb + lapse * (zk - hb)
             p = pb * (t / tb) ** (-G0 / (_R_AIR * lapse))
         out[k] = p / (_R_AIR * t)
-    top = h > 84852.0
+    # Above the table's top (geopotential 84,852 m, geometric 86 km): an exponential tail from the 86 km value.
+    top = h > 86000.0
     if top.any():
-        out[top] *= np.exp(-(h[top] - 84852.0) / 5800.0)
+        out[top] *= np.exp(-(h[top] - 86000.0) / 5800.0)
     return out
 
 
@@ -530,13 +531,21 @@ def strewn_field(end: EndState, atm: Atmosphere, masses_kg: list[float], n_per_m
         mine = [p for p in pts if p["mass_kg"] == m]
         if len(mine) < 5:
             continue
-        en = np.array([[p["east_m"], p["north_m"]] for p in mine])
+        # Each stone's landing place relative to the luminous end (its own start moved with the jitter and, with
+        # release, back along the track: east_m and north_m are relative to that start).
+        en = np.array([_east_north(end, p["lat"], p["lon"]) for p in mine])
         mid = np.median(en, axis=0)
         cov = np.cov(en.T)
         by_mass.append({"mass_kg": m, "lat": offset_latlon(end.lat, end.lon, *mid)[0], "lon": offset_latlon(end.lat, end.lon, *mid)[1],
                         "east_m": float(mid[0]), "north_m": float(mid[1]), "ellipse_1s": _ellipse(end, mid, cov, 1.0),
                         "ellipse_2s": _ellipse(end, mid, cov, 2.0), "n": len(mine)})
     return {"points": pts, "by_mass": by_mass, "end": end.__dict__, "atmosphere": atm.source}
+
+
+def _east_north(end: EndState, lat: float, lon: float) -> tuple[float, float]:
+    """A place as metres east and north of the luminous end (the inverse of offset_latlon)."""
+    return (math.radians(lon - end.lon) * EARTH_R_M * math.cos(math.radians(end.lat)),
+            math.radians(lat - end.lat) * EARTH_R_M)
 
 
 def _ellipse(end: EndState, mid: np.ndarray, cov: np.ndarray, k: float, n: int = 48) -> list[list[float]]:

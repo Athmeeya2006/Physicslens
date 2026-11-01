@@ -72,8 +72,10 @@ def test_identical_orbits_are_one_answer():
     grid = np.arange(2461346.0, 2461347.0, 20 / 86400)
     _, _, el = T.radec(T.propagate_gp(ISS, grid).r, T.site_gcrs(site, grid))
     obs_t = grid[T.passes(grid, el)[0]][:10]
+    rs = T.site_gcrs(site, obs_t)
     tr = T.propagate_gp(ISS, obs_t)
-    ra, dec, _ = T.radec(tr.r, T.site_gcrs(site, obs_t))
+    tr = T.propagate_gp(ISS, obs_t - T.light_time_jd(tr.r, rs))  # astrometric: where it was when the light left
+    ra, dec, _ = T.radec(tr.r, rs)
     twin = {**ISS, "OBJECT_NAME": "ISS (NAUKA)", "NORAD_CAT_ID": 49044, "OBJECT_ID": "2021-066A"}
     got = T.identify(obs_t, ra, dec, site, [ISS, twin], max_clock_s=1.0)
     assert got[0]["name"] == "ISS (ZARYA)" and got[0]["rms_arcsec"] < 1 and "ISS (NAUKA)" in got[0].get("same_orbit", [])
@@ -96,3 +98,9 @@ def test_true_pole_is_precessed_from_gcrs():
     R = T.true_pole_rotation(2461346.0)
     angle = np.degrees(np.arccos(R[2, 2]))  # the GCRS pole seen from the true equator of 2026
     assert 0.12 < angle < 0.18 and np.allclose(R @ R.T, np.eye(3), atol=1e-12)  # about 20 arcsec a year since 2000
+
+
+def test_light_time_for_a_low_orbit():
+    # 1,000 km from the observer: 3.34 ms, about 25 m along the track at 7.66 km/s.
+    lt = T.light_time_jd(np.array([[7000.0, 0, 0]]), np.array([[6000.0, 0, 0]]))
+    assert lt[0] * 86400 == pytest.approx(1000 / 299792.458)

@@ -9,7 +9,7 @@ import type { Outcome } from "@/lib/api";
 
 interface Check { clock_error_s: number; time_offset_s: number; time_offset_sigma_s: number; intrack_km: number;
   crosstrack_km: number; crosstrack_sigma_km: number; km_per_clock_second: number; residual_rms_arcsec: number }
-interface Run { injected: string; dv_m_s: number; injected_at_utc: string | null; passes: number; manoeuvre: boolean; reason: string;
+interface Run { injected: string; dv_m_s: number; injected_at_utc: string | null; passes: number; manoeuvre: boolean | null; reason: string;
   window_right?: boolean; impulse?: { dv_m_s: number; dv_ric_m_s: number[]; heldout_chi2: number }; one_orbit: { heldout_chi2: number; bic: number } }
 interface Sat {
   oem_span: [string, string]; gp_epoch: string; sigma_arcsec: number;
@@ -131,7 +131,7 @@ export default function SatellitesPage() {
                       <td data-label="Injected">{r.injected}{r.injected_at_utc ? ` at ${r.injected_at_utc.replace("T", " ")}` : ""}</td>
                       <td data-label="Passes" className="num">{r.passes}</td>
                       <td data-label="Verdict">{r.reason}</td>
-                      <td data-label="Found" className="num">{r.manoeuvre && r.impulse ? `${r.impulse.dv_ric_m_s[1].toFixed(2)} m/s along the track${r.window_right ? ", right gap" : ", wrong gap"}` : r.dv_m_s ? "missed" : "nothing (correct)"}</td>
+                      <td data-label="Found" className="num">{r.manoeuvre && r.impulse ? `${r.impulse.dv_ric_m_s[1].toFixed(2)} m/s along the track${r.window_right ? ", right gap" : ", wrong gap"}` : r.manoeuvre === null ? "unresolved" : r.dv_m_s ? "missed" : "nothing (correct)"}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import itertools
 import math
 from dataclasses import dataclass
 from typing import Any
@@ -49,13 +50,29 @@ def edge_times(t: np.ndarray, flux: np.ndarray, exposure: float, sigma: float | 
     side of the first and last dark frame); the levels are solved exactly at each point. Each edge's error is where
     chi-square, minimised over the other edge, rises by one."""
     t, flux = np.asarray(t, float), np.asarray(flux, float)
-    # Halfway between the bright and dark levels (percentiles, not the median: the star may be hidden for most of
-    # the recording).
-    lo_lvl, hi_lvl = np.percentile(flux, [5, 95])
-    low_frames = flux < (lo_lvl + hi_lvl) / 2
-    if not low_frames.any() or hi_lvl - lo_lvl < 3 * (sigma or 0.0):
+    # Two levels from a two-cluster split (not percentiles or the median: the star may be hidden for a few frames of a
+    # long recording, or for most of it), and the event is the longest run of dark frames (gaps of up to two frames
+    # bridged), so a noise frame elsewhere cannot stretch it.
+    lo_lvl, hi_lvl = float(np.min(flux)), float(np.max(flux))
+    for _ in range(50):
+        mid = (lo_lvl + hi_lvl) / 2
+        dark, bright = flux[flux < mid], flux[flux >= mid]
+        if not len(dark) or not len(bright):
+            break
+        lo_lvl, hi_lvl = float(np.mean(dark)), float(np.mean(bright))
+    noise = sigma or float(1.4826 * np.median(np.abs(np.diff(flux) - np.median(np.diff(flux)))) / np.sqrt(2)) or 1e-9
+    if hi_lvl - lo_lvl < 5 * noise:
         raise ValueError("No drop in the light curve: no occultation seen (a negative chord).")
-    i0, i1 = np.flatnonzero(low_frames)[[0, -1]]
+    dark_idx = np.flatnonzero(flux < (lo_lvl + hi_lvl) / 2)
+    runs, start = [], dark_idx[0]
+    for a, b in itertools.pairwise(dark_idx):
+        if b - a > 3:
+            runs.append((start, a))
+            start = b
+    runs.append((start, dark_idx[-1]))
+    i0, i1 = max(runs, key=lambda r: r[1] - r[0])
+    low_frames = np.zeros(len(flux), bool)
+    low_frames[i0:i1 + 1] = True
     sig = sigma or float(np.std(flux[~low_frames])) or 1.0
     w = np.full(len(t), 1 / sig)
     gd = np.linspace(t[i0] - 2 * exposure, t[i0] + exposure, 3 * resolution + 1)

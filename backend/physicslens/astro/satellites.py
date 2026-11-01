@@ -129,6 +129,16 @@ def site_gcrs(site: Site, t_jd: np.ndarray) -> np.ndarray:
     return pos.xyz.to_value(u.km).T
 
 
+C_KM_S = 299792.458
+
+
+def light_time_jd(r_sat: np.ndarray, r_site: np.ndarray) -> np.ndarray:
+    """How long the light took from the satellite to the site, in days (2 to 7 ms for a low orbit: 15 to 50 m along
+    the track). Positions measured against catalogue stars are astrometric: the object where it was when the light
+    left it, seen from where the site is when it arrived."""
+    return np.linalg.norm(r_sat - r_site, axis=1) / C_KM_S / 86400.0
+
+
 def radec(r_sat: np.ndarray, r_site: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Topocentric RA, Dec (degrees) and elevation proxy (degrees above the plane perpendicular to the site's
     geocentric direction: within a fraction of a degree of the true elevation)."""
@@ -200,6 +210,7 @@ def identify(t_jd: np.ndarray, ra: np.ndarray, dec: np.ndarray, site: Site, cata
             best = None
             for dt in np.linspace(-max_clock_s, max_clock_s, 21):
                 tr = propagate_gp(omm, t_jd + dt / 86400.0)
+                tr = propagate_gp(omm, t_jd + dt / 86400.0 - light_time_jd(tr.r, rs))
                 cra, cdec, el = radec(tr.r, rs)
                 if np.min(el) < -5:
                     best = None
@@ -237,6 +248,7 @@ def catalogue_check(t_jd: np.ndarray, ra: np.ndarray, dec: np.ndarray, sigma_arc
     def model(p):
         dt, dc = p
         tr = propagate_gp(omm, t_jd + dt / 86400.0)
+        tr = propagate_gp(omm, t_jd + dt / 86400.0 - light_time_jd(tr.r, rs))
         C = np.cross(tr.r, tr.v)
         C /= np.linalg.norm(C, axis=1)[:, None]
         cra, cdec, _ = radec(tr.r + dc * C, rs)
@@ -388,6 +400,7 @@ def fit_orbit(t_jd: np.ndarray, ra: np.ndarray, dec: np.ndarray, rs: np.ndarray,
     def resid(th):
         s0, kd, imp = unpack(th)
         r = integrate(s0, t0_jd, t_jd, kd, imp)
+        r = integrate(s0, t0_jd, t_jd - light_time_jd(r, rs), kd, imp)  # where it was when the light left it
         cra, cdec, _ = radec(r, rs)
         dra = ((ra - cra + 180) % 360 - 180) * np.cos(np.radians(dec)) * 3600
         return np.concatenate([dra, (dec - cdec) * 3600]) / sigma_arcsec
@@ -417,6 +430,7 @@ def fit_orbit(t_jd: np.ndarray, ra: np.ndarray, dec: np.ndarray, rs: np.ndarray,
 def forecast_chi2(fit: OrbitFit, t_jd, ra, dec, rs, sigma_arcsec, t0_jd) -> tuple[float, float]:
     imp = (fit.impulse_jd, fit.theta[7:10]) if fit.impulse_jd is not None else None
     r = integrate(fit.theta[:6], t0_jd, t_jd, fit.theta[6], imp)
+    r = integrate(fit.theta[:6], t0_jd, t_jd - light_time_jd(r, rs), fit.theta[6], imp)
     cra, cdec, _ = radec(r, rs)
     sep = angular_sep(ra, dec, cra, cdec)
     return float(np.mean((sep / sigma_arcsec) ** 2) / 2), float(np.sqrt(np.mean(sep ** 2)))
@@ -471,6 +485,11 @@ def detect_manoeuvre(t_jd: np.ndarray, ra: np.ndarray, dec: np.ndarray, site_pos
         out.update(manoeuvre=True, impulse=passing_imp.summary(),
                    reason=f"an impulse of {np.linalg.norm(passing_imp.theta[7:10]) * 1000:.2f} m/s between passes fits "
                           f"{one.bic - passing_imp.bic:.0f} BIC better and forecasts the later passes{caveat}")
+    elif one_fails:
+        # One orbit cannot forecast the later passes, yet no impulse that could be tested does: the change (if any)
+        # lies after the training passes, or is not an impulse. Say so rather than "no manoeuvre".
+        out.update(manoeuvre=None, reason=("unresolved: one orbit cannot forecast the later passes, and no impulse in a gap the "
+                                          "earlier passes cover does either; a change after them needs more passes to test"))
     else:
         out.update(manoeuvre=False, reason="one orbit explains every pass: no manoeuvre")
     return out
