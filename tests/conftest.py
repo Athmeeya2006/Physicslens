@@ -109,6 +109,7 @@ def _isolated_law_registry():
 # Tests over 10 s on one core (the slowest 30 of a parallel run, measured; re-measure with --durations=30).
 # `make test-fast` skips them; `make test` and CI run everything.
 SLOW_TESTS = {
+    "test_an_orbit_tracked_over_dozens_of_turns_gives_its_gm",
     "test_a_law_never_ends_worse_than_its_special_case",
     "test_both_frictions_from_the_truth_reach_the_noise_floor",
     "test_capture_timestamps_set_the_time_base",

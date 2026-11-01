@@ -27,6 +27,7 @@ from .agent.skeptic import challenge, fit_more, outcome_text
 from .costguard import CostGuardClient, CostGuardError
 from .costguard.cache import file_digest
 from .export.mjcf import MjcfError, calibrate_contact, check_against_fit
+from .export.outcome import build_outcome
 from .inputs import coverage_note, describe, merge_signals, mover_signals, track_signals
 from .perception import media
 from .perception.calibration import (
@@ -114,6 +115,7 @@ class RunOptions:
     depth_3d: bool = False  # also measure a ball's depth from its apparent size (needs object_size_m and focal_px)
     focal_px: float | None = None  # camera focal length in pixels at the uploaded video's resolution
     lens: dict[str, Any] | None = None  # this phone's lens calibration (perception.lens.Lens as a dict)
+    mode: str = "video"  # video | astro_frames | series (astro.analysis: sky positions or a time series, never SAM)
     gravity_up: tuple[float, float, float] | None = None  # the phone's "up" at capture, camera axes (X right, Y up, Z away)
     # A rendered or instrument-calibrated video (orbit mode): the image scale and the fixed point the coordinates are
     # measured from (the Sun) are part of the frame's geometry, given by whoever drew it. The law is still discovered.
@@ -138,8 +140,12 @@ MIN_CLIP_FRAMES = 30
 
 def analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, options: RunOptions | None = None,
             progress: Progress = lambda _msg: None) -> dict[str, Any]:
+    if options is not None and options.mode != "video":
+        raise AnalysisError(f"mode {options.mode!r} takes frames or a series, not a video: use astro.analysis")
     try:
-        return finite(_analyze(client, video, run_dir, run_id, options, progress))
+        result = _analyze(client, video, run_dir, run_id, options, progress)
+        result["outcome"] = build_outcome(result)
+        return finite(result)
     finally:
         LAW_CONTEXT.set(None)  # the run's known inputs and limits must not leak into the next run on this thread
 

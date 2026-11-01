@@ -587,3 +587,17 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .sky-use h3 { margin: 0; font-size: 1rem; }
 .sky-use p { margin: 0; }
 .law-cell { overflow-x: auto; max-width: 420px; }
+
+/* Outcome card: what the result means and what to do, above the equation. The status word carries the meaning. */
+.outcome { border-left: 4px solid var(--line); display: grid; gap: 6px; }
+.outcome p { margin: 0; }
+.outcome-proven { border-left-color: var(--ok); }
+.outcome-partial { border-left-color: var(--model); }
+.outcome-not-yet-validated { border-left-color: var(--tie); }
+.outcome-headline { font-size: 1.08rem; font-weight: 600; }
+.outcome-files a { margin-right: 10px; }
+.readable .terms { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.readable .terms li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.term { border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 8px; background: transparent; color: inherit; cursor: pointer; }
+.term.fixed { cursor: default; border-style: dashed; }
+.term.off { text-decoration: line-through; opacity: 0.6; }

@@ -3,13 +3,14 @@
 import { Boxes, Download, FileCode2, FileJson, FileText, Film } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
-import { clipUrl, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
+import { clipUrl, type ExportKind, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
 import { AgentTrail } from "./AgentTrail";
 import { AudioPanel } from "./AudioPanel";
 import { ControlPanel } from "./ControlPanel";
 import { DepthPanel } from "./DepthPanel";
 import { Law, Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
+import { OutcomeCard, ReadableLaw } from "./OutcomeCard";
 import { type Prediction, PredictionChart } from "./PredictionChart";
 import { GhostPlayer } from "./GhostPlayer";
 import { SimToReal } from "./SimToReal";
@@ -116,6 +117,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
 
   return (
     <section className="stack" aria-labelledby="result-title">
+      {r.outcome && <OutcomeCard o={r.outcome} exportHref={(k) => exportUrl(runId, k as ExportKind)} />}
       <div className="result-head">
         <h2 id="result-title" className={r.status}>{STATUS_TEXT[r.status]}</h2>
         <p className="reason">{r.reason}</p>
@@ -202,6 +204,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
         <div className="panel">
           <h3>{r.equation.title}</h3>
           <div className="equation"><Tex tex={r.equation.latex} display /></div>
+          {r.outcome?.readable && <ReadableLaw r={r.outcome.readable} />}
           <div className="table-wrap">
             <table>
               <thead><tr><th>Parameter</th><th>Value</th><th className="ci-col">95% interval</th></tr></thead>

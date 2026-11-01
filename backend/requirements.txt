@@ -22,3 +22,7 @@ mujoco==3.17.0
 pytest==9.1.1
 pytest-xdist==3.8.0
 ruff==0.17.2
+# Astronomy: FITS, WCS, times, coordinates, photometry, catalogue queries (astro/)
+astropy==8.0.2
+photutils==3.1.1
+astroquery==0.4.11

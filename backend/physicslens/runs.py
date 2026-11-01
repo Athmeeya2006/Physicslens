@@ -15,6 +15,7 @@ from typing import Any
 from .agent.llm import LLMError
 from .costguard import CostGuardClient, CostGuardError
 from .costguard.guard import BUSY_MESSAGE
+from .export.outcome import build_outcome
 from .perception.media import MediaError
 from .pipeline import AnalysisError, RunOptions, analyze
 from .settings import Settings
@@ -71,6 +72,11 @@ class RunManager:
                 result = json.loads(saved.read_text())
                 if (saved.parent / "prediction.json").is_file():
                     result["prediction_available"] = True  # the page fetches the forecast only where one exists
+                if "outcome" not in result:
+                    # Results stored before the outcome card existed get theirs, checked against a gallery truth if any.
+                    meta = saved.parent / "meta.json"
+                    truth = json.loads(meta.read_text()).get("truth") if meta.is_file() else None
+                    result["outcome"] = build_outcome(result, truth=truth)
                 state = RunState(run_id=run_id, status="done", progress=["Done"], result=result)
         return state
 

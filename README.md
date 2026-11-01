@@ -69,6 +69,7 @@ In every result, read the decision trail beside the video: each step is tagged w
 - [Our own solar-system engine, checked against JPL](#our-own-solar-system-engine-checked-against-jpl)
 - [Is something else pulling? Perturbation discovery](#is-something-else-pulling-perturbation-discovery)
 - [Solar System Lab](#solar-system-lab)
+- [Real sky data: telescope frames, sky videos and light curves](#real-sky-data-telescope-frames-sky-videos-and-light-curves)
 
 **Part IV: Prove**
 - [How an equation is accepted](#how-an-equation-is-accepted)
@@ -347,6 +348,47 @@ The Apophis run already hinted at it: the referee's tiny velocity term was the d
 - **Accessible:** every control is labelled and works from the keyboard, the view has a text description, a live region announces the law when it changes, and motion waits for a press of Play when the system asks for reduced motion.
 
 `scripts/lab_smoke.py` checks it in a real browser against a mocked API (pick Halley with Jupiter and Saturn, switch Jupiter off, see the law), and `scripts/lab_screenshots.py` takes the screenshots above.
+
+## Real sky data: telescope frames, sky videos and light curves
+
+The orbit results above come from videos rendered from JPL positions. To work on real astronomical data,
+PhysicsLens has a second measurement chain (`backend/physicslens/astro/`) that never uses SAM, because a star or an
+asteroid is a point of light, not an object with an outline:
+
+- **Times you can trust, with their uncertainty** (`astro/io.py`). Every frame carries a UTC time and its
+  uncertainty, from the most trusted source available: a FITS header (DATE-OBS plus half the exposure, or
+  DATE-AVG), a GPS-stamped video, the camera's EXIF time, or, flagged as low trust, a start time you type plus the
+  frame rate. The uncertainty is carried into every result (a transit or occultation time adds it in quadrature),
+  and dynamics uses TDB.
+- **Centroids from the light profile** (`astro/centroid.py`). A 2D Gaussian fitted to each star gives its position
+  with a formal uncertainty; on synthetic stars at random sub-pixel positions the error is 0.127 px at a
+  signal-to-noise ratio of 20 and 0.029 px at 100, where the centre of a thresholded mask (what a segmentation
+  tracker gives) is off by 0.26 px and 0.17 px on the same frames. Streaks (satellites, fast asteroids, meteors)
+  are fitted as a blurred line segment: midpoint, length, angle, and the brightness along the trail.
+- **Plate solving** (`astro/platesolve.py`): which piece of sky each frame shows, as a WCS with its RMS in
+  arcseconds. Blind solving uses astrometry.net's `solve-field` (arguments checked and passed without a shell), or
+  its web service with your own key (`ASTROMETRY_NET_API_KEY` in `.env`; the image is uploaded, so never use it for
+  anything private). From a rough pointing (a FITS header), the solution is refined against Gaia DR3 stars: the
+  common shift is found by letting every nearby source-star pair vote, then matched stars fit the WCS; on a
+  synthetic field pointed 25 arcsec, 1% and half a degree off, it recovers the centre to under 0.1 arcsec. Gaia
+  queries are cached under `data/astro/cache/` (Gaia data: CC BY-NC 3.0 IGO).
+- **Moving objects** (`astro/moving.py`): sources that stay put in most frames are stars or hot pixels and are
+  removed; a detection in one frame only (a cosmic ray) can never make a track; what is left is linked into tracks
+  of constant rate.
+- **The observer** (`astro/observer.py`): a site as latitude, longitude and height; altitude and azimuth; and where
+  a solar-system body appears from that site, with the light-travel time iterated and the observer's aberration
+  (up to about 20.5 arcsec) applied by astropy.
+- **Brightness over time** (`astro/photometry.py`): aperture photometry with uncertainties, comparison stars to
+  divide out clouds and airmass, and the mid-time of a dip (transit, eclipse, occultation) from a trapezoid fit.
+- **The same verification** (`astro/analysis.py`). Sky positions over time (mode `astro_frames`, on the tangent
+  plane in arcseconds) or one quantity over time (mode `series`) go to Muse Spark Open for laws, and the same
+  held-out forecast, rolling origins and BIC decide. No SAM call is made in these modes (a test checks it). Every
+  result carries its provenance: data source, licence, time source and uncertainty, plate-solution RMS.
+
+**Installing the plate solver.** On Debian or Ubuntu: `sudo apt install astrometry.net`, then index files covering
+your field size: for fields of about 0.1 to 2 degrees, the 4200 series (`astrometry-data-tycho2` for wide fields,
+or the files from http://data.astrometry.net/4200/ into `/usr/share/astrometry`). Without it, refinement from a
+FITS header's pointing still works, and the web service is the fallback.
 
 ---
 
@@ -903,7 +945,7 @@ CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (682 tests, counted by `pytest --collect-only -q`; 61 marked slow in `tests/conftest.py`) covers:
+The suite (696 tests, counted by `pytest --collect-only -q`; 62 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.
@@ -989,6 +1031,8 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Capture quality: a bubble level from the accelerometer, the phone's measured gravity in the 3D mode, lens calibration from a printed board, and a rolling-shutter warning
 - [x] URDF and SDF exports next to MuJoCo, a command line, and a share image per result
 - [x] Security: numpy and math reached through an allowlist in generated controllers, bubblewrap isolation where available, request limits on every costly route, uploads sniffed before they are written, CORS checked at startup, and a dependency audit
+- [x] Real sky data without SAM: FITS, image and video frames with UTC times and their uncertainty, PSF centroids (0.13 px at SNR 20 against 0.26 px for a mask), streak fits, plate solving (astrometry.net, its web service, or refinement against Gaia DR3), moving-object linking, the observer's light time and aberration, photometry and event timing, and astro modes of the pipeline
+- [x] An outcome card on every result: a plain headline, what to do, the files, what it was checked against and how confident it is (from the bootstrap), above a readable law with the fitted numbers written in, one sentence per term, the forecast without each term, and why the rivals lost
 - [x] Classical baselines on the gallery tracks (textbook curve fit, PySINDy alone) and the reasoning model alone on the same frames, a dataset card with Croissant metadata, a filming checklist for new clips, and every README number checked against its source in CI
 
 ## Roadmap

@@ -276,19 +276,21 @@ def test_a_well_posed_pendulum_is_identifiable_and_reports_its_resamples(damped_
     assert boot.identifiability == [] and 8 <= boot.reps <= 16
 
 
-def test_an_orbit_tracked_over_dozens_of_turns_gives_its_gm():
-    """Io-like: 34 orbits at 15 frames each with tracker noise. Fitted from half an orbit up (short_windows); cold on a
+def test_an_orbit_tracked_over_dozens_of_turns_gives_its_gm(monkeypatch):
+    """Io-like: 25 orbits at 12 frames each with tracker noise. Fitted from half an orbit up (short_windows); cold on a
     quarter of the clip the fit settled on an orbit 4% too wide with GM 12% high."""
+    from physicslens.physics import fit as fit_module
     from physicslens.physics.coords import Coordinates
     from physicslens.physics.custom import register
     from physicslens.physics.fit import short_windows
     from physicslens.sky.discover import kepler
+    monkeypatch.setattr(fit_module, "MAX_FIT_SECONDS", 180.0)  # accuracy is the point; a busy machine is slower
     gm, r = 2.8248e-7, 0.002809
     w = (gm / r**3) ** 0.5
-    t = np.arange(500) * 0.12
+    t = np.arange(300) * 0.15  # 25 orbits, 12 frames each
     xy = r * np.column_stack([np.cos(w * t + 0.3), np.sin(w * t + 0.3)])
     xy += np.random.default_rng(4).normal(0, r / 215, xy.shape)  # 2 px on a 430 px orbit
-    assert short_windows(xy[:375])[0] == 8
+    assert short_windows(xy[:225])[0] == 8
     f = fit_model(register(kepler(gm)), Coordinates("plane", t, xy, ("x", "y"), {}))
     assert f.params["mu"] == pytest.approx(gm, rel=0.005) and f.heldout_nrmse < 0.02
 

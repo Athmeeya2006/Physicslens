@@ -78,6 +78,13 @@ def const(module: str, name: str) -> float:
 
 
 @cache
+def centroid_rows() -> dict[float, dict[str, float]]:
+    sys.path.insert(0, str(ROOT / "backend"))
+    from physicslens.astro.centroid import accuracy_vs_snr
+    return {r["snr"]: r for r in accuracy_vs_snr()}
+
+
+@cache
 def collected(marker: str | None = None) -> int:
     cmd = [sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider", "tests"]
     if marker:
@@ -169,6 +176,13 @@ CLAIMS = [
     Claim("Validation: spring, viscous misses by %", r"viscous damping misses by ([\d.]+)%",
           lambda: ranked("spring", "damped_harmonic") * 100),
     Claim("Validation: spring, undamped misses by %", r"the undamped model by (\d+)%", lambda: ranked("spring", "harmonic") * 100),
+    # Real sky data: PSF against mask centroids on the same synthetic stars (deterministic, seed 0)
+    Claim("Centroid: PSF fit at SNR 20 (px)", r"the error is ([\d.]+) px at a\s+signal-to-noise ratio of 20",
+          lambda: centroid_rows()[20.0]["psf_rms_px"]),
+    Claim("Centroid: PSF fit at SNR 100 (px)", r"ratio of 20 and ([\d.]+) px at 100", lambda: centroid_rows()[100.0]["psf_rms_px"]),
+    Claim("Centroid: mask at SNR 20 (px)", r"tracker gives\) is off by ([\d.]+) px and", lambda: centroid_rows()[20.0]["mask_rms_px"]),
+    Claim("Centroid: mask at SNR 100 (px)", r"is off by [\d.]+ px and ([\d.]+) px on the same frames",
+          lambda: centroid_rows()[100.0]["mask_rms_px"]),
     # The acceptance rules, as the code sets them
     Claim("Rule: training share, %", r"Each model is fitted on the first (\d+)% of the motion",
           lambda: const("fit", "TRAIN_FRACTION") * 100),

@@ -18,7 +18,9 @@ from physicslens.export.dataset import entries as dataset_entries
 from physicslens.export.mjcf import MjcfError, bounce_mjcf, build_mjcf
 from physicslens.export.og import render as render_og
 from physicslens.export.og import share_page
+from physicslens.export.outcome import build_outcome
 from physicslens.export.report import report_markdown
+from physicslens.export.robot import RobotExportError, sdf, urdf
 from physicslens.export.script import parameters_json, python_script
 from physicslens.export.sim2real import Sim2RealError, sim2real
 
@@ -57,7 +59,9 @@ def main() -> None:
         if (src / "prediction.json").is_file():
             # Tells the page there is a forecast to fetch, so results without one make no request that would 404.
             result["prediction_available"] = True
-            (dst / "result.json").write_text(json.dumps(result))
+        # The outcome card, checked against the gallery entry's independent truth when it has one.
+        result["outcome"] = build_outcome(result, truth=meta.get("truth"))
+        (dst / "result.json").write_text(json.dumps(result))
         (dst / f"physicslens-{gid}-report.md").write_text(report_markdown(result, meta.get("title")))
         contact = (result.get("bounces") or {}).get("mujoco_contact")
         if contact:
@@ -76,6 +80,12 @@ def main() -> None:
                 if notes:
                     xml = xml.replace("<worldbody>", "<!-- " + " ".join(notes).replace("--", "-") + " -->\n  <worldbody>", 1)
                 (dst / f"physicslens-{gid}.xml").write_text(xml)
+            for kind, writer in (("urdf", urdf), ("sdf", sdf)):
+                try:
+                    (dst / f"physicslens-{gid}.{kind}").write_text(writer(result["fit_state"]))
+                except RobotExportError:
+                    pass  # only pendulums, springs and projectiles: the outcome card lists what exists
+
             if result.get("status") == "accepted":
                 try:
                     (dst / "sim2real.json").write_text(json.dumps(sim2real(result)))

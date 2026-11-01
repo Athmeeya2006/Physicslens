@@ -120,7 +120,7 @@ export function useBackend(): boolean | null {
 // Gallery entries are precomputed real analyses, bundled as static files; they never need the backend.
 export const isGallery = (id: string) => id.startsWith("gallery-");
 const staticBase = (id: string) => `/gallery/${id}`;
-const EXPORT_EXT = { json: "json", py: "py", mjcf: "xml" } as const;
+const EXPORT_EXT = { json: "json", py: "py", mjcf: "xml", urdf: "urdf", sdf: "sdf" } as const;
 
 export type TrackPoint = [frame: number, x: number, y: number];
 
@@ -162,7 +162,26 @@ export interface TrailStep {
   items?: { model_id: string; title: string; why: string; latex?: string | null; status?: "accepted" | "tied" | "rejected" }[];
 }
 
+// The outcome card (export/outcome.py): plain words, an action, files, what it was checked against.
+export interface Readable {
+  latex_numeric: string;
+  heldout: number | null;
+  terms: { latex: string; text: string; without: string | null; without_title: string | null; without_heldout: number | null }[];
+  written_by_agent: boolean;
+  rivals: { title: string; why: string; heldout: number | null }[];
+}
+export interface Outcome {
+  headline: string;
+  action: string;
+  artifacts: { kind: string }[];
+  checked_against: { name: string; truth: number; measured: number; relative_error: number; within_interval: boolean; source: string } | null;
+  confidence: string | null;
+  status: "proven" | "partial" | "not yet validated";
+  readable: Readable | null;
+}
+
 export interface AnalysisResult {
+  outcome?: Outcome;
   status: "accepted" | "ambiguous" | "no_fit";
   reason: string;
   family: string;
@@ -386,7 +405,8 @@ export const getRun = (id: string): Promise<RunView> =>
     : fetch(`${API_BASE}/api/runs/${id}`).then((r) => json<RunView>(r));
 export const clipUrl = (id: string) => (isGallery(id) ? `${staticBase(id)}/clip.mp4` : `${API_BASE}/api/runs/${id}/clip.mp4`);
 export const posterUrl = (id: string) => `${staticBase(id)}/poster.jpg`;
-export const exportUrl = (id: string, kind: "json" | "py" | "mjcf" | "report" | "contact") =>
+export type ExportKind = "json" | "py" | "mjcf" | "urdf" | "sdf" | "report" | "contact";
+export const exportUrl = (id: string, kind: ExportKind) =>
   !isGallery(id) ? `${API_BASE}/api/runs/${id}/export/${kind}`
     : kind === "report" ? `${staticBase(id)}/physicslens-${id}-report.md`
     : kind === "contact" ? `${staticBase(id)}/physicslens-${id}-contact.xml` : `${staticBase(id)}/physicslens-${id}.${EXPORT_EXT[kind]}`;
