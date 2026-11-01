@@ -6,7 +6,7 @@ VENV ?= .venv
 BIN := $(VENV)/bin
 export PYTHONPATH := backend
 
-.PHONY: help setup test test-fast smoke report kill unkill dev-backend dev-frontend lint audit
+.PHONY: help setup test test-fast smoke report kill unkill dev-backend dev-frontend lint audit numbers
 
 help:
 	@echo "setup         create venv and install backend deps"
@@ -19,6 +19,7 @@ help:
 	@echo "dev-frontend  run Next.js on :3000"
 	@echo "lint          ruff over backend, tests and scripts"
 	@echo "audit         known vulnerabilities in the pinned Python and npm dependencies"
+	@echo "numbers       check every README number against the file it comes from"
 
 setup:
 	@test -f config/budget.yaml || cp config/budget.example.yaml config/budget.yaml
@@ -54,6 +55,9 @@ dev-frontend:
 
 lint:
 	$(BIN)/ruff check backend tests scripts
+
+numbers:
+	$(BIN)/python scripts/readme_numbers.py
 
 # Known vulnerabilities in the pinned dependencies (queries the public advisory databases; no keys, no spend).
 audit:

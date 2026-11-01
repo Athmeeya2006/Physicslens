@@ -35,3 +35,21 @@ def test_gm_from_a_law_the_agent_wrote_enters_as_the_central_body():
                              {"name": "b", "value": 1e-7, "std": 1e-8, "unit": "1/day"}]}
     rows = entries("gallery-jupiter", result, {"title": "Weighing Jupiter", "credit": "JPL", "description": "d"})
     assert [(r["property"], r["object"]) for r in rows] == [("gravitational_parameter", "central body")]
+
+
+def test_croissant_metadata_hashes_the_published_files_and_describes_every_field():
+    import hashlib
+    import json
+
+    from physicslens.export.dataset import FIELDS, croissant
+    rows = [{f: 1.0 if f in ("value", "std", "heldout_error") else "x" for f in FIELDS}]
+    js, csv_text = json.dumps(rows).encode(), to_csv(rows).encode()
+    meta = croissant(js, csv_text, "https://example.org")
+    files = {d["name"]: d for d in meta["distribution"]}
+    assert files["dataset.csv"]["sha256"] == hashlib.sha256(csv_text).hexdigest()
+    assert files["dataset.json"]["contentUrl"] == "https://example.org/gallery/dataset.json"
+    fields = meta["recordSet"][0]["field"]
+    assert [f["name"] for f in fields] == list(FIELDS)
+    assert all(f["description"] and f["source"]["extract"]["column"] == f["name"] for f in fields)
+    assert next(f for f in fields if f["name"] == "value")["dataType"] == "sc:Float"
+    assert meta["conformsTo"] == "http://mlcommons.org/croissant/1.0" and "by/4.0" in meta["license"]

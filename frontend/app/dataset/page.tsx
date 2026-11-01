@@ -15,6 +15,24 @@ const SCALE: Record<string, string> = {
   none: "no scale needed", user: "length given by the person filming", object_size: "object size given",
   gravity: "Earth's gravity assumed as the ruler", known_scale: "scale known from how the video was drawn",
 };
+// Schema.org Dataset in the page itself, for dataset search engines; the full Croissant file (with each file's hash)
+// is generated with the data, at /gallery/croissant.json.
+const JSON_LD = JSON.stringify({
+  "@context": "https://schema.org/",
+  "@type": "Dataset",
+  name: "PhysicsLens open dataset: physical parameters measured from video",
+  description: "Physical parameters measured from video, one row per parameter, each from a law that forecast motion it was never fitted on.",
+  url: "https://physicslens.vercel.app/dataset",
+  license: "https://creativecommons.org/licenses/by/4.0/",
+  keywords: ["system identification", "physics", "video", "parameter estimation", "sim-to-real"],
+  isAccessibleForFree: true,
+  creator: { "@type": "Organization", name: "PhysicsLens" },
+  distribution: [
+    { "@type": "DataDownload", encodingFormat: "text/csv", contentUrl: "https://physicslens.vercel.app/gallery/dataset.csv" },
+    { "@type": "DataDownload", encodingFormat: "application/json", contentUrl: "https://physicslens.vercel.app/gallery/dataset.json" },
+  ],
+});
+
 const scaleText = (basis: string) => SCALE[basis] ?? `reference in view (${basis.replaceAll("_", " ")})`;
 
 export default function DatasetPage() {
@@ -39,6 +57,7 @@ export default function DatasetPage() {
 
   return (
     <main id="main">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
       <header className="page-head">
         <h1>Open dataset</h1>
         <p className="tagline">
@@ -53,6 +72,10 @@ export default function DatasetPage() {
           <a className="button secondary" href="/gallery/dataset.json" download><Download size={16} aria-hidden="true" /> JSON</a>
           <a className="button secondary" href="/gallery/dataset.csv" download><Download size={16} aria-hidden="true" /> CSV</a>
         </div>
+        <p className="small muted">
+          <a href="/gallery/DATASET_CARD.md">Dataset card</a> (fields, units, how each value was verified, licence) and{" "}
+          <a href="/gallery/croissant.json">Croissant metadata</a>. The table is CC BY 4.0; each clip keeps its own licence.
+        </p>
         {error && <p className="error">The dataset could not be loaded ({error}).</p>}
         {rows && (
           <div className="table-wrap"><table className="cards">

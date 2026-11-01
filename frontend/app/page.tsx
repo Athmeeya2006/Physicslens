@@ -43,7 +43,8 @@ export default function Home() {
   const [mover, setMover] = useState("");
   const [inputsCsv, setInputsCsv] = useState<File | null>(null);
   const [tilt, setTilt] = useState<Level | null>(null);
-  const [lens, setLens] = useState<LensCalibration | null>(null);  // the phone's tilt, saved by the filmer for this clip
+  const [lens, setLens] = useState<LensCalibration | null>(null);
+  const [depth3d, setDepth3d] = useState(false);  // a ball's depth from its apparent size: needs the lens and its size  // the phone's tilt, saved by the filmer for this clip
   const [run, setRun] = useState<RunView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
@@ -127,7 +128,8 @@ export default function Home() {
       if (turnstileBox.current) window.turnstile?.reset(turnstileBox.current);
       const r = await startRun(file, { pendulumLengthM: length, objectSizeM: size,
                                        slowMotion: slowMo ? Number(slowMo) : null, objectHint: hint || null,
-                                       knownMover: mover || null, inputsCsv, gravityUp: tilt?.up ?? null, lens }, token);
+                                       knownMover: mover || null, inputsCsv, gravityUp: tilt?.up ?? null, lens,
+                                       depth3d: depth3d && !!lens && !!size }, token);
       setRun(r);
       setRunParam(r.run_id);
       poll(r.run_id);
@@ -241,6 +243,13 @@ export default function Home() {
                   <p className="small muted">Laws may then use these signals and the time t; they are measured, never fitted.</p>
                 </fieldset>
                 <LensPanel onChange={setLens} />
+                {lens && (
+                  <label className="small">
+                    <input type="checkbox" checked={depth3d} onChange={(e) => setDepth3d(e.target.checked)} />
+                    {" "}Also measure a thrown ball&apos;s depth (3D), from its apparent size: needs its diameter as the
+                    object size above{depth3d && !sizeCm ? " (enter it to use 3D)" : ""}
+                  </label>
+                )}
                 {health?.turnstile_site_key && <div ref={turnstileBox} />}
                 <button type="submit" disabled={!file || busy || !canUpload}>
                   {busy ? <><Loader2 size={16} className="spin" aria-hidden="true" />Analyzing</> : "Analyze the motion"}

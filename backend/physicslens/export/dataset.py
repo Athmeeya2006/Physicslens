@@ -78,3 +78,56 @@ def to_csv(rows: list[dict[str, Any]]) -> str:
     w.writeheader()
     w.writerows(rows)
     return out.getvalue()
+
+
+FIELD_TYPES = {"value": "sc:Float", "std": "sc:Float", "heldout_error": "sc:Float"}
+FIELD_NOTES = {
+    "id": "run id and property, unique", "object": "what was tracked", "property": "the property, from a fixed list",
+    "meaning": "the property in words", "value": "fitted value", "std": "one standard deviation (bootstrap)",
+    "units": "units of value and std", "family": "motion family", "model": "the law's id",
+    "heldout_error": "forecast RMSE over the last quarter divided by the motion's standard deviation",
+    "scale_basis": "where lengths came from", "conditions": "what was filmed and how", "run_id": "the gallery result",
+    "clip": "the clip's title", "license": "the clip's source and licence",
+}
+
+
+def croissant(json_bytes: bytes, csv_bytes: bytes, site: str) -> dict[str, Any]:
+    """Croissant 1.0 metadata (schema.org Dataset plus the ML Commons vocabulary) for the two published files."""
+    import hashlib
+    base = f"{site}/gallery"
+    return {
+        "@context": {
+            "@language": "en", "@vocab": "https://schema.org/", "sc": "https://schema.org/",
+            "cr": "http://mlcommons.org/croissant/", "rai": "http://mlcommons.org/croissant/RAI/",
+            "dct": "http://purl.org/dc/terms/", "citeAs": "cr:citeAs", "column": "cr:column",
+            "conformsTo": "dct:conformsTo", "data": {"@id": "cr:data", "@type": "@json"},
+            "dataType": {"@id": "cr:dataType", "@type": "@vocab"}, "examples": {"@id": "cr:examples", "@type": "@json"},
+            "extract": "cr:extract", "field": "cr:field", "fileObject": "cr:fileObject", "fileProperty": "cr:fileProperty",
+            "format": "cr:format", "includes": "cr:includes", "isLiveDataset": "cr:isLiveDataset", "jsonPath": "cr:jsonPath",
+            "key": "cr:key", "md5": "cr:md5", "parentField": "cr:parentField", "path": "cr:path", "recordSet": "cr:recordSet",
+            "references": "cr:references", "regex": "cr:regex", "repeated": "cr:repeated", "replace": "cr:replace",
+            "separator": "cr:separator", "source": "cr:source", "subField": "cr:subField", "transform": "cr:transform",
+        },
+        "@type": "sc:Dataset",
+        "conformsTo": "http://mlcommons.org/croissant/1.0",
+        "name": "physicslens-open-dataset",
+        "description": ("Physical parameters measured from video by PhysicsLens, one row per parameter, each from a law "
+                        "that forecast motion it was never fitted on. Every row names its clip, conditions and run."),
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "url": f"{site}/dataset",
+        "citeAs": "PhysicsLens open dataset: physical parameters measured from video. https://physicslens.vercel.app/dataset",
+        "keywords": ["system identification", "physics", "video", "parameter estimation", "sim-to-real"],
+        "isLiveDataset": True,
+        "distribution": [
+            {"@type": "cr:FileObject", "@id": "dataset-csv", "name": "dataset.csv", "contentUrl": f"{base}/dataset.csv",
+             "encodingFormat": "text/csv", "sha256": hashlib.sha256(csv_bytes).hexdigest()},
+            {"@type": "cr:FileObject", "@id": "dataset-json", "name": "dataset.json", "contentUrl": f"{base}/dataset.json",
+             "encodingFormat": "application/json", "sha256": hashlib.sha256(json_bytes).hexdigest()},
+        ],
+        "recordSet": [{
+            "@type": "cr:RecordSet", "@id": "measurements", "name": "measurements", "key": {"@id": "measurements/id"},
+            "field": [{"@type": "cr:Field", "@id": f"measurements/{f}", "name": f, "description": FIELD_NOTES[f],
+                       "dataType": FIELD_TYPES.get(f, "sc:Text"),
+                       "source": {"fileObject": {"@id": "dataset-csv"}, "extract": {"column": f}}} for f in FIELDS],
+        }],
+    }

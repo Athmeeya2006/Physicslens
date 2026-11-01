@@ -14,7 +14,14 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 |---|---|
 | 🎥 **Demo video (3 min)** | _link coming_ |
 | 🌐 **Try it** | [physicslens.vercel.app](https://physicslens.vercel.app): real analyses with the ghost overlay, decision trail and exports. Everything is open, no code needed: analyze your own clip, live camera, voice, studies and the physics audit, whenever the analysis server is online (the home page says so) |
+| 🪐 **Solar System Lab** | [physicslens.vercel.app/sky](https://physicslens.vercel.app/sky): a 3D solar system to change and rediscover, free and in the browser |
 | 🤖 **For AI assistants** | [`llms.txt`](llms.txt) is a compact map of this repository |
+
+## How to read this README
+
+- **Judging (5 minutes):** [In 30 seconds](#in-30-seconds), then the [Judging guide](#judging-guide-5-minutes): six links, each a real result with its decision trail.
+- **Using it (15 minutes):** [What it does](#what-it-does), [Systems it identifies](#systems-it-identifies), [How an equation is accepted](#how-an-equation-is-accepted), [Applications](#applications) and [Limitations](#limitations); then film something, using the bubble level and the tips under the upload button.
+- **Building on it (everything):** Parts IV to VII: the acceptance rules, the agent, the pipeline in detail, the API, configuration, structure and tests. Every number in this file is recomputed from its source by `make numbers`.
 
 ---
 
@@ -24,7 +31,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
 - **Proof it discovers rather than recalls:** from rendered videos of asteroid Apophis and of Jupiter's four large moons it found the inverse-square law, the Sun's GM within 0.023% and Jupiter's within 0.012% of NASA/JPL, and Kepler's third law (exponent 1.4991 ± 0.0032) from the tracks alone; on Halley's comet a force law with the exponent left free fitted 1.9998.
-- **On real footage:** a 0.5 m pendulum gives g within 1%; a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
+- **On real footage:** a 0.5 m pendulum gives g = 9.91 ± 0.04 m/s² (1.0% from 9.81); a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
 - **Meta models doing real work:** Muse Spark Open (open weights, on Baseten) reasons, SAM 3.1 tracks, Muse Voice Transcribe listens, Muse Image draws setup guides, Muse Wonder writes controllers that only simulation can accept, and Muse Glimmer 30B is the fully offline open-weight path.
 
 ## Judging guide (5 minutes)
@@ -39,6 +46,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | 4 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | free fall rejected; a drag law accepted on held-out motion |
 | 4b | [Physics audit at scale](https://physicslens.vercel.app/audit) | 149 clips: real motion has a forecasting law 47% of the time, AI-generated 17%; no real clip falsely accused |
 | 5 | [Open dataset](https://physicslens.vercel.app/dataset) | every verified parameter, with its uncertainty, clip and licence |
+| 5b | [Solar System Lab](https://physicslens.vercel.app/sky) | a 3D solar system from JPL data: make Jupiter ten times heavier, switch Neptune off, turn relativity on, and watch the target's orbit and its perturbation equations change; with the analysis server online, "Find the law" runs discovery on the simulated track |
 | 6 | Your own clip, live mode, a study | open to everyone, no code; [the home page](https://physicslens.vercel.app) shows whether the analysis server is online |
 
 In every result, read the decision trail beside the video: each step is tagged with the model (provider and id) or the numerical method behind it, and "What the model thought" shows the reasoning.
@@ -52,18 +60,23 @@ In every result, read the decision trail beside the video: each step is tagged w
 
 **Part II: Measure**
 - [Systems it identifies](#systems-it-identifies)
+- [Equations the agent writes itself](#equations-the-agent-writes-itself)
+- [Time-dependent and driven laws](#time-dependent-and-driven-laws)
+- [3D from one phone, balls only](#3d-from-one-phone-balls-only)
+
+**Part III: The solar system**
 - [Proof it discovers, not recalls](#proof-it-discovers-not-recalls)
 - [Our own solar-system engine, checked against JPL](#our-own-solar-system-engine-checked-against-jpl)
 - [Is something else pulling? Perturbation discovery](#is-something-else-pulling-perturbation-discovery)
 - [Solar System Lab](#solar-system-lab)
 
-**Part III: Prove**
+**Part IV: Prove**
 - [How an equation is accepted](#how-an-equation-is-accepted)
 - [The agent: samples, tools and a referee](#the-agent-samples-tools-and-a-referee)
 - [Studies: asking for the experiment that settles it](#studies-asking-for-the-experiment-that-settles-it)
 - [Live mode: predictions made before the event](#live-mode-predictions-made-before-the-event)
 
-**Part IV: Use and catch**
+**Part V: Use and catch**
 - [Applications](#applications)
 - [For robotics: exports checked in MuJoCo](#for-robotics-exports-checked-in-mujoco)
 - [Sim-to-real gap, made visible](#sim-to-real-gap-made-visible)
@@ -74,14 +87,14 @@ In every result, read the decision trail beside the video: each step is tagged w
 - [Physics audit](#physics-audit)
 - [Open dataset](#open-dataset)
 
-**Part V: The record**
+**Part VI: The record**
 - [The story: how it was built](#the-story-how-it-was-built)
 - [Validation](#validation)
 - [Limitations](#limitations)
 - [Meta models used](#meta-models-used)
 - [Cost and safety controls](#cost-and-safety-controls)
 
-**Part VI: Reference**
+**Part VII: Reference**
 - [The pipeline in detail](#the-pipeline-in-detail)
 - [Getting started (Linux)](#getting-started-linux)
 - [Configuration reference](#configuration-reference)
@@ -167,15 +180,29 @@ flowchart LR
 | Spinning object slowing down | free spin, dry friction, viscous, air drag, dry plus viscous | the friction law and its coefficients |
 | **Anything else that moves** (rolling, sliding, braking, a falling leaf) | constant velocity and constant acceleration (along a line or in the plane) as controls, plus up to three equations **the agent writes itself** | the law that forecasts the motion, its fitted coefficients, and the same ghost, exports and what-ifs |
 
-**Equations the agent writes itself.** For motion outside the named families the agent proposes the acceleration law as text, for example `-mu*9.81*sign(v) - c*v*abs(v)` for a cart slowed by rolling friction and air drag. A small recursive-descent parser over a closed grammar (numbers, declared parameters, the state variables, `+ - * / ^` and a whitelist of functions) turns it into a model; nothing is ever passed to `eval`. The parsed tree drives the ODE solver, the LaTeX shown in the app and the exported Python script, so what you see is exactly what was fitted. Each law must beat "nothing acts on it" and "a constant force" on held-out motion, and a malformed proposal goes back to the agent with the parser's error. On synthetic data an agent-written air-drag law recovers its coefficient within 5% and a wrong spring law is rejected.
+### Equations the agent writes itself
 
-**Time-dependent and driven laws.** A law may also use the time `t` (seconds from the start of the track) and named *known inputs*: signals that are measured, never fitted. They come from a second object in the same video that you name as the known mover (SAM tracks it too, and its path becomes `x2`, `y2` in the measured object's coordinates), from a CSV you upload with the clip (a column `t` in seconds from the clip's start, then up to six named columns with optional units, e.g. `u[N]`, such as a robot's logged motor command), or from a simulation (labelled "simulation, no pixels"). Each input's source is recorded in the result and the decision trail. A law is evaluated only where its inputs were measured: asked for a time outside that span it fails with a clear error, never an extrapolation. On synthetic data a driven oscillator `-w^2*s - 2*z*w*v + A*cos(W*t)` recovers its drive's amplitude and frequency within 2%, and a law pulled toward a moving point given as inputs recovers its stiffness within 2% (`tests/test_driven.py`); the exported Python script carries the inputs and reproduces the fitted motion to 1e-6.
+For motion outside the named families the agent proposes the acceleration law as text, for example `-mu*9.81*sign(v) - c*v*abs(v)` for a cart slowed by rolling friction and air drag. A small recursive-descent parser over a closed grammar (numbers, declared parameters, the state variables, `+ - * / ^` and a whitelist of functions) turns it into a model; nothing is ever passed to `eval`. The parsed tree drives the ODE solver, the LaTeX shown in the app and the exported Python script, so what you see is exactly what was fitted. Each law must beat "nothing acts on it" and "a constant force" on held-out motion, and a malformed proposal goes back to the agent with the parser's error. On synthetic data an agent-written air-drag law recovers its coefficient within 5% and a wrong spring law is rejected.
 
 **Units are checked before anything is fitted.** Every state variable, input, parameter and `t` carries a unit (length, time and mass, with fractional powers allowed), and the law's terms must each come out as an acceleration. Sums need equal units, the arguments of `sin`, `exp`, `log` and the like must be pure numbers, and a power needs a constant exponent unless its base is a pure number. A law that fails is rejected before fitting, with a message the agent can act on, for example "term 1 has units L T^-1, expected L T^-2: did you mean it multiplied by a rate (a parameter in 1/s), as in c*v?". Unit text the checker does not know, and literal constants such as 9.81 that stand for a physical constant, leave their term unchecked rather than rejected. Ten library laws written in this language pass and eleven wrong ones are rejected (`tests/test_driven.py`). Everyday clips allow up to 4 fitted parameters; orbit mode, with thousands of clean samples, allows 6.
 
+### Time-dependent and driven laws
+
+A law may also use the time `t` (seconds from the start of the track) and named *known inputs*: signals that are measured, never fitted. They come from a second object in the same video that you name as the known mover (SAM tracks it too, and its path becomes `x2`, `y2` in the measured object's coordinates), from a CSV you upload with the clip (a column `t` in seconds from the clip's start, then up to six named columns with optional units, e.g. `u[N]`, such as a robot's logged motor command), or from a simulation (labelled "simulation, no pixels"). Each input's source is recorded in the result and the decision trail. A law is evaluated only where its inputs were measured: asked for a time outside that span it fails with a clear error, never an extrapolation. On synthetic data a driven oscillator `-w^2*s - 2*z*w*v + A*cos(W*t)` recovers its drive's amplitude and frequency within 2%, and a law pulled toward a moving point given as inputs recovers its stiffness within 2% (`tests/test_driven.py`); the exported Python script carries the inputs and reproduces the fitted motion to 1e-6.
+
+### Changes during a clip
+
 Changes during a clip (say, the string is shortened mid-recording) are detected; each regime is fitted separately, and live mode refits on the new motion.
 
-**3D from one phone, balls only.** A ball looks the same from every side, so its apparent size gives its distance: Z = f·D/d, with D the diameter you enter, d the diameter of the disc with the mask's area, and f the camera's focal length in pixels. Its image position then gives X and Y. Frames where the mask is stretched by motion blur (aspect ratio over 1.3), loses over 30% of its area against its neighbours, or touches the frame edge are rejected. One pixel of diameter error on a 40 px ball is 2.5% of the distance, so depth is far noisier than position across the image; the fit weights it accordingly, and every frame's depth error is reported. The three 3D projectile laws then go through the same held-out forecast and BIC rules as the 2D ones. The mode is opt-in (`depth_3d` and `focal_px` on `POST /api/runs`, with the object's size) and runs only for a ball fitted as a projectile; otherwise the 2D result stands and a note says why 3D was skipped. Phone videos record no focal length that ffprobe can read (none of our clips have one), so you measure it once: film an A4 sheet flat at a known distance and use f = d·Z/D (`physics/depth3d.py`, `focal_from_reference`).
+### 3D from one phone, balls only
+
+A ball looks the same from every side, so its apparent size gives its distance: Z = f·D/d, with D the diameter you enter, d the diameter of the disc with the mask's area, and f the camera's focal length in pixels. Its image position then gives X and Y. Frames where the mask is stretched by motion blur (aspect ratio over 1.3), loses over 30% of its area against its neighbours, or touches the frame edge are rejected. One pixel of diameter error on a 40 px ball is 2.5% of the distance, so depth is far noisier than position across the image; the fit weights it accordingly, and every frame's depth error is reported. The three 3D projectile laws then go through the same held-out forecast and BIC rules as the 2D ones. The mode is opt-in (a checkbox on the Analyze page once the phone's lens is calibrated, or `depth_3d` with `focal_px` or `lens` on `POST /api/runs`, with the ball's diameter as the object size) and runs only for a ball fitted as a projectile; otherwise the 2D result stands and a note says why 3D was skipped. Phone videos record no focal length that ffprobe can read, so it comes from a lens calibration (film the printed board once: `perception/lens.py`) or from an A4 sheet filmed flat at a known distance, f = d·Z/D (`focal_from_reference`). When the phone's tilt was saved with the clip (the bubble level on the Analyze page), the positions are turned so the accelerometer's "down" is down before fitting: on a synthetic throw filmed by a phone rolled 8° and pitched 5°, no 3D law holds without it and g comes back within 5% with it (`tests/test_depth3d.py`).
+
+---
+
+# Part III: The solar system
+
+> Nobody films an asteroid, so this is where discovery can't be recall: the laws of the planets, found from rendered videos of real orbits, then a simulator of our own to predict what comes next, find what else is pulling, and play with it.
 
 ## Proof it discovers, not recalls
 
@@ -307,12 +334,15 @@ The Apophis run already hinted at it: the referee's tiny velocity term was the d
 
 ![The lab with Jupiter switched off: Halley's hairpin, the changed run dashed over the original](frontend/public/readme/lab-desktop.png)
 
-[physicslens.vercel.app/sky](https://physicslens.vercel.app/sky): change the solar system and watch both the orbits and the law change. Pick a scenario, switch bodies off or hide them from the "video", scale a body's mass from a hundredth to a hundred times, add a planet that isn't there, turn on the Sun's relativity and exaggerate it (marked FICTIONAL whenever the system is no longer the real one), and play the result: a top-down view in the target's orbital plane, zoom and pan with the wheel, a pinch or the keyboard, a timeline, a speed control and a camera that can follow any body. The scenario as written stays on screen, solid, under the changed run, dashed, in the same visual language as a video result's ghost.
+[physicslens.vercel.app/sky](https://physicslens.vercel.app/sky): change the solar system and watch both the orbits and the law change. Pick a scenario, switch bodies off or hide them from the "video", scale a body's mass from a hundredth to a hundred times, add a planet that isn't there, turn on the Sun's relativity and exaggerate it (marked FICTIONAL whenever the system is no longer the real one), and play the result in 3D (three.js): glowing orbits, the Sun as the light source, lit planets with their own colouring, and an illustrative swarm of asteroids on Kepler orbits; drag to turn, scroll or pinch to zoom, right-drag to pan, with a timeline, a speed control and a camera that can follow any body. Sizes are not to scale (at scale every planet would be smaller than a pixel); positions are. The scenario as written stays on screen, solid, under the changed run, dashed, in the same visual language as a video result's ghost.
+
+- **Every force, term by term:** the target's equation of motion written out, one term per body with its own formula (each with the indirect term, because every body also pulls the Sun), its GM, its distance and its pull as a share of the Sun's at this moment, plus the relativistic term with its size when relativity is on. Change a mass, switch a body off or add one, and its row changes.
 
 - **What changed:** the target's semi-major axis, eccentricity, perihelion longitude and period over time, original against changed, and the perihelion's precession in arcseconds per century.
-- **The law:** with the analysis server online, every change also finds the target's law from its simulated track with tracker-like noise (the direct-track mode above: free, labelled "simulation, no pixels", not a video discovery), with its parameters and intervals, the residual search and, when a perturbation is accepted, how the equation changed. "Film it" renders the scenario and runs the normal, paid video analysis on it, only when the server offers uploads.
+- **The law:** with the analysis server online, every change also finds the target's law from its simulated track with tracker-like noise (the direct-track mode above: free, labelled "simulation, no pixels", not a video discovery), with its parameters and intervals, a table of how the law was chosen (every candidate law with its held-out forecast error, how far behind it was by BIC, and the verdict with its reason), the residual search and, when a perturbation is accepted, how the equation changed. "Film it" renders the scenario and runs the normal, paid video analysis on it, only when the server offers uploads.
 - **Detectability:** a badge says whether a phone-video tracker would see the change, in pixels.
-- **Offline too:** every scenario is precomputed into the static site (`scripts/build_sky_static.py`), and a change is re-integrated in the browser (a small RK4 integrator with the indirect term and optional relativity) as an instant preview; with a server, its run replaces the preview. Without a server the page says the law cannot be found right now.
+- **Offline too:** every scenario is precomputed into the static site (`scripts/build_sky_static.py`), and a change is re-integrated in the browser (a small RK4 integrator with the indirect term, optional relativity and the added planet, placed exactly as the server places it) as an instant preview; with a server, its run replaces the preview. Each scenario as written also carries its law, found in advance at 2 px of noise, so "Find the law" answers without a server; finding the law of a changed system needs the server, and the page says so.
+- **Questions it answers:** six presets load a scenario with the change a real question needs: will a comet come back on time (Halley with Jupiter switched off), how a near miss reshapes an asteroid (Apophis), is there a planet nobody has seen (Uranus with a hidden Neptune), is Newton enough (Mercury's precession), would the inner planets survive a heavier Jupiter, and the Galilean moons' resonance.
 - **Links:** `#halley_all_planets` opens a scenario; every change is kept in a short `?s=` parameter, so a link reproduces exactly what you see.
 - **Accessible:** every control is labelled and works from the keyboard, the view has a text description, a live region announces the law when it changes, and motion waits for a press of Play when the system asks for reduced motion.
 
@@ -320,7 +350,7 @@ The Apophis run already hinted at it: the referee's tiny velocity term was the d
 
 ---
 
-# Part III: Prove
+# Part IV: Prove
 
 > Models propose. Math decides. Nothing is accepted on a model's word.
 
@@ -382,7 +412,7 @@ A study turns a goal into a measurement campaign (`studies.py`, `physics/combine
 
 ---
 
-# Part IV: Use and catch
+# Part V: Use and catch
 
 > A verified law is useful: drive a simulator, watch a machine wear, answer another agent. And the same verification, turned outward, catches physics that is wrong.
 
@@ -522,9 +552,11 @@ Reproduce: `python scripts/audit_study.py select|run|baseline|report` (run and b
 
 Every verified measurement in the gallery also becomes a row of an open dataset of real-world physical parameters (damping ratios, natural frequencies, drag rates, friction, gravity), on the site's **Dataset** page with JSON and CSV downloads (on phones each row is shown as a card). Laws the agent wrote count too when a parameter has the units of GM (length cubed per time squared): the orbit results add the Sun's and Jupiter's gravitational parameters, labelled as the central body's. A row enters only when its result was accepted, its law forecast held-out motion within 15%, and the value was measured rather than given by the user, assumed, or in arbitrary units (`backend/physicslens/export/dataset.py`). Each row carries its uncertainty, the scale basis, the run it came from and the clip's licence, because a damping ratio or friction coefficient only holds for the conditions it was measured in.
 
+The dataset has a card (`gallery/DATASET_CARD.md`: fields, units, how each value was verified, licence, and how to mint a Zenodo DOI) and [Croissant](http://mlcommons.org/croissant/1.0) metadata generated with the files, with each file's SHA-256 (`/gallery/croissant.json`); the Dataset page also carries schema.org `Dataset` markup for dataset search engines. The table is CC BY 4.0; each clip keeps its own licence.
+
 ---
 
-# Part V: The record
+# Part VI: The record
 
 ## The story: how it was built
 
@@ -538,12 +570,25 @@ Every verified measurement in the gallery also becomes a row of an open dataset 
 
 ## Validation
 
-**On real footage**, with every reasoning step on Muse Glimmer (open weights) and tracking by SAM 3.1 (clips and licenses in `gallery/README.md`):
+**On real footage**, with every reasoning step on Muse Spark Open (open weights, on Baseten) and tracking by SAM 3.1 (clips and licenses in `gallery/README.md`; the numbers are the gallery results, checked by `scripts/readme_numbers.py`):
 
-- **Pendulum** (0.5 m string, length given): g = 9.79 ± 0.01 m/s² from the period, against 9.81. A small swing can't tell sin θ from θ, so the exact law is kept and the approximation noted. The result rests on the given length: with the pivot out of frame the arc alone can't fix it (two stretches of the same swing gave radii 50% apart), so the app does not re-measure a length you supply.
-- **Paper bag thrown across a blackboard** (filmed at 200 fps, analyzed with a slow-motion factor of 20): free fall misses the held-out last quarter by 41% and is rejected; linear air drag forecasts it within 11%, with a velocity time constant of 0.38 s (scale-free); quadratic drag scores 548 BIC worse.
+- **Pendulum** (0.5 m string, length given): g = 9.91 ± 0.04 m/s², against 9.81 (1.0% high). The first verdict was the exact pendulum; the referee proposed linear damping, which fits the whole swing 34 BIC better and also forecasts the held-out quarter (within 13.8%), so the verdict changed on screen. A small swing can't tell sin θ from θ, so the exact law is kept over the small-angle one. The result rests on the given length: with the pivot out of frame the arc alone can't fix it (two stretches of the same swing gave radii 50% apart), so the app does not re-measure a length you supply.
+- **Paper bag thrown across a blackboard** (filmed at 200 fps, analyzed with a slow-motion factor of 20): free fall misses the held-out last quarter by 35% and is rejected; linear air drag forecasts it within 2.9%, with a velocity time constant of 0.41 s (scale-free); quadratic drag forecasts within 5.9% but scores 883 BIC worse.
 - **Air-track spring cart** (nothing of known size in view): a spring with dry (sliding) friction, ω = 2.7387 ± 0.0012 rad/s; the swing shrinks by about the same amount every cycle, so dry friction forecasts the held-out motion within 5.9% while viscous damping misses by 10.9% and the undamped model by 48%.
 - What didn't work, honestly: on 240p Apollo 16 TV footage of an astronaut jumping, with two jumps separated by standing and no usable scale, no equation passed, and the result is not in the gallery.
+
+**Against classical baselines, on the same tracks** (`scripts/baselines.py`, free; `benchmark/results/BASELINES.md` and `baselines.json`). The same coordinates and 75/25 split PhysicsLens is judged on, with two baselines that skip the agent and the verification: a plain `curve_fit` of the textbook law (a simple harmonic swing, a damped harmonic oscillator, a drag-free parabola, or a Kepler ellipse with its GM), and PySINDy alone (polynomials up to degree 3 on the position and its finite-difference velocity). Held-out error: the forecast's RMSE over the last quarter divided by the motion's standard deviation.
+
+| Clip | Truth | PhysicsLens (verified) | Textbook law, curve_fit | PySINDy alone | Closest to truth |
+|---|---|---|---|---|---|
+| apophis | 0.00029591 AU^3/day^2 | mu = 0.00029598 ± 9.8e-08; held-out 0.00494 | mu = 0.00029596 ± 1.5e-07; held-out 0.00605 | mu = n/a; held-out 1.4 | textbook curve_fit |
+| halley | 0.00029591 AU^3/day^2 | mu = 0.00029563 ± 2e-07; held-out 0.00202 | mu = 0.00029494 ± 5.5e-08; held-out 0.00202 | mu = n/a; held-out 2.17 | PhysicsLens |
+| jupiter | 4.4933 R_J^3/hour^2 | mu = 4.4941 ± 0.0011; held-out 0.00143 | mu = 4.4979 ± 0.00043; held-out 0.00143 | mu = n/a; held-out 0.516 | PhysicsLens |
+| paperbag | none | k = 2.4265 ± 0.051; held-out 0.0286 | k = n/a; held-out 0.35 | k = -1411.2; diverged | no independent truth |
+| pendulum | 9.81 m/s^2 | g = 9.9095 ± 0.036; held-out 0.138 | g = 9.9521 ± 0.032; held-out 0.103 | g = 8.6924; held-out 0.295 | PhysicsLens |
+| spring | none | omega = 2.7387 ± 0.0012; held-out 0.0594 | omega = 2.7399 ± 0.0012; held-out 0.109 | omega = 2.7677; held-out 0.524 | no independent truth |
+
+What it shows: where the textbook law is already the right law (the orbits, a nearly undamped swing), a careful curve fit does about as well, once (Apophis) a hair closer to the truth. What PhysicsLens adds is choosing the law: the textbook parabola has no drag, so on the paper bag its forecast misses by 35% against 2.9%, and it cannot report a drag rate at all; the damped oscillator misses the spring cart's held-out motion by 10.9% against dry friction's 5.9%. PySINDy alone cannot express an inverse-square pull with a polynomial library, so it reads no GM from any orbit, and on the paper bag its learned equations blow up.
 
 **Exports:** for every exactly representable model, the MuJoCo export replayed in MuJoCo matches the fitted motion to under 0.1 mm; the generated Python script matches to 1e-9.
 
@@ -634,7 +679,7 @@ Other rules: the language model never receives video, only up to four keyframes 
 
 ---
 
-# Part VI: Reference
+# Part VII: Reference
 
 The manual: setup, configuration, API, structure and tests, in full.
 
@@ -837,13 +882,14 @@ make test                     # every test, mocked models, in parallel (pytest-x
 make test-fast                # the same without the tests marked slow (over 10 s each)
 make lint                     # ruff over backend, tests and scripts
 make audit                    # pip-audit and npm audit over the pinned dependencies (none known on Nov 1)
+make numbers                  # every README number recomputed from the file it comes from (also in CI)
 ```
 
 CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.11 and 3.12, and the frontend typecheck, build and static build, on every push; it needs no secrets and makes no paid calls. Optional local hooks run the same checks before a commit: `pip install pre-commit && pre-commit install` (`.pre-commit-config.yaml`). Dependabot proposes grouped weekly updates for the pinned dependencies. Each test process keeps its own ledger, cache and runs (`PHYSICSLENS_VAR_DIR`), and the agent's laws registered by one test are removed after it, so tests are independent in any order.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (633 tests, counted by `pytest --collect-only -q`; 61 marked slow in `tests/conftest.py`) covers:
+The suite (671 tests, counted by `pytest --collect-only -q`; 61 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.
@@ -928,6 +974,8 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Live sessions saved as results, uploads checked before they are queued, and specific error messages instead of silent failures
 - [x] Capture quality: a bubble level from the accelerometer, the phone's measured gravity in the 3D mode, lens calibration from a printed board, and a rolling-shutter warning
 - [x] URDF and SDF exports next to MuJoCo, a command line, and a share image per result
+- [x] Security: numpy and math reached through an allowlist in generated controllers, bubblewrap isolation where available, request limits on every costly route, uploads sniffed before they are written, CORS checked at startup, and a dependency audit
+- [x] Classical baselines on the gallery tracks (textbook curve fit, PySINDy alone), a dataset card with Croissant metadata, a filming checklist for new clips, and every README number checked against its source in CI
 
 ## Roadmap
 

@@ -13,8 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
+from physicslens.export.dataset import croissant, to_csv
 from physicslens.export.dataset import entries as dataset_entries
-from physicslens.export.dataset import to_csv
 from physicslens.export.mjcf import MjcfError, bounce_mjcf, build_mjcf
 from physicslens.export.og import render as render_og
 from physicslens.export.og import share_page
@@ -90,6 +90,10 @@ def main() -> None:
     (DST / "index.json").write_text(json.dumps(index, indent=1))
     (DST / "dataset.json").write_text(json.dumps(dataset, indent=1))
     (DST / "dataset.csv").write_text(to_csv(dataset))
+    # Croissant metadata hashes the exact published files, and the card travels with them.
+    (DST / "croissant.json").write_text(json.dumps(
+        croissant((DST / "dataset.json").read_bytes(), (DST / "dataset.csv").read_bytes(), SITE), indent=1))
+    shutil.copy(SRC / "DATASET_CARD.md", DST / "DATASET_CARD.md")
     print(f"Bundled {len(index)} gallery entries into {DST.relative_to(ROOT)}")
 
 

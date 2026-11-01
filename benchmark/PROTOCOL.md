@@ -27,4 +27,60 @@ Real clips with independently measured answers, written down **before** any anal
 
 ## Target size
 
-15 to 20 clips across at least four systems. Report every one.
+15 to 20 clips across at least four systems. Report every one. `benchmark/FILMING.md` is the checklist for the next
+four (a door closer twice, a bouncing ball, a spinning toy, a 3D throw).
+
+## Acceptance criteria (what "accepted" means in every number)
+
+The rules in force, with the constants that set them (`backend/physicslens/physics/verify.py`, `rigor.py`, `fit.py`,
+`uncertainty.py`, `prescreen.py`):
+
+1. **Held-out forecast.** Each law is fitted on the first 75% of the motion (`TRAIN_FRACTION`) and run on to the end;
+   its RMSE over the last 25%, divided by the motion's standard deviation, must be under 0.15 (`MAX_HELDOUT_NRMSE`),
+   or under 0.3 (`HARD_MAX_HELDOUT_NRMSE`) when that RMSE is within 3 times the tracking noise
+   (`MAX_HELDOUT_NOISE_RATIO`: a correct law cannot beat the noise floor).
+2. **Rolling origins.** A law that passes is also restarted from 55, 65, 75 and 85% of the clip (`ROLLING_ORIGINS`),
+   parameters fixed and only the starting state refitted on the data before each point, and must forecast the next
+   15% (`ROLLING_HORIZON`); the median of those errors must pass the same rule. Live mode skips this for speed.
+3. **BIC with the effective sample size.** n_eff = n (1 - rho) / (1 + rho) from the lag-1 autocorrelation rho of the
+   best law's residuals, at least 10 (`MIN_N_EFF`), the same n_eff for every law. A winner needs a BIC lead of 10
+   (`DECISIVE_DELTA_BIC`); otherwise the laws tie and an experiment is requested. A law is fitted from its special
+   cases' solutions, so it can never end worse than a law it contains.
+4. **Referee.** After acceptance, up to three alternatives proposed by a second model are fitted and judged by rules 1
+   to 3; the verdict changes only if one passes them and leads by BIC.
+5. **Fast refusal.** Before any simulation, motion that no law's acceleration explains (R² under 0.2, velocity
+   flatness over 0.5, a quadratic trend explaining under 95%: `prescreen.py`) is refused as noise-like.
+6. **Uncertainty.** Residual block bootstrap refits: 40 when time allows, never fewer than 8
+   (`MIN_BOOTSTRAP_REPS`) within 60 s (`MAX_BOOTSTRAP_SECONDS`); the result records how many ran. Pairs of parameters
+   whose refits correlate beyond 0.9 are reported with filming advice (`IDENTIFIABILITY_R`).
+
+## Seeds and determinism
+
+- Bootstrap resampling: `numpy.random.default_rng(0)` (`physics/uncertainty.py`), so a stored track gives the same
+  intervals every time.
+- Solar-system discovery noise: `seed=0` (`sky/discover.py`); the negative control uses seeds 0 to 19.
+- Controllers: the 50 bootstrap variants are drawn with a fixed seed stored with the run.
+- Synthetic tests set their own seeds (`np.random.default_rng(k)` in each test).
+- Model calls are not deterministic (SAM and the reasoning model vary slightly between identical calls), which is
+  why every analysis is cached by its inputs and the gallery stores the result, not a recipe to rerun.
+
+## Reproducing the README's numbers
+
+Every number the README quotes from a result is listed in `scripts/readme_numbers.py` with the file it comes from,
+and `python scripts/readme_numbers.py` (or `make numbers`, also run in CI) recomputes each one and compares it at
+the precision the README writes it. The sources:
+
+| Numbers | Recompute with | Reads |
+|---|---|---|
+| Gallery results (pendulum, paper bag, spring, Apophis, Halley, Io) | `scripts/readme_numbers.py` | `gallery/*/result.json` |
+| Jupiter's four moons, Kepler's third law | `python scripts/jupiter_demo.py report` (writes `var/jupiter/report.json`; the committed copy is `data/jupiter/report.json`) | the four stored analyses |
+| The engine against JPL, direct-track GM | `python scripts/sky_demo.py validate` | `data/sky/` (cached JPL states and masses) |
+| Le Verrier's Neptune | `python scripts/sky_demo.py leverrier` | `data/sky/leverrier.json` |
+| Halley and Apophis forecasts, apparitions, the 2029 aftermath | `python scripts/halley_demo.py prediction`, `python scripts/orbit_demo.py prediction` | `data/halley/`, `data/orbit/` |
+| Classical baselines | `python scripts/baselines.py` | `benchmark/results/` |
+| Physics audit study | `python scripts/audit_study.py analysis` (free, from the stored runs) | `data/audit_study/` |
+| Lens calibration gain, 3D tilt, synthetic validation | `make test` (each is a test with its numbers in the docstring) | `tests/` |
+| Test count | `pytest --collect-only -q` | `tests/` |
+
+Analyses themselves (SAM 3.1 and the reasoning model) are paid and run only with approval; everything in this table
+is local and free.

@@ -1,0 +1,260 @@
+[
+ {
+  "clip": "gallery-apophis",
+  "family": "plane",
+  "samples": 585,
+  "truth": {
+   "name": "mu",
+   "value": 0.00029591220828559115,
+   "unit": "AU^3/day^2",
+   "source": "the Sun's GM, JPL DE440"
+  },
+  "coordinates_check_nrmse": 0.004836272497993318,
+  "physicslens": {
+   "status": "accepted",
+   "law": "Newtonian gravity with Stokes drag",
+   "parameters": [
+    {
+     "name": "mu",
+     "value": 0.0002959806931690096,
+     "std": 9.78496403802456e-08,
+     "unit": "AU^3/day^2"
+    },
+    {
+     "name": "b",
+     "value": 2.410500886931571e-07,
+     "std": 2.3710481944125528e-08,
+     "unit": "1/day"
+    }
+   ],
+   "heldout_nrmse": 0.004944874875092772
+  },
+  "textbook_curve_fit": {
+   "law": "Kepler ellipse (elements and GM)",
+   "name": "mu",
+   "value": 0.0002959646509114537,
+   "std": 1.476355807603687e-07,
+   "unit": "AU^3/day^2",
+   "heldout_nrmse": 0.006046408022477248
+  },
+  "pysindy_alone": {
+   "law": " 0.0000;  0.0000",
+   "heldout_nrmse": 1.3958447094976834,
+   "note": "a polynomial library cannot express an inverse-square pull, so no GM can be read off"
+  }
+ },
+ {
+  "clip": "gallery-halley",
+  "family": "plane",
+  "samples": 590,
+  "truth": {
+   "name": "mu",
+   "value": 0.00029591220828559115,
+   "unit": "AU^3/day^2",
+   "source": "the Sun's GM, JPL DE440"
+  },
+  "coordinates_check_nrmse": 0.000778720245641663,
+  "physicslens": {
+   "status": "accepted",
+   "law": "Keplerian inverse-square gravity from Sun",
+   "parameters": [
+    {
+     "name": "mu",
+     "value": 0.0002956311433591957,
+     "std": 1.9685683535152543e-07,
+     "unit": "AU^3/day^2"
+    }
+   ],
+   "heldout_nrmse": 0.0020201094588396173
+  },
+  "textbook_curve_fit": {
+   "law": "Kepler ellipse (elements and GM)",
+   "name": "mu",
+   "value": 0.000294935531973337,
+   "std": 5.5129348221653026e-08,
+   "unit": "AU^3/day^2",
+   "heldout_nrmse": 0.002021534143754328
+  },
+  "pysindy_alone": {
+   "law": " 0.0000;  0.0000",
+   "heldout_nrmse": 2.1709096851573477,
+   "note": "a polynomial library cannot express an inverse-square pull, so no GM can be read off"
+  }
+ },
+ {
+  "clip": "gallery-jupiter",
+  "family": "plane",
+  "samples": 325,
+  "truth": {
+   "name": "mu",
+   "value": 4.4932761000748,
+   "unit": "R_J^3/hour^2",
+   "source": "Jupiter's GM, JPL Horizons, in Jupiter radii and hours"
+  },
+  "coordinates_check_nrmse": 0.0006550111755010638,
+  "physicslens": {
+   "status": "accepted",
+   "law": "Keplerian point-mass gravity",
+   "parameters": [
+    {
+     "name": "mu",
+     "value": 4.494068608009033,
+     "std": 0.0011496322610113684,
+     "unit": "R_J^3/hour^2"
+    }
+   ],
+   "heldout_nrmse": 0.0014339631594842918
+  },
+  "textbook_curve_fit": {
+   "law": "Kepler ellipse (elements and GM)",
+   "name": "mu",
+   "value": 4.497878602419544,
+   "std": 0.0004306403168374114,
+   "unit": "R_J^3/hour^2",
+   "heldout_nrmse": 0.001433784190740386
+  },
+  "pysindy_alone": {
+   "law": "-0.7056 q0 v0 + -0.7137 q1 v1;  0.0000",
+   "heldout_nrmse": 0.516218429342126,
+   "note": "a polynomial library cannot express an inverse-square pull, so no GM can be read off"
+  }
+ },
+ {
+  "clip": "gallery-paperbag",
+  "family": "projectile",
+  "samples": 534,
+  "truth": null,
+  "coordinates_check_nrmse": 0.014822757990853457,
+  "physicslens": {
+   "status": "accepted",
+   "law": "Projectile with linear drag",
+   "parameters": [
+    {
+     "name": "g",
+     "value": 9.81,
+     "std": 0.0,
+     "unit": "m/s^2"
+    },
+    {
+     "name": "k",
+     "value": 2.4264622166000307,
+     "std": 0.050985356082309245,
+     "unit": "1/s"
+    }
+   ],
+   "heldout_nrmse": 0.028561245183636712
+  },
+  "textbook_curve_fit": {
+   "law": "drag-free parabola",
+   "name": "g",
+   "value": 10.102921481174551,
+   "std": 0.07719159122988081,
+   "unit": "m/s^2",
+   "note": "the textbook parabola has no drag term, so it has no k; its own g (with the scale set by g = 9.81) comes out at 10.1",
+   "heldout_nrmse": 0.3504679505858566
+  },
+  "pysindy_alone": {
+   "law": " 214.3778 1 + -69130.5304 q0 + -40400.8453 q1 +  1411.2062 v0 +  497.3064 v1 + -122154.2122 q0^2 + -17334.0658 q0 q1 +  5645.6862 q0 v0 +  10217.3528 q0 v1 +  17231.2705 q1^2 +  949.9435 q1 v0 +  5821.1866 q1 v1 +  107.5944 v0^2 +  99.1466 v0 v1 +  46.9853 v1^2 + -53335.8483 q0^3 +  14761.7644 q0^2 q1 +  4001.6654 q0^2 v0 +  7750.6874 q0^2 v1 +  9608.1539 q0 q1^2 + -84.6034 q0 q1 v0 +  3150.5214 q0 q1 v1 + -223.1257 q0 v0^2 + -90.1988 q0 v0 v1 +  102.8996 q0 v1^2 +  6883.3743 q1^3 + -318.0811 q1^2 v0 +  407.1301 q1^2 v1 + -345.2238 q1 v0^2 + -243.8759 q1 v0 v1 +  14.3027 q1 v1^2 +  4.1153 v0^3 +  5.1573 v0^2 v1 + -0.5712 v0 v1^2 + -1.7730 v1^3; -465.1381 1 + -81925.7906 q0 + -34760.3071 q1 + -2295.7822 v0 + -688.0924 v1 + -78282.5363 q0^2 + -31650.9514 q0 q1 + -7062.9589 q0 v0 + -6813.1276 q0 v1 + -54489.7547 q1^2 +  5898.0060 q1 v0 + -189.5335 q1 v1 +  426.4800 v0^2 +  519.0839 v0 v1 +  78.9534 v1^2 + -5546.2841 q0^3 +  17966.3588 q0^2 q1 + -6330.6507 q0^2 v0 + -3853.0295 q0^2 v1 +  22452.2265 q0 q1^2 + -2390.1570 q0 q1 v0 +  2774.5353 q0 q1 v1 +  365.9864 q0 v0^2 +  246.3457 q0 v0 v1 + -168.8584 q0 v1^2 +  49712.7091 q1^3 + -9181.9700 q1^2 v0 + -1083.0042 q1^2 v1 + -26.7587 q1 v0^2 + -496.3905 q1 v0 v1 + -375.7895 q1 v1^2 +  18.3414 v0^3 +  4.1613 v0^2 v1 + -8.1134 v0 v1^2 +  0.2082 v1^3",
+   "heldout_nrmse": Infinity,
+   "name": "k",
+   "value": -1411.2062093902334
+  }
+ },
+ {
+  "clip": "gallery-pendulum",
+  "family": "pendulum",
+  "samples": 164,
+  "truth": {
+   "name": "g",
+   "value": 9.81,
+   "unit": "m/s^2",
+   "source": "standard gravity at the filming site (Aachen, 9.811); length 0.5 m given"
+  },
+  "coordinates_check_nrmse": 0.0960511473463868,
+  "physicslens": {
+   "status": "accepted",
+   "law": "Pendulum with linear damping",
+   "parameters": [
+    {
+     "name": "g",
+     "value": 9.90946508078551,
+     "std": 0.03601564860610632,
+     "unit": "m/s^2"
+    },
+    {
+     "name": "gamma",
+     "value": 0.05246265447390525,
+     "std": 0.012199346270715119,
+     "unit": "1/s"
+    },
+    {
+     "name": "L",
+     "value": 0.5,
+     "std": 0.0,
+     "unit": "m"
+    }
+   ],
+   "heldout_nrmse": 0.13796122010809742
+  },
+  "textbook_curve_fit": {
+   "law": "simple harmonic swing, theta = A cos(w t + phi)",
+   "name": "g",
+   "value": 9.95214736357119,
+   "std": 0.03204489294571011,
+   "unit": "m/s^2",
+   "heldout_nrmse": 0.10290340405790024
+  },
+  "pysindy_alone": {
+   "law": " 0.2734 1 + -17.3849 q0 +  1.4133 v0 +  6.0799 q0^2 +  2.9217 q0 v0 + -2.2517 v0^2 + -81.3415 q0^2 v0 + -24.9635 q0 v0^2 + -5.4319 v0^3",
+   "heldout_nrmse": 0.2947343255857456,
+   "name": "g",
+   "value": 8.6924336078729
+  }
+ },
+ {
+  "clip": "gallery-spring",
+  "family": "oscillator",
+  "samples": 450,
+  "truth": null,
+  "coordinates_check_nrmse": 0.049740985954784586,
+  "physicslens": {
+   "status": "accepted",
+   "law": "Spring with dry friction",
+   "parameters": [
+    {
+     "name": "omega",
+     "value": 2.73870465105181,
+     "std": 0.0011679515222912705,
+     "unit": "rad/s"
+    },
+    {
+     "name": "s0",
+     "value": -0.001501407953738827,
+     "std": 0.0007763693742020121,
+     "unit": "m"
+    },
+    {
+     "name": "f",
+     "value": 0.03712341277540551,
+     "std": 0.0005285812710587264,
+     "unit": "m/s^2"
+    }
+   ],
+   "heldout_nrmse": 0.05936908625927351
+  },
+  "textbook_curve_fit": {
+   "law": "damped harmonic oscillator",
+   "name": "omega",
+   "value": 2.739870070885911,
+   "std": 0.001172620136076008,
+   "unit": "rad/s",
+   "heldout_nrmse": 0.10900261430254546
+  },
+  "pysindy_alone": {
+   "law": "-7.6599 q0 +  0.4958 q0 v0 +  0.1348 v0^2 +  45.4125 q0^3 + -3.9362 q0^2 v0 + -14.9618 q0 v0^2",
+   "heldout_nrmse": 0.5244887090641208,
+   "name": "omega",
+   "value": 2.7676524378854213
+  }
+ }
+]

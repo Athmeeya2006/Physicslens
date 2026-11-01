@@ -1,0 +1,77 @@
+{
+ "gm_jpl_rj3_h2": 4.493276131995703,
+ "gm_source": "JPL Horizons API, Jupiter (599) physical data, fetched 2026-10-30",
+ "moons": [
+  {
+   "moon": "io",
+   "verdict": "accepted",
+   "law": "Keplerian point-mass gravity",
+   "reason": "Keplerian point-mass gravity forecasts held-out data within 0.1%; next best (Isotropic harmonic central force) is 2890 BIC worse.",
+   "gm": 4.494068608009033,
+   "gm_std": 0.0011496322610113684,
+   "gm_error_percent": 0.017636931050968307,
+   "period_h": 42.43002013552034,
+   "period_std_h": 0.006178838986325197,
+   "mean_distance_rj": 5.899445861911298,
+   "distance_std_rj": 0.013776222664697092
+  },
+  {
+   "moon": "europa",
+   "verdict": "accepted",
+   "law": "Offset point-mass gravity",
+   "reason": "Offset point-mass gravity forecasts held-out data within 0.1%; next best (Oblate Jupiter J2 correction) is 548 BIC worse.",
+   "gm": 4.49268956303599,
+   "gm_std": 0.000584734656304019,
+   "gm_error_percent": -0.013054371520515584,
+   "period_h": 85.26191374743819,
+   "period_std_h": 0.029714850241814434,
+   "mean_distance_rj": 9.382641786254908,
+   "distance_std_rj": 0.022036295788290805
+  },
+  {
+   "moon": "ganymede",
+   "verdict": "accepted",
+   "law": "Central Newtonian gravity - Keplerian orbit (Ganymede-like)",
+   "reason": "Central Newtonian gravity - Keplerian orbit (Ganymede-like) forecasts held-out data within 0.2%; next best (Kepler plus weak viscous drag) is 7 BIC worse.",
+   "gm": 4.491646800726032,
+   "gm_std": 0.0010721246708304214,
+   "gm_error_percent": -0.03626154328839615,
+   "period_h": 171.7670907716584,
+   "period_std_h": 0.014342524111386343,
+   "mean_distance_rj": 14.966145420242658,
+   "distance_std_rj": 0.03487951068524385
+  },
+  {
+   "moon": "callisto",
+   "verdict": "accepted",
+   "law": "General power-law central gravity",
+   "reason": "General power-law central gravity forecasts held-out data within 0.1%; next best (Newtonian point-mass gravity (Keplerian orbit)) is 17 BIC worse.",
+   "gm": 4.335483254649378,
+   "gm_std": 0.1246010238328003,
+   "gm_error_percent": -3.5117556257607707,
+   "period_h": 400.15308879005494,
+   "period_std_h": 0.10427190510877546,
+   "mean_distance_rj": 26.355908120501844,
+   "distance_std_rj": 0.06169186265711982
+  }
+ ],
+ "combined": {
+  "gm": 4.492717272203614,
+  "gm_std": 0.0004687362059929619,
+  "gm_error_percent": -0.012437690800026768
+ },
+ "kepler_third_law": {
+  "status": "accepted",
+  "reason": "Power law, exponent fitted predicts every recording from the others (worst miss 0.7 sigma) and has the best BIC.",
+  "law": "Power law, exponent fitted",
+  "params": [
+   2.969288234991759,
+   1.4991458338811043
+  ],
+  "exponent": 1.4991458338811043,
+  "exponent_std": 0.003163377073638744,
+  "gm_from_kepler": 4.477700295209573,
+  "gm_from_kepler_error_percent": -0.3466476648345318
+ },
+ "units": "R_J = Jupiter equatorial radius (from Horizons); h = hour"
+}

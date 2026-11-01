@@ -33,6 +33,8 @@ jobs:
         run: pip install -r backend/requirements.txt
       - name: Lint
         run: ruff check backend tests scripts
+      - name: README numbers match their sources
+        run: python scripts/readme_numbers.py
       - name: Tests (mocked models, no network, no spend)
         run: PHYSICSLENS_FIT_WORKERS=1 pytest -q -n auto tests
 
