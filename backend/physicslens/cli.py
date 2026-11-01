@@ -63,6 +63,8 @@ def _analyze(a: argparse.Namespace) -> int:
     print(f"{result['status']}: {eq or ''}  {result['reason']}")
     for p in result.get("parameters", []):
         print(f"  {p['name']} = {p['value']:.6g} +- {p['std']:.2g} {p['unit']}")
+    for p in result.get("agreed_parameters", []):
+        print(f"  {p['name']} = {p['value']:.6g} +- {p['std']:.2g} {p['unit']} (every tied law agrees)")
     writers = {"json": lambda: parameters_json(result), "py": lambda: python_script(result),
                "mjcf": lambda: build_mjcf(result["fit_state"])[0], "urdf": lambda: urdf(result["fit_state"]),
                "sdf": lambda: sdf(result["fit_state"])}

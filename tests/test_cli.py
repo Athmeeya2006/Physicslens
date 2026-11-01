@@ -48,7 +48,7 @@ def test_analyze_mock_runs_the_plumbing_and_stops_plainly(tmp_path, capsys):
 
 def test_analyze_writes_every_export_for_a_verified_result(tmp_path, capsys, monkeypatch):
     from physicslens import pipeline
-    stored = json.loads((ROOT / "gallery" / "gallery-pendulum" / "result.json").read_text())
+    stored = json.loads((ROOT / "gallery" / "gallery-spring" / "result.json").read_text())
     monkeypatch.setattr(pipeline, "analyze", lambda *a, **k: stored)  # the analysis itself is tested elsewhere
     out = tmp_path / "out"
     assert main(["analyze", str(ROOT / "samples" / "smoke_ball.mp4"), "--mock", "--out", str(out),
@@ -56,7 +56,16 @@ def test_analyze_writes_every_export_for_a_verified_result(tmp_path, capsys, mon
     for ext in ("json", "py", "xml", "urdf", "sdf"):
         assert (out / f"physicslens.{ext}").stat().st_size > 100
     text = capsys.readouterr().out
-    assert text.startswith("accepted: Pendulum with linear damping") and "g = 9.90947" in text
+    assert text.startswith("accepted: Spring with dry friction") and "omega = " in text
+
+
+def test_a_tie_prints_what_the_laws_agree_on(tmp_path, capsys, monkeypatch):
+    from physicslens import pipeline
+    stored = json.loads((ROOT / "gallery" / "gallery-pendulum" / "result.json").read_text())
+    monkeypatch.setattr(pipeline, "analyze", lambda *a, **k: stored)
+    assert main(["analyze", str(ROOT / "samples" / "smoke_ball.mp4"), "--mock", "--out", str(tmp_path / "o")]) == 1
+    text = capsys.readouterr().out
+    assert text.startswith("ambiguous:") and "g = 9.907" in text and "every tied law agrees" in text
 
 
 def test_sky_discover_prints_the_law(capsys):
