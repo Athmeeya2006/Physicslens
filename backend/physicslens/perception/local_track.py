@@ -12,6 +12,9 @@ import cv2
 import numpy as np
 
 MIN_SCORE = 0.5  # below this the match is not trusted and the frame is skipped
+# A template this flat (grey-level spread) is background, not an object: it "matches" everywhere, and the tracker would
+# slide to the frame's corner and report that as the object (seen when a tap landed a few frames late).
+MIN_TEMPLATE_STD = 6.0
 SEARCH_FACTOR = 3.0  # search window is this many object sizes around the last position
 
 
@@ -32,8 +35,12 @@ class TemplateTracker:
         self.w, self.h = x2 - x1, y2 - y1
         self.cx, self.cy = (x1 + x2) / 2, (y1 + y2) / 2
 
+    @property
+    def featureless(self) -> bool:
+        return self.template.size == 0 or float(self.template.std()) < MIN_TEMPLATE_STD
+
     def update(self, gray: np.ndarray) -> Match | None:
-        if self.w < 4 or self.h < 4:
+        if self.w < 4 or self.h < 4 or self.featureless:
             return None
         rx, ry = SEARCH_FACTOR * self.w, SEARCH_FACTOR * self.h
         H, W = gray.shape

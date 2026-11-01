@@ -381,6 +381,22 @@ def fit_models(specs: list[ModelSpec], c: Coordinates,
     return [r for r in results if r is not None]
 
 
+def in_worker(fn, *args):
+    """fn(*args) in a fit worker process when there are workers, else here. For long pure computations started from a
+    thread (live mode's prediction bootstrap): in a process they don't hold this interpreter's lock, so the thread
+    that refits every second keeps running. fn must be a top-level function and its arguments picklable."""
+    global _pool
+    workers = fit_workers()
+    if workers < 2:
+        return fn(*args)
+    try:
+        return _get_pool(workers).submit(fn, *args).result()
+    except (BrokenProcessPool, RuntimeError) as e:
+        log.warning("Fit workers unavailable (%s); computing here.", e)
+        _pool = None
+        return fn(*args)
+
+
 NESTED_REL_TOL = 1e-9
 
 

@@ -22,6 +22,7 @@ interface FitMsg {
   equation?: { model_id: string; title: string; latex: string };
   parameters?: LiveParam[];
   ghost?: Point[];
+  refining?: string;  // shown from the quick laws while slower ones (dry friction) are still being fitted
 }
 interface Notice { level: string; message: string }
 
@@ -378,6 +379,7 @@ export default function LivePage() {
                 {fit.status === "accepted" ? "Verified" : fit.status === "ambiguous" ? "Converging" : "No clean equation yet"}
                 {fit.window_s ? <span className="muted small"> · {fit.window_s.toFixed(1)} s of motion</span> : null}
               </h3>
+              {fit.refining && <p className="small muted" role="status">From the quick laws; {fit.refining}.</p>}
               {fit.equation && (
                 <div className="equation"><Tex tex={fit.equation.latex} display /></div>
               )}

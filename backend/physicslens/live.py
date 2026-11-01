@@ -41,12 +41,12 @@ from .perception.sam_track import ObjectTrack, tracks_from_text
 from .physics.collisions import detect_bounces
 from .physics.coords import Coordinates, fit_circle, to_coordinates
 from .physics.cueing import learned_lead, next_cue, push_delay
-from .physics.fit import FitResult, fit_family, simulate
+from .physics.fit import FitResult, fit_family, in_worker, simulate
 from .physics.forecast import FAMILIES as FORECAST_FAMILIES
 from .physics.forecast import Prediction, judge, observed_crossing, predict_crossing
-from .physics.models import MODELS, models_for
+from .physics.models import BUILTIN_MODELS, MODELS, models_for
 from .physics.regime import detect_change
-from .physics.uncertainty import bootstrap_samples
+from .physics.uncertainty import bootstrap_builtin, bootstrap_samples
 from .physics.verify import assess
 from .pipeline import (
     MOVING_ID,
@@ -60,7 +60,7 @@ from .pipeline import (
 )
 from .sigproc.cleanup import detect_impacts, fill_short_gaps, split_at
 from .sigproc.summary import summarize
-from .sigproc.trajectory import from_pixels
+from .sigproc.trajectory import Trajectory, from_pixels
 
 log = logging.getLogger("physicslens.live")
 
@@ -68,10 +68,36 @@ WINDOW_S = 10.0  # rolling buffer the equation is fitted on
 MIN_FIT_S = 2.5  # don't fit before this much track exists
 # A throw is in the air for about a second: waiting 2.5 s meant a thrown ball never got a fit. 0.6 s is 18 samples at
 # 30 fps, above recorded mode's 12-sample minimum, and the fit then uses the longest free flight only.
-MIN_FIT_S_BY_FAMILY = {"projectile": 0.6}
+MIN_FIT_S_BY_FAMILY = {"projectile": 0.6, "line": 1.2}  # a throw is in the air under a second; a push slides for one or two
 PREDICT_S = 3.0  # ghost extends this far past the newest tracked frame
 HISTORY = 6  # recent fits used to show how well the parameters have converged
 SCENE_AFTER_FRAMES = 25  # ask the scene model after ~1 s of video
+REST_SPEED_FRACTION = 0.08  # below this share of the top speed the object counts as at rest (rolling or sliding)
+
+
+def moving_stretch(traj: Trajectory) -> Trajectory:
+    """The longest stretch in which the object moves (speed above REST_SPEED_FRACTION of its peak), keeping the sample
+    where it comes to rest; the whole track when it never rests."""
+    if len(traj) < 5:
+        return traj
+    kernel = np.ones(5) / 5
+    # Edge-padded, so the ends don't read as a sudden jump towards zero.
+    smooth = np.column_stack([np.convolve(np.pad(traj.xy[:, i], 2, mode="edge"), kernel, mode="valid") for i in range(2)])
+    speed = np.hypot(*np.gradient(smooth, axis=0).T)
+    moving = speed > REST_SPEED_FRACTION * float(speed.max())
+    best, start = (0, 0), None
+    for i, m in enumerate([*moving, False]):
+        if m and start is None:
+            start = i
+        elif not m and start is not None:
+            if i - start > best[1] - best[0]:
+                best = (start, i)
+            start = None
+    a, b = best
+    return traj if b - a >= len(traj) - 1 else traj.slice(a, min(len(traj), b + 1))
+
+
+TAP_LOOKBACK_FRAMES = 12  # about half a second at 25 fps: how far back a tap is matched to what was on screen
 REFIT_EVERY = 12  # frames of new local track between refits (~0.5 s)
 LOCAL_BATCH = 5  # local points are sent in small batches
 BUFFER_S = 25.0  # frames kept for chunk encoding and tracker re-anchoring (fit window plus SAM's lag)
@@ -132,6 +158,7 @@ class LiveSession:
         self.reanchor: tuple[int, tuple[int, int, int, int]] | None = None
         self.use_data_url = True
         self.family: str | None = None
+        self._sam_misses = 0
         self.family_from_user = False  # tapped "what is it?": fit now, let the agent's hypotheses refine it later
         self.awaiting_family = False  # the model could not settle the family: fitting waits for the user's tap
         self._agent_consulted = False
@@ -240,13 +267,25 @@ class LiveSession:
     def select(self, x: float, y: float) -> None:
         """The user tapped the object: start tracking at the newest frame now, without waiting for the scene model."""
         with self.lock:
-            idx = self.latest
-            jpeg = self.frames.get(idx)
-            if jpeg is None:
+            # The screen shows a frame a little older than the newest one here (capture, upload and decode take
+            # time), so a fast object may already have moved off the tapped point: use the newest of the last few
+            # frames that has something at the tap, and track forward from it.
+            tracker, idx, box = None, -1, (0, 0, 0, 0)
+            for k in range(self.latest, max(-1, self.latest - TAP_LOOKBACK_FRAMES), -1):
+                jpeg = self.frames.get(k)
+                if jpeg is None:
+                    continue
+                gray = to_gray(jpeg)
+                cand_box = box_around_tap(gray, x, y)
+                cand = TemplateTracker(gray, cand_box)
+                if not cand.featureless:
+                    tracker, idx, box = cand, k, cand_box
+                    break
+            if tracker is None:
+                self.send({"type": "notice", "level": "warning",
+                           "message": "Nothing to follow where you tapped (just background): tap the moving object again."})
                 return
-            gray = to_gray(jpeg)
-            box = box_around_tap(gray, x, y)
-            self.tracker = TemplateTracker(gray, box)
+            self.tracker = tracker
             self.object_size = float(max(box[2] - box[0], box[3] - box[1]))
             # A new selection starts a new measurement: earlier tracks and fits belonged to whatever was tracked before.
             self.local = {idx: (self.tracker.cx, self.tracker.cy)}
@@ -456,7 +495,10 @@ class LiveSession:
             self.calibration = self._calibrate(tracks.get(REFERENCE_ID))
         moving = tracks.get(MOVING_ID)
         if moving is None:
-            self.send({"type": "notice", "level": "info", "message": "SAM lost the object in one chunk; local tracking continues."})
+            self._sam_misses += 1
+            if self._sam_misses == 1:  # said once: every two seconds it would bury the other notices
+                self.send({"type": "notice", "level": "info",
+                           "message": "SAM lost the object in a chunk; local tracking continues (said once)."})
             return
         keep = moving.frames < len(indices)  # chunk-local frames only
         points = []
@@ -595,13 +637,35 @@ class LiveSession:
                 traj = max(pieces, key=lambda q: float(np.ptp(q.xy, axis=0).max()))
             if len(traj) < min_s * fps:
                 return None
+        if self.family == "line":
+            # A push, a slide and a stop is one law; the object lying still before or after it is not part of it.
+            traj = moving_stretch(traj)
+            if len(traj) < min_s * fps:
+                return None
         try:
             coords = to_coordinates(traj, self.family)  # type: ignore[arg-type]
         except ValueError as e:
             msg = {"type": "fit", "status": "no_fit", "reason": str(e)}
             self.send(msg)
             return msg
-        fits = fit_family([MODELS[m] for m in self.candidates], coords, warm=self.warm)
+        # Dry-friction laws take seconds per fit (their smoothed sign makes the solver crawl near rest): the quick laws
+        # are fitted and shown first, then the friction laws join from their solutions and the verdict is sent again.
+        # Otherwise a spring showed nothing for most of a minute (all five spring laws: 48 s cold, 19 s warm).
+        quick = [m for m in self.candidates if "f" not in MODELS[m].param_names]
+        slow = [m for m in self.candidates if m not in quick]
+        fits = fit_family([MODELS[m] for m in quick or self.candidates], coords, warm=self.warm)
+        if quick and slow:
+            interim = assess(coords, fits, rolling=False)
+            lead0 = interim.winner or (interim.contenders[0] if interim.contenders else None)
+            if lead0 is not None:
+                spec0 = MODELS[lead0.model_id]
+                self.send({"type": "fit", "status": interim.status, "reason": interim.reason, "samples": len(traj),
+                           "window_s": round(float(traj.t[-1]), 2), "measured_fps": round(rate, 1),
+                           "uncalibrated": uncalibrated, "refining": "friction laws still fitting",
+                           "equation": {"model_id": spec0.id, "title": spec0.title, "latex": spec0.latex},
+                           "parameters": [{"name": q.name, "latex": q.latex, "unit": q.unit,
+                                           "value": lead0.params[q.name], "spread": None} for q in spec0.params]})
+            fits = [*fits, *fit_family([MODELS[m] for m in slow], coords, known=fits, warm=self.warm)]
         for f in fits:
             if f.success:
                 self.warm[f.model_id] = f.params
@@ -673,7 +737,12 @@ class LiveSession:
 
     def _make_forecast(self, spec, lead: FitResult, coords, t_abs0: float) -> None:
         try:
-            samples, _ = bootstrap_samples(spec, coords, lead, reps=FORECAST_REPS)
+            # The refits run in a worker process when there is one: in this thread they held the interpreter for half
+            # a minute and the live fits stopped coming meanwhile.
+            if BUILTIN_MODELS.get(spec.id) is spec:
+                samples, _ = in_worker(bootstrap_builtin, spec.id, coords, lead, FORECAST_REPS)
+            else:
+                samples, _ = bootstrap_samples(spec, coords, lead, reps=FORECAST_REPS)
             for horizon in FORECAST_HORIZONS_S:
                 p = predict_crossing(spec, lead, coords, horizon, samples)
                 if p is not None:
@@ -731,7 +800,11 @@ class LiveSession:
             self.regime_start = start_frame
             self.warm.clear()
             self.history.clear()
-        if time.monotonic() - self._last_llm >= LLM_MIN_INTERVAL_S:
+        # What the object is doesn't change with its dynamics (a shortened string is still a pendulum): a family the
+        # user tapped is kept. A family the model chose is asked again once, if the model can be asked; otherwise
+        # (the scene step failed) clearing it would stop every fit for the rest of the session.
+        if (not self.family_from_user and self.scene is not None
+                and time.monotonic() - self._last_llm >= LLM_MIN_INTERVAL_S):
             self.family = None  # one fresh hypotheses call once the new regime has enough data
         self.send({"type": "regime_change", "frame": start_frame, "at_s": round(at_s, 2), "error_ratio": round(ratio, 1),
                    "message": f"Dynamics changed at about {at_s:.1f} s (prediction error {ratio:.0f}x normal). Refitting on the new motion."})

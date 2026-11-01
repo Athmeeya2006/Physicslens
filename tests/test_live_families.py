@@ -101,3 +101,18 @@ def test_a_live_session_is_saved_as_a_normal_result(harness, tmp_path):
     assert "def rhs" in python_script(stored, 2.0)  # exports work from the saved fit
     session.save(run_dir, keep_video=True)
     assert (run_dir / "clip.mp4").stat().st_size > 0
+
+
+def test_a_slide_is_fitted_without_the_rest_after_it():
+    """Pushed, slides, stops, lies still: the law is fitted on the slide (constant deceleration), not on the rest."""
+    import numpy as np
+    from physicslens.live import moving_stretch
+    from physicslens.sigproc.trajectory import Trajectory
+    t = np.arange(250) / 25  # 3.3 s of sliding then 6.7 s at rest
+    ts = np.minimum(t, 200 / 60)
+    x = (200 * ts - 0.5 * 60 * ts * ts) / 200
+    traj = Trajectory(t, np.column_stack([x, np.zeros_like(x)]), np.arange(250), 25.0)
+    kept = moving_stretch(traj)
+    assert 2.8 < kept.t[-1] - kept.t[0] < 3.5 and kept.t[0] < 0.2
+    glide = Trajectory(t, np.column_stack([0.3 * t, np.zeros_like(t)]), np.arange(250), 25.0)
+    assert len(moving_stretch(glide)) == len(glide)  # never at rest: all of it

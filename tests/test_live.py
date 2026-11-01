@@ -334,3 +334,39 @@ def test_no_hypotheses_and_no_scene_family_asks_instead_of_assuming_a_pendulum(h
     assert any(m["type"] == "choose_family" for m in sent)
     session.choose_family_now("line")  # the user's tap starts fitting, and the model is not asked again
     assert session.family == "line" and not session.awaiting_family and session._agent_consulted
+
+
+def test_a_flat_template_never_reports_a_position():
+    from physicslens.perception.local_track import TemplateTracker
+    flat = np.full((240, 320), 30, np.uint8)
+    tracker = TemplateTracker(flat, (100, 100, 140, 140))
+    assert tracker.featureless and tracker.update(flat) is None  # not the corner of the frame
+
+
+def test_a_late_tap_is_matched_to_the_frame_that_was_on_screen(harness, tmp_path):
+    """The ball has moved on by the newest frame: the tap is matched to the last frame with the ball at that point."""
+    sam = FakeSam()
+    session, sent = make_session(harness, tmp_path, sam)
+    frames = clip_jpegs()
+    for i in range(11):
+        session.add_frame(frames[i])
+    x, y = fixture_ball_center(4)  # where the ball was six frames ago
+    session.select(x, y)
+    sel = next(m for m in sent if m["type"] == "selected")
+    assert sel["frame"] < 10 and sel["frame"] >= 10 - 11
+    blank = cv2.imencode(".jpg", np.full((480, 640, 3), 30, np.uint8))[1].tobytes()
+    session2, sent2 = make_session(harness, tmp_path / "b", FakeSam())
+    for _ in range(5):
+        session2.add_frame(blank)
+    session2.select(100, 100)
+    assert any(m["type"] == "notice" and "tap the moving object again" in m["message"] for m in sent2)
+    assert session2.tracker is None
+
+
+def test_a_regime_change_keeps_the_family_the_user_tapped(harness, tmp_path):
+    """Dynamics changed, the object did not: refits continue on the new motion without waiting for a model."""
+    session, sent = make_session(harness, tmp_path, FakeSam())
+    session.family, session.family_from_user = "pendulum", True
+    session._new_regime(40, 1.6, 9.0)
+    assert session.family == "pendulum"
+    assert any(m["type"] == "regime_change" for m in sent)

@@ -97,6 +97,12 @@ def identifiability(names: list[str], samples: np.ndarray) -> list[dict[str, obj
     return out
 
 
+def bootstrap_builtin(model_id: str, c: Coordinates, fit: FitResult, reps: int, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
+    """bootstrap_samples for a library law looked up by id: a top-level function a worker process can run."""
+    from .models import BUILTIN_MODELS
+    return bootstrap_samples(BUILTIN_MODELS[model_id], c, fit, reps, seed)
+
+
 def bootstrap(spec: ModelSpec, c: Coordinates, fit: FitResult, reps: int = 40, seed: int = 0) -> dict[str, ParamEstimate]:
     return bootstrap_full(spec, c, fit, reps, seed).estimates
 
