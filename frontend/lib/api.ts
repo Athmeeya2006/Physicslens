@@ -178,6 +178,7 @@ export interface Outcome {
   confidence: string | null;
   status: "proven" | "partial" | "not yet validated";
   readable: Readable | null;
+  limits?: string[];  // why a result is partial, in plain words
 }
 
 export interface AnalysisResult {
@@ -416,6 +417,15 @@ export function askWhatIf(id: string, question: string) {
     method: "POST",
     headers: { "Content-Type": "application/json", ...codeHeaders() },
     body: JSON.stringify({ question }),
+  }).then((r) => json<import("@/components/WhatIf").WhatIfAnswer>(r));
+}
+
+// Heavier, lighter, bigger or smaller object: the fitted law re-simulated on the server (local math, free).
+export function objectWhatIf(id: string, mass: number, size: number) {
+  return fetch(`${API_BASE}/api/runs/${id}/whatif/object`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mass, size }),
   }).then((r) => json<import("@/components/WhatIf").WhatIfAnswer>(r));
 }
 

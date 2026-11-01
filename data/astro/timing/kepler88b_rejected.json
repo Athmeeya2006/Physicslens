@@ -1,0 +1,222 @@
+[
+ {
+  "epoch": 83,
+  "reason": "partial: 5 of about 7 in-transit points"
+ },
+ {
+  "epoch": 90,
+  "reason": "too little data around the transit to detrend"
+ },
+ {
+  "epoch": 125,
+  "reason": "partial: 3 of about 7 in-transit points"
+ },
+ {
+  "epoch": 9,
+  "reason": "no clear transit (dip 15% of the typical depth)"
+ },
+ {
+  "epoch": 88,
+  "reason": "no clear transit (dip 3% of the typical depth)"
+ },
+ {
+  "epoch": 89,
+  "reason": "no clear transit (dip 2% of the typical depth)"
+ },
+ {
+  "epoch": 91,
+  "reason": "no clear transit (dip 8% of the typical depth)"
+ },
+ {
+  "epoch": 92,
+  "reason": "no clear transit (dip 7% of the typical depth)"
+ },
+ {
+  "epoch": 93,
+  "reason": "no clear transit (dip 3% of the typical depth)"
+ },
+ {
+  "epoch": 95,
+  "reason": "no clear transit (dip 5% of the typical depth)"
+ },
+ {
+  "epoch": 96,
+  "reason": "no clear transit (dip 8% of the typical depth)"
+ },
+ {
+  "epoch": 97,
+  "reason": "no clear transit (dip 17% of the typical depth)"
+ },
+ {
+  "epoch": 98,
+  "reason": "no clear transit (dip 5% of the typical depth)"
+ },
+ {
+  "epoch": 99,
+  "reason": "no clear transit (dip 7% of the typical depth)"
+ },
+ {
+  "epoch": 100,
+  "reason": "no clear transit (dip 15% of the typical depth)"
+ },
+ {
+  "epoch": 101,
+  "reason": "no clear transit (dip 1% of the typical depth)"
+ },
+ {
+  "epoch": 102,
+  "reason": "no clear transit (dip 7% of the typical depth)"
+ },
+ {
+  "epoch": 103,
+  "reason": "no clear transit (dip 6% of the typical depth)"
+ },
+ {
+  "epoch": 104,
+  "reason": "no clear transit (dip 3% of the typical depth)"
+ },
+ {
+  "epoch": 105,
+  "reason": "no clear transit (dip 3% of the typical depth)"
+ },
+ {
+  "epoch": 107,
+  "reason": "no clear transit (dip 2% of the typical depth)"
+ },
+ {
+  "epoch": 108,
+  "reason": "no clear transit (dip 0% of the typical depth)"
+ },
+ {
+  "epoch": 109,
+  "reason": "no clear transit (dip 4% of the typical depth)"
+ },
+ {
+  "epoch": 110,
+  "reason": "no clear transit (dip 5% of the typical depth)"
+ },
+ {
+  "epoch": 111,
+  "reason": "no clear transit (dip 4% of the typical depth)"
+ },
+ {
+  "epoch": 112,
+  "reason": "no clear transit (dip 12% of the typical depth)"
+ },
+ {
+  "epoch": 113,
+  "reason": "no clear transit (dip 4% of the typical depth)"
+ },
+ {
+  "epoch": 114,
+  "reason": "no clear transit (dip 4% of the typical depth)"
+ },
+ {
+  "epoch": 115,
+  "reason": "no clear transit (dip 6% of the typical depth)"
+ },
+ {
+  "epoch": 116,
+  "reason": "no clear transit (dip 5% of the typical depth)"
+ },
+ {
+  "epoch": 117,
+  "reason": "no clear transit (dip 6% of the typical depth)"
+ },
+ {
+  "epoch": 118,
+  "reason": "no clear transit (dip 8% of the typical depth)"
+ },
+ {
+  "epoch": 119,
+  "reason": "no clear transit (dip 5% of the typical depth)"
+ },
+ {
+  "epoch": 120,
+  "reason": "no clear transit (dip 2% of the typical depth)"
+ },
+ {
+  "epoch": 121,
+  "reason": "no clear transit (dip 10% of the typical depth)"
+ },
+ {
+  "epoch": 122,
+  "reason": "no clear transit (dip 4% of the typical depth)"
+ },
+ {
+  "epoch": 123,
+  "reason": "no clear transit (dip 3% of the typical depth)"
+ },
+ {
+  "epoch": 126,
+  "reason": "no clear transit (dip 13% of the typical depth)"
+ },
+ {
+  "epoch": 127,
+  "reason": "no clear transit (dip 3% of the typical depth)"
+ },
+ {
+  "epoch": 128,
+  "reason": "no clear transit (dip 10% of the typical depth)"
+ },
+ {
+  "epoch": 129,
+  "reason": "no clear transit (dip 2% of the typical depth)"
+ },
+ {
+  "epoch": 130,
+  "reason": "no clear transit (dip 14% of the typical depth)"
+ },
+ {
+  "epoch": 131,
+  "reason": "no clear transit (dip 28% of the typical depth)"
+ },
+ {
+  "epoch": 132,
+  "reason": "no clear transit (dip 2% of the typical depth)"
+ },
+ {
+  "epoch": 19,
+  "reason": "off the timing curve of its neighbours by 81 min"
+ },
+ {
+  "epoch": 21,
+  "reason": "off the timing curve of its neighbours by 125 min"
+ },
+ {
+  "epoch": 22,
+  "reason": "off the timing curve of its neighbours by 124 min"
+ },
+ {
+  "epoch": 23,
+  "reason": "off the timing curve of its neighbours by 517 min"
+ },
+ {
+  "epoch": 24,
+  "reason": "off the timing curve of its neighbours by 118 min"
+ },
+ {
+  "epoch": 25,
+  "reason": "off the timing curve of its neighbours by 110 min"
+ },
+ {
+  "epoch": 26,
+  "reason": "off the timing curve of its neighbours by 119 min"
+ },
+ {
+  "epoch": 85,
+  "reason": "off the timing curve of its neighbours by 243 min"
+ },
+ {
+  "epoch": 86,
+  "reason": "off the timing curve of its neighbours by 378 min"
+ },
+ {
+  "epoch": 87,
+  "reason": "off the timing curve of its neighbours by 513 min"
+ },
+ {
+  "epoch": 94,
+  "reason": "off the timing curve of its neighbours by 2320 min"
+ }
+]

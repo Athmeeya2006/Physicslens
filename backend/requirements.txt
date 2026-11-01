@@ -26,3 +26,11 @@ ruff==0.17.2
 astropy==8.0.2
 photutils==3.1.1
 astroquery==0.4.11
+# Transit timing: Kepler/TESS light curves from MAST and transit models (astro/transits.py); batman needs distutils
+lightkurve==2.6.0
+batman-package==2.5.3
+setuptools==84.2.1
+# Hidden companions: N-body transit times (astro/ttv.py)
+rebound==5.2.2
+# Fireballs: NRLMSIS 2.1 air density for the flight and dark flight (astro/fireball.py)
+pymsis==0.13.0

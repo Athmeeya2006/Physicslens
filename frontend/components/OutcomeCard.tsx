@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { formatUnit, type Outcome, type Readable } from "@/lib/api";
 import { Tex } from "./Equation";
 
@@ -16,13 +16,16 @@ const pct = (v: number | null | undefined) => (v == null || !Number.isFinite(v) 
 // templates (export/outcome.py), never written by the language model.
 export function OutcomeCard({ o, exportHref }: { o: Outcome; exportHref?: (kind: string) => string }) {
   const [label, base] = STATUS[o.status];
+  const titleId = useId();
   // Verified, with a truth to compare: say it was checked, and that the truth sits just outside the interval.
+  // With a stated limit, the limit is the reason (shown below); the gloss only says it was checked.
   const gloss = o.status === "partial" && o.checked_against
-    ? "predicted motion it never saw; an independent measurement lies just outside its 95% interval"
+    ? (o.limits?.length ? "checked against independent measurements; part of it is not reproduced (below)"
+      : "predicted motion it never saw; an independent measurement lies just outside its 95% interval")
     : base;
   return (
-    <section className={`panel outcome outcome-${o.status.replaceAll(" ", "-")}`} aria-labelledby="outcome-title">
-      <p className="outcome-status"><strong id="outcome-title">{label}</strong> <span className="muted small">{gloss}</span></p>
+    <section className={`panel outcome outcome-${o.status.replaceAll(" ", "-")}`} aria-labelledby={titleId}>
+      <p className="outcome-status"><strong id={titleId}>{label}</strong> <span className="muted small">{gloss}</span></p>
       <p className="outcome-headline">{o.headline}</p>
       <p><strong>What to do:</strong> {o.action}</p>
       {o.confidence && <p className="small"><strong>Confidence:</strong> {formatUnit(o.confidence)}</p>}
@@ -33,6 +36,9 @@ export function OutcomeCard({ o, exportHref }: { o: Outcome; exportHref?: (kind:
           ({(o.checked_against.relative_error * 100).toFixed(2)}% off,{" "}
           {o.checked_against.within_interval ? "inside" : "outside"} the 95% interval)
         </p>
+      )}
+      {o.limits && o.limits.length > 0 && (
+        <p className="small"><strong>Not reproduced:</strong> {o.limits.join("; ")}</p>
       )}
       {o.artifacts.length > 0 && exportHref && (
         <p className="small outcome-files">

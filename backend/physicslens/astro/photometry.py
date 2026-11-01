@@ -85,6 +85,7 @@ def event_timing(t: np.ndarray, flux: np.ndarray, flux_err: np.ndarray | None = 
     p0 = np.array([mid0, depth0, dur0, dur0 / 4, base0])
     lo = [t.min(), 0.0, 3 * np.median(np.diff(t)), 1e-9, base0 - 1]
     hi = [t.max(), 1.0, span, span / 2, base0 + 1]
+    p0 = np.clip(p0, np.array(lo) + 1e-12, np.array(hi) - 1e-12)  # a guess on a bound would be refused
     fit = least_squares(lambda p: (trapezoid(t, *p) - f) * w, p0, bounds=(lo, hi), x_scale="jac")
     mid, depth, dur, ing, base = fit.x
     model = trapezoid(t, *fit.x)
