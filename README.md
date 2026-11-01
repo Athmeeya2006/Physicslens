@@ -1161,6 +1161,11 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] An outcome card on every result: a plain headline, what to do, the files, what it was checked against and how confident it is (from the bootstrap), above a readable law with the fitted numbers written in, one sentence per term, the forecast without each term, and why the rivals lost
 - [x] Transit timing on real data: WASP-12b's shrinking orbit, Kepler-88's unseen planet from transit times measured in the Kepler light curves and an N-body fit, and the list of stale ephemerides, with transit windows as a calendar
 - [x] Fireballs on real data: alpha-beta triage, the orbit before entry, dark flight with Mach-dependent drag and the night's winds, and a strewn field checked against every recovered Winchcombe stone, on a map
+- [x] The Sun's rotation law from real SDO images (sunspots placed with sunpy from each image's own header), checked against the published sunspot profile, with active-region return dates checked against NOAA's records
+- [x] Stellar occultations: edge times from integrated frames with calibrated errors, and an outline from every observer's chord with misses as constraints, checked on Umbriel's 2020 occultation
+- [x] Asteroid follow-up: an orbit from Minor Planet Center observations (Sun, planets, Moon, light-time), how much one more night shrinks the uncertainty, and ADES reports, checked on 2024 YR4's later observations
+- [x] Satellites: catalogue checks against NASA's ISS trajectory, identification, the clock's effect, manoeuvre detection with a negative control, tumble periods and IOD reports
+- [x] A cases page and a README table of real-world cases, each status computed from its result file; ties report what the tied laws agree on, and a written law with wrong units is set aside instead of sinking the proposal
 - [x] What-ifs for the object itself (heavier, lighter, bigger, smaller), free and instant; laws that tie still report what they agree on; an extra term that makes the forecast worse is not accepted
 - [x] Classical baselines on the gallery tracks (textbook curve fit, PySINDy alone) and the reasoning model alone on the same frames, a dataset card with Croissant metadata, a filming checklist for new clips, and every README number checked against its source in CI
 
