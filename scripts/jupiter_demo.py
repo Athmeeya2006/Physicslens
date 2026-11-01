@@ -16,7 +16,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import subprocess
 import sys
 import time
 from datetime import UTC, datetime
@@ -81,40 +80,28 @@ def plane_basis(rv: np.ndarray) -> np.ndarray:
     return np.vstack([e1, np.cross(n, e1), n])
 
 
-def render(moon: str) -> None:
-    import cv2
+def frames_for_render(moon: str) -> tuple[list, object, np.ndarray, float, float, int]:
+    from physicslens.sky.render import Drawn, Frame
     rj = json.loads((DATA / "jupiter.json").read_text())["equatorial_radius_km"]
     rv = load(moon)[:FRAMES]
     basis = plane_basis(rv)
     xy = rv[:, 1:4] @ basis[:2].T / rj  # Jupiter radii, in the moon's orbital plane
     px_per_rj = ORBIT_PX / float(np.max(np.hypot(*xy.T)))
     px = np.column_stack([SIZE / 2 + xy[:, 0] * px_per_rj, SIZE / 2 - xy[:, 1] * px_per_rj])
-    OUT.mkdir(parents=True, exist_ok=True)
-    raw = OUT / f"{moon}_raw.mp4"
-    vw = cv2.VideoWriter(str(raw), cv2.VideoWriter_fourcc(*"mp4v"), FPS, (SIZE, SIZE))
-    sub = 8
     step_h = (rv[1, 0] - rv[0, 0]) * 24
-    for k in range(len(rv)):
-        big = np.zeros((SIZE * sub, SIZE * sub, 3), np.uint8)
-        big[:] = (18, 14, 10)
-        c = (SIZE * sub // 2, SIZE * sub // 2)
-        cv2.circle(big, c, max(int(px_per_rj * sub), 10 * sub), (120, 170, 215), -1, cv2.LINE_AA)  # Jupiter, to scale
-        cv2.circle(big, tuple(int(v * sub) for v in px[k]), 16 * sub, (235, 235, 235), -1, cv2.LINE_AA)  # the moon (32 px)
-        img = cv2.resize(big, (SIZE, SIZE), interpolation=cv2.INTER_AREA)
-        cv2.putText(img, f"{moon.capitalize()}   t = {k * step_h:6.1f} h", (24, 48), cv2.FONT_HERSHEY_SIMPLEX, 1.0,
-                    (200, 200, 200), 2, cv2.LINE_AA)
-        cv2.putText(img, f"Rendered from NASA/JPL Horizons data. 1 frame = {step_h * 60:.0f} min.", (24, SIZE - 24),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.62, (150, 150, 150), 1, cv2.LINE_AA)
-        vw.write(img)
-    vw.release()
-    out = OUT / f"{moon}.mp4"
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "16",
-                    "-movflags", "+faststart", str(out)], check=True)
-    raw.unlink()
-    (OUT / f"{moon}.json").write_text(json.dumps({"step_hours": step_h, "frames": len(rv), "fps": FPS,
-                                                  "px_per_rj": px_per_rj, "jupiter_px": [SIZE / 2, SIZE / 2],
-                                                  "basis": basis.tolist()}, indent=1))
-    print(f"{out}: {len(rv)} frames, {step_h * 60:.0f} min per frame, {px_per_rj:.1f} px per R_J")
+    bodies = [Drawn("Jupiter", np.array([SIZE / 2, SIZE / 2]), max(int(px_per_rj * 8), 80) / 8, (120, 170, 215)),  # to scale
+              Drawn(moon, px, 16, (235, 235, 235))]  # the moon (32 px)
+    frame = Frame(SIZE, FPS, [f"{moon.capitalize()}   t = {k * step_h:6.1f} h" for k in range(len(rv))],
+                  [f"Rendered from NASA/JPL Horizons data. 1 frame = {step_h * 60:.0f} min."])
+    return bodies, frame, basis, px_per_rj, step_h, len(rv)
+
+
+def render(moon: str) -> None:
+    from physicslens.sky.render import render as draw
+    bodies, frame, basis, px_per_rj, step_h, n = frames_for_render(moon)
+    out = draw(bodies, frame, OUT / f"{moon}.mp4", {"step_hours": step_h, "px_per_rj": px_per_rj,
+                                                     "jupiter_px": [SIZE / 2, SIZE / 2], "basis": basis.tolist()})
+    print(f"{out}: {n} frames, {step_h * 60:.0f} min per frame, {px_per_rj:.1f} px per R_J")
 
 
 FRAME_NOTE = ("Rendered top-down video of an orbital plane. The coordinate origin (0, 0) is the fixed body at the centre "

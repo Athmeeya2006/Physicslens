@@ -1,0 +1,36 @@
+{
+ "law": "Newtonian gravity with Stokes drag",
+ "start": "2022-01-01 00:00",
+ "rows": [
+  {
+   "case": "Discovered law alone (the video's Sun, the video's start)",
+   "hours_from_jpl": 12.99999650940299,
+   "km": 2176990.4272608417
+  },
+  {
+   "case": "Discovered law with the planets (planets added from JPL, not discovered from the video)",
+   "hours_from_jpl": 14.34999642893672,
+   "km": 4470503.76265959
+  },
+  {
+   "case": "JPL close-approach record",
+   "date": "2029-Apr-13 21:46",
+   "hours_from_jpl": 0.0,
+   "km": 38011.45916295157
+  }
+ ],
+ "error_budget": {
+  "gm_one_sigma_hours": 2.1833332031965256,
+  "gm_one_sigma_km": 3038160.921848599,
+  "gm_and_state_monte_carlo_std_hours": 0.9425593371076659,
+  "gm_and_state_monte_carlo_std_km": 94921.01132462453,
+  "monte_carlo_draws": 12,
+  "relativity_hours": 0.01666666567325592,
+  "relativity_km": -262.8104291527052,
+  "left_after_planets_and_relativity_from_jpl_state": {
+   "hours": -2.7157366275787354e-06,
+   "km": 543.0312380657488
+  }
+ },
+ "notes": "Relativity and the remainder are measured from JPL's J2000 state of Apophis with every planet and the Moon: the remainder is mostly the Yarkovsky push of sunlight, which JPL models and we do not."
+}

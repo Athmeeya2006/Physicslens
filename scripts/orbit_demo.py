@@ -6,6 +6,9 @@
   python scripts/orbit_demo.py predict    integrate the recovered law to April 2029; compare with JPL; plots + report
   python scripts/orbit_demo.py fetch-planets   the planets' and Moon's positions and masses (free)
   python scripts/orbit_demo.py planets    the 2029 flyby with the planets and the Moon added: where the miss comes from
+  python scripts/orbit_demo.py aftermath  Apophis's orbit before and after the 2029 flyby, our engine against JPL
+  python scripts/orbit_demo.py prediction  the discovered law alone and with the planets added, against JPL, with an
+                                          error budget -> data/orbit/prediction_table.json (and the gallery)
   python scripts/orbit_demo.py all        everything above (asks before the paid step)
 
 Data: positions and velocities of 99942 Apophis and Earth from JPL Horizons (heliocentric, ecliptic J2000, AU and
@@ -30,7 +33,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import time
 import urllib.parse
@@ -169,41 +171,28 @@ def to_px(xy: np.ndarray) -> np.ndarray:
     return np.column_stack([SIZE / 2 + xy[:, 0] * PX_PER_AU, SIZE / 2 - xy[:, 1] * PX_PER_AU])
 
 
-def render() -> Path:
-    import cv2
+def frames_for_render() -> tuple[list, object, np.ndarray, np.ndarray]:
+    from physicslens.sky.render import Drawn, Frame
     ast, earth = load("apophis"), load("earth")
     basis = plane_basis(ast)
     frames_jd = np.arange(jd(TRAIN_START), jd(TRAIN_STOP), STEP_DAYS)
     idx_a = np.searchsorted(ast[:, 0], frames_jd)
     idx_e = np.searchsorted(earth[:, 0], frames_jd)
-    a_px = to_px(ast[idx_a, 1:4] @ basis[:2].T)
-    e_px = to_px(earth[idx_e, 1:4] @ basis[:2].T)
-    OUT.mkdir(parents=True, exist_ok=True)
-    raw = OUT / "apophis_raw.mp4"
-    vw = cv2.VideoWriter(str(raw), cv2.VideoWriter_fourcc(*"mp4v"), FPS, (SIZE, SIZE))
-    sub = 8  # draw at 8x and shrink: smooth, sub-pixel-accurate discs
-    for k, when in enumerate(frames_jd):
-        big = np.zeros((SIZE * sub, SIZE * sub, 3), np.uint8)
-        big[:] = (18, 14, 10)
-        c = (SIZE * sub // 2, SIZE * sub // 2)
-        cv2.circle(big, c, 18 * sub, (60, 200, 255), -1, cv2.LINE_AA)  # Sun
-        cv2.circle(big, tuple(int(v * sub) for v in e_px[k]), 11 * sub, (230, 150, 60), -1, cv2.LINE_AA)  # Earth
-        cv2.circle(big, tuple(int(v * sub) for v in a_px[k]), 13 * sub, (235, 235, 235), -1, cv2.LINE_AA)  # Apophis
-        img = cv2.resize(big, (SIZE, SIZE), interpolation=cv2.INTER_AREA)
-        cv2.putText(img, date_of(when)[:10], (24, 48), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (200, 200, 200), 2, cv2.LINE_AA)
-        cv2.putText(img, "Rendered from NASA/JPL Horizons data. 1 frame = 2.5 days.", (24, SIZE - 54),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.62, (150, 150, 150), 1, cv2.LINE_AA)
-        cv2.putText(img, "white: asteroid 99942 Apophis   blue: Earth   yellow: Sun", (24, SIZE - 24),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.62, (150, 150, 150), 1, cv2.LINE_AA)
-        vw.write(img)
-    vw.release()
-    out = OUT / "apophis.mp4"
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-c:v", "libx264", "-pix_fmt", "yuv420p",
-                    "-crf", "16", "-movflags", "+faststart", str(out)], check=True)
-    raw.unlink()
-    (OUT / "render.json").write_text(json.dumps({
-        "start_jd": float(frames_jd[0]), "step_days": STEP_DAYS, "frames": len(frames_jd), "fps": FPS,
-        "px_per_au": PX_PER_AU, "sun_px": [SIZE / 2, SIZE / 2], "basis": basis.tolist()}, indent=1))
+    bodies = [Drawn("Sun", np.array([SIZE / 2, SIZE / 2]), 18, (60, 200, 255)),
+              Drawn("Earth", to_px(earth[idx_e, 1:4] @ basis[:2].T), 11, (230, 150, 60)),
+              Drawn("Apophis", to_px(ast[idx_a, 1:4] @ basis[:2].T), 13, (235, 235, 235))]
+    frame = Frame(SIZE, FPS, [date_of(w)[:10] for w in frames_jd],
+                  ["Rendered from NASA/JPL Horizons data. 1 frame = 2.5 days.",
+                   "white: asteroid 99942 Apophis   blue: Earth   yellow: Sun"])
+    return bodies, frame, basis, frames_jd
+
+
+def render() -> Path:
+    from physicslens.sky.render import render as draw
+    bodies, frame, basis, frames_jd = frames_for_render()
+    out = draw(bodies, frame, OUT / "apophis.mp4", {
+        "start_jd": float(frames_jd[0]), "step_days": STEP_DAYS, "px_per_au": PX_PER_AU, "sun_px": [SIZE / 2, SIZE / 2],
+        "basis": basis.tolist()}, meta_path=OUT / "render.json")
     print(f"{out}: {len(frames_jd)} frames, {len(frames_jd) / FPS:.1f} s")
     return out
 
@@ -368,15 +357,136 @@ def planets() -> dict:
     return out
 
 
+def aftermath() -> dict:
+    """How much the 2029 flyby changes Apophis's orbit: osculating elements on 2029-01-01 and 2029-08-01 from our
+    engine (every planet and the Moon, from JPL's J2000 state) and from JPL's own ephemeris."""
+    from physicslens.sky.elements import to_elements
+    from physicslens.sky.ephem import J2000, catalogue_system, sun_gm
+    from physicslens.sky.nbody import simulate
+    path = DATA / "apophis_aftermath.csv"
+    if not path.is_file():
+        params = {"format": "json", "COMMAND": "'99942;'", "EPHEM_TYPE": "VECTORS", "CENTER": "'500@10'",
+                  "START_TIME": "'2028-06-01'", "STOP_TIME": "'2030-06-01'", "STEP_SIZE": "'1 d'", "VEC_TABLE": "'2'",
+                  "REF_PLANE": "'ECLIPTIC'", "OUT_UNITS": "'AU-D'", "CSV_FORMAT": "'YES'"}
+        d = _get(HORIZONS, params)
+        rows = [[float(f[0]), *(float(v) for v in f[2:8])] for f in
+                ([v.strip() for v in ln.split(",")] for ln in d["result"].split("$$SOE")[1].split("$$EOE")[0].strip().splitlines())]
+        np.savetxt(path, np.array(rows), delimiter=",", comments="", fmt="%.15g",
+                   header=f"# JPL Horizons API ({d['signature']['source']} {d['signature']['version']}), fetched "
+                          f"{datetime.now(UTC):%Y-%m-%d}, COMMAND=99942;, CENTER=500@10 (Sun), ECLIPTIC J2000, AU and AU/day, TDB\n"
+                          "# jd_tdb,x,y,z,vx,vy,vz")
+    jpl = load("apophis_aftermath")
+    when = {"before": jd("2029-01-01"), "after": jd("2029-08-01")}
+    massive = ["Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Ceres"]
+    run = simulate(sun_gm(), catalogue_system([*massive, "Apophis"]), J2000, np.array(list(when.values())))
+    pos, vel = run.of("Apophis")
+    out: dict = {"source": "our engine from JPL's J2000 state; JPL Horizons ephemeris", "elements": {}}
+    for k, (label, t) in enumerate(when.items()):
+        ours = to_elements(np.concatenate([pos[k], vel[k]]), sun_gm())
+        row = jpl[np.argmin(np.abs(jpl[:, 0] - t))]
+        theirs = to_elements(row[1:7], sun_gm())
+        out["elements"][label] = {
+            "date": date_of(t)[:10],
+            "ours": {"a_au": ours.a, "e": ours.e, "period_days": ours.period, "q_au": ours.q},
+            "jpl": {"a_au": theirs.a, "e": theirs.e, "period_days": theirs.period, "q_au": theirs.q}}
+    b, a = out["elements"]["before"], out["elements"]["after"]
+    out["change"] = {"ours": {"a_au": a["ours"]["a_au"] - b["ours"]["a_au"],
+                              "period_days": a["ours"]["period_days"] - b["ours"]["period_days"]},
+                     "jpl": {"a_au": a["jpl"]["a_au"] - b["jpl"]["a_au"],
+                             "period_days": a["jpl"]["period_days"] - b["jpl"]["period_days"]}}
+    (DATA / "aftermath.json").write_text(json.dumps(out, indent=1) + "\n")
+    print(json.dumps(out, indent=1))
+    return out
+
+
+def prediction(draws: int = 12) -> dict:
+    """The law found from the video (fitted GM, its small velocity term, fitted starting state) carried to the 2029
+    flyby alone and with the planets added as known forcing (from JPL, not from the video), against JPL's close
+    approach; then the error budget, as for Halley."""
+    from physicslens.sky.ephem import J2000, catalogue_system, sun_gm
+    from physicslens.sky.nbody import Options, simulate
+    from physicslens.sky.prediction import PROVENANCE, law_extra, lift, planet_paths, propagate, state_covariance
+    from scipy.interpolate import CubicSpline
+    result = json.loads((ROOT / "gallery" / "gallery-apophis" / "result.json").read_text())
+    meta = json.loads((DATA / "render.json").read_text())
+    fs = result["fit_state"]
+    jd0, state = lift(fs, meta)
+    extra = law_extra(fs, meta)
+    cad = json.loads((DATA / "cad_2029.json").read_text())
+    jd_cad, d_cad = float(cad["data"][0][2]), float(cad["data"][0][4]) * AU_KM
+    earth = load("earth_flyby")
+    earth_at = CubicSpline(earth[:, 0], earth[:, 1:4])
+    fine = np.arange(jd_cad - 1.9, jd_cad + 1.9, 1 / 1440)
+    jd_eval = np.concatenate([np.arange(jd0 + 10, jd_cad - 2, 10.0), fine])
+    near = jd_eval >= fine[0]
+    paths = planet_paths(jd0, float(jd_eval[-1]))
+
+    def approach(gm: float, st: np.ndarray, planets: bool) -> tuple[float, float, np.ndarray]:
+        pos = propagate(gm, st, jd0, jd_eval, planets, extra=extra, prescribed=paths)[near]
+        d = np.linalg.norm(pos - earth_at(fine), axis=1) * AU_KM
+        k = int(np.argmin(d))
+        return float((fine[k] - jd_cad) * 24), float(d[k]), d
+
+    mu = fs["params"]["mu"]
+    mu_std = next(p["std"] for p in result["parameters"] if p["name"] == "mu")
+    h_alone, km_alone, _ = approach(mu, state, False)
+    h_added, km_added, _ = approach(mu, state, True)
+    h_plus, km_plus, _ = approach(mu + mu_std, state, True)
+    h_minus, km_minus, _ = approach(mu - mu_std, state, True)
+    mean, cov = state_covariance(result)
+    rng = np.random.default_rng(0)
+    mc = [approach(d[0], lift({**fs, "y0": list(d[1:])}, meta)[1], True) for d in rng.multivariate_normal(mean, cov, draws)]
+    massive = ["Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Ceres"]
+    grid = np.concatenate([[J2000], fine])
+
+    def jpl_start(gr: bool) -> tuple[float, float]:
+        run = simulate(sun_gm(), catalogue_system([*massive, "Apophis"]), J2000, grid, Options(gr=gr, max_seconds=900))
+        d = np.linalg.norm(run.of("Apophis")[0][1:] - run.of("Earth")[0][1:], axis=1) * AU_KM
+        k = int(np.argmin(d))
+        return float((fine[k] - jd_cad) * 24), float(d[k])
+
+    newton, with_gr = jpl_start(False), jpl_start(True)
+    rows = [
+        {"case": "Discovered law alone (the video's Sun, the video's start)", "hours_from_jpl": h_alone, "km": km_alone},
+        {"case": f"Discovered law with the planets ({PROVENANCE})", "hours_from_jpl": h_added, "km": km_added},
+        {"case": "JPL close-approach record", "date": cad["data"][0][3], "hours_from_jpl": 0.0, "km": d_cad},
+    ]
+    out = {
+        "law": result["equation"]["title"], "start": date_of(jd0), "rows": rows,
+        "error_budget": {
+            "gm_one_sigma_hours": abs(h_plus - h_minus) / 2, "gm_one_sigma_km": abs(km_plus - km_minus) / 2,
+            "gm_and_state_monte_carlo_std_hours": float(np.std([m[0] for m in mc])),
+            "gm_and_state_monte_carlo_std_km": float(np.std([m[1] for m in mc])), "monte_carlo_draws": draws,
+            "relativity_hours": with_gr[0] - newton[0], "relativity_km": with_gr[1] - newton[1],
+            "left_after_planets_and_relativity_from_jpl_state": {"hours": with_gr[0], "km": with_gr[1] - d_cad},
+        },
+        "notes": ("Relativity and the remainder are measured from JPL's J2000 state of Apophis with every planet and the "
+                  "Moon: the remainder is mostly the Yarkovsky push of sunlight, which JPL models and we do not."),
+    }
+    (DATA / "prediction_table.json").write_text(json.dumps(out, indent=1, default=float) + "\n")
+    _, _, d_alone = approach(mu, state, False)
+    _, _, d_added = approach(mu, state, True)
+    pick = np.linspace(0, len(fine) - 1, 300).astype(int)
+    jpl_d = np.linalg.norm(CubicSpline(load("apophis_flyby")[:, 0], load("apophis_flyby")[:, 1:4])(fine) - earth_at(fine),
+                           axis=1) * AU_KM
+    chart = {"provenance": PROVENANCE, "x_label": "hours from JPL's closest approach", "y_label": "distance from Earth, km",
+             "t": ((fine[pick] - jd_cad) * 24).tolist(), "alone": d_alone[pick].tolist(), "with_planets": d_added[pick].tolist(),
+             "jpl": jpl_d[pick].tolist(), "rows": rows}
+    (ROOT / "gallery" / "gallery-apophis" / "prediction.json").write_text(json.dumps(chart, default=float) + "\n")
+    print(json.dumps(out, indent=1, default=float))
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=["fetch", "fetch-planets", "render", "analyze", "predict", "planets", "all"])
+    ap.add_argument("step", choices=["fetch", "fetch-planets", "render", "analyze", "predict", "planets", "aftermath",
+                                     "prediction", "all"])
     a = ap.parse_args()
     if a.step in ("fetch", "all") and (a.step == "fetch" or not (DATA / "apophis.csv").exists()):
         fetch()
     if a.step in ("render", "all"):
         render()
-    if a.step == "analyze" or (a.step == "all" and input("Run the paid analysis (SAM 3.1 + Muse Spark Open, about $0.30)? [y/N] ") == "y"):
+    if a.step == "analyze" or (a.step == "all" and input("Run the paid analysis (SAM 3.1 + Muse Spark Open, billed through the cost guard)? [y/N] ") == "y"):
         analyze()
     if a.step in ("predict", "all"):
         predict()
@@ -384,6 +494,10 @@ def main() -> None:
         fetch_planets()
     if a.step == "planets":
         planets()
+    if a.step == "aftermath":
+        aftermath()
+    if a.step == "prediction":
+        prediction()
 
 
 if __name__ == "__main__":

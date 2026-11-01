@@ -1,0 +1,27 @@
+{
+ "law": "Keplerian inverse-square gravity from Sun",
+ "start": "1985-01-01",
+ "rows": [
+  {
+   "case": "Discovered law alone (the video's Sun, the video's start)",
+   "days_from_jpl": 838.1999935247004
+  },
+  {
+   "case": "Discovered law with the planets (planets added from JPL, not discovered from the video)",
+   "days_from_jpl": 559.64999456238
+  },
+  {
+   "case": "JPL",
+   "date": "2061-07-29",
+   "days_from_jpl": 0.0
+  }
+ ],
+ "error_budget_days": {
+  "gm_one_sigma": 173.92499935207888,
+  "gm_and_state_monte_carlo_std": 43.43377126090406,
+  "monte_carlo_draws": 12,
+  "relativity": 0.0,
+  "left_after_planets_and_relativity_from_jpl_state": -0.3000033516436815
+ },
+ "notes": "Relativity and the remainder are measured from JPL's J2000 state of the comet with every planet: the remainder is mostly the comet's outgassing, which JPL models and we do not."
+}

@@ -5,6 +5,10 @@
   python scripts/halley_demo.py analyze    the normal PhysicsLens pipeline on that video (PAID: SAM 3.1 + Muse Spark Open)
   python scripts/halley_demo.py predict    integrate the recovered law to the next perihelion; compare with JPL
   python scripts/halley_demo.py planets    the same return with the giant planets' pulls added: where the miss comes from
+  python scripts/halley_demo.py prediction   the discovered law alone and with the planets added, against JPL, with
+                                           an error budget -> data/halley/prediction_table.json (and the gallery)
+  python scripts/halley_demo.py apparitions  Halley's perihelia 1835 to 2061 from our engine against JPL's: why one
+                                           passage cannot fix the next return better than the planets allow
 
 Halley's orbit is a hard test for a law found from pixels: it is a long ellipse (eccentricity 0.967), so near the Sun
 the pull is thousands of times stronger than at its far end, and an inverse-square law that is even slightly wrong in
@@ -28,12 +32,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import time
 import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
+from itertools import pairwise
 from pathlib import Path
 
 import numpy as np
@@ -151,8 +155,8 @@ def layout(xy: np.ndarray) -> tuple[float, np.ndarray]:
     return scale, sun_px
 
 
-def render() -> Path:
-    import cv2
+def frames_for_render() -> tuple[list, object, np.ndarray, np.ndarray, float, np.ndarray, float]:
+    from physicslens.sky.render import Drawn, Frame
     comet, earth = load("halley"), load("earth")
     basis = plane_basis(comet)
     step = (jd(TRAIN_STOP) - jd(TRAIN_START)) / MAX_FRAMES
@@ -162,34 +166,22 @@ def render() -> Path:
     e_xy = interp(earth) @ basis[:2].T
     scale, sun_px = layout(c_xy)
     to_px = lambda xy: np.column_stack([sun_px[0] + xy[:, 0] * scale, sun_px[1] - xy[:, 1] * scale])
-    c_px, e_px = to_px(c_xy), to_px(e_xy)
-    speed = np.linalg.norm(np.diff(c_px, axis=0), axis=1)
+    bodies = [Drawn("Sun", sun_px, 18, (60, 200, 255)), Drawn("Earth", to_px(e_xy), 10, (230, 150, 60)),
+              Drawn("Halley", to_px(c_xy), 13, (235, 235, 235))]
+    frame = Frame(SIZE, FPS, [date_of(w) for w in frames_jd],
+                  [f"Rendered from NASA/JPL Horizons data. 1 frame = {step:.2f} days.",
+                   "white: comet 1P/Halley   blue: Earth   yellow: Sun"])
+    return bodies, frame, basis, frames_jd, scale, sun_px, step
+
+
+def render() -> Path:
+    from physicslens.sky.render import render as draw
+    bodies, frame, basis, frames_jd, scale, sun_px, step = frames_for_render()
+    speed = np.linalg.norm(np.diff(bodies[2].px, axis=0), axis=1)
     print(f"scale {scale:.1f} px/AU, one frame = {step:.2f} days, fastest move {speed.max():.1f} px/frame")
-    OUT.mkdir(parents=True, exist_ok=True)
-    raw = OUT / "halley_raw.mp4"
-    vw = cv2.VideoWriter(str(raw), cv2.VideoWriter_fourcc(*"mp4v"), FPS, (SIZE, SIZE))
-    sub = 8  # draw at 8x and shrink: smooth, sub-pixel-accurate discs
-    for k, when in enumerate(frames_jd):
-        big = np.zeros((SIZE * sub, SIZE * sub, 3), np.uint8)
-        big[:] = (18, 14, 10)
-        cv2.circle(big, tuple(int(v * sub) for v in sun_px), 18 * sub, (60, 200, 255), -1, cv2.LINE_AA)  # Sun
-        cv2.circle(big, tuple(int(v * sub) for v in e_px[k]), 10 * sub, (230, 150, 60), -1, cv2.LINE_AA)  # Earth
-        cv2.circle(big, tuple(int(v * sub) for v in c_px[k]), 13 * sub, (235, 235, 235), -1, cv2.LINE_AA)  # Halley
-        img = cv2.resize(big, (SIZE, SIZE), interpolation=cv2.INTER_AREA)
-        cv2.putText(img, date_of(when), (24, 48), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (200, 200, 200), 2, cv2.LINE_AA)
-        cv2.putText(img, f"Rendered from NASA/JPL Horizons data. 1 frame = {step:.2f} days.", (24, SIZE - 54),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.62, (150, 150, 150), 1, cv2.LINE_AA)
-        cv2.putText(img, "white: comet 1P/Halley   blue: Earth   yellow: Sun", (24, SIZE - 24),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.62, (150, 150, 150), 1, cv2.LINE_AA)
-        vw.write(img)
-    vw.release()
-    out = OUT / "halley.mp4"
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-c:v", "libx264", "-pix_fmt", "yuv420p",
-                    "-crf", "16", "-threads", "2", "-movflags", "+faststart", str(out)], check=True)
-    raw.unlink()
-    (OUT / "render.json").write_text(json.dumps({
-        "start_jd": float(frames_jd[0]), "step_days": step, "frames": len(frames_jd), "fps": FPS,
-        "px_per_au": scale, "sun_px": sun_px.tolist(), "basis": basis.tolist()}, indent=1))
+    out = draw(bodies, frame, OUT / "halley.mp4", {
+        "start_jd": float(frames_jd[0]), "step_days": step, "px_per_au": scale, "sun_px": sun_px.tolist(),
+        "basis": basis.tolist()}, threads=2, meta_path=OUT / "render.json")
     print(f"{out}: {len(frames_jd)} frames, {len(frames_jd) / FPS:.1f} s")
     return out
 
@@ -305,12 +297,134 @@ def planets() -> dict:
     return out
 
 
+def apparitions() -> dict:
+    """Every perihelion from 1835 to 2061: our engine (every planet, from JPL's J2000 state, backward and forward)
+    against JPL's osculating time of perihelion near each one. The orbit-to-orbit period changes by months, which is
+    why a single passage cannot pin down the next return better than the planets allow."""
+    from physicslens.sky.ephem import J2000, catalogue_system, sun_gm
+    from physicslens.sky.nbody import Options, simulate
+    path = DATA / "halley_elements.csv"
+    if not path.is_file():
+        d = _get(HORIZONS, {"format": "json", "COMMAND": "'90000030;'", "EPHEM_TYPE": "ELEMENTS", "CENTER": "'500@10'",
+                            "START_TIME": "'1835-01-01'", "STOP_TIME": "'2062-12-31'", "STEP_SIZE": "'30 d'",
+                            "REF_PLANE": "'ECLIPTIC'", "CSV_FORMAT": "'YES'"})
+        rows = [[float(f[0]), float(f[2]), float(f[3]), float(f[7])] for f in
+                ([v.strip() for v in ln.split(",")] for ln in d["result"].split("$$SOE")[1].split("$$EOE")[0].strip().splitlines())]
+        np.savetxt(path, np.array(rows), delimiter=",", comments="", fmt="%.12g",
+                   header=f"# JPL Horizons API ({d['signature']['source']} {d['signature']['version']}), fetched "
+                          f"{datetime.now(UTC):%Y-%m-%d}, osculating elements of 1P/Halley (90000030), heliocentric, "
+                          "every 30 days\n# jd_tdb,eccentricity,perihelion_distance_km,time_of_perihelion_jd")
+    el = np.loadtxt(path, delimiter=",", skiprows=2)
+    jpl: list[float] = []
+    for tp in el[:, 3]:  # one perihelion per apparition: the Tp from the elements nearest to it in time
+        if not jpl or abs(tp - jpl[-1]) > 20 * 365.25:
+            jpl.append(float(el[np.argmin(np.abs(el[:, 0] - tp)), 3]))
+    massive = ["Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Ceres"]
+    found = []
+    for lo, hi in ((jpl[0] - 400, J2000), (J2000, jpl[-1] + 400)):
+        grid = np.arange(lo, hi, 1.0)
+        backward = hi == J2000
+        jd_eval = grid[::-1] if backward else grid
+        # 170 years backward with Mercury in: allowed a quarter of an hour (it is a one-off, offline step).
+        run = simulate(sun_gm(), catalogue_system([*massive, "Halley"]), J2000, jd_eval, Options(max_seconds=900))
+        r = np.linalg.norm(run.of("Halley")[0], axis=1)
+        jd_sorted, r_sorted = (jd_eval[::-1], r[::-1]) if backward else (jd_eval, r)
+        for k in range(1, len(r_sorted) - 1):
+            if r_sorted[k] < r_sorted[k - 1] and r_sorted[k] <= r_sorted[k + 1] and r_sorted[k] < 1.0:
+                a, b, c = r_sorted[k - 1], r_sorted[k], r_sorted[k + 1]  # a parabola through three daily samples
+                found.append(float(jd_sorted[k] + 0.5 * (a - c) / (a - 2 * b + c)))
+    rows = []
+    for t_jpl in jpl:
+        ours = min(found, key=lambda t: abs(t - t_jpl))
+        rows.append({"jpl_perihelion": date_of(t_jpl), "ours_minus_jpl_days": ours - t_jpl, "jpl_jd": t_jpl, "ours_jd": ours})
+    for prev, cur in pairwise(rows):
+        cur["jpl_period_years"] = (cur["jpl_jd"] - prev["jpl_jd"]) / 365.25
+        cur["ours_period_years"] = (cur["ours_jd"] - prev["ours_jd"]) / 365.25
+    periods = [r["jpl_period_years"] for r in rows if "jpl_period_years" in r]
+    out = {"source": "our engine from JPL's J2000 state, every planet; JPL osculating time of perihelion",
+           "perihelia": rows, "period_spread_years": [min(periods), max(periods)]}
+    (DATA / "apparitions.json").write_text(json.dumps(out, indent=1) + "\n")
+    for r in rows:
+        print(r["jpl_perihelion"], f"{r['ours_minus_jpl_days']:+.2f} d", f"{r.get('jpl_period_years', 0):.2f} y")
+    return out
+
+
+def prediction(draws: int = 12) -> dict:
+    """The law found from the video (its fitted GM and fitted starting state), carried to 2061 alone and with the
+    planets added as known forcing (from JPL, not from the video), against JPL; then where the remaining miss comes
+    from: the GM's own uncertainty, the fitted state's (Monte Carlo of the fit's covariance), and the physics left
+    out (relativity; the comet's outgassing, which JPL models)."""
+    from physicslens.sky.ephem import J2000, catalogue_system, sun_gm
+    from physicslens.sky.nbody import Options, simulate
+    from physicslens.sky.prediction import PROVENANCE, lift, planet_paths, propagate, state_covariance
+    result = json.loads((ROOT / "gallery" / "gallery-halley" / "result.json").read_text())
+    meta = json.loads((DATA / "render.json").read_text())
+    fs = result["fit_state"]
+    jd0, state = lift(fs, meta)
+    later = load("halley_2061")
+    r_jpl = np.linalg.norm(later[:, 1:4], axis=1)
+    jpl_peri = float(later[np.argmin(r_jpl), 0])
+    jd_eval = np.concatenate([np.arange(jd0 + 30, jpl_peri - 900, 30.0), np.arange(jpl_peri - 900, jpl_peri + 900, 0.05)])
+    near = jd_eval >= jpl_peri - 900
+    paths = planet_paths(jd0, float(jd_eval[-1]))
+
+    def peri(gm: float, st: np.ndarray, planets: bool, gr: bool = False) -> tuple[float, np.ndarray]:
+        pos = propagate(gm, st, jd0, jd_eval, planets, gr, prescribed=paths)
+        r = np.linalg.norm(pos, axis=1)[near]
+        return float(jd_eval[near][np.argmin(r)] - jpl_peri), r
+
+    mu = fs["params"]["mu"]
+    mu_std = next(p["std"] for p in result["parameters"] if p["name"] == "mu")
+    alone, r_alone = peri(mu, state, False)
+    added, r_added = peri(mu, state, True)
+    plus, _ = peri(mu + mu_std, state, True)
+    minus, _ = peri(mu - mu_std, state, True)
+    mean, cov = state_covariance(result)
+    rng = np.random.default_rng(0)
+    mc = [peri(d[0], lift({**fs, "y0": list(d[1:])}, meta)[1], True)[0]
+          for d in rng.multivariate_normal(mean, cov, size=draws)]
+    # Missing physics, measured from JPL's own starting state so the video's errors are out of it.
+    massive = ["Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Ceres"]
+    grid = np.concatenate([[J2000], np.arange(jpl_peri - 900, jpl_peri + 900, 0.05)])
+    def jpl_start(gr: bool) -> float:
+        run = simulate(sun_gm(), catalogue_system([*massive, "Halley"]), J2000, grid, Options(gr=gr, max_seconds=900))
+        r = np.linalg.norm(run.of("Halley")[0][1:], axis=1)
+        return float(grid[1:][np.argmin(r)] - jpl_peri)
+    newton, with_gr = jpl_start(False), jpl_start(True)
+    rows = [
+        {"case": "Discovered law alone (the video's Sun, the video's start)", "days_from_jpl": alone},
+        {"case": f"Discovered law with the planets ({PROVENANCE})", "days_from_jpl": added},
+        {"case": "JPL", "date": date_of(jpl_peri), "days_from_jpl": 0.0},
+    ]
+    out = {
+        "law": result["equation"]["title"], "start": date_of(jd0), "rows": rows,
+        "error_budget_days": {
+            "gm_one_sigma": abs(plus - minus) / 2,
+            "gm_and_state_monte_carlo_std": float(np.std(mc)), "monte_carlo_draws": draws,
+            "relativity": with_gr - newton,
+            "left_after_planets_and_relativity_from_jpl_state": with_gr,
+        },
+        "notes": ("Relativity and the remainder are measured from JPL's J2000 state of the comet with every planet: "
+                  "the remainder is mostly the comet's outgassing, which JPL models and we do not."),
+    }
+    (DATA / "prediction_table.json").write_text(json.dumps(out, indent=1, default=float) + "\n")
+    t_near = jd_eval[near]
+    pick = np.linspace(0, len(t_near) - 1, 300).astype(int)
+    chart = {"provenance": PROVENANCE, "x_label": "days from JPL's perihelion", "y_label": "distance from the Sun, AU",
+             "t": (t_near[pick] - jpl_peri).tolist(), "alone": r_alone[pick].tolist(), "with_planets": r_added[pick].tolist(),
+             "jpl": np.interp(t_near[pick], later[:, 0], r_jpl).tolist(), "rows": rows}
+    (ROOT / "gallery" / "gallery-halley" / "prediction.json").write_text(json.dumps(chart, default=float) + "\n")
+    print(json.dumps(out, indent=1, default=float))
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=["fetch", "fetch-planets", "render", "analyze", "predict", "planets"])
+    ap.add_argument("step", choices=["fetch", "fetch-planets", "render", "analyze", "predict", "planets", "apparitions",
+                                     "prediction"])
     a = ap.parse_args()
     {"fetch": fetch, "fetch-planets": fetch_planets, "render": render, "analyze": analyze, "predict": predict,
-     "planets": planets}[a.step]()
+     "planets": planets, "apparitions": apparitions, "prediction": prediction}[a.step]()
 
 
 if __name__ == "__main__":

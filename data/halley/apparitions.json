@@ -1,0 +1,39 @@
+{
+ "source": "our engine from JPL's J2000 state, every planet; JPL osculating time of perihelion",
+ "perihelia": [
+  {
+   "jpl_perihelion": "1835-11-16",
+   "ours_minus_jpl_days": -7.685655067674816,
+   "jpl_jd": 2391598.93977,
+   "ours_jd": 2391591.2541149324
+  },
+  {
+   "jpl_perihelion": "1910-04-20",
+   "ours_minus_jpl_days": -4.100291552487761,
+   "jpl_jd": 2418781.67844,
+   "ours_jd": 2418777.5781484474,
+   "jpl_period_years": 74.42228246406536,
+   "ours_period_years": 74.43209865438757
+  },
+  {
+   "jpl_perihelion": "1986-02-09",
+   "ours_minus_jpl_days": -9.254738688468933e-05,
+   "jpl_jd": 2446470.9591,
+   "ours_jd": 2446470.9590074527,
+   "jpl_period_years": 75.80911885010312,
+   "ours_period_years": 75.82034458317663
+  },
+  {
+   "jpl_perihelion": "2061-07-28",
+   "ours_minus_jpl_days": -0.00030304212123155594,
+   "jpl_jd": 2474034.22028,
+   "ours_jd": 2474034.219976958,
+   "jpl_period_years": 75.46409631759046,
+   "ours_period_years": 75.46409574128728
+  }
+ ],
+ "period_spread_years": [
+  74.42228246406536,
+  75.80911885010312
+ ]
+}
