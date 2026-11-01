@@ -208,10 +208,13 @@ def matches(text: str, value: float) -> bool:
 
 
 def check_baselines(readme: str) -> list[str]:
-    """The baseline table in the README is the generated one, row for row."""
-    generated = (ROOT / "benchmark" / "results" / "BASELINES.md").read_text()
-    rows = [line for line in generated.splitlines() if line.startswith("| ") and not line.startswith("| Clip")]
-    return [f"baseline row missing or changed: {row[:60]}..." for row in rows if row not in readme]
+    """The baseline tables in the README are the generated ones, row for row."""
+    out = []
+    for rel in ("benchmark/results/BASELINES.md", "benchmark/llm_alone/LLM_ALONE.md"):
+        generated = (ROOT / rel).read_text()
+        rows = [line for line in generated.splitlines() if line.startswith("| ") and not line.startswith("| Clip")]
+        out += [f"{rel} row missing or changed: {row[:60]}..." for row in rows if row not in readme]
+    return out
 
 
 def main() -> int:
@@ -240,7 +243,7 @@ def main() -> int:
     for problem in check_baselines(readme):
         print(f"MISMATCH {problem}")
         failures += 1
-    print(f"\n{len(CLAIMS)} claims and the baseline table checked: {failures} problem(s).")
+    print(f"\n{len(CLAIMS)} claims and the baseline tables checked: {failures} problem(s).")
     return 1 if failures else 0
 
 

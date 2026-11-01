@@ -23,7 +23,7 @@ from pydantic import Field
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
-from physicslens.agent.llm import ask_json
+from physicslens.agent.llm import LLMError, ask_json
 from physicslens.agent.schemas import Strict
 from physicslens.costguard import CostGuardClient
 from physicslens.perception import media
@@ -76,8 +76,14 @@ def main() -> None:
         # The attempt number keeps each run out of the response cache: the point is the spread of fresh answers.
         text = (f"Frame times in seconds: {times}. Clip length {duration:.2f} s. {a.note} "
                 f"(independent attempt {k + 1} of {a.runs})")
-        guess, call = ask_json(client, task="llm_alone", system=SYSTEM, text=text, schema_model=LLMGuess,
-                               run_id=f"llm-alone-{clip.stem}-{k}", images=frames)
+        try:
+            guess, call = ask_json(client, task="llm_alone", system=SYSTEM, text=text, schema_model=LLMGuess,
+                                   run_id=f"llm-alone-{clip.stem}-{k}", images=frames)
+        except LLMError as e:
+            # Two unusable answers in a row are a result too: counted as an attempt with no answer, not a crash.
+            answers.append({"attempt": k + 1, "model": None, "provider": None, "answer": {}, "error": str(e)})
+            print(f"attempt {k + 1}: no valid answer ({e})")
+            continue
         answers.append({"attempt": k + 1, "model": call.model, "provider": call.provider, "answer": guess.model_dump(),
                         "reasoning": call.reasoning})
         print(f"attempt {k + 1}: {guess.equation} {[(p.name, p.value, p.unit) for p in guess.parameters]}")

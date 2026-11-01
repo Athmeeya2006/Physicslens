@@ -1,0 +1,221 @@
+{
+ "clip": "gallery/gallery-paperbag/clip.mp4",
+ "note": "A paper bag thrown across a blackboard, filmed at 200 fps and played 20 times slower: real time is the video time divided by 20. Give g and any drag coefficient.",
+ "truth": {},
+ "frame_times_s": [
+  0.0,
+  5.933,
+  11.867,
+  17.8
+ ],
+ "llm_alone": [
+  {
+   "attempt": 1,
+   "model": "meta-models/muse-spark-open-1026",
+   "provider": "baseten",
+   "answer": {
+    "motion": "projectile motion with negligible air drag (near-parabolic trajectory)",
+    "equation": "x''= -k*v*x', y''= -g -k*v*y'; k~0. Light drag limit k->0 gives x=v0x*t, y=y0+v0y*t-0.5*g*t^2",
+    "parameters": [
+     {
+      "name": "g",
+      "value": 9.8,
+      "unit": "m/s^2"
+     },
+     {
+      "name": "linear drag b/m",
+      "value": 0.2,
+      "unit": "1/s"
+     },
+     {
+      "name": "quadratic drag k",
+      "value": 0.05,
+      "unit": "1/m"
+     }
+    ],
+    "period_s": null,
+    "reasoning_summary": "Video is 20x slow; overlay 0.87s = real flight ~0.9s matches 17.8s clip/20. Blackboard ~1m high ~2m wide => range ~2m, apex rise ~0.5m, fall ~1m. v0x~2-3m/s, v0y~3m/s. From h=0.5*g*t_fall^2 with t_fall~0.55s => g=2h/t^2 ~7-11 m/s2 => ~9.8 within scale error. x(t) linear, y(t) parabolic symmetric; no visible drag asymmetry => b/m<0.5/s, k<0.1/m."
+   },
+   "reasoning": "Need to produce JSON with motion, equation, parameters, period_s, reasoning_summary with length constraints: equation <=300 chars, reasoning_summary <=600 chars.\n\nWe need estimate g and drag.\n\nReal time = video/20. So clip 17.8s video =0.89s real matches 0.87 overlay. So flight ~0.87s video? Actually overlay 00.870 Sekunden maybe is video time? Probably video time. But description says real time is video/20. So real flight 0.0435s? Wait no: If filmed at 200fps and played 20x slower, then video time =20* real time. So overlay timer shows video time? Need interpret. The overlay shows 00.280 etc - that's slow motion time. So real time = overlay/20.\n\nThus flight duration real ~0.0435s? That seems too short. Alternatively clip length 17.80s includes slow motion playback of 0.89s real. So indeed projectile in air for ~0.89s real if timer is video time? Actually overlay goes to 0.870s at end of trajectory, which is within clip length. So 0.870s is slow time => real 0.0435s which impossible. So maybe the \"Frame times\" given are already video times, and the clip length 17.80s is video length. The overlay timer is video time since start of throw. So real flight is 0.870/20 =0.0435s - unrealistic for 2m range. So perhaps the description's \"real time is video/20\" is trick but actually the overlay is already in real time? Hmm typical physics video: filmed 200fps played 20x slower means displayed seconds correspond to real? Let's assume the timer in image is slow time, but the question says real time is video/20, need to divide. Then real flight very short implying huge g scaling.\n\nBut if real flight 0.0435s over ~1m drop, g would be ~1000 m/s2 unrealistic. So must be that overlay timer is already converted? Better to treat overlay as slow time but the scaling leads to reasonable g if board is small? Check: board width maybe 1m. In 0.043s cannot traverse.\n\nThus probably the instruction \"real time is video time divided by 20\" applies to frame times [0.0,5.933...]? Those are spaced 5.9s apart video => real 0.296s between frames. The last frame 17.8s video =0.89s real which matches trajectory duration ~0.87s? But trajectory duration in overlay is 0.87s - that would be video time =0.87s video =0.043s real, contradicts 0.89s real frame interval. So inconsistent.\n\nMaybe the frame times given [0.0,5.933...] are the video times of the four snapshots, but the overlay in snapshots is a separate stroboscopic track running at real speed? Approach: Use physics: y =0.5 g t_real^2. Estimate drop ~1m in t_real~0.45s (half of 0.89s). So g~ 2*1/0.2=10 m/s2. So t_real ~0.87s flight would match g~9.8. Therefore overlay time 0.87s must be real time, not video time. So the note \"real time is video/20\" refers to converting the frame times interval to real? But we keep overlay as real.\n\nWe need to propose g~9-10 m/s2, drag negligible.\n\nLet's produce concise equation and reasoning.\n\nWe must keep strings short.\n\n"
+  },
+  {
+   "attempt": 2,
+   "model": "meta-models/muse-spark-open-1026",
+   "provider": "baseten",
+   "answer": {
+    "motion": "projectile motion of a paper bag in vertical plane - near parabolic motion under gravity with weak air drag",
+    "equation": "m d^2r/dt^2 = m*g - b*v  (linear drag limit) or m d^2r/dt^2 = m*g - k|v|v (quadratic drag); components: x'' = -(b/m) x' , y'' = -g - (b/m) y' , y up, x horizontal",
+    "parameters": [
+     {
+      "name": "g",
+      "value": 9.8,
+      "unit": "m/s^2"
+     },
+     {
+      "name": "b/m (linear drag rate)",
+      "value": 0.4,
+      "unit": "1/s"
+     },
+     {
+      "name": "k/m quadratic drag coeff",
+      "value": 0.12,
+      "unit": "1/m"
+     },
+     {
+      "name": "initial horizontal speed magnitude |vx0|",
+      "value": 2.4,
+      "unit": "m/s"
+     },
+     {
+      "name": "initial vertical speed vy0",
+      "value": 3.8,
+      "unit": "m/s"
+     },
+     {
+      "name": "real time of flight",
+      "value": 0.89,
+      "unit": "s"
+     }
+    ],
+    "period_s": null,
+    "reasoning_summary": "Video time 20x slow: t_real=t_video/20. Overlays 0.28,0.575,0.87s match video/20. Flight ~0.89s real, apex ~0.4s. Grid ~5cm: h~0.6-0.8m, range ~1.8m. h=g*t_a^2/2 => g~2h/t_a^2 ~9-10 m/s2. Near parabola but slight asymmetry/flattening indicates weak drag for light paper bag: b/m~0.2-0.6 1/s or k/m~0.05-0.2 1/m."
+   },
+   "reasoning": "Need motion: projectile under gravity with air drag? Equation: mx'' = -b vx etc? Or Newton second law.\n\nParameters: need g and drag coefficient. Provide up to 8 items. Must keep reasoning_summary <=600 chars.\n\nClip length 17.8s video time divided by 20 real time 0.89s. So g ~9.8. Drag small.\n\nWe need to output JSON only.\n\nNeed to produce parameters array. Name, value, unit.\n\nWe should include g, drag, maybe initial velocities.\n\nWe need keep parameters <=8.\n\nProvide period_s null? This is not periodic, so null.\n\nReasoning_summary <=600 chars. Must be concise.\n\nLet's craft.\n\nNeed to be careful with previous invalid due to too many items and too long string. Now respect.\n\nProvide motion: \"projectile motion of paper bag in vertical plane under gravity with weak air drag (parabolic trajectory)\".\n\nEquation: e.g., \"m d^2r/dt^2 = m g - b dr/dt (or -c|v|v) ; componentwise: x'' = -(b/m) x', y'' = -g - (b/m) y'\"\n\nParameters: give g =9.8, b/m etc.\n\nKeep 5-6 parameters.\n\nLet's ensure valid JSON.\n\n"
+  },
+  {
+   "attempt": 3,
+   "model": "meta-models/muse-spark-open-1026",
+   "provider": "baseten",
+   "answer": {
+    "motion": "projectile motion of light paper bag with significant air drag - near-parabolic but asymmetric, range shortened and vertical fall steepened",
+    "equation": "m*d^2r/dt^2 = m*g - b*v - c*|v|*v  or a = g - gamma*v - k*|v|*v ; linear+quadratic drag approximation, gamma=b/m [1/s], k=C_d*rho*A/(2m) [1/m]",
+    "parameters": [
+     {
+      "name": "g",
+      "value": 9.81,
+      "unit": "m/s^2"
+     },
+     {
+      "name": "video slowdown factor",
+      "value": 20.0,
+      "unit": "dimensionless"
+     },
+     {
+      "name": "real flight time T_real = T_video/20",
+      "value": 0.89,
+      "unit": "s"
+     },
+     {
+      "name": "linear drag coefficient gamma = b/m",
+      "value": 1.0,
+      "unit": "1/s"
+     },
+     {
+      "name": "quadratic drag coefficient k",
+      "value": 0.8,
+      "unit": "1/m"
+     },
+     {
+      "name": "estimated launch speed",
+      "value": 4.0,
+      "unit": "m/s"
+     }
+    ],
+    "period_s": null,
+    "reasoning_summary": "Video seconds /20 = real seconds; 17.8s video =0.89s real flight matching overlay (0.280,0.575,0.870 video =0.014,0.029,0.044? actually 5.9,11.8 video steps). Trajectory is projectile parabola distorted by drag: ascent ~0.4s real, descent faster horizontally slowed. g must be ~9.8 to fit height ~0.8-1.0m in 0.9s (h=0.5 g (T/2)^2 ~1m vacuum, observed lower due to drag). Light paper bag implies gamma ~0.5-2 1/s and terminal velocity ~5-8 m/s, hence k ~0.3-1 1/m."
+   },
+   "reasoning": "Need to give g and drag coefficient. Real time = video time /20. Clip length 17.80 s video => real 0.89 s. Need projectile with drag.\n\nWe need parameters <=8 items.\n\nProvide motion, equation, parameters, period_s, reasoning_summary.\n\nMotion: projectile with air drag (paper bag).\n\nEquation: m dv/dt = m g - b v - maybe quadratic? Provide linear plus quadratic.\n\nBut simplify: d^2 r/dt^2 = g - gamma v ... etc.\n\nNeed estimate g. Estimate ~9.8.\n\nNeed drag coefficient. Can't know exactly but estimate.\n\nVideo times: [0.0,5.933,11.867,17.8] video seconds? Real times divide by 20 => 0, 0.296,0.593,0.89. That matches frames: 0.280,0.575,0.870 shown overlay? Probably.\n\nSo need to include parameters: g, gamma, etc. Must keep <=8.\n\nProvide 5 parameters max.\n\nReasoning summary concise.\n\nPeriod null.\n\nMake JSON."
+  },
+  {
+   "attempt": 4,
+   "model": "meta-models/muse-spark-open-1026",
+   "provider": "baseten",
+   "answer": {
+    "motion": "paper bag in free fall / projectile motion under gravity with weak air drag (approximately parabolic trajectory)",
+    "equation": "m*d^2r/dt^2 = m*g - k*v (linear drag approx) or m*d^2r/dt^2 = m*g - c*|v|*v (quadratic drag); in components d^2x/dt^2 = - (k/m)*dx/dt, d^2y/dt^2 = -g - (k/m)*dy/dt ; with g \u2248 9-10 m/s^2; t_real = t_video/20 = t_timer",
+    "parameters": [
+     {
+      "name": "g",
+      "value": 9.8,
+      "unit": "m/s^2"
+     },
+     {
+      "name": "linear drag rate k/m",
+      "value": 0.3,
+      "unit": "1/s"
+     },
+     {
+      "name": "quadratic drag coefficient c/m",
+      "value": 0.05,
+      "unit": "1/m"
+     }
+    ],
+    "period_s": null,
+    "reasoning_summary": "Timer in image is real time = video time/20. Total flight ~0.87s real fits ~2-3m x ~1m y projectile. Parabola y(t)=y0+vy0*t-0.5*g*t^2 truncated by drag gives g ~9-10 m/s2. Width of blackboard ~2-3m, grid ~5cm, fall from apex ~0.5-1m in ~0.3-0.4s => 2*dy/t^2 ~ 8-11 m/s2. Slight flattening vs ideal parabola indicates weak drag for crumpled paper, k/m ~0.1-0.8 1/s (quadratic c/m ~0.02-0.1 1/m). Within factor ~2 due to unknown metric scale of board."
+   },
+   "reasoning": "Need estimate g and drag coefficient. Paper bag thrown across blackboard, filmed at 200 fps and played 20 times slower: real time is video time divided by 20. Give g and drag coefficient.\n\nWe have frame times in seconds: [0.0,5.933,11.867,17.8] Clip length 17.80 s. But those times are video times? The displayed Timer says 00.000 Sekunden etc. At frame 2 time shows 00.280 seconds. At frame 3: 00.575 seconds, frame 4: 00.870 seconds. That's probably video time? Or real time? It says filmed at 200 fps and played 20 times slower: real time is video time divided by 20. So displayed time is? Likely video time. So real time is /20.\n\nWe need to estimate g. Paper bag trajectory looks like projectile with low drag? Check.\n\nGrid on blackboard: need scale. Blackboard typical size ~ maybe 3m wide? Grid squares: count. Let's estimate: The paper bag movement: vertical drop? At apex around.\n\nWe need to deduce length scale. Blackboard grid: appears ~ maybe 5 cm per grid? Need estimate. Could assume blackboard height ~ 1m? Let's see image: Person on right. Height of blackboard maybe ~ 1.2m. Grid: count vertical squares: roughly maybe 20 squares vertical. So each square ~6 cm. Horizontal ~40 squares.\n\nWe can attempt to get g from trajectory. Projectile motion: x = v0x t, y = v0y t - 1/2 g t^2.\n\nBut with slow motion factor 20, real time small: At t_video=0.87s => t_real =0.0435s? That seems too short for flight of ~2m distance. So not right. Perhaps the displayed timer is real time? Let's read: \"filmed at 200 fps and played 20 times slower: real time is the video time divided by 20.\" Could mean frame times in seconds provided are clip times (video time). Real physics time = clip time /20. So clip length 17.80s => real duration 0.89s. That matches displayed time 0.870 at last frame. So indeed real flight time is ~0.89s. That is plausible: paper bag thrown across ~2m in 0.89s is plausible.\n\nSo video time 17.8s /20 =0.89s real.\n\nNow we need to estimate g. Without length scale, hard.\n\nCould use typical blackboard: Might be known experiment? Paper bag thrown across blackboard - maybe \"Paper bag\" is actually? Could be a physics demonstration to measure g via projectile motion with grid.\n\nWe need estimate g ~9.81 m/s2, drag coefficient small. For paper bag, drag maybe significant due to low mass. But bag is crumpled? Looks like paper bag maybe falling with some air resistance.\n\nAlternatively maybe the \"paper bag\" is actually a projectile where drag is negligible, so we can estimate g from parabola.\n\nWe need to give parameters: g and drag coefficient. Estimate.\n\nWe need to propose equation: m d^2 r/dt^2 = m g - k v or - c |v| v . Provide parameters.\n\nWithout calibration, we give rough: g \u2248 9.8 m/s2, drag coefficient b/m ~ small maybe 0.2 1/s.\n\nWe can attempt to calculate g from image: Let's estimate height drop: From apex to landing: vertical drop \u0394y \u2248 ? In grid units.\n\nCount grid squares from apex (around 3/4 up) to bottom ~ maybe 10 squares. Each square maybe 0.05 m => \u0394y ~0.5 m. Time from apex to landing: video time ~0.87-0.40 \u22480.47s video => real 0.0235? Wait that's too small. Actually apex video time ~0.57? At frame 3, bag is just past apex. So apex video ~0.55s => real 0.0275s. Landing video 0.87 => real 0.0435. Time fall =0.016s. Drop 0.5m in 0.016s impossible (would be huge acceleration). So my scale wrong.\n\nTherefore my assumption real time /20 leads to impossibly large g.\n\nMaybe the displayed timer already is real time? Let's see: It shows 00.280 Sekunden at frame 2, but frame time in seconds is 5.933. So frame times vs displayed timer not matching. Frame times are actually maybe ??? Wait frame times listed: [0.0,5.933,11.867,17.8] Clip length 17.80 s. So those are times of frames in the clip timeline. Displayed timer in image shows 00.280 etc. That's the on-screen counter that counts video time? At clip time 5.933s, displayed timer shows 00.280s. So displayed timer is not clip time; it's maybe the stroboscopic time?\n\nActually the white dots are successive positions stroboscopically recorded. The image shows trailing dots. The timer in upper right maybe shows time elapsed since launch (video slowed time?).\n\nLet's map: Frame 0 clip time 0.0 shows timer 00.000. Frame 1 clip time 5.933 shows timer 00.280. So clip time vs timer ratio: 5.933/0.280 \u224821.19 close to 20. So indeed timer = clip time /20 approx (maybe 20x slower). At frame 2 clip 11.867 timer 0.575 ratio 20.64, frame3 ratio 20.46. Approx 20. So timer is real time.\n\nThus real time is timer value, clip time is 20x. So our earlier conversion is correct: real time = clip time /20 = timer.\n\nNow earlier calculation gave fall time ~0.3s real (from apex 0.28? Wait apex timer 0.575? Actually apex near 0.4? Let's estimate more accurately.)\n\nTrajectory: At timer 0.280, bag has just been thrown, moving up. At timer 0.575, bag is slightly past apex moving down slightly. At timer 0.870, bag has landed. So total flight timer ~0.87s real. That's plausible for projectile 2m range.\n\nFall from apex to ground: apex time ~0.5? Let's say apex at ~0.45s timer. Landing at 0.87 => fall duration ~0.42s. Drop distance ~0.6m => g =2*\u0394y / t^2 \u22482*0.6/0.1764\u22486.8 m/s2 low but maybe due to drag.\n\nSo g estimate ~9.8 but measured maybe ~10.\n\nLet's produce answer: motion is projectile under gravity with weak quadratic air drag.\n\nProvide parameters: g \u22489.8 m/s\u00b2, drag coefficient k/m \u22480.3 s\u207b\u00b9 (linear) or c\u22480.02.\n\nPeriod null.\n\nWe need to output JSON.\n\n"
+  },
+  {
+   "attempt": 5,
+   "model": "meta-models/muse-spark-open-1026",
+   "provider": "baseten",
+   "answer": {
+    "motion": "projectile (paper wad/bag) with air drag across blackboard, shown in slow motion",
+    "equation": "m*d^2r/dt^2 = m*g - b*dr/dt - c*|dr/dt|*dr/dt  (approx projectile with linear+quadratic drag); vertical: y'' = -g - (b/m) y' - (k/m) |v| y', horizontal: x'' = - (b/m) x' - (k/m)|v|x' ; g\u22489.81 m/s2 in real time, g_video=g/400 in displayed time",
+    "parameters": [
+     {
+      "name": "g",
+      "value": 9.8,
+      "unit": "m/s^2"
+     },
+     {
+      "name": "g_apparent_video",
+      "value": 0.0245,
+      "unit": "m/s^2"
+     },
+     {
+      "name": "slow_motion_factor",
+      "value": 20.0,
+      "unit": "dimensionless"
+     },
+     {
+      "name": "linear_drag_b_over_m",
+      "value": 2.0,
+      "unit": "1/s"
+     },
+     {
+      "name": "quadratic_drag_k_over_m",
+      "value": 0.8,
+      "unit": "1/m"
+     },
+     {
+      "name": "terminal_velocity",
+      "value": 7.0,
+      "unit": "m/s"
+     }
+    ],
+    "period_s": null,
+    "reasoning_summary": "Video time is 20x slow: t_real=t_video/20. 0.87s video =0.044s*20? Actually 17.8s clip ~0.89s real. Grid ~2m wide => parabola height ~0.5m. Fit y(t_real)=y0+vy0 t-0.5 g t^2 requires g~10 m/s2; apparent g_video=g/400~0.025. Horiz. speed decay shows drag: b/m~1-3/s, k/m~0.5-1/m, vt~5-10m/s for light paper."
+   },
+   "reasoning": "We need to produce JSON with motion, equation, parameters, period, reasoning_summary <=600 chars.\n\nWe have frame times 0,5.933,11.867,17.8 video time. Real time /20. So real flight maybe ~0.89 s? Actually video 0.87 shows complete trajectory. So real ~0.0435 s? Wait that can't. Wait overlay says 00.870 Sekunden - that's video time. But statement says real time is video/20. So real ~0.0435 s unrealistic. Maybe clip length 17.8 s video = 0.89 real seconds matches projectile. Need to estimate g.\n\nStandard projectile with drag: m dv/dt = mg - b v - k|v|v etc.\n\nNeed estimate g ~9.8 m/s2. Drag coefficient? For paper bag, high drag. Estimate?\n\nWe need to provide parameters: g, drag coefficient.\n\nProvide reasoning_summary <600 chars.\n\nLet's craft JSON.\n\nEquation: y'' = -g - (b/m) y' etc or vector.\n\nMake parameters: g, maybe drag coefficient b/m, terminal velocity.\n\nPeriod null.\n\nNeed keep reasoning_summary short."
+  }
+ ],
+ "physicslens": {
+  "status": "accepted",
+  "equation": "Projectile with linear drag",
+  "parameters": [
+   {
+    "name": "g",
+    "value": 9.81,
+    "std": 0.0,
+    "unit": "m/s^2"
+   },
+   {
+    "name": "k",
+    "value": 2.4264622166000307,
+    "std": 0.050985356082309245,
+    "unit": "1/s"
+   }
+  ]
+ }
+}

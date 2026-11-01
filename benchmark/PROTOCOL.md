@@ -78,6 +78,7 @@ the precision the README writes it. The sources:
 | Le Verrier's Neptune | `python scripts/sky_demo.py leverrier` | `data/sky/leverrier.json` |
 | Halley and Apophis forecasts, apparitions, the 2029 aftermath | `python scripts/halley_demo.py prediction`, `python scripts/orbit_demo.py prediction` | `data/halley/`, `data/orbit/` |
 | Classical baselines | `python scripts/baselines.py` | `benchmark/results/` |
+| The reasoning model alone | `python scripts/llm_alone_table.py` (the answers were collected once by `scripts/llm_alone.py`, paid, with approval) | `benchmark/llm_alone/` |
 | Physics audit study | `python scripts/audit_study.py analysis` (free, from the stored runs) | `data/audit_study/` |
 | Lens calibration gain, 3D tilt, synthetic validation | `make test` (each is a test with its numbers in the docstring) | `tests/` |
 | Test count | `pytest --collect-only -q` | `tests/` |

@@ -590,6 +590,18 @@ The dataset has a card (`gallery/DATASET_CARD.md`: fields, units, how each value
 
 What it shows: where the textbook law is already the right law (the orbits, a nearly undamped swing), a careful curve fit does about as well, once (Apophis) a hair closer to the truth. What PhysicsLens adds is choosing the law: the textbook parabola has no drag, so on the paper bag its forecast misses by 35% against 2.9%, and it cannot report a drag rate at all; the damped oscillator misses the spring cart's held-out motion by 10.9% against dry friction's 5.9%. PySINDy alone cannot express an inverse-square pull with a polynomial library, so it reads no GM from any orbit, and on the paper bag its learned equations blow up.
 
+**Against the reasoning model alone** (`scripts/llm_alone.py`, then `scripts/llm_alone_table.py`; raw answers in `benchmark/llm_alone/`). The same open-weight model that drives PhysicsLens, shown the same keyframes and setup facts (length, scale, time per frame) but no measurement, asked five times per clip for the equation and its numbers:
+
+| Clip | Quantity | Truth | Model alone: median (range) over attempts | PhysicsLens (verified) | Closer to the truth |
+|---|---|---|---|---|---|
+| apophis | mu | 0.0002959 | 0.0002959 (0.0002959 to 0.0002959), 5 of 5 answers gave one | 0.00029598 ± 9.8e-08 | model alone (0.0% vs 0.02% off) |
+| jupiter | mu | 4.493 | 4.5 (4.5 to 4.5), 5 of 5 answers gave one | 4.4941 ± 0.0011 | PhysicsLens (0.1% vs 0.02% off) |
+| paperbag | k | n/a | 0.4 (0.2 to 2), 5 of 5 answers gave one | 2.4265 ± 0.051 | no independent truth |
+| pendulum | g | 9.81 | 9.3 (9.3 to 9.8), 5 of 5 answers gave one | 9.9095 ± 0.036 | PhysicsLens (5.2% vs 1.01% off) |
+| spring | omega | n/a | 2.9 (1.26 to 3), 4 of 5 answers gave one | 2.7387 ± 0.0012 | no independent truth |
+
+The model alone writes a sensible textbook law every time (inverse-square gravity for both orbits, the pendulum equation, drag for the paper bag), which is its job in PhysicsLens: proposing. But textbook is not always right: for the spring cart it wrote viscous damping in every answer, and verification found dry friction, which forecasts the held-out motion within 5.9% where viscous damping misses by 10.9%. Its numbers are another matter. On the two orbits it gave the same value in all five attempts, the textbook constants (the Sun's GM in AU³/day² is a famous number), so it recalled rather than measured, and a changed system (a heavier Jupiter in the Solar System Lab) would get the same recalled answer. On the pendulum, where nothing can be recalled, it said g = 9.3 in four of five attempts, 5% low; the measured spring frequency ranged from 1.26 to 3 rad/s across attempts and the paper bag's drag rate from 0.2 to 2 per second, while the verified values carry intervals of a few parts in a thousand. One spring attempt returned no usable answer twice and is counted as such.
+
 **Exports:** for every exactly representable model, the MuJoCo export replayed in MuJoCo matches the fitted motion to under 0.1 mm; the generated Python script matches to 1e-9.
 
 **On synthetic data with known answers** (so far; real clips for these are being recorded):
@@ -975,7 +987,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Capture quality: a bubble level from the accelerometer, the phone's measured gravity in the 3D mode, lens calibration from a printed board, and a rolling-shutter warning
 - [x] URDF and SDF exports next to MuJoCo, a command line, and a share image per result
 - [x] Security: numpy and math reached through an allowlist in generated controllers, bubblewrap isolation where available, request limits on every costly route, uploads sniffed before they are written, CORS checked at startup, and a dependency audit
-- [x] Classical baselines on the gallery tracks (textbook curve fit, PySINDy alone), a dataset card with Croissant metadata, a filming checklist for new clips, and every README number checked against its source in CI
+- [x] Classical baselines on the gallery tracks (textbook curve fit, PySINDy alone) and the reasoning model alone on the same frames, a dataset card with Croissant metadata, a filming checklist for new clips, and every README number checked against its source in CI
 
 ## Roadmap
 
