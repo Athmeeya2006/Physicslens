@@ -68,7 +68,10 @@ class RunManager:
             # Finished runs survive a server restart (and can be shared by link).
             saved = self.run_dir(run_id) / "result.json"
             if saved.is_file():
-                state = RunState(run_id=run_id, status="done", progress=["Done"], result=json.loads(saved.read_text()))
+                result = json.loads(saved.read_text())
+                if (saved.parent / "prediction.json").is_file():
+                    result["prediction_available"] = True  # the page fetches the forecast only where one exists
+                state = RunState(run_id=run_id, status="done", progress=["Done"], result=result)
         return state
 
     def _work(self, state: RunState, video: Path, options: RunOptions) -> None:

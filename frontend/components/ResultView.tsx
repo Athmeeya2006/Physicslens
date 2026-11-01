@@ -94,10 +94,10 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
   // Gallery orbit results carry a prediction file (scripts/halley_demo.py and orbit_demo.py prediction).
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   useEffect(() => {
-    if (!isGallery(runId)) return;
+    if (!isGallery(runId) || !result.prediction_available) return;
     fetch(`/gallery/${runId}/prediction.json`).then((r) => (r.ok ? r.json() : null)).then(setPrediction)
       .catch(() => setPrediction(null));  // most gallery results have none: nothing to show
-  }, [runId]);
+  }, [runId, result.prediction_available]);
   const r = result;
   const [whatIfGhost, setWhatIfGhost] = useState<{ label: string; points: TrackPoint[] } | null>(null);
   const [share, setShare] = useState<{ state: "idle" | "busy" | "done" | "error"; url?: string; error?: string }>({ state: "idle" });

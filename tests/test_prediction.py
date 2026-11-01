@@ -49,3 +49,9 @@ def test_planet_paths_follow_the_planets_own_integration():
                                                   "Uranus", "Neptune", "Pluto", "Ceres"]), J2000, np.array([J2000 + 250.5]))
     np.testing.assert_allclose(jupiter.where(J2000 + 250.5), direct.of("Jupiter")[0][0], atol=1e-9)
     assert "not discovered" in PROVENANCE
+
+
+def test_gallery_results_say_whether_a_forecast_exists():
+    from physicslens import app as app_module
+    assert app_module.runs.get("gallery-halley").result.get("prediction_available") is True
+    assert "prediction_available" not in app_module.runs.get("gallery-pendulum").result

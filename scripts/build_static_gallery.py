@@ -54,6 +54,10 @@ def main() -> None:
             index.append({"id": gid, **meta, "status": study.get("status")})
             continue
         result = json.loads((src / "result.json").read_text())
+        if (src / "prediction.json").is_file():
+            # Tells the page there is a forecast to fetch, so results without one make no request that would 404.
+            result["prediction_available"] = True
+            (dst / "result.json").write_text(json.dumps(result))
         (dst / f"physicslens-{gid}-report.md").write_text(report_markdown(result, meta.get("title")))
         contact = (result.get("bounces") or {}).get("mujoco_contact")
         if contact:

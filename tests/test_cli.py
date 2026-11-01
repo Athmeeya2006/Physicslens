@@ -44,3 +44,34 @@ def test_analyze_mock_runs_the_plumbing_and_stops_plainly(tmp_path, capsys):
     # Canned answers are not valid scene JSON, so the run stops at scene understanding: reported, not a traceback.
     assert code == 1
     assert "stopped: The reasoning model returned invalid scene output" in capsys.readouterr().err
+
+
+def test_analyze_writes_every_export_for_a_verified_result(tmp_path, capsys, monkeypatch):
+    import physicslens.pipeline as pipeline
+    stored = json.loads((ROOT / "gallery" / "gallery-pendulum" / "result.json").read_text())
+    monkeypatch.setattr(pipeline, "analyze", lambda *a, **k: stored)  # the analysis itself is tested elsewhere
+    out = tmp_path / "out"
+    assert main(["analyze", str(ROOT / "samples" / "smoke_ball.mp4"), "--mock", "--out", str(out),
+                 "--export", "json,py,mjcf,urdf,sdf"]) == 0
+    for ext in ("json", "py", "xml", "urdf", "sdf"):
+        assert (out / f"physicslens.{ext}").stat().st_size > 100
+    text = capsys.readouterr().out
+    assert text.startswith("accepted: Pendulum with linear damping") and "g = 9.90947" in text
+
+
+def test_sky_discover_prints_the_law(capsys):
+    assert main(["sky", "discover", "apophis_sun_only", "--noise-px", "2"]) == 0
+    found = json.loads(capsys.readouterr().out)
+    assert found["status"] == "accepted" and found["source"] == "simulation, no pixels"
+
+
+def test_lens_calibrate_reports_a_failure(tmp_path, capsys):
+    import cv2
+    import numpy as np
+    blank = tmp_path / "blank.mp4"
+    w = cv2.VideoWriter(str(blank), cv2.VideoWriter_fourcc(*"mp4v"), 10, (320, 240))
+    for _ in range(10):
+        w.write(np.full((240, 320, 3), 128, np.uint8))
+    w.release()
+    assert main(["lens", "calibrate", str(blank), "--out", str(tmp_path / "l.json")]) == 1
+    assert "Calibration failed" in capsys.readouterr().err and not (tmp_path / "l.json").exists()
