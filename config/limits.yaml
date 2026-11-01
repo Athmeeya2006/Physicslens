@@ -32,6 +32,17 @@ fitting:
   # threads, at most 4. PHYSICSLENS_FIT_WORKERS overrides for one run.
   workers: null
 
+sky:
+  # The Solar System Lab (/api/sky/*): free CPU work on cached JPL data, still bounded.
+  max_bodies: 30
+  max_particles: 200
+  max_years: 300
+  max_points: 2000        # per body in a simulate response
+  per_ip_per_minute: 20
+  max_concurrent: 2
+  max_seconds: 90
+  cache_entries: 64
+
 circuit_breaker:
   consecutive_failures: 5
   pause_seconds: 120

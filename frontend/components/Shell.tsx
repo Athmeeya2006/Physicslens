@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Camera, ClipboardList, Database, Moon, ScanSearch, ShieldCheck, Sun } from "lucide-react";
+import { Activity, Camera, ClipboardList, Database, Moon, Orbit, ScanSearch, ShieldCheck, Sun } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { accessCode } from "@/lib/api";
@@ -23,6 +23,7 @@ const NAV = [
   { href: "/live", label: "Live", icon: Camera },
   { href: "/health", label: "Machine health", icon: Activity },
   { href: "/audit", label: "Physics audit", icon: ShieldCheck },
+  { href: "/sky", label: "Solar System Lab", icon: Orbit },
   { href: "/dataset", label: "Dataset", icon: Database },
 ];
 
@@ -61,7 +62,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="shell-inner">
           <a className="wordmark" href="/">
             <Mark />
-            PhysicsLens
+            <span className="wordmark-text">PhysicsLens</span>
           </a>
           <nav className="shell-nav" aria-label="Main">
             {NAV.map(({ href, label, icon: Icon }) => (
