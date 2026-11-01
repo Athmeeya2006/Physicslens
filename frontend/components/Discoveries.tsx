@@ -48,14 +48,14 @@ const STORIES: Story[] = [
     title: "Free fall, rejected.",
     text: "Of three drag laws, only drag proportional to speed forecasts the part of the flight the model never saw. No ruler in view: Earth's gravity sets the scale.",
     law: "\\dot{\\mathbf v} = -g\\,\\hat{\\mathbf y} - k\\,\\mathbf v",
-    stats: [{ value: "2.43 ± 0.05", label: "drag rate k per second" }, { value: "2.9%", label: "error forecasting the unseen flight" }],
+    stats: [{ value: "2.42 ± 0.05", label: "drag rate k per second" }, { value: "2.9%", label: "error forecasting the unseen flight" }],
   },
   {
     run: "gallery-spring", eyebrow: "Real footage: a glider between two springs",
-    title: "Friction, measured with nothing of known size in view.",
-    text: "The swing shrinks by about the same amount every cycle, the signature of sliding friction rather than air drag, so a spring with dry friction forecasts the unseen motion best. Frequency and friction need no ruler.",
-    law: "\\ddot s = -\\omega^2 (s - s_0) - f\\,\\operatorname{sgn}(\\dot s)",
-    stats: [{ value: "2.7387 ± 0.0012", label: "natural frequency, rad/s" }, { value: "5.9%", label: "forecast error (viscous damping: 10.9%)" }],
+    title: "Friction or damping? Fifteen seconds would tell.",
+    text: "The swing shrinks by about the same amount every cycle, the signature of sliding friction, and dry friction forecasts the unseen motion best. But on this clip viscous damping is only 4 BIC behind, so neither is confirmed: both agree on the frequency, and the agent asks for a 15-second recording that would separate them. No ruler needed.",
+    law: "\\ddot s = -\\omega^2 (s - s_0) - f\\,\\operatorname{sgn}(\\dot s) \\quad\\text{or}\\quad - 2\\zeta\\omega\\,\\dot s\\,?",
+    stats: [{ value: "2.7401 ± 0.0023", label: "natural frequency, rad/s, from both laws" }, { value: "8.8%", label: "forecast error (viscous damping: 10.9%)" }],
   },
 ];
 

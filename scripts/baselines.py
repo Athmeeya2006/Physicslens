@@ -205,7 +205,9 @@ def physicslens_row(result: dict[str, Any]) -> dict[str, Any]:
     fs = result["fit_state"]
     win = next(r for r in result["ranking"] if r["model_id"] == fs["model_id"])
     return {"status": result["status"], "law": (result.get("equation") or {}).get("title"),
-            "parameters": [{k: p.get(k) for k in ("name", "value", "std", "unit")} for p in result.get("parameters", [])],
+            # A tie has no single law's parameters, but the values every tied law agrees on are measured either way.
+            "parameters": [{k: p.get(k) for k in ("name", "value", "std", "unit")}
+                           for p in result.get("parameters") or result.get("agreed_parameters") or []],
             "heldout_nrmse": win.get("heldout_nrmse")}
 
 

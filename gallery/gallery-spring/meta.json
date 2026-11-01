@@ -1,6 +1,6 @@
 {
-  "title": "Spring cart: friction measured with no ruler in sight",
-  "description": "A glider on a track between two springs, filmed for 15 s with nothing of known size in view. Frequency and friction don't need a scale: the swing shrinks by about the same amount every cycle, so PhysicsLens accepts a spring with dry (sliding) friction over the undamped and viscous-damping laws, on held-out motion.",
-  "credit": "Video: Pieter Kuiper, Linnaeus University, Wikimedia Commons, Attribution license (trimmed)",
-  "order": 4
+ "title": "Spring: dry friction or damping? Fifteen seconds would tell",
+ "description": "A glider on a track between two springs, filmed for 15 s with nothing of known size in view. Dry (sliding) friction forecasts the held-out motion best (8.8% against 10.9% for viscous damping), but the two laws are only 4 BIC apart, so neither is confirmed. Both give the same natural frequency, 2.740 ± 0.002 rad/s, which needs no scale. The agent asks for the same pull filmed for 15 s, where the laws separate by 33 times the tracking noise.",
+ "credit": "Video: Pieter Kuiper, Linnaeus University, Wikimedia Commons, Attribution license (trimmed)",
+ "order": 4
 }

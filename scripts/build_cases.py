@@ -54,7 +54,7 @@ def lab() -> dict[str, Any]:
 def sim_to_real() -> dict[str, Any]:
     from physicslens.export.sim2real import compare_to_video, measured_coordinates
 
-    r = _json("gallery/gallery-spring/result.json")
+    r = _json("gallery/gallery-paperbag/result.json")
     v = None
     if r and r.get("fit_state"):
         calibrated = (r.get("calibration") or {}).get("source", "none") != "none"
@@ -63,12 +63,12 @@ def sim_to_real() -> dict[str, Any]:
     return {"id": "robotics", "title": "Robotics: sim-to-real", "problem": "Simulators use textbook physics, so a controller tuned in simulation fails on the real machine.",
             "who": "robotics engineers",
             "gives": "a calibrated model with intervals, exported to MuJoCo, URDF and SDF, checked by replaying it in MuJoCo",
-            "number": (f"on motion it never saw, the calibrated spring lands {ratio:.1f} times closer to the real track than the "
-                       "textbook spring") if v else None,
+            "number": (f"on flight it never saw, the calibrated model of a thrown paper bag lands {ratio:.1f} times closer to the "
+                       "real track than the textbook (drag-free) one") if v else None,
             "status": "not yet validated" if v is None else "proven" if ratio > 1 else "partial",
             "status_rule": "proven when the calibrated model forecasts the real video's held-out quarter better than the textbook model",
             "cant": "one rigid body at a time, filmed side-on; the control comparison runs in simulation only",
-            "link": "/?run=gallery-spring"}
+            "link": "/?run=gallery-paperbag"}
 
 
 def health() -> dict[str, Any]:

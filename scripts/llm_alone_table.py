@@ -53,7 +53,9 @@ def main() -> None:
                 values.append(v)
                 labels.add(label)
         truth = rec["truth"].get(name)
-        pl = next((p for p in (rec.get("physicslens") or {}).get("parameters", []) if p["name"] == name), None)
+        # The verified value from the gallery result as it stands now (the values every tied law agrees on, for a tie).
+        res = json.loads((DIR.parents[1] / "gallery" / gid / "result.json").read_text())
+        pl = next((p for p in res.get("parameters") or res.get("agreed_parameters") or [] if p["name"] == name), None)
         med = statistics.median(values) if values else None
         llm_cell = (f"{fmt(med)} ({fmt(min(values))} to {fmt(max(values))}), {len(values)} of {len(rec['llm_alone'])} "
                     "answers gave one") if values else f"none of {len(rec['llm_alone'])} answers gave one"
