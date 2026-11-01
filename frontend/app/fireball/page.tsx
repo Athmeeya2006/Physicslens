@@ -15,7 +15,7 @@ const FallMap = dynamic(() => import("@/components/FallMap").then((m) => m.FallM
 
 interface Triage { verdict: "likely" | "possible" | "unlikely"; words: string; ln_alpha_sin_gamma: number; ln_beta: number }
 interface Find {
-  site: string; place: string; mass_g: string; lat: number; lon: number; along_m: number; across_m: number;
+  site: string; place: string; mass_g: string; lat: number; lon: number; along_m: number; across_m: number; includes?: string[];
   explained_by: "at_end" | "fragmentation_zone" | null;
   at_end: { along_range_m: [number, number]; across_offset_m: number };
   fragmentation_zone: { along_range_m: [number, number]; across_offset_m: number };
@@ -134,7 +134,7 @@ export default function FireballPage() {
         <p className="tagline">
           From the cameras&apos; record of a fireball to where its meteorites landed: whether anything survived, how heavy it
           was, where it came from in the Solar System, and where to search. Tested on the Winchcombe fall of 28 February 2021,
-          against the published orbit and the ten stones that were found.
+          against the published orbit and the stones that were found.
         </p>
       </header>
       {error && <p className="error">{error}</p>}
@@ -167,7 +167,7 @@ export default function FireballPage() {
                 <tbody>
                   {d.finds.map((f) => (
                     <tr key={`${f.place}-${f.mass_g}-${f.lat}`}>
-                      <td data-label="Found">{f.place} ({f.site})</td>
+                      <td data-label="Found">{f.place} ({f.site}){f.includes?.length ? <span className="small muted"><br />with {f.includes.join("; ")}</span> : null}</td>
                       <td data-label="Mass" className="num">{f.mass_g} g</td>
                       <td data-label="Along" className="num">{(f.along_m / 1000).toFixed(1)} km</td>
                       <td data-label="Across" className="num">{f.at_end.across_offset_m.toFixed(0)} m</td>

@@ -813,62 +813,36 @@
   {
    "site": "Wilcock driveway",
    "place": "Winchcombe",
-   "mass_g": "319.5",
+   "mass_g": "340.1",
    "largest_fragment_g": "8.8",
    "lat": 51.951,
    "lon": -1.976,
-   "mass_kg": 0.3195,
+   "part_of": "",
+   "mass_kg": 0.3401,
+   "includes": [
+    "20.6 g that bounced into the second driveway (impact debris)"
+   ],
    "along_m": 8329.425580137617,
    "across_m": -362.31498409155665,
    "at_end": {
     "along_range_m": [
-     4606.550145922432,
-     11026.910985409218
+     4925.147991189696,
+     11235.58955961471
     ],
     "along_ok": true,
-    "across_offset_m": -416.97655758850266,
-    "across_sigma_m": 35.96119547803491
+    "across_offset_m": -412.4591765471447,
+    "across_sigma_m": 35.750048552016736
    },
    "fragmentation_zone": {
     "along_range_m": [
-     2772.480746860408,
-     11535.852157881547
+     3108.225069614671,
+     11749.323764572102
     ],
     "along_ok": true,
-    "across_offset_m": -411.56787440469896,
-    "across_sigma_m": 40.29408574765443
+    "across_offset_m": -409.02861338293104,
+    "across_sigma_m": 44.00389821593653
    },
    "explained_by": "at_end"
-  },
-  {
-   "site": "second driveway",
-   "place": "Winchcombe",
-   "mass_g": "20.6",
-   "largest_fragment_g": "17.2",
-   "lat": 51.951,
-   "lon": -1.976,
-   "mass_kg": 0.0206,
-   "along_m": 8329.425580137617,
-   "across_m": -362.31498409155665,
-   "at_end": {
-    "along_range_m": [
-     3314.3382706966013,
-     6504.353406738278
-    ],
-    "along_ok": false,
-    "across_offset_m": -447.6417024352912,
-    "across_sigma_m": 46.66104380509377
-   },
-   "fragmentation_zone": {
-    "along_range_m": [
-     38.42292929452893,
-     6313.996902395935
-    ],
-    "along_ok": false,
-    "across_offset_m": -433.7089826751128,
-    "across_sigma_m": 42.20626801322484
-   },
-   "explained_by": null
   },
   {
    "site": "lawn",
@@ -877,6 +851,7 @@
    "largest_fragment_g": "11.2",
    "lat": 51.942,
    "lon": -2.047,
+   "part_of": "",
    "mass_kg": 0.0112,
    "along_m": 3385.6580062271028,
    "across_m": 136.51641127604796,
@@ -907,6 +882,7 @@
    "largest_fragment_g": "13.7",
    "lat": 51.945,
    "lon": -2.043,
+   "part_of": "",
    "mass_kg": 0.0201,
    "along_m": 3692.4697082313664,
    "across_m": -167.34371990546583,
@@ -937,6 +913,7 @@
    "largest_fragment_g": "152.0",
    "lat": 51.95,
    "lon": -2.012,
+   "part_of": "",
    "mass_kg": 0.1601,
    "along_m": 5863.163054264119,
    "across_m": -503.54745906747974,
@@ -967,6 +944,7 @@
    "largest_fragment_g": "7.5",
    "lat": 51.941,
    "lon": -2.089,
+   "part_of": "",
    "mass_kg": 0.0165,
    "along_m": 510.2430259911383,
    "across_m": -46.690538090748575,
@@ -997,6 +975,7 @@
    "largest_fragment_g": "12.0",
    "lat": 51.941,
    "lon": -2.045,
+   "part_of": "",
    "mass_kg": 0.012,
    "along_m": 3510.6943579826575,
    "across_m": 261.12227410900044,
@@ -1027,6 +1006,7 @@
    "largest_fragment_g": "17.5",
    "lat": 51.942,
    "lon": -2.069,
+   "part_of": "",
    "mass_kg": 0.0175,
    "along_m": 1885.4323402313587,
    "across_m": -17.389994823824935,
@@ -1057,6 +1037,7 @@
    "largest_fragment_g": "19.2",
    "lat": 51.943,
    "lon": -2.063,
+   "part_of": "",
    "mass_kg": 0.0192,
    "along_m": 2305.9325942924443,
    "across_m": -86.02989180227758,
@@ -1087,6 +1068,7 @@
    "largest_fragment_g": "5.2",
    "lat": 51.943,
    "lon": -2.073,
+   "part_of": "",
    "mass_kg": 0.0052,
    "along_m": 1624.0118370216594,
    "across_m": -155.98734912040078,
@@ -15598,14 +15580,14 @@
  },
  "last_fragmentation_m": 34900.0,
  "summary": {
-  "finds": 10,
-  "median_across_m": 211.90782237865852,
+  "finds": 9,
+  "median_across_m": 169.19007289341243,
   "max_across_m": 563.3522362341723,
   "along_at_end": 5,
   "along_either": 9
  },
  "outcome": {
-  "headline": "Winchcombe: the fireball's own flight says it dropped meteorites (likely by alpha-beta), the simulated fall line runs within 563 m of all 10 stones found, and the orbit before it met the Earth matches the published one to 0.4 sigma.",
+  "headline": "Winchcombe: the fireball's own flight says it dropped meteorites (likely by alpha-beta), the simulated fall line runs within 563 m of all 9 stones found, and the orbit before it met the Earth matches the published one to 0.4 sigma.",
   "action": "Search along the fall line, heavier stones further along the track; download the strewn field (GeoJSON or KML).",
   "artifacts": [
    {
@@ -15623,11 +15605,9 @@
    "within_interval": true,
    "source": "McMullan et al. 2023 (orbit); Russell et al. 2024 (find sites)"
   },
-  "confidence": "across the track every find within 563 m of the simulated stones; along it, 5 of 10 where stones released at the luminous end land, 9 of 10 allowing release anywhere after the last flare (34.9 km)",
-  "status": "partial",
-  "limits": [
-   "not reproduced along the track: 20.6 g at Winchcombe"
-  ],
+  "confidence": "across the track every find within 563 m of the simulated stones; along it, 5 of 9 where stones released at the luminous end land, 9 of 9 allowing release anywhere after the last flare (34.9 km)",
+  "status": "proven",
+  "limits": [],
   "readable": null
  }
 }

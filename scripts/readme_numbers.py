@@ -269,7 +269,7 @@ CLAIMS = [
           lambda: fireball()["dark_flight_vs_paper"][0]["ours_impact_ms"]),
     Claim("Winchcombe: main mass minutes", r"main mass hits at \d+ m/s after ([\d.]+) minutes",
           lambda: fireball()["dark_flight_vs_paper"][0]["ours_minutes"]),
-    Claim("Winchcombe: farthest find across the track (m)", r"runs within (\d+) m of all ten", lambda: fireball()["summary"]["max_across_m"]),
+    Claim("Winchcombe: farthest find across the track (m)", r"runs within (\d+) m of all \d+ recovered", lambda: fireball()["summary"]["max_across_m"]),
     Claim("Winchcombe: finds matched, release at the end", r"Along it, (\d+) match stones released", lambda: fireball()["summary"]["along_at_end"]),
     Claim("Winchcombe: more matched, release after the flare", r"luminous end and (\d+) more match",
           lambda: fireball()["summary"]["along_either"] - fireball()["summary"]["along_at_end"]),

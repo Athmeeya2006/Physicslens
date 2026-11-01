@@ -82,8 +82,18 @@ def read_winds(atm: F.Atmosphere, name: str) -> F.Atmosphere:
 
 
 def read_finds() -> list[dict]:
+    """The recovered stones. A find marked part_of another is debris of that stone's impact (the 17.2 g piece that
+    bounced 10 m into the neighbour's driveway from the main mass, Russell et al. 2024), so it is counted with it."""
     with open(DATA / "winchcombe_finds.csv") as fh:
-        return [{**r, "lat": float(r["lat"]), "lon": float(r["lon"]), "mass_kg": float(r["mass_g"]) / 1000} for r in csv.DictReader(fh)]
+        rows = [{**r, "lat": float(r["lat"]), "lon": float(r["lon"]), "mass_kg": float(r["mass_g"]) / 1000} for r in csv.DictReader(fh)]
+    stones = [r for r in rows if not r.get("part_of")]
+    for r in rows:
+        if r.get("part_of"):
+            host = next(x for x in stones if x["site"] == r["part_of"])
+            host["mass_kg"] += r["mass_kg"]
+            host["mass_g"] = f"{host['mass_kg'] * 1000:.1f}"
+            host.setdefault("includes", []).append(f"{r['mass_g']} g that bounced into the {r['site']} (impact debris)")
+    return stones
 
 
 def end_state() -> F.EndState:
