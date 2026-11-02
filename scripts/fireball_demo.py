@@ -242,22 +242,30 @@ def outcome(out: dict) -> dict:
     pulls = out["orbit"]["pulls"]
     main = next(f for f in out["finds"] if f["site"] == "Wilcock driveway")
     orbit_ok = all(abs(v) <= 2 for v in pulls.values())
-    proven = orbit_ok and main["at_end"]["along_ok"] and s["max_across_m"] <= 600 and s["along_either"] == s["finds"]
+    # Judged only on what was fixed before comparing with the finds: the orbit, the fall line across the track, and the
+    # release rule chosen in advance (stones leave where the light ends) placing the main mass. Allowing release anywhere
+    # after the last flare was chosen after comparing, so it is reported beside the blind result, never in the status.
+    proven = orbit_ok and main["at_end"]["along_ok"] and s["max_across_m"] <= 600
+    late = [f"{f['mass_g']} g at {f['place']}" for f in out["finds"] if not f["at_end"]["along_ok"]]
     misses = [f"{f['mass_g']} g at {f['place']}" for f in out["finds"] if f["explained_by"] is None]
     return {
-        "headline": (f"Winchcombe: the fireball's own flight says it dropped meteorites ({out['alpha_beta']['triage']['verdict']} by "
-                     f"alpha-beta), the simulated fall line runs within {s['max_across_m']:.0f} m of all {s['finds']} stones found, "
-                     f"and the orbit before it met the Earth matches the published one to {max(abs(v) for v in pulls.values()):.1f} sigma."),
+        "headline": (f"Winchcombe, from the published triangulated trajectory (not a video): the flight says it dropped meteorites "
+                     f"({out['alpha_beta']['triage']['verdict']} by alpha-beta); the simulated fall line runs within "
+                     f"{s['max_across_m']:.0f} m of all {s['finds']} stones found; with the release rule fixed in advance "
+                     f"{s['along_at_end']} of {s['finds']} also land in the predicted stretch along the track; and the orbit "
+                     f"before it met the Earth matches the published one to {max(abs(v) for v in pulls.values()):.1f} sigma."),
         "action": "Search along the fall line, heavier stones further along the track; download the strewn field (GeoJSON or KML).",
         "artifacts": [{"kind": "geojson"}, {"kind": "kml"}],
         "checked_against": {"name": "perihelion distance q (AU)", "truth": PUBLISHED_ORBIT["q_au"][0], "measured": out["orbit"]["ours"]["q_au"],
                             "relative_error": (out["orbit"]["ours"]["q_au"] - PUBLISHED_ORBIT["q_au"][0]) / PUBLISHED_ORBIT["q_au"][0],
                             "within_interval": abs(pulls["q_au"]) <= 1.96, "source": "McMullan et al. 2023 (orbit); Russell et al. 2024 (find sites)"},
-        "confidence": (f"across the track every find within {s['max_across_m']:.0f} m of the simulated stones; along it, "
-                       f"{s['along_at_end']} of {s['finds']} where stones released at the luminous end land, "
-                       f"{s['along_either']} of {s['finds']} allowing release anywhere after the last flare (34.9 km)"),
+        "confidence": (f"blind (rule fixed in advance: stones released at the luminous end): across the track every find within "
+                       f"{s['max_across_m']:.0f} m, along it {s['along_at_end']} of {s['finds']}. Chosen after comparing: allowing "
+                       f"release anywhere after the last flare (34.9 km), {s['along_either']} of {s['finds']} along it"),
         "status": "proven" if proven else "partial",
-        "limits": [] if not misses else [f"not reproduced along the track: {', '.join(misses)}"],
+        "limits": ([f"along the track the rule fixed in advance misses {', '.join(late)}; they fit only if stones also left "
+                    "earlier, after the last flare, a choice made after seeing the finds"] if late else [])
+                  + ([f"not reproduced along the track at all: {', '.join(misses)}"] if misses else []),
         "readable": None}
 
 

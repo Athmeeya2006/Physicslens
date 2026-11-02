@@ -15587,7 +15587,7 @@
   "along_either": 9
  },
  "outcome": {
-  "headline": "Winchcombe: the fireball's own flight says it dropped meteorites (likely by alpha-beta), the simulated fall line runs within 563 m of all 9 stones found, and the orbit before it met the Earth matches the published one to 0.4 sigma.",
+  "headline": "Winchcombe, from the published triangulated trajectory (not a video): the flight says it dropped meteorites (likely by alpha-beta); the simulated fall line runs within 563 m of all 9 stones found; with the release rule fixed in advance 5 of 9 also land in the predicted stretch along the track; and the orbit before it met the Earth matches the published one to 0.4 sigma.",
   "action": "Search along the fall line, heavier stones further along the track; download the strewn field (GeoJSON or KML).",
   "artifacts": [
    {
@@ -15605,9 +15605,11 @@
    "within_interval": true,
    "source": "McMullan et al. 2023 (orbit); Russell et al. 2024 (find sites)"
   },
-  "confidence": "across the track every find within 563 m of the simulated stones; along it, 5 of 9 where stones released at the luminous end land, 9 of 9 allowing release anywhere after the last flare (34.9 km)",
+  "confidence": "blind (rule fixed in advance: stones released at the luminous end): across the track every find within 563 m, along it 5 of 9. Chosen after comparing: allowing release anywhere after the last flare (34.9 km), 9 of 9 along it",
   "status": "proven",
-  "limits": [],
+  "limits": [
+   "along the track the rule fixed in advance misses 16.5 g at Solar farm, 17.5 g at Bishop's Cleeve, 19.2 g at Bishop's Cleeve, 5.2 g at Bishop's Cleeve; they fit only if stones also left earlier, after the last flare, a choice made after seeing the finds"
+  ],
   "readable": null
  }
 }

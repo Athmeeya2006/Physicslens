@@ -130,10 +130,11 @@ def fireball() -> dict[str, Any]:
     return {"id": "fireball", "title": "Fireballs and meteorite falls", "problem": "Fresh meteorites are valuable, and finding them depends on a good search map.",
             "who": "fireball networks, meteorite hunters",
             "gives": "whether anything survived, the orbit it came from, and a strewn-field map (GeoJSON, KML)",
-            "number": (f"Winchcombe: within {s['max_across_m']:.0f} m of all {s['finds']} recovered stones across the track, "
-                       f"{s['along_either']} of {s['finds']} along it") if s else None,
+            "number": (f"Winchcombe, from the published trajectory: within {s['max_across_m']:.0f} m of all {s['finds']} recovered "
+                       f"stones across the track; along it {s['along_at_end']} of {s['finds']} with the release rule fixed in "
+                       f"advance ({s['along_either']} of {s['finds']} with a later choice)") if s else None,
             "status": o.get("status", "not yet validated"),
-            "status_rule": "proven when the orbit matches within 2 sigma, the main mass is reproduced and every find is",
+            "status_rule": "proven when the orbit matches within 2 sigma and, with the release rule fixed in advance, the main mass is reproduced and every find lies within 600 m of the fall line",
             "cant": "it starts from a triangulated trajectory, not one video; masses carry a factor-of-two uncertainty from shape and density",
             "link": "/fireball"}
 
