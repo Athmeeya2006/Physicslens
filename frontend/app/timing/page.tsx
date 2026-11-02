@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Tex } from "@/components/Equation";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
+import { ProofNav } from "@/components/ProofNav";
 
 // Transit timing on real data (scripts/timing_demo.py): WASP-12b's decaying orbit, Kepler-88's hidden planet, and
 // which published ephemerides have gone stale. Everything is precomputed and served as static files.
@@ -137,6 +138,7 @@ export default function TimingPage() {
 
   return (
     <main id="main">
+      <ProofNav caseTitle="exoplanet timing" />
       <header className="page-head">
         <h1>Transit timing</h1>
         <p className="tagline">

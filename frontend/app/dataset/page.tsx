@@ -3,6 +3,7 @@
 import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { formatUnit, withUncertainty } from "@/lib/api";
+import { ProofNav } from "@/components/ProofNav";
 
 type Row = {
   id: string; object: string | null; property: string; meaning: string; value: number; std: number; units: string;
@@ -57,6 +58,7 @@ export default function DatasetPage() {
 
   return (
     <main id="main">
+      <ProofNav />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
       <header className="page-head">
         <h1>Open dataset</h1>

@@ -7,7 +7,7 @@ import { ArrowLeft, Check, Loader2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Gallery } from "@/components/Gallery";
 import { VoiceNotes } from "@/components/VoiceNotes";
-import { CasesStrip } from "@/components/CasesStrip";
+import { Problems } from "@/components/Problems";
 import { Discoveries } from "@/components/Discoveries";
 import { Hero } from "@/components/Hero";
 import { ResultView } from "@/components/ResultView";
@@ -156,8 +156,7 @@ export default function Home() {
         ) : (
           <>
             <Hero />
-            <Discoveries />
-            <CasesStrip />
+            <Problems />
           </>
         )}
 
@@ -226,32 +225,37 @@ export default function Home() {
                     <input type="number" inputMode="decimal" min="0.5" step="0.1" value={sizeCm} onChange={(e) => setSizeCm(e.target.value)} />
                   </label>
                 </fieldset>
-                <label className="field">
-                  Slow-motion clip? How many times slower it plays (8 for 240 fps shown at 30), else leave empty
-                  <input type="number" inputMode="decimal" min="1" step="any" value={slowMo} onChange={(e) => setSlowMo(e.target.value)} />
-                </label>
-                <fieldset className="scale-fields">
-                  <legend>Driven motion, optional: something else pushes or pulls it, and you know how</legend>
-                  <label className="field">
-                    Also track this object as the known mover
-                    <input type="text" maxLength={60} placeholder="e.g. the cart holding the pivot" value={mover}
-                           onChange={(e) => setMover(e.target.value)} />
-                  </label>
-                  <label className="field">
-                    Or a CSV of known signals: a column t (seconds from the clip&apos;s start), then up to 6 named
-                    columns, e.g. u[N]
-                    <input type="file" accept=".csv,text/csv" onChange={(e) => setInputsCsv(e.target.files?.[0] ?? null)} />
-                  </label>
-                  <p className="small muted">Laws may then use these signals and the time t; they are measured, never fitted.</p>
-                </fieldset>
-                <LensPanel onChange={setLens} />
-                {lens && (
-                  <label className="small">
-                    <input type="checkbox" checked={depth3d} onChange={(e) => setDepth3d(e.target.checked)} />
-                    {" "}Also measure a thrown ball&apos;s depth (3D), from its apparent size: needs its diameter as the
-                    object size above{depth3d && !sizeCm ? " (enter it to use 3D)" : ""}
-                  </label>
-                )}
+                <details className="advanced">
+                  <summary>More options: slow motion, a known driver, lens calibration, 3D</summary>
+                  <div className="stack" style={{ gap: 12, marginTop: 10 }}>
+                    <label className="field">
+                      Slow-motion clip? How many times slower it plays (8 for 240 fps shown at 30), else leave empty
+                      <input type="number" inputMode="decimal" min="1" step="any" value={slowMo} onChange={(e) => setSlowMo(e.target.value)} />
+                    </label>
+                    <fieldset className="scale-fields">
+                      <legend>Driven motion, optional: something else pushes or pulls it, and you know how</legend>
+                      <label className="field">
+                        Also track this object as the known mover
+                        <input type="text" maxLength={60} placeholder="e.g. the cart holding the pivot" value={mover}
+                               onChange={(e) => setMover(e.target.value)} />
+                      </label>
+                      <label className="field">
+                        Or a CSV of known signals: a column t (seconds from the clip&apos;s start), then up to 6 named
+                        columns, e.g. u[N]
+                        <input type="file" accept=".csv,text/csv" onChange={(e) => setInputsCsv(e.target.files?.[0] ?? null)} />
+                      </label>
+                      <p className="small muted">Laws may then use these signals and the time t; they are measured, never fitted.</p>
+                    </fieldset>
+                    <LensPanel onChange={setLens} />
+                    {lens && (
+                      <label className="small">
+                        <input type="checkbox" checked={depth3d} onChange={(e) => setDepth3d(e.target.checked)} />
+                        {" "}Also measure a thrown ball&apos;s depth (3D), from its apparent size: needs its diameter as the
+                        object size above{depth3d && !sizeCm ? " (enter it to use 3D)" : ""}
+                      </label>
+                    )}
+                  </div>
+                </details>
                 {health?.turnstile_site_key && <div ref={turnstileBox} />}
                 <button type="submit" disabled={!file || busy || !canUpload}>
                   {busy ? <><Loader2 size={16} className="spin" aria-hidden="true" />Analyzing</> : "Analyze the motion"}
@@ -291,6 +295,7 @@ export default function Home() {
           </section>
           <Gallery items={gallery} onOpen={openRun} activeId={run?.run_id} />
         </div>
+        {!done && <Discoveries />}
       </main>
     </>
   );

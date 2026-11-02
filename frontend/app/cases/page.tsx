@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ProofNav } from "@/components/ProofNav";
 
 // One card per real-world case (scripts/build_cases.py): the problem, who has it, what PhysicsLens gives them, one
 // number against an independent truth, the status from the result file, and what it cannot do.
@@ -22,6 +23,7 @@ export default function CasesPage() {
 
   return (
     <main id="main">
+      <ProofNav />
       <header className="page-head">
         <h1>Real-world cases</h1>
         <p className="tagline">

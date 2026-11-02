@@ -65,6 +65,11 @@ def audit_page(browser, base: str, path: str, vp: str, theme: str, html: bool) -
         return [f"could not load: {e}"]
     page.wait_for_timeout(2500)  # "load", then time for data: a page that streams video never goes network-idle
     base_text = visible_text(page)
+    # A page that handles its own failure still failed: a data file the browser refused (NaN in a JSON file) left the
+    # satellite page as one red line, with no uncaught error for the checks above.
+    shown_errors = [t for t in page.locator(".error:visible, [role=alert]:visible").all_inner_texts() if t.strip()]
+    if shown_errors:
+        problems.append(f"shows an error: {shown_errors[0][:120]}")
     if base_text < 80:
         problems.append(f"almost no text on load ({base_text} characters)")
     if page.evaluate("document.documentElement.scrollWidth") > VIEWPORTS[vp]["width"] + 1:

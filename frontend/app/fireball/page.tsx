@@ -7,6 +7,7 @@ import { Tex } from "@/components/Equation";
 import type { FallMapData } from "@/components/FallMap";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
+import { ProofNav } from "@/components/ProofNav";
 
 // A meteorite fall from its bright flight to the stones on the ground (scripts/fireball_demo.py on the Winchcombe
 // fall of 2021). Everything is precomputed and served as static files.
@@ -129,6 +130,7 @@ export default function FireballPage() {
 
   return (
     <main id="main">
+      <ProofNav caseTitle="fireballs and meteorites" />
       <header className="page-head">
         <h1>Fireballs and meteorite falls</h1>
         <p className="tagline">

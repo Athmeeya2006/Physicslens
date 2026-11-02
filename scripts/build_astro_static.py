@@ -8,6 +8,8 @@ Each case's results.json and its downloads (transit windows as CSV and ICS) are 
 
 from __future__ import annotations
 
+import json
+import math
 import shutil
 from pathlib import Path
 
@@ -28,10 +30,24 @@ FILES = {
 }
 
 
+def finite(v):
+    """NaN and infinity are not JSON: a browser refuses the whole file (the satellite page showed only an error)."""
+    if isinstance(v, float) and not math.isfinite(v):
+        return None
+    if isinstance(v, dict):
+        return {k: finite(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [finite(x) for x in v]
+    return v
+
+
 def main() -> None:
     DST.mkdir(parents=True, exist_ok=True)
     for name, src in FILES.items():
-        if src.is_file():
+        if src.is_file() and src.suffix == ".json":
+            (DST / name).write_text(json.dumps(finite(json.loads(src.read_text())), allow_nan=False))
+            print(f"{name}: {src.stat().st_size} bytes")
+        elif src.is_file():
             shutil.copy(src, DST / name)
             print(f"{name}: {src.stat().st_size} bytes")
         else:

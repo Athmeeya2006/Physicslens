@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
+import { ProofNav } from "@/components/ProofNav";
 
 // Umbriel's outline from the 2020 stellar occultation (scripts/occultation_demo.py): every observer's chord in the
 // plane perpendicular to the star, the fitted circle, and the observers who saw nothing. Precomputed, served static.
@@ -66,6 +67,7 @@ export default function OccultationPage() {
 
   return (
     <main id="main">
+      <ProofNav caseTitle="stellar occultations" />
       <header className="page-head">
         <h1>Stellar occultations</h1>
         <p className="tagline">

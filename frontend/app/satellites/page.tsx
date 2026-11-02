@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
+import { ProofNav } from "@/components/ProofNav";
 
 // Satellites on real orbits (scripts/satellite_demo.py): the ISS against its public catalogue orbit, what one pass
 // and the observer's clock can tell, and manoeuvre detection with a negative control. Precomputed, served static.
@@ -61,6 +62,7 @@ export default function SatellitesPage() {
 
   return (
     <main id="main">
+      <ProofNav caseTitle="satellites" />
       <header className="page-head">
         <h1>Satellites</h1>
         <p className="tagline">

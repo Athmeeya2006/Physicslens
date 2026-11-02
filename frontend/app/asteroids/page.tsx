@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
+import { ProofNav } from "@/components/ProofNav";
 
 // Did my observation matter? Asteroid 2024 YR4 from its first nights (scripts/asteroid_demo.py): the orbit's
 // uncertainty a month ahead before and after one more night, checked against later observations. Static.
@@ -47,6 +48,7 @@ export default function AsteroidsPage() {
 
   return (
     <main id="main">
+      <ProofNav caseTitle="asteroid follow-up" />
       <header className="page-head">
         <h1>Asteroid follow-up</h1>
         <p className="tagline">

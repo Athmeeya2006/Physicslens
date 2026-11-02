@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Camera, ClipboardList, Database, Globe2, Moon, Orbit, ScanSearch, ShieldCheck, Sun } from "lucide-react";
+import { Activity, Camera, ClipboardList, Moon, Orbit, ScanSearch, ShieldCheck, Sun } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { accessCode } from "@/lib/api";
@@ -18,14 +18,21 @@ function Mark() {
 }
 
 const NAV = [
-  { href: "/", label: "Analyze", icon: ScanSearch },
-  { href: "/study", label: "Studies", icon: ClipboardList },
-  { href: "/live", label: "Live", icon: Camera },
-  { href: "/health", label: "Machine health", icon: Activity },
-  { href: "/audit", label: "Audit", icon: ShieldCheck },
-  { href: "/sky", label: "Solar System Lab", icon: Orbit },
-  { href: "/cases", label: "Cases", icon: Globe2 },
-  { href: "/dataset", label: "Dataset", icon: Database },
+  { href: "/", label: "Analyze", icon: ScanSearch, also: [] as string[] },
+  { href: "/live", label: "Live", icon: Camera, also: [] },
+  { href: "/study", label: "Studies", icon: ClipboardList, also: [] },
+  { href: "/health", label: "Machine health", icon: Activity, also: [] },
+  { href: "/sky", label: "Solar System Lab", icon: Orbit, also: [] },
+  // Proof: every result checked against an independent answer, the physics audit and the open dataset.
+  { href: "/cases", label: "Proof", icon: ShieldCheck,
+    also: ["/audit", "/dataset", "/timing", "/fireball", "/sun", "/satellites", "/occultation", "/asteroids"] },
+];
+
+/** The sub-pages of Proof, shown as a row under the page title on each of them. */
+export const PROOF_PAGES = [
+  { href: "/cases", label: "Real-world cases" },
+  { href: "/audit", label: "Physics audit" },
+  { href: "/dataset", label: "Open dataset" },
 ];
 
 function ThemeToggle() {
@@ -66,8 +73,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="wordmark-text">PhysicsLens</span>
           </a>
           <nav className="shell-nav" aria-label="Main">
-            {NAV.map(({ href, label, icon: Icon }) => (
-              <a key={href} href={href} title={label} aria-current={path === href ? "page" : undefined}>
+            {NAV.map(({ href, label, icon: Icon, also }) => (
+              <a key={href} href={href} title={label}
+                 aria-current={path === href || also.some((a) => path === a || path === `${a}.html`) ? "page" : undefined}>
                 <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
                 <span>{label}</span>
               </a>

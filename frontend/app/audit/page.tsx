@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AuditCheck, Health, PhysicsAudit, RunView } from "@/lib/api";
 import { formatUnit, getHealth, getRun, startRun, useBackend, withUncertainty } from "@/lib/api";
 import { AuditStudy } from "@/components/AuditStudy";
+import { ProofNav } from "@/components/ProofNav";
 
 const POLL_MS = 1000;
 
@@ -145,6 +146,7 @@ export default function AuditPage() {
 
   return (
     <main id="main">
+      <ProofNav />
       <header className="page-head">
         <h1>Physics audit</h1>
         <p className="tagline">

@@ -27,7 +27,7 @@ export function Gallery({ items, onOpen, activeId }: { items: GalleryItem[]; onO
                 <img src={posterUrl(it.id)} alt={`Frame from the ${it.object ?? "analyzed"} clip with the model ghost overlaid`} loading="lazy" />
                 <span>
                   <span className="g-title">{it.title}</span>
-                  <span className="g-desc" style={{ display: "block" }}>{it.description}</span>
+                  <span className="g-desc" title={it.description}>{it.description}</span>
                   <span className="g-meta">
                     {it.kind === "study" ? <span className="verdict accepted">{it.status === "finished" ? "Study: complete" : "Study"}</span>
                       : status && <span className={`verdict ${status.cls}`}>{status.text}</span>}

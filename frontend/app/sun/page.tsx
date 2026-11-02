@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Tex } from "@/components/Equation";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
+import { ProofNav } from "@/components/ProofNav";
 
 // The Sun's rotation law from real SDO/HMI images (scripts/sun_demo.py), and region-return forecasts checked against
 // NOAA's records. Everything is precomputed and served as static files.
@@ -81,9 +82,13 @@ export default function SunPage() {
   }, []);
   const best = d ? Math.min(...d.laws.map((l) => l.bic)) : 0;
   const earth = d ? Object.values(d.earth_rate_deg_day.from_sunpy_L0) : [];
+  // The regions that came back are the check; the ones that never did are listed, folded, below them.
+  const back = d ? d.returns.filter((r) => r.returned) : [];
+  const gone = d ? d.returns.filter((r) => !r.returned) : [];
 
   return (
     <main id="main">
+      <ProofNav caseTitle="the Sun's rotation" />
       <header className="page-head">
         <h1>The Sun&apos;s rotation</h1>
         <p className="tagline">
@@ -134,7 +139,7 @@ export default function SunPage() {
               <table className="cards">
                 <thead><tr><th>Region</th><th>Forecast back on the east limb</th><th>Seen again (NOAA)</th><th>Miss</th><th>NOAA&apos;s own forecast</th></tr></thead>
                 <tbody>
-                  {d.returns.map((r, i) => (
+                  {back.map((r, i) => (
                     <tr key={i}>
                       <td data-label="Region">{r.noaa_number ? `AR ${r.noaa_number}` : "unnumbered"} ({r.lat >= 0 ? "N" : "S"}{Math.abs(r.lat).toFixed(0)}, {r.period})</td>
                       <td data-label="Forecast" className="num">{r.forecast.east_limb_return.utc.replace("T", " ")} ± {r.forecast.east_limb_return.sigma_days.toFixed(1)} d</td>
@@ -146,6 +151,27 @@ export default function SunPage() {
                 </tbody>
               </table>
             </div>
+            {gone.length > 0 && (
+              <details>
+                <summary className="small">{gone.length} more regions that were not seen again (decayed, or too small for NOAA to number)</summary>
+                <div className="table-wrap">
+                  <table className="cards">
+                    <thead><tr><th>Region</th><th>Forecast back on the east limb</th><th>Seen again (NOAA)</th><th>Miss</th><th>NOAA&apos;s own forecast</th></tr></thead>
+                    <tbody>
+                      {gone.map((r, i) => (
+                        <tr key={i}>
+                          <td data-label="Region">{r.noaa_number ? `AR ${r.noaa_number}` : "unnumbered"} ({r.lat >= 0 ? "N" : "S"}{Math.abs(r.lat).toFixed(0)}, {r.period})</td>
+                          <td data-label="Forecast" className="num">{r.forecast.east_limb_return.utc.replace("T", " ")} ± {r.forecast.east_limb_return.sigma_days.toFixed(1)} d</td>
+                          <td data-label="Seen again">{r.returned ? `AR ${r.returned.number}, ${r.returned.at} on ${r.returned.listed}` : "not seen (decayed, or too small to number)"}</td>
+                          <td data-label="Miss" className="num">{r.error_days !== undefined ? `${r.error_days >= 0 ? "+" : ""}${r.error_days.toFixed(1)} d` : ""}</td>
+                          <td data-label="NOAA" className="num">{r.noaa_error_days !== undefined ? `${r.noaa_error_days >= 0 ? "+" : ""}${r.noaa_error_days.toFixed(1)} d` : ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
             <p className="small muted">Median miss {d.returns_summary.median_error_days?.toFixed(1) ?? "n/a"} days over {d.returns_summary.came_back} returns
               {d.returns_summary.noaa_median_error_days != null ? `; NOAA's own "due to return" lists, ${d.returns_summary.noaa_median_error_days.toFixed(1)} days over ${d.returns_summary.noaa_compared}` : ""}.
               A region is listed when NOAA first numbers it, usually a day or two after it rounds the limb; the time it crossed the limb
