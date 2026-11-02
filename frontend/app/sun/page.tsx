@@ -29,6 +29,10 @@ interface Sun {
   outcome: Outcome;
 }
 
+interface AgentRun { period: string; spots: { spot: string; points: number; days: number; status: string; reason: string;
+  ranking: { model_id: string; title: string | null; heldout_nrmse: number }[]; llm_calls: { provider: string; model: string }[];
+  least_squares: { carrington_drift_deg_day: number; sigma: number } }[] }
+
 const PROFILE_STYLE: Record<string, string> = { howard: "6 3", snodgrass: "2 3", allen: "10 4" };
 
 function RateChart({ d }: { d: Sun }) {
@@ -76,9 +80,11 @@ function RateChart({ d }: { d: Sun }) {
 export default function SunPage() {
   const [d, setD] = useState<Sun | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [agent, setAgent] = useState<AgentRun | null>(null);
   useEffect(() => {
     fetch("/astro/sun.json").then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then(setD).catch((e) => setError(`The solar results could not be loaded (${(e as Error).message}).`));
+    fetch("/astro/sun_agent.json").then((r) => (r.ok ? r.json() : null)).then((a) => a && setAgent(a)).catch(() => setAgent(null));
   }, []);
   const best = d ? Math.min(...d.laws.map((l) => l.bic)) : 0;
   const earth = d ? Object.values(d.earth_rate_deg_day.from_sunpy_L0) : [];
@@ -178,6 +184,34 @@ export default function SunPage() {
               is worked back from where it was first listed.{d.returns_summary.later_than_forecast != null &&
               ` All misses go one way: ${d.returns_summary.later_than_forecast} of ${d.returns_summary.came_back} regions came back later than forecast here, and ${d.returns_summary.noaa_later_than_forecast} of ${d.returns_summary.noaa_compared} later than NOAA's own date.`}</p>
           </section>
+          {agent && agent.spots.length > 0 && (
+            <section className="panel stack" aria-labelledby="sun-agent">
+              <h2 id="sun-agent">The agent on one sunspot at a time</h2>
+              <p className="small">The same agent as for a video ({agent.spots[0].llm_calls[0]?.model ?? "Muse Spark Open"}, Meta&apos;s
+                open-weight model) was given single spots&apos; tracks from {agent.period}: their Carrington longitude every 6 hours.
+                It proposed the laws; verification judged them on the last quarter of each track, which it never saw.</p>
+              <div className="table-wrap">
+                <table className="cards">
+                  <thead><tr><th>Spot</th><th>Laws it proposed (forecast error on the unseen quarter)</th><th>Verdict</th></tr></thead>
+                  <tbody>
+                    {agent.spots.map((sp) => (
+                      <tr key={sp.spot}>
+                        <td data-label="Spot">{sp.spot}, {sp.points} positions over {sp.days.toFixed(1)} days</td>
+                        <td data-label="Laws" className="small">{sp.ranking.length
+                          ? sp.ranking.map((f) => `${f.title ?? f.model_id} (${(f.heldout_nrmse * 100).toFixed(0)}%)`).join("; ")
+                          : "none fitted: the track is noise-like"}</td>
+                        <td data-label="Verdict"><span className={`verdict ${sp.status === "accepted" ? "accepted" : "rejected"}`}>
+                          {sp.status === "accepted" ? "accepted" : "no law"}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="small muted">No law was accepted, and that is the right answer: over a week a spot drifts about 2 degrees
+                in longitude while its own motion scatters by {d.rate_scatter_deg_day.toFixed(2)} degrees a day, so one spot cannot be
+                forecast. The rotation law above comes from all {d.rates.length} spots together, which is why it is trustworthy.</p>
+            </section>
+          )}
           <p className="small muted">What it can&apos;t do: this is not new science (the law has been known for a century); sunspots do not
             rotate exactly like the plasma around them; and whether a region will flare is out of scope, only where it will be. Data:
             SDO/HMI continuum images via Helioviewer (NASA SDO, the HMI science team); NOAA SWPC Solar Region Summaries via NOAA NCEI.

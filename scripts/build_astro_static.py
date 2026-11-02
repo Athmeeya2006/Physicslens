@@ -24,6 +24,7 @@ FILES = {
     "occultation.json": ROOT / "data" / "astro" / "occultation" / "results.json",
     "satellites.json": ROOT / "data" / "astro" / "satellites" / "results.json",
     "sun.json": ROOT / "data" / "astro" / "sun" / "results.json",
+    "sun_agent.json": ROOT / "data" / "astro" / "sun" / "agent.json",
     "fireball.json": ROOT / "data" / "astro" / "fireball" / "results.json",
     "winchcombe_strewn_field.geojson": ROOT / "data" / "astro" / "fireball" / "winchcombe_strewn_field.geojson",
     "winchcombe_strewn_field.kml": ROOT / "data" / "astro" / "fireball" / "winchcombe_strewn_field.kml",

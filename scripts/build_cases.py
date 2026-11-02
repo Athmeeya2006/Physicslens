@@ -204,16 +204,29 @@ def asteroids() -> dict[str, Any]:
             "link": "/asteroids" if r else None}
 
 
+# Which steps of each case ran on Meta's models and which are PhysicsLens's own math, shown on every case so the
+# split is never left to guess.
+MODELS_USED = {
+    "robotics": "SAM 3.1 tracked the bag; Muse Spark Open (open weights) proposed the laws; verification, the fits and the MuJoCo replay are math",
+    "lab": "SAM 3.1 tracked the bob; Muse Spark Open proposed the laws and designed the deciding experiment; verification is math",
+    "audit": "SAM 3.1 tracked every clip; Muse Spark Open read each scene and proposed laws; the physics checks are math",
+    "sun": "Muse Spark Open proposed laws for single spots' tracks (verification rejected them: noise); the rotation law itself is math on all spots",
+    "health": "SAM 3.1 tracks and Muse Spark Open reasons on each recording; the drift test between recordings is math",
+}
+NO_MODEL = "local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos)"
+
+
 def cases() -> list[dict[str, Any]]:
-    return [sim_to_real(), lab(), timing(), fireball(), sun(), occultation(), asteroids(), satellites(), audit(), health()]
+    rows = [sim_to_real(), lab(), timing(), fireball(), sun(), occultation(), asteroids(), satellites(), audit(), health()]
+    return [{**c, "models": MODELS_USED.get(c["id"], NO_MODEL)} for c in rows]
 
 
 def table(rows: list[dict[str, Any]]) -> str:
-    lines = [START, "", "| Case | Who has the problem | What PhysicsLens gives them | Against an independent truth | Status | What it can't do |",
-             "|---|---|---|---|---|---|"]
+    lines = [START, "", "| Case | Who has the problem | What PhysicsLens gives them | Against an independent truth | Status | Meta models | What it can't do |",
+             "|---|---|---|---|---|---|---|"]
     for c in rows:
         name = f"[{c['title']}]({SITE}{c['link']})" if c["link"] else c["title"]
-        lines.append(f"| {name} | {c['who']} | {c['gives']} | {c['number'] or 'no result yet'} | {c['status']} | {c['cant']} |")
+        lines.append(f"| {name} | {c['who']} | {c['gives']} | {c['number'] or 'no result yet'} | {c['status']} | {c['models']} | {c['cant']} |")
     return "\n".join([*lines, "", END])
 
 

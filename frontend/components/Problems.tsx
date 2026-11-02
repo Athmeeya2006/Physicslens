@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 // and how that answer was checked. Read from the same generated file as /cases (scripts/build_cases.py), whose status
 // rules are written down, so this page can never claim more than the results do. Proven cases come first.
 
-interface Case { id: string; title: string; problem: string; who: string; number: string | null; status: string; link: string | null }
+interface Case { id: string; title: string; problem: string; who: string; number: string | null; status: string; link: string | null; models?: string }
 
 const ORDER: Record<string, number> = { proven: 0, partial: 1, "not yet validated": 2 };
 
@@ -35,6 +35,7 @@ export function Problems() {
             </div>
             <p className="problem-q">{c.problem}</p>
             <p className="problem-answer">{c.number}</p>
+            {c.models && <p className="small muted">{c.models.charAt(0).toUpperCase() + c.models.slice(1)}.</p>}
             <div className="problem-foot">
               <span className="small muted">For {c.who}</span>
               {c.link && <a className="small" href={c.link}>See it <ArrowRight size={14} aria-hidden="true" /></a>}

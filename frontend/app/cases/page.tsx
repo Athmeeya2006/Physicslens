@@ -8,7 +8,7 @@ import { ProofNav } from "@/components/ProofNav";
 
 interface Case {
   id: string; title: string; problem: string; who: string; gives: string; number: string | null;
-  status: "proven" | "partial" | "not yet validated"; status_rule: string; cant: string; link: string | null;
+  status: "proven" | "partial" | "not yet validated"; status_rule: string; cant: string; link: string | null; models?: string;
 }
 
 const BADGE: Record<Case["status"], string> = { proven: "Proven", partial: "Partial", "not yet validated": "Not yet validated" };
@@ -46,6 +46,7 @@ export default function CasesPage() {
               <p className="small"><strong>Who:</strong> {c.who}</p>
               <p className="small"><strong>What they get:</strong> {c.gives}</p>
               <p className="case-number">{c.number ?? "No result yet."}</p>
+              {c.models && <p className="small case-models"><strong>Meta models:</strong> {c.models}</p>}
               <p className="small muted"><strong>What it can&apos;t do:</strong> {c.cant}</p>
               {c.link && <a className="button secondary" href={c.link}>See the result</a>}
             </article>

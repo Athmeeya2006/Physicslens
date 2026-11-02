@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Camera, ClipboardList, Moon, Orbit, ScanSearch, ShieldCheck, Sun } from "lucide-react";
+import { Activity, Camera, ClipboardList, Menu, Moon, Orbit, ScanSearch, ShieldCheck, Sun, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { accessCode } from "@/lib/api";
@@ -59,31 +59,50 @@ function ThemeToggle() {
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const path = usePathname();
+  const path = (usePathname() ?? "/").replace(/\.html$/, "").replace(/^\/index$/, "/");
   // Reading the code moves it from the URL into session storage, so plain links keep it.
   useEffect(() => void accessCode(), []);
+  // The bar slims down and lifts once the page scrolls; on a narrow screen the sections fold into a menu.
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+  const current = (href: string, also: string[]) => path === href || also.includes(path);
+  const links = (onPick?: () => void) => NAV.map(({ href, label, icon: Icon, also }) => (
+    <a key={href} href={href} title={label} onClick={onPick} aria-current={current(href, also) ? "page" : undefined}>
+      <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
+      <span>{label}</span>
+    </a>
+  ));
 
   return (
     <>
       <a className="skip-link" href="#main">Skip to content</a>
-      <header className="shell-bar">
+      <header className={`shell-bar${scrolled ? " scrolled" : ""}${open ? " menu-open" : ""}`}>
         <div className="shell-inner">
           <a className="wordmark" href="/">
             <Mark />
             <span className="wordmark-text">PhysicsLens</span>
           </a>
-          <nav className="shell-nav" aria-label="Main">
-            {NAV.map(({ href, label, icon: Icon, also }) => (
-              <a key={href} href={href} title={label}
-                 aria-current={path === href || also.some((a) => path === a || path === `${a}.html`) ? "page" : undefined}>
-                <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
-                <span>{label}</span>
-              </a>
-            ))}
-          </nav>
+          <nav className="shell-nav" aria-label="Main">{links()}</nav>
           <div className="shell-spacer" />
           <ThemeToggle />
+          <button type="button" className="menu-toggle" aria-expanded={open} aria-controls="shell-menu"
+                  aria-label={open ? "Close the menu" : "Open the menu"} onClick={() => setOpen((o) => !o)}>
+            {open ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
+          </button>
         </div>
+        <nav id="shell-menu" className="shell-menu" aria-label="Main" hidden={!open}>{links(() => setOpen(false))}</nav>
       </header>
       {children}
       <footer className="shell-foot">

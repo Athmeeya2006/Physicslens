@@ -1,0 +1,163 @@
+{
+ "generated": "scripts/sun_agent.py",
+ "period": "2014-01-01",
+ "spots": [
+  {
+   "spot": "a sunspot at latitude -8.2 deg",
+   "lat": -8.164969823231525,
+   "points": 34,
+   "days": 8.242709490740742,
+   "status": "no_fit",
+   "reason": "No candidate predicts the held-out motion: best forecast error 41% (Constant acceleration).",
+   "equation": null,
+   "parameters": null,
+   "ranking": [
+    {
+     "model_id": "line_constant_accel",
+     "title": "Constant acceleration",
+     "heldout_nrmse": 0.40593813016485836,
+     "bic": -49.21571895240245,
+     "status": "rejected",
+     "why": "forecast error 41% on held-out data"
+    },
+    {
+     "model_id": "line_constant_velocity",
+     "title": "Constant velocity (no net force)",
+     "heldout_nrmse": 0.9380069090343682,
+     "bic": -23.493214204857793,
+     "status": "rejected",
+     "why": "forecast error 94% on held-out data"
+    }
+   ],
+   "trail": [
+    {
+     "step": "data",
+     "provider": null,
+     "model": "provenance",
+     "text": "SDO/HMI continuum via Helioviewer, period from 2014-01-01, Carrington longitude from each image's own header (sunpy); times from image timestamps (\u00b11 s)."
+    },
+    {
+     "step": "hypotheses",
+     "provider": "baseten",
+     "model": "meta-models/muse-spark-open-1026",
+     "text": "Proposed 2 laws: Constant velocity (no net force), Constant acceleration."
+    },
+    {
+     "step": "verdict",
+     "provider": null,
+     "model": "held-out verification",
+     "text": "No candidate predicts the held-out motion: best forecast error 41% (Constant acceleration)."
+    }
+   ],
+   "llm_calls": [
+    {
+     "provider": "baseten",
+     "model": "meta-models/muse-spark-open-1026"
+    }
+   ],
+   "least_squares": {
+    "carrington_drift_deg_day": 0.27459639662984614,
+    "sigma": 0.017705555565907537
+   }
+  },
+  {
+   "spot": "a sunspot at latitude -11.0 deg",
+   "lat": -11.01830122632754,
+   "points": 33,
+   "days": 7.992709490740742,
+   "status": "no_fit",
+   "reason": "No candidate predicts the held-out motion: best forecast error 32% (Constant velocity (no net force)).",
+   "equation": null,
+   "parameters": null,
+   "ranking": [
+    {
+     "model_id": "line_constant_velocity",
+     "title": "Constant velocity (no net force)",
+     "heldout_nrmse": 0.31883826912972424,
+     "bic": -30.247307283632722,
+     "status": "rejected",
+     "why": "forecast error 32% on held-out data"
+    },
+    {
+     "model_id": "line_constant_accel",
+     "title": "Constant acceleration",
+     "heldout_nrmse": 1.748548135652712,
+     "bic": -27.947858797906264,
+     "status": "rejected",
+     "why": "forecast error 175% on held-out data"
+    }
+   ],
+   "trail": [
+    {
+     "step": "data",
+     "provider": null,
+     "model": "provenance",
+     "text": "SDO/HMI continuum via Helioviewer, period from 2014-01-01, Carrington longitude from each image's own header (sunpy); times from image timestamps (\u00b11 s)."
+    },
+    {
+     "step": "hypotheses",
+     "provider": "baseten",
+     "model": "meta-models/muse-spark-open-1026",
+     "text": "Proposed 2 laws: Constant velocity (no net force), Constant acceleration."
+    },
+    {
+     "step": "verdict",
+     "provider": null,
+     "model": "held-out verification",
+     "text": "No candidate predicts the held-out motion: best forecast error 32% (Constant velocity (no net force))."
+    }
+   ],
+   "llm_calls": [
+    {
+     "provider": "baseten",
+     "model": "meta-models/muse-spark-open-1026"
+    }
+   ],
+   "least_squares": {
+    "carrington_drift_deg_day": -0.25785872204579974,
+    "sigma": 0.013228225950537905
+   }
+  },
+  {
+   "spot": "a sunspot at latitude -9.3 deg",
+   "lat": -9.313172344737971,
+   "points": 30,
+   "days": 7.242709490740742,
+   "status": "no_fit",
+   "reason": "The motion looks like noise: no candidate law explains more than 0% of the measured acceleration, the velocity's spectrum is flat (0.81, where 1 is white noise), and no smooth trend explains the track (79%). Simulation fits were skipped.",
+   "equation": null,
+   "parameters": null,
+   "ranking": [],
+   "trail": [
+    {
+     "step": "data",
+     "provider": null,
+     "model": "provenance",
+     "text": "SDO/HMI continuum via Helioviewer, period from 2014-01-01, Carrington longitude from each image's own header (sunpy); times from image timestamps (\u00b11 s)."
+    },
+    {
+     "step": "hypotheses",
+     "provider": "baseten",
+     "model": "meta-models/muse-spark-open-1026",
+     "text": "Proposed 2 laws: Constant velocity (no net force), Constant acceleration."
+    },
+    {
+     "step": "verdict",
+     "provider": null,
+     "model": "held-out verification",
+     "text": "The motion looks like noise: no candidate law explains more than 0% of the measured acceleration, the velocity's spectrum is flat (0.81, where 1 is white noise), and no smooth trend explains the track (79%). Simulation fits were skipped."
+    }
+   ],
+   "llm_calls": [
+    {
+     "provider": "baseten",
+     "model": "meta-models/muse-spark-open-1026"
+    }
+   ],
+   "least_squares": {
+    "carrington_drift_deg_day": 0.37955490458410246,
+    "sigma": 0.04765817501246997
+   }
+  }
+ ]
+}
