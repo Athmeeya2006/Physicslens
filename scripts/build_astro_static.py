@@ -35,6 +35,7 @@ FILES = {
     "agent_wasp12b.json": ROOT / "data" / "cases_agent" / "wasp12b.json",
     "agent_kepler88b.json": ROOT / "data" / "cases_agent" / "kepler88b.json",
     "agent_fireball.json": ROOT / "data" / "cases_agent" / "fireball.json",
+    "agent_coastdown.json": ROOT / "data" / "cases_agent" / "coastdown.json",
     "winchcombe_strewn_field.geojson": ROOT / "data" / "astro" / "fireball" / "winchcombe_strewn_field.geojson",
     "winchcombe_strewn_field.kml": ROOT / "data" / "astro" / "fireball" / "winchcombe_strewn_field.kml",
 }

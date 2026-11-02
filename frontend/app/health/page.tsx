@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AgentOnCase } from "@/components/AgentOnCase";
 import { TrendChart } from "@/components/TrendChart";
 import { API_BASE, useBackend, formatUnit } from "@/lib/api";
 
@@ -151,6 +152,7 @@ function PublicFaultsSection() {
         )}
       </ul>
       <p className="small muted">Every rule was fixed before scoring. Sources, licences and the full report: data/health_public/ in the repository.</p>
+      <AgentOnCase file="agent_coastdown.json" what="the wheel's turning angle against time during one coast-down" />
     </section>
   );
 }

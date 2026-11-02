@@ -592,6 +592,11 @@ constraints. Radius 582.1 ± 0.9 km against the published 582.4 ± 0.8; the limb
 degree of freedom 1 comes out at 4.2 km, as in the paper. Edge times from light curves model each frame's
 integration; on synthetic curves the stated one-sigma error holds 66 to 70% of the time (68% expected).
 
+A blind outline of a newer occultation was looked for and not made: the recent observer timings found are either
+already reduced by their teams (Lucky Star, NASA PDS), behind accounts with all rights reserved (SODIS), or published
+without reuse terms (IOTA's recent folders), so none could be reduced and registered in advance
+(`data/occultation_new/SOURCES.md`).
+
 ### Asteroid follow-up: did my observation matter? (`/asteroids`)
 
 `scripts/asteroid_demo.py` fits 2024 YR4's orbit (Sun, planets and Moon, light-time, each observation weighted by its
@@ -624,6 +629,10 @@ camera errors (the satellite sunlit, the observer in darkness).
   recorded burns found (recall 95% interval 82% to 100%), 1 false alarm in 572 quiet days, the burn placed a median
   13 hours from its recorded time (the files come every few days), and its size within 0.09 m/s of NASA's figure (median 0.035 m/s)
   where NASA gives one. By its rule the case is now proven.
+- No blind ISS prediction is registered: NASA's ephemeris itself lists planned burns in its header and builds them
+  into its forecast, so a "prediction" from it would not be blind, and the newest file (made October 30) lists none
+  and is 16 days from the last archived one, longer than the rule's 7-day gap. When a new file arrives with no
+  announced burn, `scripts/satellite_history.py` can score it against the next one.
 - Observations are written as IOD lines (the format checked against its specification), and a tumbling object's
   period comes from its light curve with the half-period alias checked (synthetic: 37.2 ± 1.2 s, true 37.2).
 
@@ -1292,7 +1301,7 @@ CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (856 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
+The suite (864 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.
