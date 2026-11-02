@@ -13,7 +13,6 @@ import io
 import json
 import logging
 import re
-import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -158,21 +157,42 @@ def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default(size=size)
 
 
+# The built-in font has no glyph for these; drawn as-is they show as empty boxes.
+PLAIN = str.maketrans({"×": "x", "−": "-", "≈": "~", "–": "-", "—": ",", "σ": "sigma", "θ": "theta"})
+
+
+def _wrap(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, width: int) -> list[str]:
+    lines: list[str] = []
+    for word in text.translate(PLAIN).split():
+        trial = f"{lines[-1]} {word}" if lines else word
+        if lines and font.getlength(trial) <= width:
+            lines[-1] = trial
+        else:
+            lines.append(word)
+    return lines
+
+
 def overlay_text(image_bgr: np.ndarray, plan: SetupGuidePlan, instruction: str) -> tuple[bytes, list[str]]:
     """Labels at their marks and the verified instruction (with its numbers) as a caption band. Returns JPEG + texts."""
     rgb = Image.fromarray(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB))
     w, h = rgb.size
     size = max(12, round(min(w, h) / 28))
     font = _font(size)
-    lines = textwrap.wrap(instruction, width=max(20, int(w / (size * 0.55))))[:3]
-    band = (size + 8) * len(lines) + 12
+    # Wrapped by measured width and never cut: a long instruction gets a smaller caption, not a missing ending.
+    cap_size = size
+    lines = _wrap(instruction, _font(cap_size), w - 16)
+    while len(lines) > 5 and cap_size > 10:
+        cap_size -= 1
+        lines = _wrap(instruction, _font(cap_size), w - 16)
+    font_caption = _font(cap_size)
+    band = (cap_size + 8) * len(lines) + 12
     canvas = Image.new("RGB", (w, h + band), (17, 17, 17))
     canvas.paste(rgb, (0, 0))
     draw = ImageDraw.Draw(canvas)
     drawn: list[str] = []
     for mark in plan.marks:
         x1, y1, _, _ = mark.box.to_pixels(w, h)
-        text = mark.label
+        text = mark.label.translate(PLAIN)
         tw, th = draw.textbbox((0, 0), text, font=font)[2:]
         tx = min(max(x1, 0), max(w - tw - 8, 0))
         ty = y1 - th - 10 if y1 - th - 10 >= 0 else min(y1 + 4, h - th - 8)
@@ -181,8 +201,8 @@ def overlay_text(image_bgr: np.ndarray, plan: SetupGuidePlan, instruction: str) 
         drawn.append(text)
     y = h + 6
     for line in lines:
-        draw.text((8, y), line, font=font, fill=(255, 255, 255))
-        y += size + 8
+        draw.text((8, y), line, font=font_caption, fill=(255, 255, 255))
+        y += cap_size + 8
     drawn.append(" ".join(lines))
     buf = io.BytesIO()
     canvas.save(buf, format="JPEG", quality=90)

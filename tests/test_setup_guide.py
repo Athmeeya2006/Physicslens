@@ -195,6 +195,15 @@ def test_overlay_numbers_appear_in_overlay_never_in_prompt(h, tmp_path):
     assert img.shape[1] == W and img.shape[0] > H  # caption band below the frame
 
 
+def test_overlay_keeps_a_long_instruction_whole():
+    # A real request ran to four lines and lost its ending ("they will differ by"); and "×" drew as an empty box.
+    long = ("The data cannot yet tell dry (constant) friction from viscous (speed-dependent) damping, please use the same "
+            "pull and film 15 s. Our simulation of the two tied models predicts they will differ by about 5.3 mm under "
+            "that longer recording, about 32.6× your tracking noise (~0.16 mm), which will decisively separate them.")
+    _, drawn = sg.overlay_text(scene_image(), SetupGuidePlan.model_validate(PLAN), long)
+    assert drawn[-1].endswith("decisively separate them.") and "32.6x" in drawn[-1] and "×" not in drawn[-1]
+
+
 def test_check_resizes_a_differently_sized_edit():
     original = scene_image()
     edited = cv2.imdecode(np.frombuffer(marked(jpeg(original)), np.uint8), cv2.IMREAD_COLOR)

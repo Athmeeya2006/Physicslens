@@ -1,0 +1,80 @@
+{
+ "step_ref": 7,
+ "instruction": "The data cannot yet tell dry (constant) friction from viscous (speed-dependent) damping, please use the same pull and film 15 s. Our simulation of the two tied models predicts they will differ by about 5.3 mm under that longer recording, about 32.6\u00d7 your tracking noise (~0.16 mm), which will decisively separate them.",
+ "caption": "Illustration by Muse Image. A drawing of the setup, not a measurement.",
+ "keyframe_sha256": "2c6dde9d3a00984114910dc3f1429e9cd7a62622c0af7bea798be44ebd4bfec7",
+ "provider": "meta_api",
+ "model": "muse-image-1.0",
+ "images_billed": 0,
+ "checks": [
+  {
+   "attempt": 0,
+   "cached": true,
+   "accepted": true,
+   "ssim_outside": 0.9280689676421194,
+   "change_inside": 17.179885979114076,
+   "reason": "Scene unchanged outside the marks, and the marks were drawn.",
+   "resized": true
+  }
+ ],
+ "status": "picture",
+ "plan": {
+  "instruction": "Using the same pull, film the glider cart oscillating between the springs for 15 s to distinguish dry friction from viscous damping, where the two models are predicted to differ by about 5.3 mm, about 32.6\u00d7 your tracking noise (~0.16 mm).",
+  "marks": [
+   {
+    "kind": "place_object",
+    "label": "glider cart",
+    "box": {
+     "x1": 85,
+     "y1": 320,
+     "x2": 600,
+     "y2": 780
+    }
+   },
+   {
+    "kind": "release_point",
+    "label": "pull and release",
+    "box": {
+     "x1": 5,
+     "y1": 420,
+     "x2": 130,
+     "y2": 620
+    }
+   },
+   {
+    "kind": "keep_clear",
+    "label": "keep track clear",
+    "box": {
+     "x1": 0,
+     "y1": 560,
+     "x2": 1000,
+     "y2": 850
+    }
+   }
+  ]
+ },
+ "planned_by": {
+  "provider": "baseten",
+  "model": "meta-models/muse-spark-open-1026"
+ },
+ "prompt": "Edit this photo of a physics experiment. Keep the scene exactly as it is: the same objects, positions, lighting, colors and framing. Only draw simple marks on top, with clean bright lines: a dashed outline showing where to put the object, large, in the center of the picture, for glider cart; a bright ring showing where to let go, small, in the middle left part of the picture, for pull and release; a light shaded patch showing an area to keep clear, large, in the lower center part of the picture, for keep track clear. Add no text, no numbers and no letters anywhere. Do not move, add or remove anything in the scene. Leave every other part of the photo unchanged.",
+ "reason": "Scene unchanged outside the marks, and the marks were drawn.",
+ "overlay_text": [
+  "glider cart",
+  "pull and release",
+  "keep track clear",
+  "The data cannot yet tell dry (constant) friction from viscous (speed-dependent) damping, please use the same pull and film 15 s. Our simulation of the two tied models predicts they will differ by about 5.3 mm under that longer recording, about 32.6x your tracking noise (~0.16 mm), which will decisively separate them."
+ ],
+ "trail_item": {
+  "step": "setup_guide",
+  "provider": "meta_api",
+  "model": "muse-image-1.0",
+  "text": "Drew the requested setup on a frame of this clip; math confirmed the scene is unchanged outside the marks.",
+  "status": "accepted",
+  "step_ref": 7,
+  "planned_by": {
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026"
+  }
+ }
+}
