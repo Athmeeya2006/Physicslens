@@ -12843,7 +12843,7 @@
   },
   "companion_degenerate_with": [],
   "outcome": {
-   "headline": "An unseen planet pulls Kepler-88 b: about 22.26 days and 244 \u00b1 10 Earth masses, found from transit times alone. It forecasts the later transits to 15 min; the best simple law misses by 200 min.",
+   "headline": "An unseen planet pulls Kepler-88 b: roughly 22.3 days and 244 Earth masses, found from transit times alone. It forecasts the later transits to 15 min; the best simple law misses by 200 min.",
    "action": "Confirm with radial velocities, or schedule transit observations from the N-body forecast.",
    "artifacts": [],
    "checked_against": {
@@ -12854,7 +12854,7 @@
     "within_interval": false,
     "source": "Nesvorny et al. 2013 (later confirmed by radial velocities)"
    },
-   "confidence": "period 22.265 \u00b1 0.007 d, mass 225 to 263 Earth masses (95%, at the fitted eccentricities). Published: 22.3383 d, 215.9 \u00b1 7.6 Earth masses.",
+   "confidence": "one solution of a family: the fit's formal errors (\u00b1 0.007 d, \u00b1 10 Earth masses) are too small, since the published period is 11 of them away (0.3%); in timing data the companion's mass trades off against its eccentricity. Published: 22.3383 d, 215.9 \u00b1 7.6 Earth masses.",
    "status": "partial",
    "limits": [
     "held-out chi-square 14.9 per transit is above the 4 every law must meet: the timing errors (about 3 min) are smaller than what this fit explains"

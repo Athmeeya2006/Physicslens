@@ -31,9 +31,12 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
 - **Proof it discovers rather than recalls:** from rendered videos of asteroid Apophis and of Jupiter's four large moons it found the inverse-square law, the Sun's GM within 0.023% and Jupiter's within 0.012% of NASA/JPL, and Kepler's third law (exponent 1.4991 ± 0.0032) from the tracks alone; on Halley's comet a force law with the exponent left free fitted 1.9998.
-- **On real footage:** a 0.5 m pendulum gives g = 9.91 ± 0.04 m/s² (0.99% from 9.81); a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
+- **On real footage:** a pendulum given as 0.5 m long gives g = 9.91 ± 0.04 m/s² (one standard deviation; 0.99% from 9.81, and its 95% interval, 9.83 to 9.99, misses 9.81: the stated length is the likely cause, see below); a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
 - **Real-world cases, each checked against an independent answer:** the Winchcombe meteorite fall (its orbit within 0.4 sigma of the published one, every recovered stone on the simulated fall line), WASP-12b's shrinking orbit (28.6 ± 2.1 ms per year against the published 29 ± 2), the Sun's rotation from real SDO images, Uranus's moon Umbriel sized from a star's disappearance, and how much one more night helped track asteroid 2024 YR4. Each is a page that also says what it cannot do.
 - **Meta models doing real work:** Muse Spark Open (open weights, on Baseten) reasons, SAM 3.1 tracks, Muse Voice Transcribe listens, Muse Image draws setup guides, Muse Wonder writes controllers that only simulation can accept, and Muse Glimmer 30B is the fully offline open-weight path.
+
+
+*Numbers in this README: ± is one standard deviation; a range marked 95% is a 95% interval, as the result cards show.*
 
 ## Judging guide (5 minutes)
 
@@ -437,9 +440,11 @@ by the same factor) before BIC decides.
   early or late, repeating every 598 days. No simple law forecasts them (a sine misses the later transits by 200
   min). An N-body fit with a second planet near the 2:1 resonance (REBOUND, starting periods from the TTV
   super-period formula of Lithwick, Xie and Wu 2012) forecasts them to 15 min and puts the unseen planet at
-  22.265 ± 0.007 days and 244 ± 10 Earth masses, against the published 22.338 days and 216 ± 8 (Nesvorny et al.
-  2013, later confirmed by radial velocities). The status is partial, and the page says why: the forecast misses
-  by more than the 3-minute timing errors allow.
+  roughly 22.3 days and 244 Earth masses, against the published 22.338 days and 216 ± 8 (Nesvorny et al.
+  2013, later confirmed by radial velocities). The fit's formal errors (± 0.007 days, ± 10 Earth masses) are not
+  the uncertainty and the page does not present them as one: the published period is 11 of them away, because in
+  timing data the companion's mass trades off against its eccentricity, so this is one solution of a family. The
+  status is partial, and the page says why: the forecast misses by more than the 3-minute timing errors allow.
 - **Ephemeris rot:** of 4,770 transiting planets in the NASA Exoplanet Archive with uncertainties, the published
   ephemeris predicts the transit on 2027-01-01 to worse than 10 minutes for 3,248 and worse than an hour for
   1,363 (224 of those around stars brighter than V = 12).
@@ -655,7 +660,7 @@ The phone's microphone is an independent instrument, analyzed with local signal 
 
 ## For AI agents: PhysicsLens as an MCP server
 
-Any MCP client (an AI coding assistant, an agent framework) can call PhysicsLens as a tool, so an agent can measure the physics in a video instead of guessing it. `backend/physicslens/mcp_server.py` uses the official MCP Python SDK and talks to a PhysicsLens server over its HTTP API, so every paid model call still happens on that server behind its cost guard. It only reads video files on the machine it runs on and only talks to the configured server: there is no way to make it fetch an arbitrary URL.
+Any MCP-capable app or agent framework can call PhysicsLens as a tool, so an agent can measure the physics in a video instead of guessing it. `backend/physicslens/mcp_server.py` uses the official MCP Python SDK and talks to a PhysicsLens server over its HTTP API, so every paid model call still happens on that server behind its cost guard. It only reads video files on the machine it runs on and only talks to the configured server: there is no way to make it fetch an arbitrary URL.
 
 | Tool | What it does |
 |---|---|
@@ -746,7 +751,7 @@ The dataset has a card (`gallery/DATASET_CARD.md`: fields, units, how each value
 
 **On real footage**, with every reasoning step on Muse Spark Open (open weights, on Baseten) and tracking by SAM 3.1 (clips and licenses in `gallery/README.md`; the numbers are the gallery results, checked by `scripts/readme_numbers.py`):
 
-- **Pendulum** (0.5 m string, length given): g = 9.91 ± 0.04 m/s², against 9.81 (0.99% high), from both tied laws. Linear damping fits the whole swing 4 BIC better, short of the 10 needed to decide, and forecasts the held-out quarter worse (within 13.8% against 9.9% for the simple pendulum), so it is not confirmed; the agent asks for a release from about 35 degrees filmed for 7 s, where the two forecasts separate by about 8 times the tracking noise. A small swing can't tell sin θ from θ, so the exact law is kept over the small-angle one. The result rests on the given length: with the pivot out of frame the arc alone can't fix it (two stretches of the same swing gave radii 50% apart), so the app does not re-measure a length you supply.
+- **Pendulum** (0.5 m string, length given): g = 9.91 ± 0.04 m/s², against 9.81 (0.99% high), from both tied laws. Linear damping fits the whole swing 4 BIC better, short of the 10 needed to decide, and forecasts the held-out quarter worse (within 13.8% against 9.9% for the simple pendulum), so it is not confirmed; the agent asks for a release from about 35 degrees filmed for 7 s, where the two forecasts separate by about 8 times the tracking noise. A small swing can't tell sin θ from θ, so the exact law is kept over the small-angle one. The result rests on the given length: with the pivot out of frame the arc alone can't fix it (two stretches of the same swing gave radii 50% apart), so the app does not re-measure a length you supply. That length is the weak point: the 95% interval (9.83 to 9.99) excludes both 9.81 and Aachen's local 9.811, a systematic error, not noise. A second clip from the same teacher, also given as "half a metre", gives 9.51 (3.1% low) from a period that agrees with the teacher's own stopwatch within hand timing: two clips with the same nominal length missing in opposite directions point at the length (string length against the distance to the bob's centre), not the timing or the fit. So the lab case stays "not yet validated" until a clip with a measured length to the bob's centre.
 - **Paper bag thrown across a blackboard** (filmed at 200 fps, analyzed with a slow-motion factor of 20): free fall misses the held-out last quarter by 35% and is rejected; linear air drag forecasts it within 2.9%, with a velocity time constant of 0.41 s (scale-free); quadratic drag forecasts within 5.9% but scores 57 BIC worse.
 - **Air-track spring cart** (nothing of known size in view): dry (sliding) friction and viscous damping tie: dry friction forecasts the held-out motion within 8.8% while viscous damping misses by 10.9% and the undamped model by 48%, but the two damped laws are only 4 BIC apart, so neither is confirmed; both give ω = 2.7401 ± 0.0023 rad/s, and the agent asks for the same pull filmed for 15 s, where they separate by 33 times the tracking noise.
 - What didn't work, honestly: on 240p Apollo 16 TV footage of an astronaut jumping, with two jumps separated by standing and no usable scale, no equation passed, and the result is not in the gallery.
@@ -1076,7 +1081,7 @@ CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (780 tests, counted by `pytest --collect-only -q`; 62 marked slow in `tests/conftest.py`) covers:
+The suite (782 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.

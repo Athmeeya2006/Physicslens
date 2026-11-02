@@ -13,12 +13,15 @@ interface Case {
 
 const BADGE: Record<Case["status"], string> = { proven: "Proven", partial: "Partial", "not yet validated": "Not yet validated" };
 
+const RANK: Record<string, number> = { proven: 0, partial: 1, "not yet validated": 2 };
+
 export default function CasesPage() {
   const [cases, setCases] = useState<Case[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     fetch("/cases.json").then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((d) => setCases(d.cases)).catch((e) => setError(`The cases could not be loaded (${(e as Error).message}).`));
+      // Proven first, then partial, then what is not validated yet: the strongest evidence leads.
+      .then((d) => setCases([...d.cases].sort((a: Case, b: Case) => (RANK[a.status] ?? 3) - (RANK[b.status] ?? 3)))).catch((e) => setError(`The cases could not be loaded (${(e as Error).message}).`));
   }, []);
 
   return (

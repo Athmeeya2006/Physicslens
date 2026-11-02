@@ -129,17 +129,27 @@ def kepler88_outcome(result: dict) -> dict:
     within = abs(pc - pub["Pc_days"]) <= 1.96 * float(np.hypot(bs["Pc_sigma"], pub["Pc_sigma"]))
     passes = bs["heldout_chi2"] <= timing.HELDOUT_CHI2
     sinus = next(x["heldout_rms_min"] for x in result["laws"] if x["law"] == "sinusoid")
+    off_sigmas = abs(pc - pub["Pc_days"]) / max(bs["Pc_sigma"], 1e-12)
+    if within:
+        found = f"about {pc:.2f} days and {mc:.0f} ± {bs['mc_earth_sigma']:.0f} Earth masses"
+        conf = (f"period {pc:.3f} ± {bs['Pc_sigma']:.3f} d, mass {mc - 1.96 * bs['mc_earth_sigma']:.0f} to "
+                f"{mc + 1.96 * bs['mc_earth_sigma']:.0f} Earth masses (95%, at the fitted eccentricities). ")
+    else:
+        # The fit's own errors do not cover the published answer, so they are not the uncertainty: timing data trade
+        # the companion's mass against its eccentricity, and a family of solutions fits. Say so, rather than print a ±
+        # that misses by many of itself.
+        found = f"roughly {pc:.1f} days and {mc:.0f} Earth masses"
+        conf = (f"one solution of a family: the fit's formal errors (± {bs['Pc_sigma']:.3f} d, ± {bs['mc_earth_sigma']:.0f} Earth "
+                f"masses) are too small, since the published period is {off_sigmas:.0f} of them away ({abs(err_p):.1%}); in timing "
+                "data the companion's mass trades off against its eccentricity. ")
     return {
-        "headline": (f"An unseen planet pulls Kepler-88 b: about {pc:.2f} days and {mc:.0f} ± {bs['mc_earth_sigma']:.0f} Earth "
-                     f"masses, found from transit times alone. It forecasts the later transits to {bs['heldout_rms_min']:.0f} "
-                     f"min; the best simple law misses by {sinus:.0f} min."),
+        "headline": (f"An unseen planet pulls Kepler-88 b: {found}, found from transit times alone. It forecasts the later "
+                     f"transits to {bs['heldout_rms_min']:.0f} min; the best simple law misses by {sinus:.0f} min."),
         "action": "Confirm with radial velocities, or schedule transit observations from the N-body forecast.",
         "artifacts": [],
         "checked_against": {"name": "companion period", "truth": pub["Pc_days"], "measured": pc, "relative_error": err_p,
                             "within_interval": bool(within), "source": "Nesvorny et al. 2013 (later confirmed by radial velocities)"},
-        "confidence": (f"period {pc:.3f} ± {bs['Pc_sigma']:.3f} d, mass {mc - 1.96 * bs['mc_earth_sigma']:.0f} to "
-                       f"{mc + 1.96 * bs['mc_earth_sigma']:.0f} Earth masses (95%, at the fitted eccentricities). Published: "
-                       f"{pub['Pc_days']} d, {pub['mc_earth']} ± {pub['mc_sigma']} Earth masses."),
+        "confidence": conf + f"Published: {pub['Pc_days']} d, {pub['mc_earth']} ± {pub['mc_sigma']} Earth masses.",
         "status": "proven" if within and passes else "partial",
         "limits": [] if passes else [(f"held-out chi-square {bs['heldout_chi2']:.1f} per transit is above the {timing.HELDOUT_CHI2:.0f} "
                                       "every law must meet: the timing errors (about 3 min) are smaller than what this fit explains")],

@@ -125,6 +125,7 @@ function LawTable({ laws }: { laws: LawRow[] }) {
 }
 
 export default function TimingPage() {
+  const [showAll, setShowAll] = useState(false);
   const [d, setD] = useState<Timing | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [maxV, setMaxV] = useState(12);
@@ -227,7 +228,7 @@ export default function TimingPage() {
               <table className="cards">
                 <thead><tr><th>Planet</th><th>Transit-time uncertainty on {d.rot.date}</th><th>Period (d)</th><th>V</th></tr></thead>
                 <tbody>
-                  {rot.slice(0, 60).map((r) => (
+                  {rot.slice(0, showAll ? 60 : 15).map((r) => (
                     <tr key={r.planet}>
                       <td data-label="Planet">{r.planet}</td>
                       <td data-label="Uncertainty" className="num">{r.sigma_min >= 1440 ? `${(r.sigma_min / 1440).toFixed(1)} days` : r.sigma_min >= 60 ? `${(r.sigma_min / 60).toFixed(1)} h` : `${r.sigma_min.toFixed(0)} min`}</td>
@@ -238,6 +239,10 @@ export default function TimingPage() {
                 </tbody>
               </table>
             </div>
+            {rot.length > 15 && (
+              <p><button type="button" className="secondary" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
+                {showAll ? "Show the 15 worst" : `Show ${Math.min(rot.length, 60) - 15} more`}</button></p>
+            )}
             <p className="small muted">{d.rot.source}. Uncertainty = √(σ_T0² + (N σ_P)²) from the published ephemeris, N orbits ahead.</p>
           </section>
           <p className="small muted">What it can&apos;t do: timing inversions are degenerate (mass against eccentricity, and a single

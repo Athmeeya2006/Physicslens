@@ -35,8 +35,30 @@ jobs:
         run: ruff check backend tests scripts
       - name: README numbers match their sources
         run: python scripts/readme_numbers.py
-      - name: Tests (mocked models, no network, no spend)
-        run: PHYSICSLENS_FIT_WORKERS=1 pytest -q -n auto tests
+      - name: Tests (mocked models, no network, no spend; the slow ones run in their own job)
+        run: PHYSICSLENS_FIT_WORKERS=1 pytest -q -n auto -m "not slow" tests
+
+  backend-slow:
+    # The long physics checks (N-body searches, full live sessions), apart so they never push the fast job past its limit.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MOCK_MODELS: "1"
+      APP_ENV: dev
+      PYTHONPATH: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Python packages
+        run: pip install -r backend/requirements.txt
+      - name: Slow tests (mocked models, no network, no spend)
+        run: PHYSICSLENS_FIT_WORKERS=1 pytest -q -n auto -m slow tests
 
   frontend:
     runs-on: ubuntu-latest
