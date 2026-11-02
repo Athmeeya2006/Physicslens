@@ -1,7 +1,10 @@
 """Predict a future event from the verified law, with an honest timing window, then check it against what happened.
 
-The event is the oscillation passing its rest point in a chosen direction: easy to see, and its time depends on the
-whole law (frequency, damping, starting state), so a hit many periods ahead is evidence the law is right.
+For a swing or a spring the event is the oscillation passing its rest point in a chosen direction: easy to see, and
+its time depends on the whole law (frequency, damping, starting state), so a hit many periods ahead is evidence the
+law is right. For something rolling or sliding there is no rest point to come back to; the event is it reaching a
+point further along its path (where the law puts it `horizon` seconds ahead), whose time depends on the friction or
+drag law and the speed. A throw is over before a law can be verified and then tested on what is left, so it gets none.
 """
 
 from __future__ import annotations
@@ -17,7 +20,10 @@ from .models import ModelSpec
 # 95% window: 1.96 standard deviations of the predicted time over the bootstrap refits, plus the time resolution
 # of the measurement itself (one sample either side, since a crossing is interpolated between two samples).
 Z95 = 1.96
-FAMILIES = ("pendulum", "oscillator")
+FAMILIES = ("pendulum", "oscillator", "line")
+OSCILLATING = ("pendulum", "oscillator")
+# Below this distance (in the coordinate's units) ahead the object has as good as stopped: nothing left to time.
+MIN_AHEAD = 1e-3
 
 
 @dataclass(frozen=True)
@@ -57,19 +63,32 @@ def predict_crossing(spec: ModelSpec, fit: FitResult, c: Coordinates, horizon_s:
     q = simulate(spec, fit.params, fit.y0, t, c.ctx)
     if q is None:
         return None
-    level = _rest_level(q[:, 0])
-    after = crossing_times(t, q[:, 0], level, direction)
-    after = after[after >= t_end + horizon_s]
-    if len(after) == 0:
-        return None  # it stops before then; nothing to time
-    t_pred = float(after[0])
+    if c.family in OSCILLATING:
+        level = _rest_level(q[:, 0])
+        after = crossing_times(t, q[:, 0], level, direction)
+        after = after[after >= t_end + horizon_s]
+        if len(after) == 0:
+            return None  # it stops before then; nothing to time
+        t_pred = float(after[0])
+    else:
+        # Where the law puts it `horizon_s` ahead; the event is passing that point, moving the way it moves now.
+        k_end = int(np.searchsorted(t, t_end))
+        k_tgt = int(np.searchsorted(t, t_end + horizon_s))
+        if k_tgt >= len(t):
+            return None
+        ahead = float(q[k_tgt, 0] - q[k_end, 0])
+        if abs(ahead) < MIN_AHEAD * max(1.0, float(np.ptp(c.q[:, 0]))):
+            return None  # it will have stopped: a stopped object passes no point
+        direction = 1 if ahead > 0 else -1
+        level = float(q[k_tgt, 0])
+        t_pred = float(t_end + horizon_s)
     times = []
     for row in param_samples:
         p = dict(zip(spec.param_names, map(float, row), strict=True))
         qs = simulate(spec, p, fit.y0, t, c.ctx)
         if qs is None:
             continue
-        cs = crossing_times(t, qs[:, 0], _rest_level(qs[:, 0]), direction)
+        cs = crossing_times(t, qs[:, 0], _rest_level(qs[:, 0]) if c.family in OSCILLATING else level, direction)
         if len(cs):
             times.append(float(cs[np.argmin(np.abs(cs - t_pred))]))
     if len(times) < max(3, len(param_samples) // 2):

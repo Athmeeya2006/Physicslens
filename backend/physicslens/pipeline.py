@@ -374,7 +374,8 @@ def _analyze(client: CostGuardClient, video: Path, run_dir: Path, run_id: str, o
         judged = judge_candidates(verdict)
         trail.append({"step": "verification", "provider": None, "model": "simulate-and-compare", "text": verdict.reason,
                       "status": verdict.status,
-                      "items": [{"model_id": m, "title": MODELS[m].title, "status": st, "why": why} for m, (st, why) in judged.items()]})
+                      "items": [{"model_id": m, "title": MODELS[m].title, "status": st, "why": why, "latex": MODELS[m].latex}
+                                for m, (st, why) in judged.items()]})
         if family == "projectile" and bounces is None:
             progress("Analyzing bounces")
             bounces = analyze_bounces(full, full_origin, calibration.px_per_m)
@@ -1301,8 +1302,8 @@ def fit_summary(f: FitResult, rationale: str | None = None) -> dict[str, Any]:
             "heldout_nrmse": f.heldout_nrmse, "rmse": f.rmse, "rationale": rationale,
             "rolling": [{"origin": r["origin"], "horizon": r["horizon"], "nrmse": r["nrmse"]} for r in f.rolling],
             "param_meta": [{"name": p.name, "latex": p.latex, "unit": p.unit} for p in spec.params],
-            # A law the agent wrote has no familiar name, so its equation is shown with it.
-            **({"latex": spec.latex} if f.model_id.startswith("custom_") else {})}
+            # Every law is shown with its equation, named or written by the agent.
+            "latex": spec.latex}
 
 
 EARTH_G = 9.81

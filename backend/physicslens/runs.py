@@ -72,9 +72,11 @@ class RunManager:
                 result = json.loads(saved.read_text())
                 if (saved.parent / "prediction.json").is_file():
                     result["prediction_available"] = True  # the page fetches the forecast only where one exists
-                if "outcome" not in result:
-                    # Results stored before the outcome card existed get theirs, checked against a gallery truth if any.
-                    meta = saved.parent / "meta.json"
+                meta = saved.parent / "meta.json"
+                if "outcome" not in result or meta.is_file():
+                    # Results stored before the outcome card existed get theirs; a gallery entry's card is always rebuilt
+                    # against its meta.json truth, so a corrected truth (local gravity, not 9.81) reaches the page without
+                    # touching the stored record of the run.
                     truth = json.loads(meta.read_text()).get("truth") if meta.is_file() else None
                     result["outcome"] = build_outcome(result, truth=truth)
                 state = RunState(run_id=run_id, status="done", progress=["Done"], result=result)

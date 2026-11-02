@@ -38,17 +38,37 @@ def _gallery_outcome(name: str) -> dict[str, Any] | None:
     return build_outcome(result, truth=meta.get("truth")) if result else None
 
 
+def _wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * (p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5 / d
+    return max(0.0, c - h), min(1.0, c + h)
+
+
 def lab() -> dict[str, Any]:
     o = _gallery_outcome("pendulum")
     c = (o or {}).get("checked_against")
-    return {"id": "lab", "title": "Lab measurement", "problem": "Measuring a physical constant needs a lab setup and someone to fit the data.",
-            "who": "students, teachers, anyone checking an experiment",
+    lf = _json("data/lab_footage/results.json")
+    base = {"id": "lab", "title": "Lab measurement", "problem": "Measuring a physical constant needs a lab setup and someone to fit the data.",
+            "who": "test engineers, labs, anyone checking an experiment",
             "gives": "the constant with a 95% interval, the law it follows, and the recording that would settle what is still open",
-            "number": f"g = {c['measured']:.3f} m/s² against {c['truth']} ({abs(c['relative_error']):.2%} off)" if c else None,
-            "status": (o or {}).get("status", "not yet validated"),
-            "status_rule": "the result's own outcome card: proven when the truth lies inside its interval",
             "cant": "it needs a known length (or another scale) in the picture; the arc alone cannot fix the length when the pivot is out of view",
             "link": "/?run=gallery-pendulum"}
+    if lf and lf.get("measured"):
+        # Many labelled clips: a 95% interval should hold the truth about 95 times in 100. Proven when that rate's own
+        # 95% interval includes 95% (the intervals are honest) and the median error is under 2%.
+        rows = [r for r in lf["rows"] if "g" in r]
+        k, n = sum(r["inside_with_length"] for r in rows), len(rows)
+        lo, hi = _wilson(k, n)
+        proven = lo <= 0.95 <= hi and lf["median_abs_error"] < 0.02
+        return {**base, "number": (f"{n} real clips with measured lengths: the local g inside the 95% interval in {k} of {n} "
+                                   f"(coverage {lo:.0%} to {hi:.0%} at 95%); median error {lf['median_abs_error']:.1%}"),
+                "status": "proven" if proven else "partial",
+                "status_rule": "proven when, over many labelled clips, the share of 95% intervals holding the truth is consistent with 95% and the median error is under 2%"}
+    return {**base, "number": f"g = {c['measured']:.3f} m/s² against {c['truth']} ({abs(c['relative_error']):.2%} off)" if c else None,
+            "status": (o or {}).get("status", "not yet validated"),
+            "status_rule": "the result's own outcome card: proven when the truth lies inside its interval"}
 
 
 def sim_to_real() -> dict[str, Any]:
@@ -79,15 +99,58 @@ def sim_to_real() -> dict[str, Any]:
             "link": "/?run=gallery-paperbag"}
 
 
+def robot_arm() -> dict[str, Any]:
+    r = _json("data/robot/result.json")
+    h = (r or {}).get("heldout", {})
+    cmp = (r or {}).get("heldout_comparison", {})
+    number = None
+    if r and "identified" in h:
+        number = (f"SO-100 arm, {r['data']['episodes']} public recordings: on held-out episodes the corrected MuJoCo model tracks the "
+                  f"real joints to {h['identified']['arm_total']['rms_deg']:.2f}° RMS against {h['default']['arm_total']['rms_deg']:.2f}° for "
+                  f"the MuJoCo Menagerie model ({cmp['default_minus_identified']['ratio']:.1f} times closer; "
+                  f"{cmp['fair_baseline_minus_identified']['ratio']:.1f} times closer than the default with a fitted delay)")
+    return {"id": "robot-arm", "title": "Open-source robot arm: simulator corrected from public recordings",
+            "problem": "A robot's simulator model has guessed joint dynamics, so what works in simulation drifts on the real arm.",
+            "who": "anyone who simulates the SO-100 arm (MuJoCo Menagerie, LeRobot users)",
+            "gives": "measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model",
+            "number": number, "status": (r or {}).get("status", "not yet validated"),
+            "status_rule": (r or {}).get("status_rule", "proven when the identified model forecasts held-out episodes better than the default and a fair baseline beyond their intervals"),
+            "cant": "only the motions in these pick-and-place recordings; payloads, wear and other units of the arm are not covered",
+            "link": "/robot" if r else None,
+            # The corrected model is a contribution to a public tool when it beats the public model on held-out data with
+            # the paired improvement's 95% interval above zero (derived from the result file, never set by hand).
+            "contribution": ({"beats_public_on_heldout": True,
+                              "summary": (f"the corrected MJCF (data/robot/so_arm100_identified.xml) beats MuJoCo Menagerie's "
+                                          f"trs_so_arm100 on held-out episodes by {cmp['default_minus_identified']['improvement_deg']:.2f}° "
+                                          f"RMS (95% {cmp['default_minus_identified']['ci95'][0]:.2f} to {cmp['default_minus_identified']['ci95'][1]:.2f})")}
+                             if cmp.get("default_minus_identified", {}).get("ci95", [0])[0] > 0 else None)}
+
+
 def health() -> dict[str, Any]:
     r = _json("data/health/results.json")
-    return {"id": "health", "title": "Machine health", "problem": "Wear changes a machine's damping and frequency long before it fails.",
+    hp = _json("data/health_public/result.json")
+    card = {"id": "health", "title": "Machine health", "problem": "Wear changes a machine's damping and frequency long before it fails.",
             "who": "maintenance engineers",
             "gives": "drift alerts when two recordings of the same machine disagree beyond their intervals",
             "number": r.get("number") if r else None, "status": (r or {}).get("status", "not yet validated"),
             "status_rule": "needs recordings of a machine whose wear is known independently",
             "cant": "no validation on a real machine with known wear yet: the drift test is checked on simulated recordings only",
             "link": "/health"}
+    if hp:
+        # Public recordings with known faults, scored against their labels by rules fixed before scoring
+        # (scripts/health_public_demo.py): proven only if the bearing rule passes its own test.
+        b, sd = hp["bearings"], hp["spindown"]
+        card.update(
+            number=(f"public bearing recordings (University of Ottawa): fault type right in {b['faulty']['type_accuracy']['k']} of "
+                    f"{b['faulty']['type_accuracy']['n']} (chance 1 in 4), {b['healthy_false_alarms']['k']} false alarms in "
+                    f"{b['healthy_false_alarms']['n']} healthy runs; a motor's coast-down friction "
+                    f"{'matches' if sd['agrees_with_published'] else 'misses'} the published values"),
+            status="proven" if b.get("passed") else "partial",
+            status_rule=("proven when, scored against public fault labels, the fault type is right with a 95% lower bound above "
+                         "40% (chance 25%) and at most 2 of 20 healthy recordings alarm"),
+            cant=("the physics rule does not identify bearing fault types on this data (distributed wear has no single impact "
+                  "rate); it needs the machine's geometry and speed"))
+    return card
 
 
 def audit() -> dict[str, Any]:
@@ -130,11 +193,10 @@ def fireball() -> dict[str, Any]:
     return {"id": "fireball", "title": "Fireballs and meteorite falls", "problem": "Fresh meteorites are valuable, and finding them depends on a good search map.",
             "who": "fireball networks, meteorite hunters",
             "gives": "whether anything survived, the orbit it came from, and a strewn-field map (GeoJSON, KML)",
-            "number": (f"Winchcombe, from the published trajectory: within {s['max_across_m']:.0f} m of all {s['finds']} recovered "
-                       f"stones across the track; along it {s['along_at_end']} of {s['finds']} with the release rule fixed in "
-                       f"advance ({s['along_either']} of {s['finds']} with a later choice)") if s else None,
+            "number": (f"Winchcombe, from the published trajectory: blind, {s.get('blind_inside_95', 0)} of {s['finds']} recovered stones "
+                       f"inside their 95% landing regions; after review, all within {s['max_across_m']:.0f} m of the fall line") if s else None,
             "status": o.get("status", "not yet validated"),
-            "status_rule": "proven when the orbit matches within 2 sigma and, with the release rule fixed in advance, the main mass is reproduced and every find lies within 600 m of the fall line",
+            "status_rule": "proven when the orbit matches within 2 sigma and, with the release rule and mass bins fixed in advance, at least two thirds of the finds lie inside their blind 95% landing regions",
             "cant": "it starts from a triangulated trajectory, not one video; masses carry a factor-of-two uncertainty from shape and density",
             "link": "/fireball"}
 
@@ -162,7 +224,7 @@ def satellites() -> dict[str, Any]:
     c0 = (sp.get("checks") or [{}])[0]
     runs = (r or {}).get("manoeuvres") or []
     found = sum(1 for x in runs[1:] if x.get("manoeuvre") and x.get("window_right"))
-    return {"id": "satellites", "title": "Satellites", "problem": "A satellite that moved or decays is not where its catalogue orbit says.",
+    card = {"id": "satellites", "title": "Satellites", "problem": "A satellite that moved or decays is not where its catalogue orbit says.",
             "who": "amateur trackers, space-safety analysts",
             "gives": "which object a streak is, how far it is from its catalogue orbit, manoeuvre alerts, IOD reports",
             "number": (f"ISS catalogue offset {c0['time_offset_s']:.2f} ± {c0['time_offset_sigma_s']:.2f} s from one pass (NASA's trajectory: "
@@ -171,6 +233,20 @@ def satellites() -> dict[str, Any]:
             "status_rule": "partial until a real recorded manoeuvre is reproduced (detection shown on impulses injected into the real orbit)",
             "cant": "needs frame times good to a fraction of a second (a GPS-synced clock); one pass constrains an orbit weakly",
             "link": "/satellites" if r else None}
+    hist = _json("data/astro/satellites/history.json")
+    v = (hist or {}).get("vs_nasa_records")
+    if v and c0:
+        # The real ISS history (archived NASA ephemerides, 2021 to 2026), scored against NASA's own records of each
+        # reboost: proven when the rule fixed in advance finds real burns with recall's 95% lower bound at least 80%
+        # and at most one false alarm per 30 quiet days (upper 95% bound).
+        proven = v["recall_ci95"][0] >= 0.8 and v["false_alarms_per_30d_ci95"][1] <= 1.0
+        card.update(number=card["number"] + (f"; over {hist['data']['distinct_files']} archived NASA trajectories, {v['detected']} of "
+                                             f"{v['burns_covered']} recorded reboosts found and {v['false_alarms']} false alarm in "
+                                             f"{v['quiet_days']:.0f} quiet days"),
+                    status="proven" if proven else "partial",
+                    status_rule=("proven when real recorded reboosts are found by a rule fixed in advance (recall's 95% lower bound "
+                                 "at least 80%) with at most one false alarm per 30 quiet days (upper 95% bound)"))
+    return card
 
 
 def occultation() -> dict[str, Any]:
@@ -211,14 +287,58 @@ MODELS_USED = {
     "lab": "SAM 3.1 tracked the bob; Muse Spark Open proposed the laws and designed the deciding experiment; verification is math",
     "audit": "SAM 3.1 tracked every clip; Muse Spark Open read each scene and proposed laws; the physics checks are math",
     "sun": "Muse Spark Open proposed laws for single spots' tracks (verification rejected them: noise); the rotation law itself is math on all spots",
+    "robot-arm": "local math on public joint recordings (no video, so no SAM): the servo laws are fitted and verified by held-out MuJoCo replay; no Meta model in this case",
     "health": "SAM 3.1 tracks and Muse Spark Open reasons on each recording; the drift test between recordings is math",
 }
 NO_MODEL = "local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos)"
 
 
+# The status ladder, lowest to highest. The first three come from each case's own check; the rest need evidence that
+# exists outside the check: a pre-registered prediction (predictions/), reality scoring it (outcomes/), a contribution
+# that beats a public tool on held-out data (cases/<id>/contribution.json), and recorded use by someone outside the
+# project (cases/<id>/usage.json, never inferred).
+LADDER = ("not yet validated", "partial", "proven", "predicted", "confirmed", "improves a public tool", "solved")
+LADDER_MEANING = {
+    "not yet validated": "no independent check yet",
+    "partial": "checked, but fails part of its rule",
+    "proven": "reproduces independent known answers within its intervals",
+    "predicted": "a blind, pre-registered prediction made before the answer existed",
+    "confirmed": "a blind prediction that reality later scored as a hit",
+    "improves a public tool": "a contribution that measurably beats the current public version on held-out data",
+    "solved": "someone outside the project used it (recorded, never inferred)",
+}
+# Which pre-registration folders belong to which case.
+PREDICTION_CASES = {"timing": ("transit-timing",), "fireball": ("fireballs",), "occultation": ("occultations",),
+                    "satellites": ("satellites",), "robot-arm": ("robot",), "health": ("machine-faults",)}
+
+
+def ladder(c: dict[str, Any]) -> dict[str, Any]:
+    """Every rung the case has reached, each with its evidence; the status shown is the highest."""
+    from physicslens import prereg
+
+    rungs = [{"rung": c["status"], "evidence": c["status_rule"]}]
+    preds = [r for r in prereg.index_rows() if r["case"] in PREDICTION_CASES.get(c["id"], ())]
+    if preds:
+        rungs.append({"rung": "predicted", "evidence": f"{len(preds)} pre-registered prediction(s) in predictions/, open until scored"})
+    hits = 0
+    for r in preds:
+        o = _json(f"outcomes/{r['case']}/{r['id']}.json")
+        hits += (o or {}).get("hits", 0)
+    if hits:
+        rungs.append({"rung": "confirmed", "evidence": f"{hits} blind prediction(s) scored as hits in outcomes/"})
+    contrib = c.get("contribution") or _json(f"cases/{c['id']}/contribution.json")
+    if contrib and contrib.get("beats_public_on_heldout"):
+        rungs.append({"rung": "improves a public tool", "evidence": contrib.get("summary", "")})
+    usage = _json(f"cases/{c['id']}/usage.json")
+    if usage and usage.get("users"):
+        rungs.append({"rung": "solved", "evidence": "; ".join(u.get("who", "") for u in usage["users"])})
+    top = max(rungs, key=lambda r: LADDER.index(r["rung"]))
+    return {"status": top["rung"], "checked": c["status"], "ladder": rungs, "usage": (usage or {}).get("users", [])}
+
+
 def cases() -> list[dict[str, Any]]:
-    rows = [sim_to_real(), lab(), timing(), fireball(), sun(), occultation(), asteroids(), satellites(), audit(), health()]
-    return [{**c, "models": MODELS_USED.get(c["id"], NO_MODEL)} for c in rows]
+    rows = [sim_to_real(), robot_arm(), lab(), timing(), fireball(), sun(), occultation(), asteroids(), satellites(), audit(), health()]
+    return [{**c, **ladder(c), "models": MODELS_USED.get(c["id"], NO_MODEL)} for c in rows]
 
 
 def table(rows: list[dict[str, Any]]) -> str:
@@ -227,6 +347,15 @@ def table(rows: list[dict[str, Any]]) -> str:
     for c in rows:
         name = f"[{c['title']}]({SITE}{c['link']})" if c["link"] else c["title"]
         lines.append(f"| {name} | {c['who']} | {c['gives']} | {c['number'] or 'no result yet'} | {c['status']} | {c['models']} | {c['cant']} |")
+    counts = {r: sum(c["status"] == r for c in rows) for r in LADDER}
+    top = max((c["status"] for c in rows), key=LADDER.index)
+    used = [(c["title"], u) for c in rows for u in c.get("usage", [])]
+    lines += ["", f"**Highest status reached: {top}.** Status counts: "
+              + ", ".join(f"{counts[r]} {r}" for r in LADDER if counts[r]) + ". The ladder, lowest to highest: "
+              + "; ".join(f"*{r}*: {LADDER_MEANING[r]}" for r in LADDER) + ".",
+              "", "**Used by:** " + ("; ".join(f"{u.get('who')} ({t}, {u.get('date', 'date not given')})" for t, u in used)
+                                     if used else "nobody outside the project yet. This line lists only recorded use "
+                                     "(a `cases/<id>/usage.json` file), so it stays empty until there is some.")]
     return "\n".join([*lines, "", END])
 
 
@@ -242,7 +371,8 @@ def main() -> None:
             sys.exit("The README cases table differs from the results: run python scripts/build_cases.py")
         print("README cases table matches the results.")
         return
-    OUT.write_text(json.dumps({"generated": "scripts/build_cases.py", "cases": rows}, indent=1))
+    OUT.write_text(json.dumps({"generated": "scripts/build_cases.py", "ladder": [{"rung": r, "meaning": LADDER_MEANING[r]} for r in LADDER],
+                               "cases": rows}, indent=1))
     README.write_text(text[:i] + want + text[j:])
     print(f"{len(rows)} cases: " + ", ".join(f"{c['id']} {c['status']}" for c in rows))
 

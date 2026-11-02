@@ -1,0 +1,94 @@
+{
+"damped_harmonic": {
+"latex": "\\ddot s = -\\omega^2 (s - s_0) - 2\\zeta\\omega\\dot s",
+"title": "Damped harmonic oscillator"
+},
+"double_pendulum": {
+"latex": "\\ddot\\theta_{1,2} = f(\\theta_1, \\theta_2, \\dot\\theta_1, \\dot\\theta_2;\\ g, \\mu, \\gamma)",
+"title": "Double pendulum (point masses)"
+},
+"duffing": {
+"latex": "\\ddot s = -\\omega^2 (s - s_0) - \\beta (s - s_0)^3 - 2\\zeta\\omega\\dot s",
+"title": "Stiffening spring (Duffing)"
+},
+"free_fall": {
+"latex": "\\ddot x = 0,\\quad \\ddot y = -g",
+"title": "Projectile, no drag"
+},
+"harmonic": {
+"latex": "\\ddot s = -\\omega^2 (s - s_0)",
+"title": "Harmonic oscillator"
+},
+"line_constant_accel": {
+"latex": "\\ddot s = a_0",
+"title": "Constant acceleration"
+},
+"line_constant_velocity": {
+"latex": "\\ddot s = 0",
+"title": "Constant velocity (no net force)"
+},
+"linear_drag": {
+"latex": "\\dot{\\mathbf{v}} = -g\\hat{y} - k\\mathbf{v}",
+"title": "Projectile with linear drag"
+},
+"oscillator_dry": {
+"latex": "\\ddot s = -\\omega^2 (s - s_0) - f\\,\\mathrm{sgn}(\\dot s)",
+"title": "Spring with dry friction"
+},
+"oscillator_mixed": {
+"latex": "\\ddot s = -\\omega^2 (s - s_0) - 2\\zeta\\omega\\dot s - f\\,\\mathrm{sgn}(\\dot s)",
+"title": "Spring with viscous and dry friction"
+},
+"pendulum": {
+"latex": "\\ddot\\theta = -\\frac{g}{L}\\sin\\theta",
+"title": "Simple pendulum"
+},
+"pendulum_linear_damping": {
+"latex": "\\ddot\\theta = -\\frac{g}{L}\\sin\\theta - \\gamma\\dot\\theta",
+"title": "Pendulum with linear damping"
+},
+"pendulum_quadratic_damping": {
+"latex": "\\ddot\\theta = -\\frac{g}{L}\\sin\\theta - \\beta\\dot\\theta|\\dot\\theta|",
+"title": "Pendulum with air drag"
+},
+"pendulum_small_angle": {
+"latex": "\\ddot\\theta = -\\frac{g}{L}\\theta",
+"title": "Small-angle pendulum"
+},
+"plane_constant_accel": {
+"latex": "\\ddot x = a_x,\\quad \\ddot y = a_y",
+"title": "Constant acceleration"
+},
+"plane_constant_velocity": {
+"latex": "\\ddot{\\mathbf{r}} = 0",
+"title": "Constant velocity (no net force)"
+},
+"quadratic_drag": {
+"latex": "\\dot{\\mathbf{v}} = -g\\hat{y} - c|\\mathbf{v}|\\mathbf{v}",
+"title": "Projectile with quadratic drag"
+},
+"spin_air": {
+"latex": "\\ddot\\varphi = -q\\dot\\varphi|\\dot\\varphi|",
+"title": "Spin-down, air drag"
+},
+"spin_dry": {
+"latex": "\\ddot\\varphi = -c\\,\\mathrm{sgn}(\\dot\\varphi)",
+"title": "Spin-down, dry friction"
+},
+"spin_dry_viscous": {
+"latex": "\\ddot\\varphi = -c\\,\\mathrm{sgn}(\\dot\\varphi) - k\\dot\\varphi",
+"title": "Spin-down, dry and viscous friction"
+},
+"spin_free": {
+"latex": "\\ddot\\varphi = 0",
+"title": "Free spin (no friction)"
+},
+"spin_spring": {
+"latex": "\\ddot\\varphi = -\\kappa (\\varphi - \\varphi_0) - k\\dot\\varphi",
+"title": "Torsional spring with damping"
+},
+"spin_viscous": {
+"latex": "\\ddot\\varphi = -k\\dot\\varphi",
+"title": "Spin-down, viscous friction"
+}
+}

@@ -217,6 +217,7 @@ td { padding: 8px 12px 8px 0; vertical-align: top; border-top: 1px solid var(--s
 .home-head { display: grid; gap: 8px; max-width: 760px; margin-bottom: 28px; }
 .home-head p { color: var(--ink-2); font-size: 1.08rem; max-width: 64ch; }
 .home-grid { display: grid; gap: 28px; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; }
+.home-grid[hidden] { display: none; }
 @media (max-width: 960px) { .home-grid { grid-template-columns: minmax(0, 1fr); } }
 
 .dropzone {
@@ -683,6 +684,12 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .case-proven .case-badge { background: var(--ok); color: var(--on-strong); }
 .case-partial .case-badge { background: var(--tie); color: var(--on-strong); }
 .case-not-yet-validated .case-badge { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+/* Rungs above proven: evidence outside the check itself (a registered prediction, a scored hit, a contribution, use). */
+.case-predicted .case-badge, .case-confirmed .case-badge, .case-improves-a-public-tool .case-badge, .case-solved .case-badge { background: var(--ok); color: var(--on-strong); }
+.case-badge-inline.case-predicted, .case-badge-inline.case-confirmed, .case-badge-inline.case-improves-a-public-tool, .case-badge-inline.case-solved { background: var(--ok); color: var(--on-strong); }
+.case-card .case-details { border-top: 1px solid var(--line); padding-top: 8px; }
+.case-card .case-details summary { cursor: pointer; font-size: 0.9rem; color: var(--ink-2); }
+.case-card .case-details[open] { display: flex; flex-direction: column; gap: 6px; }
 .case-number { font-weight: 600; margin: 4px 0; }
 .case-card .button { align-self: flex-start; margin-top: auto; }
 .cases-strip ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
@@ -691,14 +698,6 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .case-badge-inline.case-partial { background: var(--tie); color: var(--on-strong); }
 .case-badge-inline.case-not-yet-validated { border: 1px solid var(--line); color: var(--ink-2); }
 
-/* Tabs (components/Tabs.tsx): a row of tabs over one panel; the row scrolls sideways on a phone instead of wrapping. */
-.tab-list { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: thin; }
-.tab { background: none; color: var(--ink-2); border: 0; border-bottom: 2px solid transparent; border-radius: 0;
-  padding: 10px 14px; font-weight: 500; white-space: nowrap; margin-bottom: -1px; }
-.tab:hover:not(:disabled) { color: var(--ink); background: var(--surface-2); }
-.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--model); font-weight: 600; }
-.tab:focus-visible { outline: 2px solid var(--model); outline-offset: -2px; }
-.tab-panel { padding-top: 16px; }
 
 /* Home: problems it solves (components/Problems.tsx). Three across: nine cases make a full grid. */
 .problems { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -731,4 +730,70 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .gallery-item .g-desc { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .case-models { border-left: 3px solid var(--line); padding-left: 8px; }
 /* In-page links land below the sticky bar, not under it. */
-[id] { scroll-margin-top: 76px; }
+[id] { scroll-margin-top: 120px; }
+
+/* Home: three ways in, then a compact strip of the cases (components/Problems.tsx). */
+.tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.tile { display: flex; flex-direction: column; gap: 6px; height: 100%; padding: 16px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface); color: var(--ink); text-decoration: none; }
+.tile:hover { border-color: var(--model); }
+.tile svg { color: var(--model); }
+.strip-row { display: grid; grid-template-columns: auto minmax(0, 14rem) minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.strip-number { }
+@media (max-width: 760px) {
+  .tiles { grid-template-columns: 1fr; }
+  .strip-row { grid-template-columns: auto 1fr; }
+  .strip-number { grid-column: 1 / -1; }
+}
+
+/* A result: the answer and the video side by side, the evidence in tabs below (components/ResultView.tsx). */
+.result-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .result-top { grid-template-columns: 1fr; } }
+/* A trail step that is not a decision: one line, the rest behind "Details". */
+.trail-line { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.trail-more summary { cursor: pointer; color: var(--ink-2); }
+/* A section folded to its heading: the answer stays on screen, the evidence opens on demand. */
+details.fold > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "▸"; color: var(--ink-2); }
+details.fold[open] > summary::before { content: "▾"; }
+details.fold > summary h2 { margin: 0; font-size: 1.15rem; }
+abbr.term-tip { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.glossary div { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.glossary dd { margin: 4px 0 0; color: var(--ink-2); }
+
+/* Grouped navigation (components/Shell.tsx): three labelled menus. */
+.shell-nav { overflow: visible; }
+.nav-group { position: relative; height: 100%; display: flex; }
+.nav-group-btn { position: relative; display: flex; align-items: center; gap: 7px; padding: 0 12px; height: 100%; background: none;
+  color: var(--shell-mute); font-size: 0.93rem; border-radius: 0; }
+.nav-group-btn:hover:not(:disabled), .nav-group-btn[aria-expanded="true"] { color: var(--shell-ink); background: none; }
+.nav-group-btn::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; border-radius: 2px;
+  background: var(--shell-accent); transform: scaleX(0); transition: transform 0.2s ease; }
+.nav-group-btn[aria-current="page"] { color: var(--shell-ink); }
+.nav-group-btn[aria-current="page"]::after { transform: scaleX(1); }
+.nav-drop { position: absolute; top: calc(100% + 4px); left: 0; min-width: 220px; list-style: none; margin: 0; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); z-index: 60; }
+.nav-drop[hidden] { display: none; }
+.nav-drop a { display: block; padding: 8px 10px; border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 0.93rem; }
+.nav-drop a::after { display: none; }
+.nav-drop a:hover { background: var(--surface-2); }
+.nav-drop a[aria-current="page"] { background: var(--surface-2); font-weight: 600; }
+.menu-group { display: grid; gap: 2px; padding: 4px 0; }
+.menu-group-label { margin: 6px 12px 2px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--shell-mute); }
+
+/* A result shows everything, in order: a sticky row of jump links, then one titled section per part. */
+.on-page { position: sticky; top: 58px; z-index: 20; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+  padding: 10px 14px; background: color-mix(in srgb, var(--ground) 92%, transparent); border: 1px solid var(--line);
+  border-radius: 10px; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); font-size: 0.9rem; }
+.on-page span { color: var(--ink-2); font-weight: 600; }
+.on-page a { color: var(--ink); text-decoration: none; padding: 2px 0; border-bottom: 2px solid transparent; }
+.on-page a:hover { border-bottom-color: var(--model); }
+.result-section { display: flex; flex-direction: column; gap: 14px; padding-top: 8px; }
+.result-section > h2 { font-size: 1.35rem; margin: 18px 0 0; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+@media (max-width: 640px) { .on-page { top: 58px; font-size: 0.85rem; } }
+.top-law { padding: 12px 16px; }
+.top-law .katex-display { margin: 6px 0 0; }
+/* Solar System Lab: every detail section in turn, separated by a rule. */
+.lab-detail + .lab-detail { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 18px; }
+.lab-detail-title { font-size: 1.2rem; margin: 0 0 10px; }

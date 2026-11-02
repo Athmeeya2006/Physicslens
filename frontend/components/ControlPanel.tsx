@@ -220,7 +220,7 @@ export function ControlPanel({ runId, family, params, length }: {
             </ol>
           )}
           {accepted?.code && (
-            <details style={{ marginTop: 12 }}>
+            <details open style={{ marginTop: 12 }}>
               <summary>Accepted controller code (Python)</summary>
               <pre style={{ overflowX: "auto", fontSize: "0.8rem" }}><code>{accepted.code}</code></pre>
             </details>

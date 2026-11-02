@@ -10,6 +10,12 @@ const STATUS: Record<Outcome["status"], [string, string]> = {
   "not yet validated": ["Not yet validated", "no law passed the test"],
 };
 
+// Summaries show 3 significant figures, more only where needed for the truth and the measurement to differ.
+function pair(a: number, b: number): [string, string] {
+  for (let p = 3; p < 7; p++) if (a.toPrecision(p) !== b.toPrecision(p)) return [a.toPrecision(p), b.toPrecision(p)];
+  return [a.toPrecision(7), b.toPrecision(7)];
+}
+
 const pct = (v: number | null | undefined) => (v == null || !Number.isFinite(v) ? "n/a" : `${(v * 100).toPrecision(2)}%`);
 
 // What the result means and what to do with it, in plain words, above the equation. Built from the numbers by
@@ -37,7 +43,7 @@ export function OutcomeCard({ o, exportHref }: { o: Outcome; exportHref?: (kind:
       {o.checked_against && !o.checked_against.text && (
         <p className="small">
           <strong>Checked against:</strong> {o.checked_against.source}: {o.checked_against.name} ={" "}
-          {o.checked_against.truth.toPrecision(5)}, measured {o.checked_against.measured.toPrecision(5)}{" "}
+          {pair(o.checked_against.truth, o.checked_against.measured)[0]}, measured {pair(o.checked_against.truth, o.checked_against.measured)[1]}{" "}
           ({(o.checked_against.relative_error * 100).toFixed(2)}% off,{" "}
           {o.checked_against.within_interval ? "inside" : "outside"} the 95% interval)
         </p>
@@ -94,7 +100,7 @@ export function ReadableLaw({ r }: { r: Readable }) {
       )}
       {r.written_by_agent && <p className="small muted">This law was written by the agent and checked like any other.</p>}
       {r.rivals.length > 0 && (
-        <details>
+        <details open>
           <summary className="small">Rival laws and why they lost ({r.rivals.length})</summary>
           <ul className="small">
             {r.rivals.map((x) => <li key={x.title}><strong>{x.title}:</strong> {x.why}</li>)}

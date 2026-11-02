@@ -5,7 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Tex } from "@/components/Equation";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
+import { AgentOnCase } from "@/components/AgentOnCase";
+import { OnThisPage } from "@/components/OnThisPage";
 import { ProofNav } from "@/components/ProofNav";
+import { Term } from "@/components/Term";
 
 // Transit timing on real data (scripts/timing_demo.py): WASP-12b's decaying orbit, Kepler-88's hidden planet, and
 // which published ephemerides have gone stale. Everything is precomputed and served as static files.
@@ -24,6 +27,7 @@ interface Timing {
     period_change_ms_per_year: [number, number]; next_windows: { epoch: number; utc_approx: string; sigma_min: number }[];
     outcome: Outcome; published: { source: string } };
   kepler88b: { system: string; status: string; reason: string; laws: LawRow[]; oc: Point[]; measured_ttv_period_days: number;
+    companion_family?: { starts: number; kept: number; fits: number };
     measured_ttv_amplitude_h: number; transits_used: number; candidates: { resonance: string; where: string; period: number }[];
     companion_fits?: Companion[]; companion?: Companion; companion_degenerate_with?: Companion[]; outcome?: Outcome;
     published: { source: string; Pc_days: number; mc_earth: number } };
@@ -108,7 +112,7 @@ function LawTable({ laws }: { laws: LawRow[] }) {
   return (
     <div className="table-wrap">
       <table className="cards">
-        <thead><tr><th>Law</th><th>Forecast of the later timings (χ² per event)</th><th>Typical miss</th><th>BIC behind the best</th></tr></thead>
+        <thead><tr><th>Law</th><th>Forecast of the later timings (<Term k="chi2">χ²</Term> per event)</th><th>Typical miss</th><th><Term k="bic" /> behind the best</th></tr></thead>
         <tbody>
           {laws.map((l) => (
             <tr key={l.law}>
@@ -126,6 +130,8 @@ function LawTable({ laws }: { laws: LawRow[] }) {
 
 export default function TimingPage() {
   const [showAll, setShowAll] = useState(false);
+  // The winning law and "nothing happening" by default; the other laws on request, so the chart reads at a glance.
+  const [allLaws, setAllLaws] = useState(true);
   const [d, setD] = useState<Timing | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [maxV, setMaxV] = useState(12);
@@ -151,18 +157,23 @@ export default function TimingPage() {
       {error && <p className="error">{error}</p>}
       {d && (
         <>
+          <OnThisPage items={[{ id: "w12", label: "WASP-12b" }, { id: "k88", label: "Kepler-88" }, { id: "rot", label: "Stale ephemerides" }]} />
           <section className="panel stack" aria-labelledby="w12">
             <h2 id="w12">WASP-12b: an orbit that is shrinking</h2>
             <OutcomeCard o={d.wasp12b.outcome} />
             <p className="small muted">158 published mid-times from 2008 to 2019 ({d.wasp12b.published.source}): each law was fitted
               on the earlier 75% and had to forecast the rest.</p>
             <OCChart oc={d.wasp12b.oc} cut={d.wasp12b.train_until_bjd} label="WASP-12b observed minus calculated transit and occultation times"
-                     curves={d.wasp12b.laws.filter((l) => l.curve).map((l) => ({ name: l.title, pts: l.curve!, dashed: l.law !== "decay" }))} />
+                     curves={d.wasp12b.laws.filter((l) => l.curve && (allLaws || l.law === "decay" || l.law === "linear"))
+                       .map((l) => ({ name: l.title, pts: l.curve!, dashed: l.law !== "decay" }))} />
+            <label className="small"><input type="checkbox" checked={allLaws} onChange={(e) => setAllLaws(e.target.checked)} /> Show all laws on the chart</label>
+            <h3>Laws compared</h3>
             <LawTable laws={d.wasp12b.laws} />
             <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
               <a className="button secondary" href="/astro/wasp12b_windows.ics" download><Download size={16} aria-hidden="true" /> Next transits (calendar)</a>
               <a className="button secondary" href="/astro/wasp12b_windows.csv" download><Download size={16} aria-hidden="true" /> Next transits (CSV)</a>
             </div>
+            <AgentOnCase file="agent_wasp12b.json" what="the transit-time residuals against time" />
             <ul className="small">
               {d.wasp12b.next_windows.slice(0, 5).map((w) => <li key={w.epoch}>{w.utc_approx.replace("T", " ")} UTC ± {w.sigma_min.toFixed(1)} min</li>)}
             </ul>
@@ -183,7 +194,14 @@ export default function TimingPage() {
             <OCChart oc={d.kepler88b.oc} label="Kepler-88 b transit timing variations"
                      curves={[...(d.kepler88b.companion?.curve ? [{ name: "N-body: the hidden planet", pts: d.kepler88b.companion.curve }] : []),
                               ...d.kepler88b.laws.filter((l) => l.curve && l.law === "sinusoid").map((l) => ({ name: "one sinusoid", pts: l.curve!, dashed: true }))]} />
+            <h3>Laws compared, and every companion candidate</h3>
             <LawTable laws={d.kepler88b.laws} />
+            {d.kepler88b.companion_family && (
+              <p className="small">The winning candidate refitted from {d.kepler88b.companion_family.starts} starting points spread over its
+                period window, both eccentricities and masses from 10 to 1,000 Earth masses: {d.kepler88b.companion_family.kept === 1
+                  ? "every start that fits as well lands in one basin, so the timings allow no wider family"
+                  : `${d.kepler88b.companion_family.kept} fits match as well, spanning the range in the card above`}.</p>
+            )}
             {d.kepler88b.companion_fits && (
               <div className="table-wrap">
                 <table className="cards">
@@ -204,6 +222,7 @@ export default function TimingPage() {
             <p className="small muted">Compared with {d.kepler88b.published.source}: period {d.kepler88b.published.Pc_days} days, mass
               {" "}{d.kepler88b.published.mc_earth} Earth masses, later confirmed by radial velocities. Mass and orbital eccentricity
               trade off in timing data, so masses are a range, not one number.</p>
+            <AgentOnCase file="agent_kepler88b.json" what="the transit-time residuals against time" />
           </section>
 
           <section className="panel stack" aria-labelledby="rot">

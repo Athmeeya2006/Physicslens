@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type { GalleryItem } from "@/lib/api";
 import { posterUrl } from "@/lib/api";
 
@@ -9,7 +11,11 @@ const STATUS: Record<string, { text: string; cls: string }> = {
   no_fit: { text: "No clean equation", cls: "rejected" },
 };
 
+// Three recordings first; the rest on request, so the home page stays short.
+const FIRST = 99;
+
 export function Gallery({ items, onOpen, activeId }: { items: GalleryItem[]; onOpen: (id: string) => void; activeId?: string }) {
+  const [all, setAll] = useState(false);
   if (!items.length) return null;
   return (
     <section aria-labelledby="gallery-title" className="stack">
@@ -18,7 +24,7 @@ export function Gallery({ items, onOpen, activeId }: { items: GalleryItem[]; onO
         <p className="muted small">Each one went through the full pipeline with Meta&apos;s models. Open one to see the ghost, the decision trail and the exports.</p>
       </div>
       <ul className="gallery-list">
-        {items.map((it) => {
+        {(all ? items : items.slice(0, FIRST)).map((it) => {
           const status = it.status ? STATUS[it.status] : undefined;
           return (
             <li key={it.id}>
@@ -39,6 +45,10 @@ export function Gallery({ items, onOpen, activeId }: { items: GalleryItem[]; onO
           );
         })}
       </ul>
+      {items.length > FIRST && (
+        <p><button type="button" className="secondary" aria-expanded={all} onClick={() => setAll((v) => !v)}>
+          {all ? "Show fewer" : `Show all ${items.length} recordings`}</button></p>
+      )}
     </section>
   );
 }

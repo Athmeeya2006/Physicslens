@@ -3,7 +3,6 @@
 import { Clapperboard, Crosshair, Pause, Play, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Law, Tex } from "@/components/Equation";
-import { Tabs } from "@/components/Tabs";
 import { Sky3D, type Sky3DHandle } from "@/components/Sky3D";
 import { useBackend, useHealth } from "@/lib/api";
 import {
@@ -489,7 +488,7 @@ export default function SkyLab() {
   // Everything below the view, rebuilt only when what it shows changes (not on every tick of the clock).
   const details = useMemo(() => (
       <section className="panel" aria-label="Details">
-        <Tabs label="Details" active={tab} onChange={setTab} tabs={[
+        {([
           ...(base?.initial && subject ? [{ id: "body", label: <>{subject === HYPOTHETICAL ? "Planet X" : subject}: orbit and push</>, panel: (
             base?.initial && subject && (
         <BodyCard name={subject} base={base} modified={modified} init={base.initial} changes={changes}
@@ -575,7 +574,13 @@ export default function SkyLab() {
         )}
       </section>
           ) },
-        ]} />
+        ] as { id: string; label: React.ReactNode; panel: React.ReactNode }[]).map((t) => (
+          // Every part shown, one after another: nobody has to find a tab to see the forces or the orbit.
+          <div key={t.id} id={`lab-${t.id}`} className="lab-detail">
+            {(t.id === "body" || t.id === "forces") && <h2 className="lab-detail-title">{t.label}</h2>}
+            {t.panel}
+          </div>
+        ))}
       </section>
   ), [base, modified, subject, changes, sc, eqTime, tab, discovery, busy, noise, online, health, filmed, name, discover]);  // eslint-disable-line react-hooks/exhaustive-deps
   return (

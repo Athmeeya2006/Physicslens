@@ -23,9 +23,18 @@ FILES = {
     "example_ades.psv": ROOT / "data" / "astro" / "asteroids" / "example_ades.psv",
     "occultation.json": ROOT / "data" / "astro" / "occultation" / "results.json",
     "satellites.json": ROOT / "data" / "astro" / "satellites" / "results.json",
+    "satellites_history.json": ROOT / "data" / "astro" / "satellites" / "history.json",
     "sun.json": ROOT / "data" / "astro" / "sun" / "results.json",
     "sun_agent.json": ROOT / "data" / "astro" / "sun" / "agent.json",
     "fireball.json": ROOT / "data" / "astro" / "fireball" / "results.json",
+    # The same cases run through the agent (scripts/cases_agent.py): its own laws beside the hand-chosen ones.
+    "robot.json": ROOT / "data" / "robot" / "result.json",
+    "health_public.json": ROOT / "data" / "health_public" / "result.json",
+    "so_arm100_identified.xml": ROOT / "data" / "robot" / "so_arm100_identified.xml",
+    "so_arm100_identified.diff": ROOT / "data" / "robot" / "so_arm100_identified.diff",
+    "agent_wasp12b.json": ROOT / "data" / "cases_agent" / "wasp12b.json",
+    "agent_kepler88b.json": ROOT / "data" / "cases_agent" / "kepler88b.json",
+    "agent_fireball.json": ROOT / "data" / "cases_agent" / "fireball.json",
     "winchcombe_strewn_field.geojson": ROOT / "data" / "astro" / "fireball" / "winchcombe_strewn_field.geojson",
     "winchcombe_strewn_field.kml": ROOT / "data" / "astro" / "fireball" / "winchcombe_strewn_field.kml",
 }

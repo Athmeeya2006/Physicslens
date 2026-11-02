@@ -14,10 +14,16 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 from urllib.parse import urlparse
 
 from playwright.sync_api import Error as PWError
 from playwright.sync_api import sync_playwright
+
+# The installed Chrome where there is one (it decodes H.264 for the gallery videos); Playwright's own Chromium elsewhere
+# (a cluster node without Chrome).
+CHROME = {"executable_path": "/usr/bin/google-chrome"} if Path("/usr/bin/google-chrome").exists() else {}
+
 
 PAGES = ["index", "study", "live", "health", "audit", "sky", "cases", "dataset", "timing", "fireball", "sun",
          "satellites", "occultation", "asteroids", "index?run=gallery-pendulum", "index?run=gallery-paperbag",
@@ -35,8 +41,12 @@ def visible_text(page) -> int:
 
 
 def dark_fraction(page) -> float:
-    """Share of the viewport that is nearly black (a blacked-out page is close to 1; the dark theme is not)."""
-    shot = page.screenshot()
+    """Share of the viewport that is nearly black (a blacked-out page is close to 1; the dark theme is not). 0 when the
+    screenshot cannot be taken in time (a WebGL page on a machine with software graphics): unknown, not black."""
+    try:
+        shot = page.screenshot(timeout=15000)
+    except PWError:
+        return 0.0
     from io import BytesIO
 
     from PIL import Image
@@ -98,7 +108,9 @@ def audit_page(browser, base: str, path: str, vp: str, theme: str, html: bool) -
         clicked += 1
         page.wait_for_timeout(500)
         text = visible_text(page)
-        if text < max(40, base_text * 0.2):
+        # A filter (a button in a group labelled "Filter ...") is meant to show fewer items: only a blank page counts.
+        filtering = loc.evaluate("e => !!e.closest('[role=group][aria-label^=\"Filter\"]')") if tag != "select" else False
+        if text < (40 if filtering else max(40, base_text * 0.2)):
             problems.append(f"after clicking '{label}': the page lost its content ({text} characters left)")
         if dark_fraction(page) > 0.97:
             problems.append(f"after clicking '{label}': the screen went black")
@@ -124,7 +136,7 @@ def main() -> None:
             pages = a.split("=", 1)[1].split(",")
     report: dict[str, list[str]] = {}
     with sync_playwright() as p:
-        browser = p.chromium.launch(executable_path="/usr/bin/google-chrome", headless=True)
+        browser = p.chromium.launch(**CHROME, headless=True)
         for path in pages:
             for vp in VIEWPORTS:
                 for theme in ("dark", "light"):

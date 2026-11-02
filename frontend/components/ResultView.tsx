@@ -4,7 +4,7 @@ import { Boxes, Download, FileCode2, FileJson, FileText, Film } from "lucide-rea
 import { useEffect, useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
 import { clipUrl, type ExportKind, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
-import { AgentTrail } from "./AgentTrail";
+import { AgentTrail, useLaws } from "./AgentTrail";
 import { AudioPanel } from "./AudioPanel";
 import { ControlPanel } from "./ControlPanel";
 import { DepthPanel } from "./DepthPanel";
@@ -14,6 +14,7 @@ import { OutcomeCard, ReadableLaw } from "./OutcomeCard";
 import { type Prediction, PredictionChart } from "./PredictionChart";
 import { GhostPlayer } from "./GhostPlayer";
 import { SimToReal } from "./SimToReal";
+import { Term } from "./Term";
 import { WhatIf } from "./WhatIf";
 
 const STATUS_TEXT: Record<AnalysisResult["status"], string> = {
@@ -91,6 +92,10 @@ function prettyModel(id: string, titles: Record<string, string>): string {
   return titles[id] ?? id.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
 }
 
+// Every part of a result is on the page, in this order, with jump links at the top: nothing hides behind a tab.
+const RESULT_TABS = ["trail", "forecast", "laws", "exports", "details"];
+const SECTION_TITLE: Record<string, string> = {trail: "Decision trail: what the agent and the math did", forecast: "Forecast: does the law predict motion it never saw?", laws: "The law and every law compared", exports: "Use the result: exports, controller and what-ifs", details: "Measurement details"};
+
 export function ResultView({ runId, result }: { runId: string; result: AnalysisResult }) {
   // Gallery orbit results carry a prediction file (scripts/halley_demo.py and orbit_demo.py prediction).
   const [prediction, setPrediction] = useState<Prediction | null>(null);
@@ -103,6 +108,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
   const [whatIfGhost, setWhatIfGhost] = useState<{ label: string; points: TrackPoint[] } | null>(null);
   const [share, setShare] = useState<{ state: "idle" | "busy" | "done" | "error"; url?: string; error?: string }>({ state: "idle" });
   const titles = Object.fromEntries(r.ranking.map((f) => [f.model_id, f.title]));
+  const laws = useLaws();
   const models = Array.from(new Set((r.trail ?? []).map((t) => t.model).filter((m) => m && m !== "simulate-and-compare")));
   const online = useBackend();
   const canAsk = online === true || !isGallery(runId);
@@ -117,44 +123,25 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
 
   return (
     <section className="stack" aria-labelledby="result-title">
-      {r.outcome && <OutcomeCard o={r.outcome} exportHref={(k) => exportUrl(runId, k as ExportKind)} />}
-      <div className="result-head">
-        <h2 id="result-title" className={r.status}>{STATUS_TEXT[r.status]}</h2>
-        <p className="reason">{r.reason}</p>
-        {r.units && (
-          <p className="small muted">
-            Units for this clip: lengths are in {r.units.length} and times in {r.units.time} (shown where the page says m and s).
-          </p>
-        )}
-        {r.hypothesis_votes && (
-          <p className="small muted">
-            {r.hypothesis_votes.proposed_by > 0
-              ? `Proposed by ${r.hypothesis_votes.proposed_by} of ${r.hypothesis_votes.samples} independent samples of the reasoning model before the math checked it.`
-              : refereeWon(r)
-                ? `None of ${r.hypothesis_votes.samples} independent samples proposed this law: the referee did, and it passed the held-out test and fit better by BIC.`
-                : `None of ${r.hypothesis_votes.samples} independent samples proposed this law; the agent tested it later or it is a baseline the math always tests.`}
-          </p>
-        )}
-        {r.skeptic && "tested" in r.skeptic && r.skeptic.survived && r.skeptic.tested > 0 && (
-          <p className="survived-badge">
-            Survived {r.skeptic.tested} challenge{r.skeptic.tested === 1 ? "" : "s"} from a referee model: no alternative law
-            did better by the same rule (forecast the held-out motion, then the best BIC).
-          </p>
-        )}
-        <div className="provenance">
-          <span>Models used:</span>
-          {models.map((m) => (
-            <span key={m} className={`model-tag ${isOpenWeight(m) ? "open" : ""}`} title={m}>{modelName(m)}</span>
-          ))}
-          <span className="model-tag">numerical verification</span>
+      <div className="result-top">
+        <div className="stack" style={{ gap: 10 }}>
+          {r.outcome && <OutcomeCard o={r.outcome} exportHref={(k) => exportUrl(runId, k as ExportKind)} />}
+          {r.equation && (
+            <div className="panel top-law">
+              <p className="small muted">{r.status === "accepted" ? "The verified law" : "The leading law (not yet decided)"}: {r.equation.title}</p>
+              <div className="law-scroll"><Tex tex={r.outcome?.readable?.latex_numeric ?? r.equation.latex} display /></div>
+            </div>
+          )}
+          <div className="provenance">
+            <span>Models used:</span>
+            {models.map((m) => (
+              <span key={m} className={`model-tag ${isOpenWeight(m) ? "open" : ""}`} title={m}>{modelName(m)}</span>
+            ))}
+            <span className="model-tag">numerical verification</span>
+          </div>
+          {r.scale_note && <p className="note">{r.scale_note}</p>}
         </div>
-        {r.scale_note && <p className="note">{r.scale_note}</p>}
-        {r.rolling_shutter?.note && <p className="note">{r.rolling_shutter.note}</p>}
-        {r.camera_level?.note && <p className="note">{r.camera_level.note}</p>}
-        {r.scale_basis && <p className="note">{r.scale_basis}</p>}
-      </div>
-
-      <div className="result-grid">
+        <div>
         {r.video_kept === false ? (
           <div className="panel"><p className="note">A saved live session: the video was not kept, only the track and
             the numbers. The equation, the exports and the what-ifs below work as for any result.</p></div>
@@ -170,36 +157,64 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           mujoco={r.mujoco?.points}
           ghosts={(r.ghosts ?? []).map((g) => ({ ...g, model_id: prettyModel(g.model_id, titles) }))}
         />}
-        <div className="panel">
-          <h3>Decision trail</h3>
-          <AgentTrail steps={r.trail ?? []} runId={runId} guideStored={r.setup_guide_available} />
         </div>
       </div>
 
+      <nav className="on-page" aria-label="On this page">
+        <span>On this page:</span>
+        {RESULT_TABS.map((id) => <a key={id} href={`#${id}`}>{SECTION_TITLE[id].split(":")[0]}</a>)}
+      </nav>
+        <section id="trail" className="result-section" aria-labelledby="trail-h">
+          <h2 id="trail-h">{SECTION_TITLE["trail"]}</h2>
+          <div className="stack">
+            <div className="result-head">
+              <h3 id="result-title" className={r.status}>{STATUS_TEXT[r.status]}</h3>
+              <p className="reason">{r.reason}</p>
+              {r.hypothesis_votes && (
+                <p className="small muted">
+                  {r.hypothesis_votes.proposed_by > 0
+                    ? `Proposed by ${r.hypothesis_votes.proposed_by} of ${r.hypothesis_votes.samples} independent samples of the reasoning model before the math checked it.`
+                    : refereeWon(r)
+                      ? `None of ${r.hypothesis_votes.samples} independent samples proposed this law: the referee did, and it passed the held-out test and fit better by BIC.`
+                      : `None of ${r.hypothesis_votes.samples} independent samples proposed this law; the agent tested it later or it is a baseline the math always tests.`}
+                </p>
+              )}
+              {r.skeptic && "tested" in r.skeptic && r.skeptic.survived && r.skeptic.tested > 0 && (
+                <p className="survived-badge">
+                  Survived {r.skeptic.tested} challenge{r.skeptic.tested === 1 ? "" : "s"} from a referee model: no alternative law
+                  did better by the same rule (forecast the held-out motion, then the best BIC).
+                </p>
+              )}
+            </div>
+            <AgentTrail steps={r.trail ?? []} runId={runId} guideStored={r.setup_guide_available}
+              latex={Object.fromEntries(r.ranking.filter((f) => f.latex).map((f) => [f.model_id, f.latex!]))} />
+          </div>
+        </section>
+        <section id="forecast" className="result-section" aria-labelledby="forecast-h">
+          <h2 id="forecast-h">{SECTION_TITLE["forecast"]}</h2>
+          <div className="stack">
+            {!r.forecast && !prediction && <p className="muted">No held-out forecast for this result.</p>}
       {r.forecast && (
         <div className="panel forecast">
           <h3>Forecast check: does the model predict motion it never saw?</h3>
           <ForecastChart f={r.forecast} uncalibrated={!!r.scale_note} units={r.units} />
         </div>
       )}
-
       {prediction && (
         <div className="panel">
           <h3>The prediction, years ahead: the law alone, and with the planets</h3>
           <PredictionChart p={prediction} />
         </div>
       )}
-
       {/* No textbook baseline for scaled units (an orbit in AU and days) or for a law the agent wrote for free planar
           motion: the server builds none, so none is asked for. */}
       {r.status === "accepted" && r.fit_state && !r.units && !(r.family === "plane" && String(r.fit_state.model_id ?? "").startsWith("custom_")) &&
         <SimToReal runId={runId} />}
-
-      {r.status === "accepted" && r.fit_state && online === true && (
-        <ControlPanel runId={runId} family={r.family} params={(r.fit_state.params ?? {}) as Record<string, number>}
-          length={(r.fit_state.ctx as Record<string, number> | undefined)?.length_m} />
-      )}
-
+          </div>
+        </section>
+        <section id="laws" className="result-section" aria-labelledby="laws-h">
+          <h2 id="laws-h">{SECTION_TITLE["laws"]}</h2>
+          <div className="stack">
       {r.equation && (
         <div className="panel">
           <h3>{r.equation.title}</h3>
@@ -241,7 +256,6 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           })}
         </div>
       )}
-
       {r.double && (
         <div className="panel">
           <h3>Double pendulum: {r.double.chaotic ? "chaotic" : "regular"} motion</h3>
@@ -262,7 +276,6 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           </p>
         </div>
       )}
-
       {r.bounces && (
         <div className="panel">
           <h3>Bounces: {r.bounces.accepted ? "hybrid model verified" : "hybrid model not confirmed"}</h3>
@@ -300,12 +313,42 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           )}
         </div>
       )}
+      <div className="panel">
+        <h3>Every candidate tested</h3>
+        <div className="table-wrap">
+          <table className="cards">
+            <thead><tr><th>Model, and why it was tested</th><th>Fitted values</th><th>Δ<Term k="bic" /></th><th><Term k="heldout">Held-out</Term> error</th></tr></thead>
+            <tbody>
+              {r.ranking.map((f) => (
+                <tr key={f.model_id}>
+                  <td data-label="Law">{f.title}{(f.latex ?? laws[f.model_id]?.latex) && <Law tex={(f.latex ?? laws[f.model_id]?.latex)!} />}<div className="muted small">{f.rationale ?? "Baseline, always tested as a control."}</div></td>
+                  <td data-label="Fitted values" className="fitted">
+                    {(f.param_meta ?? Object.keys(f.params).map((name) => ({ name, latex: name, unit: "" }))).map((p) => (
+                      <div key={p.name}>
+                        <Tex tex={p.latex} /> = {fmt(f.params[p.name])} {formatUnit(p.unit)}
+                        {r.scale_note && needsScale(p.unit) && <span className="uncal">uncalibrated</span>}
+                      </div>
+                    ))}
+                  </td>
+                  <td data-label="ΔBIC" className="num">{f.bic - bestBic < 0.5 ? "best" : `+${(f.bic - bestBic).toFixed(0)}`}</td>
+                  <td data-label="Held-out error" className="num">{(f.heldout_nrmse * 100).toFixed(1)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="muted small" style={{ marginTop: 8 }}>
+          ΔBIC is how much worse a model scores than the best one after a penalty for every extra parameter; above 10 is very
+          strong evidence against it. Held-out error is how far its forecast of the last quarter, fitted without it, misses.
+        </p>
 
-      {r.audio && <AudioPanel audio={r.audio} cameraLawTitle={r.equation?.title} />}
-      {r.depth3d && <DepthPanel d={r.depth3d} />}
-
-      {r.fit_state && canAsk && <WhatIf runId={runId} onGhost={setWhatIfGhost} />}
-
+      </div>
+          </div>
+        </section>
+        <section id="exports" className="result-section" aria-labelledby="exports-h">
+          <h2 id="exports-h">{SECTION_TITLE["exports"]}</h2>
+          <div className="stack">
+            {!r.fit_state && <p className="muted">No law was accepted, so there is nothing to export.</p>}
       {r.fit_state && (
         <div className="panel">
           <h3>Use the result</h3>
@@ -345,40 +388,18 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           )}
         </div>
       )}
-
-      <div className="panel">
-        <h3>Every candidate tested</h3>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Model, and why it was tested</th><th>Fitted values</th><th>ΔBIC</th><th>Held-out error</th></tr></thead>
-            <tbody>
-              {r.ranking.map((f) => (
-                <tr key={f.model_id}>
-                  <td>{f.title}{f.latex && <Law tex={f.latex} />}<div className="muted small">{f.rationale ?? "Baseline, always tested as a control."}</div></td>
-                  <td className="fitted">
-                    {(f.param_meta ?? Object.keys(f.params).map((name) => ({ name, latex: name, unit: "" }))).map((p) => (
-                      <div key={p.name}>
-                        <Tex tex={p.latex} /> = {fmt(f.params[p.name])} {formatUnit(p.unit)}
-                        {r.scale_note && needsScale(p.unit) && <span className="uncal">uncalibrated</span>}
-                      </div>
-                    ))}
-                  </td>
-                  <td className="num">{f.bic - bestBic < 0.5 ? "best" : `+${(f.bic - bestBic).toFixed(0)}`}</td>
-                  <td className="num">{(f.heldout_nrmse * 100).toFixed(1)}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="muted small" style={{ marginTop: 8 }}>
-          ΔBIC is how much worse a model scores than the best one after a penalty for every extra parameter; above 10 is very
-          strong evidence against it. Held-out error is how far its forecast of the last quarter, fitted without it, misses.
-        </p>
-
-      </div>
-
-      <details className="panel">
-        <summary>Measurement details</summary>
+      {r.status === "accepted" && r.fit_state && online === true && (
+        <ControlPanel runId={runId} family={r.family} params={(r.fit_state.params ?? {}) as Record<string, number>}
+          length={(r.fit_state.ctx as Record<string, number> | undefined)?.length_m} />
+      )}
+      {r.fit_state && canAsk && <WhatIf runId={runId} onGhost={setWhatIfGhost} />}
+          </div>
+        </section>
+        <section id="details" className="result-section" aria-labelledby="details-h">
+          <h2 id="details-h">{SECTION_TITLE["details"]}</h2>
+          <div className="stack">
+            <div className="panel">
+              <ul>
         <ul>
           <li>Object: {r.scene.moving_object}. {r.scene.observations}</li>
           <li>Scale: {r.calibration.source === "none" ? "no reference in view (nominal scale)"
@@ -403,7 +424,20 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           )}
           <li>Model calls: {r.llm_calls.map((c) => `${c.step}: ${c.model}${c.cached ? " (cached)" : ""}`).join(", ")}; tracking: sam-3.1</li>
         </ul>
-      </details>
+              </ul>
+              {r.units && (
+                <p className="small muted">
+                  Units for this clip: lengths are in {r.units.length} and times in {r.units.time} (shown where the page says m and s).
+                </p>
+              )}
+              {r.rolling_shutter?.note && <p className="note">{r.rolling_shutter.note}</p>}
+              {r.camera_level?.note && <p className="note">{r.camera_level.note}</p>}
+              {r.scale_basis && <p className="note">{r.scale_basis}</p>}
+            </div>
+      {r.audio && <AudioPanel audio={r.audio} cameraLawTitle={r.equation?.title} />}
+      {r.depth3d && <DepthPanel d={r.depth3d} />}
+          </div>
+        </section>
     </section>
   );
 }

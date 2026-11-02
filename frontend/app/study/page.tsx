@@ -138,6 +138,26 @@ export default function StudyPage() {
 
       {!study && (
         <section className="panel stack">
+          <h2>How a study works</h2>
+          <ol>
+            <li><strong>You give a goal.</strong> For example: &ldquo;Are the front shock absorbers on my car worn
+              out?&rdquo; Muse Spark Open, Meta&apos;s open-weight model, turns it into a plan: what to measure, which
+              recordings to make and when the question counts as answered.</li>
+            <li><strong>You film, it analyzes.</strong> Each recording goes through the full pipeline (SAM 3.1 tracks,
+              the agent proposes laws, held-out verification decides) and is verified on its own.</li>
+            <li><strong>It predicts before the next recording.</strong> When the plan varies a setting (a weight, a
+              length, an angle), a law is fitted across the recordings so far and the next result is predicted, with a
+              95% interval, before you film it; the prediction is then checked against what you measure.</li>
+            <li><strong>It asks for what would settle the question.</strong> After each recording the agent reviews the
+              evidence and either asks for another recording (and says why) or stops; code, not the model, combines the
+              numbers.</li>
+            <li><strong>You get a deliverable.</strong> A report, and for a robot or simulator a combined MuJoCo model.</li>
+          </ol>
+        </section>
+      )}
+
+      {!study && (
+        <section className="panel stack">
           <h2>Start a study</h2>
           {online === false ? (
             <p className="muted">
@@ -203,9 +223,9 @@ export default function StudyPage() {
             <div className="stack">
               <section className="panel">
                 <h3>The plan: {DELIVERABLE[study.plan.deliverable]}</h3>
-                <p className="small muted" style={{ marginBottom: 8 }}>Measure {study.plan.quantities.join("; ")}. Done when {lowerFirst(study.plan.done_when.replace(/^\s*done when[:,]?\s*/i, ""))}</p>
+                <p className="small muted" style={{ marginBottom: 8 }}>Measure {(study.plan.quantities ?? []).join("; ")}.{study.plan.done_when ? ` Done when ${lowerFirst(study.plan.done_when.replace(/^\s*done when[:,]?\s*/i, ""))}` : ""}</p>
                 <ol className="checklist">
-                  {study.plan.recordings.map((p) => {
+                  {(study.plan.recordings ?? []).map((p) => {
                     const done = study.recordings.some((r) => r.label === p.label);
                     return (
                       <li key={p.label} className={done ? "done" : ""}>
@@ -314,7 +334,7 @@ export default function StudyPage() {
                 </section>
               )}
 
-              {study.turns.length > 0 && (
+              {(study.turns ?? []).length > 0 && (
                 <section className="panel">
                   <h3>Agent&apos;s conclusion so far</h3>
                   <p>{study.turns.at(-1)!.message}</p>
@@ -336,7 +356,7 @@ export default function StudyPage() {
             </div>
             <div className="panel">
               <h3>Decision trail</h3>
-              <AgentTrail steps={study.trail} />
+              <AgentTrail steps={study.trail ?? []} />
             </div>
           </div>
         </>
@@ -352,7 +372,7 @@ const VERDICT: Record<string, string> = {
 function nextRecording(s: Study) {
   const last = s.turns.at(-1);
   if (last?.action === "record_more" && last.next_recording) return last.next_recording;
-  return s.plan.recordings.find((p) => !s.recordings.some((r) => r.label === p.label)) ?? null;
+  return (s.plan.recordings ?? []).find((p) => !s.recordings.some((r) => r.label === p.label)) ?? null;
 }
 
 function lowerFirst(text: string): string {

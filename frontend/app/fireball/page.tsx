@@ -7,6 +7,8 @@ import { Tex } from "@/components/Equation";
 import type { FallMapData } from "@/components/FallMap";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
+import { AgentOnCase } from "@/components/AgentOnCase";
+import { OnThisPage } from "@/components/OnThisPage";
 import { ProofNav } from "@/components/ProofNav";
 
 // A meteorite fall from its bright flight to the stones on the ground (scripts/fireball_demo.py on the Winchcombe
@@ -20,6 +22,7 @@ interface Find {
   explained_by: "at_end" | "fragmentation_zone" | null;
   at_end: { along_range_m: [number, number]; across_offset_m: number };
   fragmentation_zone: { along_range_m: [number, number]; across_offset_m: number };
+  blind?: { mass_bin_kg: number; hdr_level: number; inside_68: boolean; inside_95: boolean };
 }
 interface Fireball {
   event: string;
@@ -37,7 +40,8 @@ interface Fireball {
   strewn_points: { at_end: [number, number, number, number][]; fragmentation_zone: [number, number, number, number][] };
   end: { lat: number; lon: number; h_m: number };
   last_fragmentation_m: number;
-  summary: { finds: number; median_across_m: number; max_across_m: number; along_at_end: number; along_either: number };
+  summary: { finds: number; median_across_m: number; max_across_m: number; along_at_end: number; along_either: number;
+    blind_inside_68?: number; blind_inside_95?: number; blind_rule?: string };
   outcome: Outcome;
 }
 
@@ -142,6 +146,7 @@ export default function FireballPage() {
       {error && <p className="error">{error}</p>}
       {d && map && (
         <>
+          <OnThisPage items={[{ id: "fb-out", label: "Result" }, { id: "fb-map", label: "Where the stones fell" }, { id: "fb-new", label: "A new fall, predicted" }, { id: "fb-ab", label: "Did anything survive" }, { id: "fb-orbit", label: "Orbit" }, { id: "fb-dark", label: "Dark flight" }]} />
           <section className="panel stack" aria-labelledby="fb-out">
             <h2 id="fb-out">Winchcombe, England</h2>
             <OutcomeCard o={d.outcome} />
@@ -151,21 +156,37 @@ export default function FireballPage() {
             </div>
           </section>
 
+          <section className="panel stack" aria-labelledby="fb-new">
+            <h2 id="fb-new">A new fall, predicted before anyone looked</h2>
+            <p>The same blind rule, run on a fireball whose meteorites have not been reported: 2026 August 14, 07:48 UTC, over
+              Douglas County, Washington (NASA&apos;s camera solution; Doppler weather radar suggests small stones reached the
+              ground). Where each mass of stone should lie was registered on 2 November 2026, hashed, before any find: from about
+              48.08° N, 119.35° W for 5 g stones to 48.18° N, 119.38° W for 600 g ones, each region a few hundred km² because the
+              camera solution&apos;s errors are not published. It is scored when finds are reported, hit or miss.</p>
+            <p><a href="/predictions">See the registered prediction and its hash</a></p>
+          </section>
+
           <section className="panel stack" aria-labelledby="fb-map">
             <h2 id="fb-map">Where the stones fell</h2>
             <div className="row" role="radiogroup" aria-label="When the stones separated" style={{ gap: 16, flexWrap: "wrap" }}>
-              <label><input type="radio" checked={scenario === "at_end"} onChange={() => setScenario("at_end")} /> all released at the luminous end</label>
+              <label><input type="radio" checked={scenario === "at_end"} onChange={() => setScenario("at_end")} /> blind (rule fixed before comparing): released at the luminous end</label>
               <label><input type="radio" checked={scenario === "fragmentation_zone"} onChange={() => setScenario("fragmentation_zone")} />
-                {" "}released anywhere after the last flare ({(d.last_fragmentation_m / 1000).toFixed(1)} km)</label>
+                {" "}after review (with published fragment information): released anywhere after the last flare ({(d.last_fragmentation_m / 1000).toFixed(1)} km)</label>
             </div>
+            {d.summary.blind_inside_95 != null && (
+              <p className="small"><strong>Blind score:</strong> {d.summary.blind_inside_95} of {d.summary.finds} finds lie inside the 95% landing
+                region of their mass bin ({d.summary.blind_inside_68} inside the 68% one), regions computed from the simulation alone. The rule,
+                fixed in advance: {d.summary.blind_rule}.</p>
+            )}
             <FallMap data={map} label="Map of the simulated strewn field with the recovered stones" />
             <p className="small muted">Each dot is one simulated stone: its mass, shape (sphere to flat tile), the drag curve, the
               starting state and the radiosonde winds of the night all vary within their uncertainties. Black-ringed dots are the
               stones found (Russell et al. 2024; coordinates published to three decimals): green where simulated stones of that mass
               land, red where none do.</p>
+            <h3>Every stone found, scored blind and after review ({d.finds.length})</h3>
             <div className="table-wrap">
               <table className="cards">
-                <thead><tr><th>Found</th><th>Mass</th><th>Along the track</th><th>Across</th><th>Simulated range (end / zone)</th><th>Reproduced</th></tr></thead>
+                <thead><tr><th>Found</th><th>Mass</th><th>Along the track</th><th>Across</th><th>Simulated range (end / zone)</th><th>Blind region</th><th>Reproduced after review</th></tr></thead>
                 <tbody>
                   {d.finds.map((f) => (
                     <tr key={`${f.place}-${f.mass_g}-${f.lat}`}>
@@ -175,7 +196,8 @@ export default function FireballPage() {
                       <td data-label="Across" className="num">{f.at_end.across_offset_m.toFixed(0)} m</td>
                       <td data-label="Simulated" className="num">{(f.at_end.along_range_m[0] / 1000).toFixed(1)} to {(f.at_end.along_range_m[1] / 1000).toFixed(1)} /
                         {" "}{(f.fragmentation_zone.along_range_m[0] / 1000).toFixed(1)} to {(f.fragmentation_zone.along_range_m[1] / 1000).toFixed(1)} km</td>
-                      <td data-label="Reproduced">{f.explained_by === "at_end" ? "yes" : f.explained_by ? "yes, if released after the flare" : "no"}</td>
+                      <td data-label="Blind region">{f.blind ? (f.blind.inside_68 ? "inside 68%" : f.blind.inside_95 ? "inside 95%" : "outside 95%") : "n/a"}</td>
+                      <td data-label="Reproduced after review">{f.explained_by === "at_end" ? "yes" : f.explained_by ? "yes, if released after the flare" : "no"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -205,6 +227,7 @@ export default function FireballPage() {
               deceleration depend on the assumed shape and density (a factor of two in either is common), so the triage, not the
               mass, is the result here.{d.single_body.fragmentation ? ` A fragmentation was found at ${(d.single_body.fragmentation.height_m / 1000).toFixed(1)} km.`
                 : " No single fragmentation beat the single body by a decisive margin in the speeds alone."}</p>
+            <AgentOnCase file="agent_fireball.json" what="the fireball's distance along its track against time" />
           </section>
 
           <section className="panel stack" aria-labelledby="fb-orbit">

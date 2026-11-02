@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
+import { OnThisPage } from "@/components/OnThisPage";
 import { ProofNav } from "@/components/ProofNav";
 
 // Satellites on real orbits (scripts/satellite_demo.py): the ISS against its public catalogue orbit, what one pass
@@ -52,6 +53,47 @@ function DriftChart({ d }: { d: Sat["catalogue_vs_nasa"] }) {
   );
 }
 
+interface History {
+  rule: { statement: string };
+  data: { distinct_files: number; first: string; last: string };
+  vs_nasa_records: { burns_covered: number; detected: number; recall_ci95: [number, number]; false_alarms: number; quiet_days: number;
+    timing_error_h_median: number; burns: { event: string; tig_utc?: string; tig?: string; dv_ms: number | null; detected?: boolean }[] };
+  dv_vs_nasa: { burns: string[]; nasa_dv_ms: number; estimated_dv_ms: number }[];
+}
+
+// The detector on the ISS's real record (scripts/satellite_history.py): every reboost NASA recorded, found or not.
+function RealRecord() {
+  const [h, setH] = useState<History | null>(null);
+  useEffect(() => {
+    fetch("/astro/satellites_history.json").then((r) => (r.ok ? r.json() : null)).then(setH).catch(() => setH(null));
+  }, []);
+  if (!h) return null;
+  const v = h.vs_nasa_records;
+  return (
+    <section className="panel stack" aria-labelledby="sat-real">
+      <h2 id="sat-real">The real record: every ISS reboost from 2021 to 2026</h2>
+      <p className="case-number">{v.detected} of {v.burns_covered} reboosts NASA recorded were found (95%: {Math.round(v.recall_ci95[0] * 100)}% to
+        {" "}{Math.round(v.recall_ci95[1] * 100)}%), with {v.false_alarms} false alarm in {v.quiet_days.toFixed(0)} quiet days.</p>
+      <p className="small">From {h.data.distinct_files} archived NASA trajectory files ({h.data.first.slice(0, 10)} to {h.data.last.slice(0, 10)}).
+        The rule, fixed before the announcements were collected: {h.rule.statement}</p>
+      <div className="table-wrap">
+        <table className="cards">
+          <thead><tr><th>Recorded burn</th><th>Size, NASA</th><th>Size, measured here</th></tr></thead>
+          <tbody>
+            {h.dv_vs_nasa.map((x) => (
+              <tr key={x.burns.join("+")}>
+                <td data-label="Burn">{x.burns.join(", ")}</td>
+                <td data-label="NASA" className="num">{x.nasa_dv_ms.toFixed(2)} m/s</td>
+                <td data-label="Measured" className="num">{x.estimated_dv_ms.toFixed(2)} m/s</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 export default function SatellitesPage() {
   const [d, setD] = useState<Sat | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +116,7 @@ export default function SatellitesPage() {
       {error && <p className="error">{error}</p>}
       {d && (
         <>
+          <OnThisPage items={[{ id: "sat-out", label: "Catalogue check" }, { id: "sat-real", label: "Real reboosts" }, { id: "sat-one", label: "One pass" }, { id: "sat-man", label: "Manoeuvres" }, { id: "sat-tum", label: "Tumbling" }]} />
           <section className="panel stack" aria-labelledby="sat-out">
             <h2 id="sat-out">The ISS against its catalogue orbit</h2>
             <OutcomeCard o={d.outcome} />
@@ -81,6 +124,8 @@ export default function SatellitesPage() {
             <p className="small muted">The catalogue orbit is a fit made for one moment (its epoch, {d.gp_epoch.slice(0, 16).replace("T", " ")} UTC) and drifts from the
               real trajectory as it ages: within a day of its epoch it stays within {d.catalogue_vs_nasa.within_1_day.toFixed(1)} km along the track.</p>
           </section>
+
+          <RealRecord />
 
           <section className="panel stack" aria-labelledby="sat-one">
             <h2 id="sat-one">One pass: what it is, and what your clock can tell</h2>
@@ -110,10 +155,9 @@ export default function SatellitesPage() {
               perfect clock one pass measures that; every second of clock error adds {d.single_pass.checks[0].km_per_clock_second.toFixed(1)} km along the track,
               and one pass cannot tell the two apart. A GPS-synced clock (or filming one at the start and end) is what makes the
               measurement mean something.</p>
-            <details><summary className="small">The observations as IOD lines, ready to submit</summary>
-              <pre className="small" style={{ overflowX: "auto" }}>{d.iod.join("\n")}</pre>
-              <p className="small muted">Format: Interactive Orbit Determination (G. Lewis, 1998; clarified 2002). Station 9999 is a placeholder: use your own.</p>
-            </details>
+            <h3>The observations as IOD lines, ready to submit</h3>
+            <pre className="small" style={{ overflowX: "auto" }}>{d.iod.join("\n")}</pre>
+            <p className="small muted">Format: Interactive Orbit Determination (G. Lewis, 1998; clarified 2002). Station 9999 is a placeholder: use your own.</p>
           </section>
 
           <section className="panel stack" aria-labelledby="sat-man">

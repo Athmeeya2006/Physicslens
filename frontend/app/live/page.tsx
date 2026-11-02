@@ -301,12 +301,14 @@ export default function LivePage() {
             <div className="upload stack" style={{ gap: 10 }}>
               <p className="small">
                 Works live for anything that <strong>swings</strong>, bounces <strong>on a spring</strong>, is
-                <strong> thrown or falls</strong>, or <strong>rolls or slides</strong>. Spinning objects and double pendulums
-                need a recorded clip (Analyze page).
+                <strong> thrown or falls</strong>, or <strong>rolls or slides</strong>. Once a law is verified it predicts the
+                next event before it happens and checks itself: a swing or a spring passing its rest point, a rolling or sliding
+                object reaching a point further along. A throw is over too soon to predict, so it gets its law and numbers only.
+                Spinning objects and double pendulums need a recorded clip (Analyze page).
               </p>
               <p className="small muted">Scale, optional: an A4 sheet in view is read automatically; otherwise give one of these.</p>
               <label className="field">
-                Pendulum length, cm
+                Pendulum length (pivot to the centre of the bob), cm
                 <input type="number" inputMode="decimal" min="1" step="0.1" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} />
               </label>
               <label className="field">
@@ -403,7 +405,7 @@ export default function LivePage() {
 
 type Forecast = {
   id: number; status: "pending" | "hit" | "miss" | "unmeasured"; target_s: number; window_s: number; horizon_s: number;
-  made_s: number; error_s?: number;
+  made_s: number; error_s?: number; kind?: "rest" | "point";
 };
 
 // The prediction is shown (and stored on the server) before the event; the verdict comes from the measured track.
@@ -412,8 +414,10 @@ function ForecastBanner({ f, now }: { f: Forecast; now: number }) {
     const left = Math.max(0, f.target_s - now);
     return (
       <div className="forecast-banner">
-        <strong>Prediction {f.id}:</strong> it passes its rest point moving the same way in{" "}
-        <span className="countdown">{left.toFixed(1)} s</span> (± {f.window_s.toFixed(2)} s), predicted {f.horizon_s.toFixed(0)} s ahead.
+        <strong>Prediction {f.id}:</strong> {f.kind === "point"
+          ? "it reaches the point along its path where the law puts it"
+          : "it passes its rest point moving the same way"} in{" "}
+        <span className="countdown">{left.toFixed(1)} s</span> (± {f.window_s.toFixed(2)} s), predicted {f.horizon_s.toFixed(f.horizon_s < 2 ? 1 : 0)} s ahead.
       </div>
     );
   }
@@ -424,7 +428,7 @@ function ForecastBanner({ f, now }: { f: Forecast; now: number }) {
   return (
     <div className={`forecast-banner ${f.status}`}>
       <strong>Prediction {f.id}: {f.status === "hit" ? "hit" : "missed"}.</strong> It happened {Math.abs(err).toFixed(2)} s{" "}
-      {err > 0 ? "later" : "earlier"} than predicted {f.horizon_s.toFixed(0)} s in advance; the stated window was ± {f.window_s.toFixed(2)} s.
+      {err > 0 ? "later" : "earlier"} than predicted {f.horizon_s.toFixed(f.horizon_s < 2 ? 1 : 0)} s in advance; the stated window was ± {f.window_s.toFixed(2)} s.
     </div>
   );
 }

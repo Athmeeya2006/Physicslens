@@ -24,14 +24,8 @@ function Comparison({ c }: { c: AudioComparison }) {
 }
 
 export function AudioPanel({ audio, cameraLawTitle }: { audio: AudioResult; cameraLawTitle?: string }) {
-  if (!audio.available) {
-    return (
-      <div className="panel">
-        <h3>Audio</h3>
-        <p className="muted small">{audio.note}</p>
-      </div>
-    );
-  }
+  // No usable sound track: one muted line, not a whole panel with nothing in it.
+  if (!audio.available) return <p className="muted small">Audio: {audio.note}</p>;
   const r = audio.restitution;
   const sd = audio.spin_down;
   const onsets = audio.onsets ?? [];

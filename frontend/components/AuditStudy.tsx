@@ -160,7 +160,7 @@ export function AuditStudy() {
   const alone = (set: SetStats) => {
     const m = set.model_alone;
     const n = Object.values(m).reduce((x, y) => x + y, 0);
-    return n ? `${m.violates_physics ?? 0} of ${n} called fake` : "not run";
+    return n ? `${m.violates_physics ?? 0} of ${n} said to break physics` : "not run";
   };
   return (
     <section className="panel stack" style={{ gap: 16 }}>
@@ -177,6 +177,8 @@ export function AuditStudy() {
           <span className="hero-label">median forecast error of the best law, real vs AI (lower is more law-like)</span></li>
         {fa && <li><span className="hero-number">{fa.accused} of {fa.judged_real}</span>
           <span className="hero-label">real clips accused of breaking physics{fa.upper_95 !== null ? ` (at most ${pct(fa.upper_95)} at 95%)` : ""}</span></li>}
+        <li><span className="hero-number">{gen.flagged_among_judged.k} of {gen.flagged_among_judged.n}</span>
+          <span className="hero-label">generated clips it could judge that it flagged (recall: it flags physically impossible motion when it can judge, it is not a detector of fakes)</span></li>
       </ul>
       <h3>Is there a law at all?</h3>
       <p className="small muted">

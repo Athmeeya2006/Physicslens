@@ -160,7 +160,8 @@ export default function Home() {
           </>
         )}
 
-        <div className="home-grid">
+        {/* With a result open, the result is the page: the upload form and the list come back with "All recordings". */}
+        <div className="home-grid" hidden={!!done}>
           <section className="panel stack" aria-labelledby="analyze-title">
             <h2 id="analyze-title">Analyze a recording</h2>
             {health && !offline && (

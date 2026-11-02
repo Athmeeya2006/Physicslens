@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Camera, ClipboardList, Menu, Moon, Orbit, ScanSearch, ShieldCheck, Sun, X } from "lucide-react";
+import { FlaskConical, Menu, Moon, ScanSearch, ShieldCheck, Sun, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { accessCode } from "@/lib/api";
@@ -17,20 +17,40 @@ function Mark() {
   );
 }
 
+// The main pages, always in view on a wide screen (nobody should have to open a menu to find them); the phone menu
+// lists every page under three labels.
+const FLAT = [
+  { href: "/", label: "Analyze", also: [] as string[] },
+  { href: "/live", label: "Live", also: [] },
+  { href: "/study", label: "Studies", also: [] },
+  { href: "/cases", label: "Real-world cases", also: ["/robot", "/timing", "/fireball", "/sun", "/satellites", "/occultation", "/asteroids"] },
+  { href: "/predictions", label: "Predictions", also: [] },
+  { href: "/audit", label: "Physics audit", also: [] },
+  { href: "/health", label: "Machine health", also: [] },
+  { href: "/sky", label: "Solar System Lab", also: [] },
+  { href: "/dataset", label: "Dataset", also: [] },
+];
+
+// Three groups for the phone menu: what you can do, what has been shown, and the tools behind it.
 const NAV = [
-  { href: "/", label: "Analyze", icon: ScanSearch, also: [] as string[] },
-  { href: "/live", label: "Live", icon: Camera, also: [] },
-  { href: "/study", label: "Studies", icon: ClipboardList, also: [] },
-  { href: "/health", label: "Machine health", icon: Activity, also: [] },
-  { href: "/sky", label: "Solar System Lab", icon: Orbit, also: [] },
-  // Proof: every result checked against an independent answer, the physics audit and the open dataset.
-  { href: "/cases", label: "Proof", icon: ShieldCheck,
-    also: ["/audit", "/dataset", "/timing", "/fireball", "/sun", "/satellites", "/occultation", "/asteroids"] },
+  { id: "analyze", label: "Analyze", icon: ScanSearch, links: [
+    { href: "/", label: "Upload a video" }, { href: "/live", label: "Live camera" }, { href: "/study", label: "Studies" },
+  ] },
+  { id: "results", label: "Results", icon: ShieldCheck, links: [
+    { href: "/cases", label: "Real-world cases" }, { href: "/predictions", label: "Predictions" },
+    { href: "/#gallery-title", label: "Gallery" }, { href: "/dataset", label: "Open dataset" },
+  ] },
+  { id: "tools", label: "Tools", icon: FlaskConical, links: [
+    { href: "/robot", label: "Robot arm" }, { href: "/audit", label: "Physics audit" }, { href: "/health", label: "Machine health" }, { href: "/sky", label: "Solar System Lab" },
+    { href: "/fireball", label: "Fireballs" }, { href: "/timing", label: "Transit timing" }, { href: "/sun", label: "The Sun" },
+    { href: "/satellites", label: "Satellites" }, { href: "/occultation", label: "Occultations" }, { href: "/asteroids", label: "Asteroids" },
+  ] },
 ];
 
 /** The sub-pages of Proof, shown as a row under the page title on each of them. */
 export const PROOF_PAGES = [
   { href: "/cases", label: "Real-world cases" },
+  { href: "/predictions", label: "Predictions" },
   { href: "/audit", label: "Physics audit" },
   { href: "/dataset", label: "Open dataset" },
 ];
@@ -77,12 +97,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
-  const current = (href: string, also: string[]) => path === href || also.includes(path);
-  const links = (onPick?: () => void) => NAV.map(({ href, label, icon: Icon, also }) => (
-    <a key={href} href={href} title={label} onClick={onPick} aria-current={current(href, also) ? "page" : undefined}>
-      <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
-      <span>{label}</span>
-    </a>
+  const here = (href: string) => href === path;
+  const groupHere = (g: (typeof NAV)[number]) => g.links.some((l) => here(l.href));
+  // Phone: every group as a labelled list, never icons alone.
+  const menu = NAV.map((g) => (
+    <div key={g.id} className="menu-group">
+      <p className="menu-group-label">{g.label}</p>
+      {g.links.map((l) => (
+        <a key={l.href} href={l.href} aria-current={here(l.href) ? "page" : undefined} onClick={() => setOpen(false)}>{l.label}</a>
+      ))}
+    </div>
   ));
 
   return (
@@ -94,7 +118,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Mark />
             <span className="wordmark-text">PhysicsLens</span>
           </a>
-          <nav className="shell-nav" aria-label="Main">{links()}</nav>
+          <nav className="shell-nav" aria-label="Main">
+            {FLAT.map((l) => (
+              <a key={l.href} href={l.href} aria-current={here(l.href) || l.also.includes(path) ? "page" : undefined}>{l.label}</a>
+            ))}
+          </nav>
           <div className="shell-spacer" />
           <ThemeToggle />
           <button type="button" className="menu-toggle" aria-expanded={open} aria-controls="shell-menu"
@@ -102,13 +130,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {open ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
           </button>
         </div>
-        <nav id="shell-menu" className="shell-menu" aria-label="Main" hidden={!open}>{links(() => setOpen(false))}</nav>
+        <nav id="shell-menu" className="shell-menu" aria-label="Main" hidden={!open}>{menu}</nav>
       </header>
       {children}
       <footer className="shell-foot">
         Reasoning on Meta&apos;s open-weight models: Muse Spark Open (served by Baseten) and Muse Glimmer 30B. Tracking by
         SAM 3.1. Every result names the model or the numerical method behind each step.{" "}
-        <a href="https://github.com/Athmeeya2006/Physicslens/blob/main/OPEN_WEIGHTS.md">Open-weight evidence</a>
+        <a href="https://github.com/Athmeeya2006/Physicslens/blob/main/OPEN_WEIGHTS.md">Open-weight evidence</a> · <a href="/glossary">Glossary</a>
       </footer>
     </>
   );

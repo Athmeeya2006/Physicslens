@@ -7,7 +7,20 @@ import {
 import type { TrailStep } from "@/lib/api";
 import { SetupGuide } from "./SetupGuide";
 import { isGallery } from "@/lib/api";
+import { useEffect, useState } from "react";
 import { Law } from "./Equation";
+
+// Every library law's equation by id (scripts/build_law_latex.py), fetched once: older results name laws by id only,
+// and every law the agent touches is shown with its equation.
+let lawsCache: Promise<Record<string, { latex: string }>> | null = null;
+export function useLaws(): Record<string, { latex: string }> {
+  const [laws, setLaws] = useState<Record<string, { latex: string }>>({});
+  useEffect(() => {
+    lawsCache ??= fetch("/laws.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+    lawsCache.then(setLaws);
+  }, []);
+  return laws;
+}
 
 const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
   plan: { label: "Plans the study", icon: ClipboardList },
@@ -74,13 +87,44 @@ function designInstruction(step: TrailStep): string {
   return first ? `${first}.` : step.text;
 }
 
-export function AgentTrail({ steps, runId, guideStored }: { steps: TrailStep[]; runId?: string; guideStored?: boolean }) {
+export function AgentTrail({ steps, runId, guideStored, latex = {} }:
+  { steps: TrailStep[]; runId?: string; guideStored?: boolean; latex?: Record<string, string> }) {
+  const laws = useLaws();
+  const texFor = (id: string, own?: string | null) => own ?? latex[id] ?? laws[id]?.latex;
   return (
     <ol className="trail">
       {steps.map((s, i) => {
         const who = actor(s);
         const highlight = s.step === "agent" && s.action === "request_experiment";
         const { label, icon: Icon } = STEP[s.step] ?? STEP.agent;
+        const extra = (
+          <>
+            {s.expectation && <p className="small"><span className="muted">Expects:</span> {s.expectation}</p>}
+            {s.items && (
+              <ul className="trail-items">
+                {s.items.map((it) => (
+                  <li key={it.model_id} className={it.status ?? "proposed"}>
+                    {it.status
+                      ? <span className={`verdict ${it.status}`}>{(s.step === "design" ? DESIGN_STATUS : s.step === "skeptic" ? SKEPTIC_STATUS : ITEM_STATUS)[it.status] ?? it.status}</span>
+                      : <span className="verdict">Proposed</span>}
+                    <span>
+                      <span className="item-title">{it.title}</span> <span className="why">{it.why}</span>
+                      {texFor(it.model_id, it.latex) && <Law tex={texFor(it.model_id, it.latex)!} />}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {s.reasoning_summary && <p className="small muted">Reasoning: {s.reasoning_summary}</p>}
+            {s.fallbacks?.map((f, j) => <p key={j} className="small muted">Switched model: {f}</p>)}
+            {s.reasoning && (
+              <details className="thought">
+                <summary>What the model thought</summary>
+                <p>{s.reasoning}</p>
+              </details>
+            )}
+          </>
+        );
         return (
           <li key={i} className={`trail-step ${s.step} ${highlight ? "highlight" : ""}`}>
             <span className="trail-icon" aria-hidden="true"><Icon size={13} strokeWidth={2.2} /></span>
@@ -89,31 +133,8 @@ export function AgentTrail({ steps, runId, guideStored }: { steps: TrailStep[]; 
                 <strong>{s.label ?? (s.step === "agent" && s.action ? ACTION_LABEL[s.action] ?? label : label)}</strong>
                 <span className={`who ${who.tone}`}>{who.name}</span>
               </div>
-              {s.expectation && <p className="small"><span className="muted">Expects:</span> {s.expectation}</p>}
               <p className={highlight ? "lead" : undefined}>{s.text}</p>
-              {s.items && (
-                <ul className="trail-items">
-                  {s.items.map((it) => (
-                    <li key={it.model_id} className={it.status ?? "proposed"}>
-                      {it.status
-                        ? <span className={`verdict ${it.status}`}>{(s.step === "design" ? DESIGN_STATUS : s.step === "skeptic" ? SKEPTIC_STATUS : ITEM_STATUS)[it.status] ?? it.status}</span>
-                        : <span className="verdict">Proposed</span>}
-                      <span>
-                        <span className="item-title">{it.title}</span> <span className="why">{it.why}</span>
-                        {it.latex && <Law tex={it.latex} />}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {s.reasoning_summary && <p className="small muted">Reasoning: {s.reasoning_summary}</p>}
-              {s.fallbacks?.map((f, j) => <p key={j} className="small muted">Switched model: {f}</p>)}
-              {s.reasoning && (
-                <details className="thought">
-                  <summary>What the model thought</summary>
-                  <p>{s.reasoning}</p>
-                </details>
-              )}
+              {extra}
               {runId && s.step === "design" && <SetupGuide runId={runId} stepRef={i} instruction={designInstruction(s)}
                 canDraw={!isGallery(runId) || !!guideStored} />}
             </div>

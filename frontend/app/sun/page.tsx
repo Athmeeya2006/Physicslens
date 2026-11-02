@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Tex } from "@/components/Equation";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
+import { OnThisPage } from "@/components/OnThisPage";
 import { ProofNav } from "@/components/ProofNav";
 
 // The Sun's rotation law from real SDO/HMI images (scripts/sun_demo.py), and region-return forecasts checked against
@@ -26,6 +27,8 @@ interface Sun {
   returns: Ret[];
   returns_summary: { forecast: number; came_back: number; median_error_days: number | null; noaa_median_error_days: number | null; noaa_compared: number;
     later_than_forecast?: number; noaa_later_than_forecast?: number };
+  return_bias?: { returns: number; late: number; sign_test_p: number; constant_days: number;
+    loo_mae_days: { none: number; constant: number; latitude: number }; best: string; candidates: string };
   outcome: Outcome;
 }
 
@@ -106,6 +109,7 @@ export default function SunPage() {
       {error && <p className="error">{error}</p>}
       {d && (
         <>
+          <OnThisPage items={[{ id: "sun-out", label: "Rotation law" }, { id: "sun-ret", label: "Returns" }, { id: "sun-agent", label: "The agent on single spots" }]} />
           <section className="panel stack" aria-labelledby="sun-out">
             <h2 id="sun-out">Rotation law</h2>
             <OutcomeCard o={d.outcome} />
@@ -158,7 +162,7 @@ export default function SunPage() {
               </table>
             </div>
             {gone.length > 0 && (
-              <details>
+              <details open>
                 <summary className="small">{gone.length} more regions that were not seen again (decayed, or too small for NOAA to number)</summary>
                 <div className="table-wrap">
                   <table className="cards">
@@ -183,6 +187,15 @@ export default function SunPage() {
               A region is listed when NOAA first numbers it, usually a day or two after it rounds the limb; the time it crossed the limb
               is worked back from where it was first listed.{d.returns_summary.later_than_forecast != null &&
               ` All misses go one way: ${d.returns_summary.later_than_forecast} of ${d.returns_summary.came_back} regions came back later than forecast here, and ${d.returns_summary.noaa_later_than_forecast} of ${d.returns_summary.noaa_compared} later than NOAA's own date.`}</p>
+            {d.return_bias && (
+              <p className="small">
+                <strong>Is the delay a term?</strong> Each version fitted on all returns but one and scored on the one left out:
+                no delay misses by {d.return_bias.loo_mae_days.none.toFixed(2)} days, a constant {d.return_bias.constant_days.toFixed(1)}-day
+                delay by {d.return_bias.loo_mae_days.constant.toFixed(2)}, a delay that changes with latitude
+                by {d.return_bias.loo_mae_days.latitude.toFixed(2)} ({d.return_bias.returns} returns, so a hint, not a law). Possible
+                causes, not decided by these data: {d.return_bias.candidates}.
+              </p>
+            )}
           </section>
           {agent && agent.spots.length > 0 && (
             <section className="panel stack" aria-labelledby="sun-agent">

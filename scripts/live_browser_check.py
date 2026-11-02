@@ -21,6 +21,11 @@ from pathlib import Path
 
 import numpy as np
 
+# The installed Chrome where there is one (it decodes H.264 for the gallery videos); Playwright's own Chromium elsewhere
+# (a cluster node without Chrome).
+CHROME = {"executable_path": "/usr/bin/google-chrome"} if Path("/usr/bin/google-chrome").exists() else {}
+
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "var" / "live_check"
 W, H, FPS, SECONDS = 640, 480, 25, 40
@@ -77,7 +82,7 @@ def run(base: str) -> None:
     results = {}
     with sync_playwright() as p:
         for family in [f for f in LABEL if not sys.argv[3:] or f in sys.argv[3:]]:
-            browser = p.chromium.launch(executable_path="/usr/bin/google-chrome", headless=True, args=[
+            browser = p.chromium.launch(**CHROME, headless=True, args=[
                 "--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream",
                 f"--use-file-for-fake-video-capture={OUT / f'{family}.y4m'}"])
             page = browser.new_page(viewport={"width": 1280, "height": 900})

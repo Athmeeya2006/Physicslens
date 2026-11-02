@@ -12,7 +12,7 @@ const LAW = "\\ddot x = -\\frac{\\mu\\,x}{(x^2+y^2)^{3/2}} - b\\,\\dot x,\\quad 
 const STATS = [
   { value: "0.023%", label: "the Sun's mass (GM), measured from pixels, against NASA/JPL" },
   { value: "0.012%", label: "Jupiter weighed from its four large moons" },
-  { value: "1.4991", note: "± 0.0032", label: "Kepler's third-law exponent, found from the tracks (true value 1.5)" },
+  { value: "1.4991", note: "95%: 1.4929 to 1.5053", label: "Kepler's third-law exponent, found from the tracks (true value 1.5)" },
 ];
 
 export function Hero() {

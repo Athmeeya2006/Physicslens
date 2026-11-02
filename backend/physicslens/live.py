@@ -111,7 +111,8 @@ SAM_WORKERS = 4
 LLM_MIN_INTERVAL_S = 5.0  # live mode never calls the language model more often than this
 # Predict-the-future: try this far ahead first (shorter if the swing will have died out), with a small bootstrap
 # for the timing window, once the law is accepted and its parameters have settled.
-FORECAST_HORIZONS_S = (20.0, 10.0, 5.0)
+# A sliding object is gone within seconds, so its horizons are short.
+FORECAST_HORIZONS_S = {"pendulum": (20.0, 10.0, 5.0), "oscillator": (20.0, 10.0, 5.0), "line": (1.5, 1.0, 0.5)}
 FORECAST_REPS = 12
 FORECAST_MIN_HISTORY = 3
 
@@ -740,7 +741,14 @@ class LiveSession:
         """Judge a pending prediction once its window has passed; start a new one when none is pending."""
         f = self.forecast
         if f is not None:
-            p = Prediction(f["t_abs"] - t_abs0, f["window_s"], float(np.median(coords.q[:, 0])), f["direction"], 0.0)
+            level, direction = float(np.median(coords.q[:, 0])), f["direction"]
+            if f.get("target_xy") is not None and "axis_x" in coords.ctx:
+                # A point along a sliding path: each window re-estimates the path's axis and origin, so the target is
+                # kept as a place in the picture and projected onto the current axis.
+                ax = np.array([coords.ctx["axis_x"], coords.ctx["axis_y"]])
+                level = float((np.array(f["target_xy"]) - [coords.ctx["origin_x"], coords.ctx["origin_y"]]) @ ax)
+                direction = 1 if float(np.array(f["heading_xy"]) @ ax) > 0 else -1
+            p = Prediction(f["t_abs"] - t_abs0, f["window_s"], level, direction, 0.0)
             outcome = judge(p, observed_crossing(coords.t, coords.q[:, 0], p))
             if outcome["status"] != "unmeasured":
                 f.update(outcome, judged_wall=time.time(), observed_s=round(outcome["observed"] + t_abs0 - (self.t0 or 0.0), 3))
@@ -768,14 +776,21 @@ class LiveSession:
                 samples, _ = in_worker(bootstrap_builtin, spec.id, coords, lead, FORECAST_REPS)
             else:
                 samples, _ = bootstrap_samples(spec, coords, lead, reps=FORECAST_REPS)
-            for horizon in FORECAST_HORIZONS_S:
+            for horizon in FORECAST_HORIZONS_S.get(coords.family, FORECAST_HORIZONS_S["pendulum"]):
                 p = predict_crossing(spec, lead, coords, horizon, samples)
                 if p is not None:
                     t_rel = (self.t0 or 0.0)
                     self.forecast = {"id": len(self.forecasts) + 1, "status": "pending", "model_id": spec.id,
                                      "made_wall": time.time(), "made_s": round(p.made_at + t_abs0 - t_rel, 3),
                                      "target_s": round(p.t_pred + t_abs0 - t_rel, 3), "window_s": round(p.window_s, 3),
-                                     "horizon_s": horizon, "direction": p.direction, "t_abs": p.t_pred + t_abs0}
+                                     "horizon_s": horizon, "direction": p.direction, "t_abs": p.t_pred + t_abs0,
+                                     "kind": "rest" if coords.family in ("pendulum", "oscillator") else "point"}
+                    if self.forecast["kind"] == "point":
+                        xy = coords.to_xy(np.array([[p.level]]))[0]
+                        here = coords.to_xy(coords.q[-1:, :1])[0]
+                        self.forecast.update(target_xy=[float(xy[0]), float(xy[1])],
+                                             heading_xy=[float(xy[0] - here[0]), float(xy[1] - here[1])],
+                                             ahead_m=round(float(np.hypot(*(xy - here))), 3))
                     self.forecasts.append(self.forecast)
                     self._save_forecasts()
                     self.send({"type": "prediction", **_public(self.forecast)})
