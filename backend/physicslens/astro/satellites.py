@@ -329,9 +329,10 @@ def _accel(r: np.ndarray, v: np.ndarray, k_drag: float, R: np.ndarray | None = N
 
 
 def integrate(state0: np.ndarray, t0_jd: float, t_jd: np.ndarray, k_drag: float,
-              impulse: tuple[float, np.ndarray] | None = None) -> np.ndarray:
+              impulse: tuple[float, np.ndarray] | None = None, site: np.ndarray | None = None) -> np.ndarray:
     """Positions (km) at t_jd (all after t0_jd) from a state at t0_jd; impulse = (time jd, delta-v in radial,
-    in-track, cross-track km/s) applied at that instant."""
+    in-track, cross-track km/s) applied at that instant. With site (the observer's positions at t_jd), the positions
+    are astrometric: each where the satellite was when its light left (the same solution, a few ms earlier)."""
     from scipy.integrate import solve_ivp
 
     if _POLE["t"] is None or abs(_POLE["t"] - t0_jd) > 1.0:  # one rotation per day of epochs is ample
@@ -347,24 +348,36 @@ def integrate(state0: np.ndarray, t0_jd: float, t_jd: np.ndarray, k_drag: float,
     secs = (np.asarray(t_jd) - t0_jd) * 86400.0
     end = float(secs.max()) if len(secs) else 1.0
     if impulse is None:
-        return leg(state0, 0.0, end).sol(secs)[:3].T
-    tm = (impulse[0] - t0_jd) * 86400.0
-    first = leg(state0, 0.0, tm)
-    s_m = first.sol(tm).copy()
-    R = s_m[:3] / np.linalg.norm(s_m[:3])
-    C = np.cross(s_m[:3], s_m[3:])
-    C /= np.linalg.norm(C)
-    I = np.cross(C, R)
-    dv = impulse[1]
-    s_m[3:] += dv[0] * R + dv[1] * I + dv[2] * C
-    second = leg(s_m, tm, end)
-    before = secs < tm
-    out = np.zeros((len(secs), 3))
-    if before.any():
-        out[before] = first.sol(secs[before])[:3].T
-    if (~before).any():
-        out[~before] = second.sol(secs[~before])[:3].T
-    return out
+        sol = leg(state0, 0.0, end).sol
+
+        def at(x: np.ndarray) -> np.ndarray:
+            return sol(x)[:3].T
+    else:
+        tm = (impulse[0] - t0_jd) * 86400.0
+        first = leg(state0, 0.0, tm)
+        s_m = first.sol(tm).copy()
+        R = s_m[:3] / np.linalg.norm(s_m[:3])
+        C = np.cross(s_m[:3], s_m[3:])
+        C /= np.linalg.norm(C)
+        I = np.cross(C, R)
+        dv = impulse[1]
+        s_m[3:] += dv[0] * R + dv[1] * I + dv[2] * C
+        second = leg(s_m, tm, end)
+
+        def at(x: np.ndarray) -> np.ndarray:
+            out = np.zeros((len(x), 3))
+            before = x < tm
+            if before.any():
+                out[before] = first.sol(x[before])[:3].T
+            if (~before).any():
+                out[~before] = second.sol(x[~before])[:3].T
+            return out
+
+    r = at(secs)
+    if site is not None:
+        # A few ms before the first point the dense solution extends its first step: metres at most.
+        r = at(secs - light_time_jd(r, site) * 86400.0)
+    return r
 
 
 @dataclass
@@ -399,8 +412,7 @@ def fit_orbit(t_jd: np.ndarray, ra: np.ndarray, dec: np.ndarray, rs: np.ndarray,
 
     def resid(th):
         s0, kd, imp = unpack(th)
-        r = integrate(s0, t0_jd, t_jd, kd, imp)
-        r = integrate(s0, t0_jd, t_jd - light_time_jd(r, rs), kd, imp)  # where it was when the light left it
+        r = integrate(s0, t0_jd, t_jd, kd, imp, site=rs)  # where it was when the light left it
         cra, cdec, _ = radec(r, rs)
         dra = ((ra - cra + 180) % 360 - 180) * np.cos(np.radians(dec)) * 3600
         return np.concatenate([dra, (dec - cdec) * 3600]) / sigma_arcsec
@@ -429,8 +441,7 @@ def fit_orbit(t_jd: np.ndarray, ra: np.ndarray, dec: np.ndarray, rs: np.ndarray,
 
 def forecast_chi2(fit: OrbitFit, t_jd, ra, dec, rs, sigma_arcsec, t0_jd) -> tuple[float, float]:
     imp = (fit.impulse_jd, fit.theta[7:10]) if fit.impulse_jd is not None else None
-    r = integrate(fit.theta[:6], t0_jd, t_jd, fit.theta[6], imp)
-    r = integrate(fit.theta[:6], t0_jd, t_jd - light_time_jd(r, rs), fit.theta[6], imp)
+    r = integrate(fit.theta[:6], t0_jd, t_jd, fit.theta[6], imp, site=rs)
     cra, cdec, _ = radec(r, rs)
     sep = angular_sep(ra, dec, cra, cdec)
     return float(np.mean((sep / sigma_arcsec) ** 2) / 2), float(np.sqrt(np.mean(sep ** 2)))

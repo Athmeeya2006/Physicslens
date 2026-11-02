@@ -104,3 +104,13 @@ def test_light_time_for_a_low_orbit():
     # 1,000 km from the observer: 3.34 ms, about 25 m along the track at 7.66 km/s.
     lt = T.light_time_jd(np.array([[7000.0, 0, 0]]), np.array([[6000.0, 0, 0]]))
     assert lt[0] * 86400 == pytest.approx(1000 / 299792.458)
+
+
+def test_astrometric_positions_are_the_light_time_earlier_ones():
+    s0 = np.array([6778.0, 0, 0, 0, 7.6686, 0])
+    t = 2461346.0 + np.array([0.01, 0.02])
+    site = np.array([[6000.0, 500.0, 0.0], [6000.0, 500.0, 0.0]])
+    geo = T.integrate(s0, 2461346.0, t, 0.0)
+    astro = T.integrate(s0, 2461346.0, t, 0.0, site=site)
+    earlier = T.integrate(s0, 2461346.0, t - T.light_time_jd(geo, site), 0.0)
+    assert np.allclose(astro, earlier, atol=1e-3) and not np.allclose(astro, geo, atol=1e-3)
