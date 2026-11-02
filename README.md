@@ -30,13 +30,13 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 - **The problem:** robots are trained in simulators and fail when the simulator's physics is wrong (friction, damping, stiffness). Measuring real physics takes lab rigs and an expert.
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
-- **Proof it discovers rather than recalls:** from rendered videos of asteroid Apophis and of Jupiter's four large moons it found the inverse-square law, the Sun's GM within 0.023% and Jupiter's within 0.012% of NASA/JPL, and Kepler's third law (exponent 1.4991 ± 0.0032) from the tracks alone; on Halley's comet a force law with the exponent left free fitted 1.9998.
-- **On real footage:** a pendulum given as 0.5 m long gives g = 9.91 ± 0.04 m/s² (one standard deviation; 0.99% from 9.81, and its 95% interval, 9.83 to 9.99, misses 9.81: the stated length is the likely cause, see below); a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
-- **Real-world cases, each checked against an independent answer:** the Winchcombe meteorite fall from its published trajectory (its orbit within 0.4 sigma of the published one, every recovered stone within 563 m of the simulated fall line, 5 of 9 placed along it blind), WASP-12b's shrinking orbit (28.6 ± 2.1 ms per year against the published 29 ± 2), the Sun's rotation from real SDO images, Uranus's moon Umbriel sized from a star's disappearance, and how much one more night helped track asteroid 2024 YR4. Each is a page that also says what it cannot do.
+- **Proof it discovers rather than recalls:** from rendered videos of asteroid Apophis and of Jupiter's four large moons it found the inverse-square law, the Sun's GM within 0.023% and Jupiter's within 0.012% of NASA/JPL, and Kepler's third law (exponent 1.4991, 95% interval 1.4929 to 1.5053) from the tracks alone; on Halley's comet a force law with the exponent left free fitted 1.9998.
+- **On real footage:** a pendulum given as 0.5 m long gives g = 9.91 m/s² (95% interval 9.82 to 9.99), 0.98% above the local 9.811 at the filming site in Aachen, which the interval misses: the clock checks out and the stated length is the likely cause (a 4.9 mm shorter length would explain it all, see below); a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
+- **Real-world cases, each checked against an independent answer:** an open-source robot arm's simulator corrected from public recordings (on held-out motion about twice as close to the real arm as the public model), all 17 recorded ISS reboosts that five years of archived NASA trajectories cover found by a rule fixed in advance (1 false alarm in 572 quiet days), the Winchcombe meteorite fall from its published trajectory (its orbit within 0.4 sigma of the published one, every recovered stone within 563 m of the simulated fall line, but only 1 of 9 inside its blind 95% landing region, so partial), WASP-12b's shrinking orbit (28.6 ms per year, 95% interval 24.5 to 32.7, against the published 29 ± 2 at one standard deviation), the Sun's rotation from real SDO images, Uranus's moon Umbriel sized from a star's disappearance, and how much one more night helped track asteroid 2024 YR4. Each is a page that also says what it cannot do.
 - **Meta models doing real work:** Muse Spark Open (open weights, on Baseten) reasons, SAM 3.1 tracks, Muse Voice Transcribe listens, Muse Image draws setup guides, Muse Wonder writes controllers that only simulation can accept, and Muse Glimmer 30B is the fully offline open-weight path.
 
 
-*Numbers in this README: ± is one standard deviation; a range marked 95% is a 95% interval, as the result cards show.*
+*Numbers in this README: summaries give 95% intervals, written as a range, the same convention as the result cards. In the detailed sections and tables, ± is one standard deviation (a 95% interval is about twice as wide).*
 
 ## Judging guide (5 minutes)
 
@@ -76,6 +76,10 @@ In every result, read the decision trail beside the video: each step is tagged w
 - [Solar System Lab](#solar-system-lab)
 - [Real sky data: telescope frames, sky videos and light curves](#real-sky-data-telescope-frames-sky-videos-and-light-curves)
 - [Real-world cases on public data](#real-world-cases-on-public-data)
+- [Open-source robot arm: its simulator corrected](#open-source-robot-arm-its-simulator-corrected-from-public-recordings-robot)
+- [Lab measurement on labelled real footage](#lab-measurement-on-labelled-real-footage-scriptslab_footagepy)
+- [The agent on the real-world cases](#the-agent-on-the-real-world-cases-scriptscases_agentpy)
+- [Predictions made before the answer](#predictions-made-before-the-answer-predictions)
 
 **Part IV: Prove**
 - [How an equation is accepted](#how-an-equation-is-accepted)
@@ -430,7 +434,7 @@ FITS header's pointing still works, and the web service is the fallback.
 
 Each case ends in something a person can act on (a calendar of transits, a search map), is tested on public data and
 validated against an independent published answer, and says on the same page what it cannot do. Nothing is trained:
-each case is fitted from scratch. The astronomy cases are local math on free data, with no model calls. Data sources, licences and the values compared against are listed beside the data
+each case is fitted from scratch. Most astronomy cases are local math on free data; where Muse Spark Open took part (single sunspots on the Sun page, every orbit video) the case says so in its "Meta models" column. Data sources, licences and the values compared against are listed beside the data
 (`data/astro/timing/SOURCES.md`, `data/astro/fireball/SOURCES.md`).
 
 Every case at a glance (the status comes from each result file by a written rule, never set by hand; the same cards are on the site's `/cases` page):
@@ -440,17 +444,49 @@ Every case at a glance (the status comes from each result file by a written rule
 | Case | Who has the problem | What PhysicsLens gives them | Against an independent truth | Status | Meta models | What it can't do |
 |---|---|---|---|---|---|---|
 | [Robotics: sim-to-real](https://physicslens.vercel.app/?run=gallery-paperbag) | robotics engineers | a calibrated model with intervals, exported to MuJoCo, URDF and SDF, checked by replaying it in MuJoCo | on flight it never saw, the calibrated model of a thrown paper bag lands 11.5 times closer to the real track than the textbook (drag-free) one, and 2.0 times closer than the standard air-drag law (quadratic, its coefficient fitted to the same flight) | proven | SAM 3.1 tracked the bag; Muse Spark Open (open weights) proposed the laws; verification, the fits and the MuJoCo replay are math | one rigid body at a time, filmed side-on; the control comparison runs in simulation only |
-| [Lab measurement](https://physicslens.vercel.app/?run=gallery-pendulum) | students, teachers, anyone checking an experiment | the constant with a 95% interval, the law it follows, and the recording that would settle what is still open | g = 9.907 m/s² against 9.81 (0.99% off) | not yet validated | SAM 3.1 tracked the bob; Muse Spark Open proposed the laws and designed the deciding experiment; verification is math | it needs a known length (or another scale) in the picture; the arc alone cannot fix the length when the pivot is out of view |
-| [Exoplanet transit timing](https://physicslens.vercel.app/timing) | observatories, amateur transit-timing networks, exoplanet researchers | refreshed transit windows (calendar and CSV), a list of stale ephemerides, and the law behind the timings | WASP-12b's orbit shrinks by 28.6 ms/yr against the published 29 ± 2; Kepler-88's unseen planet: partial | proven | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | timing inversions are degenerate (mass against eccentricity); the Kepler-88 fit forecasts to 15 min, not the 3 min its data allow |
-| [Fireballs and meteorite falls](https://physicslens.vercel.app/fireball) | fireball networks, meteorite hunters | whether anything survived, the orbit it came from, and a strewn-field map (GeoJSON, KML) | Winchcombe, from the published trajectory: within 563 m of all 9 recovered stones across the track; along it 5 of 9 with the release rule fixed in advance (9 of 9 with a later choice) | proven | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | it starts from a triangulated trajectory, not one video; masses carry a factor-of-two uncertainty from shape and density |
+| [Open-source robot arm: simulator corrected from public recordings](https://physicslens.vercel.app/robot) | anyone who simulates the SO-100 arm (MuJoCo Menagerie, LeRobot users) | measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model | SO-100 arm, 50 public recordings: on held-out episodes the corrected MuJoCo model tracks the real joints to 0.38° RMS against 0.75° for the MuJoCo Menagerie model (2.0 times closer; 1.7 times closer than the default with a fitted delay) | improves a public tool | local math on public joint recordings (no video, so no SAM): the servo laws are fitted and verified by held-out MuJoCo replay; no Meta model in this case | only the motions in these pick-and-place recordings; payloads, wear and other units of the arm are not covered |
+| [Lab measurement](https://physicslens.vercel.app/?run=gallery-pendulum) | test engineers, labs, anyone checking an experiment | the constant with a 95% interval, the law it follows, and the recording that would settle what is still open | 12 real clips with measured lengths: the local g inside the 95% interval in 0 of 12 (coverage 0% to 24% at 95%); median error 6.2% | partial | SAM 3.1 tracked the bob; Muse Spark Open proposed the laws and designed the deciding experiment; verification is math | it needs a known length (or another scale) in the picture; the arc alone cannot fix the length when the pivot is out of view |
+| [Exoplanet transit timing](https://physicslens.vercel.app/timing) | observatories, amateur transit-timing networks, exoplanet researchers | refreshed transit windows (calendar and CSV), a list of stale ephemerides, and the law behind the timings | WASP-12b's orbit shrinks by 28.6 ms/yr against the published 29 ± 2; Kepler-88's unseen planet: partial | predicted | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | timing inversions are degenerate (mass against eccentricity); the Kepler-88 fit forecasts to 15 min, not the 3 min its data allow |
+| [Fireballs and meteorite falls](https://physicslens.vercel.app/fireball) | fireball networks, meteorite hunters | whether anything survived, the orbit it came from, and a strewn-field map (GeoJSON, KML) | Winchcombe, from the published trajectory: blind, 1 of 9 recovered stones inside their 95% landing regions; after review, all within 563 m of the fall line | predicted | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | it starts from a triangulated trajectory, not one video; masses carry a factor-of-two uncertainty from shape and density |
 | [The Sun's rotation](https://physicslens.vercel.app/sun) | space-weather watchers, radio operators, aurora chasers | the differential rotation law from real images, and return dates for active regions | 14.46 + (-3.11) sin² φ °/day against the published sunspot profile 14.44 − 3.0 sin² φ; 7 regions back a median 1.5 days from the forecast | proven | Muse Spark Open proposed laws for single spots' tracks (verification rejected them: noise); the rotation law itself is math on all spots | not new science; spots do not rotate exactly like the plasma; whether a region flares is out of scope |
 | [Stellar occultations](https://physicslens.vercel.app/occultation) | occultation observers (IOTA and amateur networks) | edge times with honest errors, and the outline from every observer's chord, misses included | Umbriel's radius 582.1 ± 0.9 km against the published 582.4 ± 0.8 km | proven | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | uses published timings, not raw videos; diffraction is not modelled |
 | [Asteroid follow-up](https://physicslens.vercel.app/asteroids) | amateur astronomers following up new objects | a submittable ADES report, and how much your night shrinks the orbit's uncertainty | 2024 YR4: one more night shrinks the uncertainty a month ahead from 2.3″ to 0.4″; observations three weeks later fell 0.6″ from the forecast (median) | proven | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | the core astrometry is already done well by free tools; one night cannot detect the Yarkovsky drift |
-| [Satellites](https://physicslens.vercel.app/satellites) | amateur trackers, space-safety analysts | which object a streak is, how far it is from its catalogue orbit, manoeuvre alerts, IOD reports | ISS catalogue offset 0.11 ± 0.01 s from one pass (NASA's trajectory: 0.11 s); no false manoeuvre on the real orbit, 2 of 2 injected found | partial | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | needs frame times good to a fraction of a second (a GPS-synced clock); one pass constrains an orbit weakly |
+| [Satellites](https://physicslens.vercel.app/satellites) | amateur trackers, space-safety analysts | which object a streak is, how far it is from its catalogue orbit, manoeuvre alerts, IOD reports | ISS catalogue offset 0.11 ± 0.01 s from one pass (NASA's trajectory: 0.11 s); no false manoeuvre on the real orbit, 2 of 2 injected found; over 292 archived NASA trajectories, 17 of 17 recorded reboosts found and 1 false alarm in 572 quiet days | proven | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | needs frame times good to a fraction of a second (a GPS-synced clock); one pass constrains an orbit weakly |
 | [Physics audit of video](https://physicslens.vercel.app/audit) | video-model builders and anyone checking footage | a verdict per clip (consistent, violates physics, or cannot judge) with the measured reason | real footage: 0 of 13 judged clips flagged; AI-generated: 2 of 14 | partial | SAM 3.1 tracked every clip; Muse Spark Open read each scene and proposed laws; the physics checks are math | most clips cannot be judged (no clean single object or too short); a clean audit is not proof a clip is real |
-| [Machine health](https://physicslens.vercel.app/health) | maintenance engineers | drift alerts when two recordings of the same machine disagree beyond their intervals | no result yet | not yet validated | SAM 3.1 tracks and Muse Spark Open reasons on each recording; the drift test between recordings is math | no validation on a real machine with known wear yet: the drift test is checked on simulated recordings only |
+| [Machine health](https://physicslens.vercel.app/health) | maintenance engineers | drift alerts when two recordings of the same machine disagree beyond their intervals | public bearing recordings (University of Ottawa): fault type right in 5 of 20 (chance 1 in 4), 15 false alarms in 20 healthy runs; a motor's coast-down friction matches the published values | partial | SAM 3.1 tracks and Muse Spark Open reasons on each recording; the drift test between recordings is math | the physics rule does not identify bearing fault types on this data (distributed wear has no single impact rate); it needs the machine's geometry and speed |
+
+**Highest status reached: improves a public tool.** Status counts: 3 partial, 5 proven, 2 predicted, 1 improves a public tool. The ladder, lowest to highest: *not yet validated*: no independent check yet; *partial*: checked, but fails part of its rule; *proven*: reproduces independent known answers within its intervals; *predicted*: a blind, pre-registered prediction made before the answer existed; *confirmed*: a blind prediction that reality later scored as a hit; *improves a public tool*: a contribution that measurably beats the current public version on held-out data; *solved*: someone outside the project used it (recorded, never inferred).
+
+**Used by:** nobody outside the project yet. This line lists only recorded use (a `cases/<id>/usage.json` file), so it stays empty until there is some.
 
 <!-- cases:end -->
+
+### Open-source robot arm: its simulator corrected from public recordings (`/robot`)
+
+The SO-100 is a widely used low-cost arm, and its public MuJoCo model (MuJoCo Menagerie `trs_so_arm100`) has
+guessed joint dynamics. `scripts/robot_demo.py` takes 50 public teleoperation episodes of the real arm
+(`lerobot/svla_so100_pickplace`, Apache-2.0: the command sent and the angle reached, every frame at 30 per second),
+identifies each joint's servo law (`backend/physicslens/robot/servo.py`: first- and second-order servo laws with
+delay, deadband, rate limit, a gravity sag and an angle-dependent offset as candidates, each extra term kept only when
+it improves the forecast of episodes it was not fitted on), puts the identified parameters into the MJCF
+(`data/robot/so_arm100_identified.xml`, with its diff against the public model), and replays the logged commands
+open-loop in MuJoCo on 15 held-out episodes never used before (`backend/physicslens/robot/arm_sim.py`).
+
+- The corrected model tracks the real joints to 0.38° RMS against 0.75° for the published model, 1.97 times closer.
+  The fair baseline, the published model with one delay fitted to the training episodes, reaches 0.65°; the
+  corrected model is 1.71 times closer than that, and 1.44 times closer than the published model with per-joint
+  offsets added as well.
+- Every improvement is paired per episode with a 95% interval above zero, which is the case's rule for "proven";
+  because the corrected model beats the current public one on held-out data, the case reaches the ladder's
+  *improves a public tool*. The model and its diff are ready to offer upstream; nothing has been submitted.
+- Limits: only the motions in these pick-and-place episodes; payloads, wear, temperature and other units of the
+  arm are not covered; the gripper closes on objects the simulated scene lacks, so it is reported but not counted.
+  The case uses the logged joint angles, not the videos, so no Meta model takes part.
+- Plainly, where the gain comes from: the public model already gets the timing roughly right; most of the gain is
+  each joint's deadband and the small command offsets between the leader and follower arms. The identified MJCF
+  parameters alone, without the offsets, reach 0.73° (barely better than the public 0.75°), and the identified joint
+  laws simulated directly reach 0.27°, because MuJoCo's joint friction only approximates a deadband. The full report,
+  with every joint's law and a suggested upstream change, is `data/robot/REPORT.md`.
 
 ### Transit timing: a shrinking orbit and an unseen planet (`/timing`)
 
@@ -469,9 +505,14 @@ by the same factor) before BIC decides.
   super-period formula of Lithwick, Xie and Wu 2012) forecasts them to 15 min and puts the unseen planet at
   roughly 22.3 days and 244 Earth masses, against the published 22.338 days and 216 ± 8 (Nesvorny et al.
   2013, later confirmed by radial velocities). The fit's formal errors (± 0.007 days, ± 10 Earth masses) are not
-  the uncertainty and the page does not present them as one: the published period is 11 of them away, because in
-  timing data the companion's mass trades off against its eccentricity, so this is one solution of a family. The
-  status is partial, and the page says why: the forecast misses by more than the 3-minute timing errors allow.
+  the uncertainty and the page does not present them as one: the published period is 11 of them away. To measure
+  how wide the family of solutions really is, the fit was repeated from 40 starting points spread over the period
+  window, both eccentricities (up to 0.2, any direction) and masses from 10 to 1,000 Earth masses, with the best 10
+  refined (`scripts/timing_demo.py --family 40`). They find one basin, refined to 22.27 days and 229 Earth masses;
+  no other fit comes within the decisive margin of it (the next is 15 chi-square worse). So these timings allow no
+  wider family: the mass lands within 2 of the published standard deviations, the period stays 0.3% off. The
+  status is partial, and the page says why: the published period is outside, and the forecast misses by more than
+  the 3-minute timing errors allow.
 - **Ephemeris rot:** of 4,770 transiting planets in the NASA Exoplanet Archive with uncertainties, the published
   ephemeris predicts the transit on 2027-01-01 to worse than 10 minutes for 3,248 and worse than an hour for
   1,363 (224 of those around stars brighter than V = 12).
@@ -497,6 +538,26 @@ UK Fireball Alliance's data, CC BY 4.0) through the whole chain and checks every
   leave where the light ends) places 5 of the 9, the main mass among them; the other 4 fit only if stones also left
   earlier, after the last flare at 34.9 km, a choice made after comparing with the finds, so it is reported beside the
   blind result and the status does not rest on it. The input is the published triangulated trajectory, not a video.
+- **Scored blind, the strict way.** With the release rule and the mass bins fixed in advance (release at the luminous
+  end plus every fragmentation our own deceleration fit detects; it detected none), each find is scored against the
+  68% and 95% landing regions of its mass bin, computed from the simulation alone: 1 of the 9 lies inside its 95%
+  region. The simulated stones of one mass land in a strip tens of metres wide across the track, while the real
+  finds scatter over hundreds of metres, so the simulation's own spread (end point within 100 m, winds within 30%,
+  the shape range) is too narrow. The case is therefore **partial**: the page shows both results, labelled "blind
+  (rule fixed before comparing)" and "after review (with published fragment information)", and the status uses the
+  blind one.
+
+**A new fall, predicted blind.** `scripts/fireball_new.py` runs the same blind rule on a fireball whose meteorites
+have not been reported: the 2026 August 14 07:48 UTC fireball over Douglas County, Washington (NASA Meteoroid
+Environment Office camera solution from 77.9 to 45.5 km at 14.6 km/s, with Doppler weather radar indicating small
+meteorites on the ground; CNEOS for triage; the Spokane radiosonde from NOAA IGRA2). No speed profile is published, so
+triage uses a stated simpler rule (entry at most 20 km/s, luminous at or below 35 km, a radar signature; all three
+hold). The landing regions for the eight mass bins were registered on 2 November 2026
+(`predictions/fireballs/wa-20260814/prediction.json`, hashed in `predictions/INDEX.md`): median sites from
+48.08° N, 119.35° W for 5 g to 48.18° N, 119.38° W for 600 g, each 95% region 223 to 307 km², broad because the
+camera solution's errors are not published and were assumed (2 km, 2 km, 3°). It is scored when finds are
+published: a hit for each recovered stone inside its mass bin's 95% region. On Winchcombe the same rule placed only
+1 of 9 inside, so a miss here would not surprise; it is registered anyway, so either way the record stands.
 
 ### The Sun's rotation from real images (`/sun`)
 
@@ -515,6 +576,12 @@ longitude. Laws for the rate against latitude must forecast the last quarter of 
 - Return forecasts: of 24 regions still on the disc at the end of a period, 7 came back and were numbered by NOAA;
   they rounded the east limb a median 1.5 days from the forecast (at most 1.9). NOAA's own "due to return" lists, for
   6 of them, were 2.1 days off (median).
+- The misses all go one way: 7 of 7 came back later than forecast (a sign test gives p = 0.016 for chance), and
+  NOAA's dates are late too. So the delay was tried as a term, each version fitted on six returns and scored on the
+  seventh (leave-one-out): no delay misses by 1.18 days on average, a constant 1.2-day delay by 0.63, and a delay
+  that shrinks with latitude by 0.38. The latitude term forecasts best, from 7 returns only. Physical candidates
+  are spots drifting against the surface and regions decaying and re-forming further east; the data here do not
+  say which.
 
 ### Stellar occultations: Umbriel's size (`/occultation`)
 
@@ -549,10 +616,93 @@ camera errors (the satellite sunlit, the observer in darkness).
   added to it are found in the right gap, with along-track parts of 0.55 and 2.05 m/s. Over four days the model
   still misses NASA's trajectory by more than the camera's noise, so an impulse may also count when it forecasts the
   later passes at least four times better than one orbit (which then cannot forecast them at all), and the verdict
-  says so. No real recorded manoeuvre has been reproduced yet: NASA's current ephemeris lists none, and past
-  catalogue orbits need a Space-Track account.
+  says so. - On the real record: `scripts/satellite_history.py` runs a rule fixed before any announcement was collected
+  (from each archived NASA ISS ephemeris only its first orbit's mean semi-major axis; between consecutive files the
+  change beyond the drag decay is a burn when it implies at least 0.2 m/s) over 292 archived NASA trajectory files
+  from February 2021 to October 2026 (Internet Archive captures of NASA's public ISS ephemeris). Scored against
+  NASA's own records of each reboost (`data/astro/satellites/announced_burns.json`, every source linked): 17 of 17
+  recorded burns found (recall 95% interval 82% to 100%), 1 false alarm in 572 quiet days, the burn placed a median
+  13 hours from its recorded time (the files come every few days), and its size within 0.09 m/s of NASA's figure (median 0.035 m/s)
+  where NASA gives one. By its rule the case is now proven.
 - Observations are written as IOD lines (the format checked against its specification), and a tumbling object's
   period comes from its light curve with the half-period alias checked (synthetic: 37.2 ± 1.2 s, true 37.2).
+
+
+### Lab measurement on labelled real footage (`scripts/lab_footage.py`)
+
+How accurate is it on real footage, beyond one pendulum? Delfys75 (Castaneda Garcia et al., CVPR 2025; MIT licence)
+has real pendulum videos whose string lengths were measured with a tape (45, 90 and 150 cm, five takes each); each
+went through the full paid pipeline (SAM 3.1 tracking, Muse Spark Open proposing laws, held-out verification) with
+the length given, and g was compared with local gravity at the lab. A 95% interval should contain the truth about 95
+times in 100; the real rate is reported, not assumed.
+
+- 12 of the 16 clips gave a measured g (the others tied between laws that disagree on it, or, for one Wikimedia
+  Commons clip, looked like noise). None of the 12 intervals contains the local g: coverage 0 of 12. The median error
+  is 6.2%, always low, while each interval is a few tenths of a percent wide: the measurement is precise, and wrong
+  by more than its own error bars.
+- Where the error comes from, measured: the length that would make each clip agree with local gravity exceeds the
+  stated one by 1.8 cm plus 4.8% of the stated length (3.3 mm scatter about that line over all 12 clips). The fixed
+  part is the size of a bob's radius (lengths stated to the top of the bob, not its centre); the part growing with
+  length is what a time scale off by about 2.3% would do, and the clips' frame timing is not it (59.94 frames per
+  second, steady). These data cannot say which; a clip with the pivot and the bob's centre measured would.
+- What this means: the intervals PhysicsLens reports cover the fit's own noise, not how a length was stated. The
+  case card says so, and stays **partial** by its rule (coverage consistent with 95% and a median error under 2%).
+
+### The agent on the real-world cases (`scripts/cases_agent.py`)
+
+The cases above were built with laws a person chose. To see what Meta's model adds, the same data went through the
+agent path the videos use (`astro/analysis.py`): Muse Spark Open saw only the numbers and a one-line description,
+proposed laws (free-form ones included), and the same held-out verification ranked them. Results in
+`data/cases_agent/`, shown on each case's page beside the person's laws.
+
+| Case | Laws a person chose | Laws the agent proposed | Library controls alone |
+|---|---|---|---|
+| WASP-12b timings | decaying orbit wins (held-out chi-square 1.79 per event) | none tested: the series looked like noise to the generic path | none tested |
+| Kepler-88 b timings | N-body second planet wins (forecast within 15 min) | no law verified (best forecast error 182%) | constant velocity, 182% |
+| Winchcombe fireball | alpha-beta and single-body drag (held-out 4.95 and 6.41 km/s) | its own fragmenting-drag law forecast within 14%, refused because a parameter sat at its limit | constant acceleration, 22% |
+
+What this shows, honestly: the generic path does not weight each measurement by its own error bar, so on transit
+timings, where the signal is a few minutes against a minute of scatter per point, it calls the series noise; the
+dedicated timing laws, which do use the error bars, find the decay. On the fireball the agent wrote a fragmentation
+law by itself, which the hand-chosen set did not contain, and verification still refused it rather than accept a fit
+that leans on a bound. No agent-proposed law beat the hand-chosen ones on these three cases.
+
+### Predictions made before the answer (`/predictions`)
+
+A forecast made after the answer is known can always be bent to fit it, so PhysicsLens can register a prediction
+before reality answers (`backend/physicslens/prereg.py`). Each one is a file,
+`predictions/<case>/<id>/prediction.json`, holding its inputs with their sources, the forecast with 68% and 95%
+intervals, the rule that will score it, the date after which it can be scored, and the commit that made it
+(uncommitted changes are flagged in the file, not hidden). Its SHA-256 goes into `predictions/INDEX.md` when it is
+written; pushing the folder makes the repository's public history the timestamp. A prediction is never edited:
+`register` refuses to overwrite, and a corrected one is a new id that leaves the old one visible. Later,
+`outcomes/<case>/<id>.json` scores it, hit or miss per predicted quantity, without touching the prediction, and
+`score` refuses to score before the prediction's own date. `prereg.verify()` recomputes every hash, and the
+`/predictions` page shows each prediction with "predicted on" and "scored on" dates, the running tally of hits and
+misses (misses stay listed), and a warning if any file no longer matches its registered hash
+(`scripts/build_predictions.py`, `tests/test_prereg.py`).
+
+**Registered so far** (2 November 2026, all in `predictions/INDEX.md`):
+
+- *Transit times of eight exoplanets whose published timetables have drifted* (`scripts/ephemeris_refresh.py`,
+  `data/ephemeris/`): Qatar-8 b, WASP-117 b, HAT-P-11 b, HAT-P-3 b, KELT-1 b, HAT-P-5 b, TOI-150.01 and HAT-P-7 b. Each
+  timetable was refreshed from TESS 2-minute light curves taken after its published epoch, with the published one as
+  a prior, and registered only after forecasting its own later TESS season (held-out chi-square 1.12 to 2.56 per
+  transit, the rule's limit being 4) and passing a scatter gate. On 1 January 2027 the published timetables are off
+  by 13 to 406 minutes, with their own uncertainty grown to 72 to 1,238 minutes (one standard deviation); the
+  refreshed ones carry 0.24 to 1.58 minutes. Every transit from 15 November 2026 to 15 May 2027 is predicted with 68%
+  and 95% windows; the first can be scored from 15 to 19 November 2026, by new TESS sectors or amateur timings
+  (`scripts/score_predictions.py`). Three candidates failed and were not registered (WASP-73 b and WASP-100 b missed
+  their held-out season; KELT-8 b's mid-times scatter 7.8 times their own errors). The refreshed ephemerides are in
+  `refreshed_ephemerides.csv` with ExoClock's column names; nothing has been submitted anywhere.
+- *Where meteorites from the 2026 August 14 Washington fireball lie* (see the fireball section).
+
+**Status ladder.** Each case's status is the highest rung it has evidence for, never set by hand
+(`scripts/build_cases.py`): *not yet validated*, *partial*, *proven* (from the case's own check), then *predicted*
+(a registered prediction exists), *confirmed* (reality scored one as a hit), *improves a public tool* (a
+contribution beats the current public version on held-out data, from `cases/<id>/contribution.json`) and
+*solved* (someone outside the project used it, only from a recorded `cases/<id>/usage.json`). The cases page and
+the README table show every rung reached with its evidence, and the "Used by" line lists only recorded use.
 
 ---
 
@@ -570,6 +720,7 @@ Only code decides, never the language model:
 - **A law never loses to its own special case.** Each law in the library declares which simpler law it becomes when a term is switched off (a spring with both frictions becomes the damped spring at f = 0). Special cases are fitted first, and each larger law also starts from their solutions, so it can only match or beat them; if it still could not, the trail says so (`ModelSpec.nests`, `tests/test_nesting.py`). Friction corners (sign of the velocity) are smoothed on the fit's first, short windows and exact on the last, so the solver's gradients stay usable.
 - **Ties become experiments.** If genuinely different laws are within 10 BIC, the agent is asked which recording would separate them (for a small-angle pendulum tie: "swing it wider"), and the user sees that request.
 - **Approximations are named, not rejected.** When a law ties with its own approximation (sin θ versus θ at small angles) the exact law is kept and the other is labeled "Same law: the small-angle approximation", not "Rejected".
+- **No law that leans on a limit.** A law whose fitted value sits at the edge of its allowed range (g pinned at its lowest while drag takes its highest) only fits by leaning on that limit, so it is not accepted, and the verdict names the parameter. A limit of zero is exempt ("no drag" is a real answer), and a range spanning decades (a stiffness from 0.01 to 40,000) is judged on a log scale, so a true value of 9 is not mistaken for the floor (`physics/verify.py`, `tests/test_rigor.py`).
 - **Controls are always tested.** The simplest model of each family (no damping, no drag, constant velocity or acceleration) is fitted alongside the agent's proposals, so a fancy law must beat the obvious baseline.
 - **Nothing fits, nothing shown, and fast.** If no model passes, the result is "no clean governing equation found." Motion that looks like noise is recognised before any simulation: when no candidate law explains more than 20% of the measured acceleration, the velocity's spectrum is flat (white-noise-like) and no smooth trend explains the track, the fits are skipped. A random walk that took four minutes of fits now gets its honest answer in about a second, while every physical synthetic track, including constant velocity and free fall, goes on to the full fits (`physics/prescreen.py`, `tests/test_prescreen.py`).
 - **Parameters the clip cannot separate are named.** Every interval comes from bootstrap refits (40 targeted, at least 8 under the time limit; the result states how many). When two parameters' refits move together (correlation above 0.9), the result and the trail say so, with the recording that would separate them: for viscous against dry friction, "film a larger first swing and let it decay to rest: viscous damping shrinks the swings by a fixed ratio, dry friction by a fixed amount". A study passes that advice to its agent as the next experiment to ask for.
@@ -615,7 +766,7 @@ A study turns a goal into a measurement campaign (`studies.py`, `physics/combine
 - If a rate limit or budget cap is hit, tracking and fitting continue locally and only the model features pause, with a visible notice.
 - **Save and stop** turns a session into a normal result with its own `?run=` link, exports and what-ifs: the track, its capture times and the last accepted law with its trail. The frames are kept only if you tick "keep the video" (otherwise the result has the track and no clip).
 - On a phone, a bubble level shows the tilt from the accelerometer and says "hold still" or "tilted 4°: turn left" until the phone is still and within 3° of level, because the measured limits assume exactly that.
-- **Predict the future, then prove it.** Once the law is verified and its parameters have settled, the app predicts when the swing will next pass its rest point about 20 s ahead (10 s or 5 s if it will have died out), with a 95% timing window from bootstrap refits of the law plus one sample of time resolution. A countdown runs on screen, and when the moment comes the measured track says hit or miss, with the error. Each prediction is written to `predictions.json` with its wall-clock time before the event happens, so the claim is auditable.
+- **Predict the future, then prove it.** Once the law is verified and its parameters have settled, the app predicts when the swing will next pass its rest point about 20 s ahead (10 s or 5 s if it will have died out), with a 95% timing window from bootstrap refits of the law plus one sample of time resolution. A countdown runs on screen, and when the moment comes the measured track says hit or miss, with the error. Each prediction is written to `predictions.json` with its wall-clock time before the event happens, so the claim is auditable. Something rolling or sliding has no rest point to come back to, so the app predicts when it will reach the point further along its path where the law puts it 1.5, 1 or 0.5 s ahead (kept as a place in the picture, since each window re-estimates the path's axis), judged the same way (`physics/forecast.py`, `tests/test_forecast.py`). A throw is over before a law can be verified and then tested on what is left, so it gets its law and numbers but no prediction, and the page says so.
 - **Control it by hand.** Once a swing's law is verified, set a target ("pump it to 30°" or "stop it") and the phone tells you when to push: three ticks one period apart, then a beep on the push, timed from the law to the moment the bob passes the bottom (where a push changes its energy most), corrected for the device's audio latency. People anticipate a beat far better than they react to a beep. The app also finds each push on the track (where the motion leaves the law's prediction), learns how late this person's pushes land, and moves the beats that much earlier. Fits use only the motion since the last push, because a push is outside the law. Pumping cues a train of three pushes; stopping re-measures after every push.
 
 ---
@@ -678,6 +829,32 @@ The accepted code is saved as `controller.py` in the run directory with a header
 - A change is flagged only when it is beyond 3 standard errors **and** practically meaningful (0.5% for frequency, 10% for decay rate), with repeatability floors that account for re-recording variation (release, temperature, mounting).
 - The trend view takes up to 12 recordings and shows each metric with its interval over time.
 
+### On public recordings with known faults (`scripts/health_public_demo.py`)
+
+Scored against labels, with every rule fixed before scoring (`data/health_public/REPORT.md`, sources and licences in
+`data/health_public/SOURCES.md`):
+
+- **Bearings** (University of Ottawa run-to-failure recordings with labelled outer-race, inner-race, ball and cage
+  faults): from the bearing geometry and the measured shaft rate, the expected defect rates are computed with the
+  standard formulas and looked for in the envelope spectrum. On the faulty stage the fault type is right in 5 of 20
+  (chance is 1 in 4), and 15 of 20 healthy recordings raise an alarm. The rule fails its own test, and the report
+  says so. A second rule written after the first failed (compare each bearing with its own healthy recording) removes
+  the false alarms but finds the type even less often, so it is reported beside the first and not used. One possible
+  reason, not tested: run-to-failure damage is distributed wear, which has no single impact rate.
+- **Fan and pump sounds** (MIMII, CC BY-SA 4.0; four fans and four pumps, 40 abnormal, 40 normal and 60 reference
+  clips each): a physics score fixed in advance on normal clips only (the rotation rate from the strongest harmonic
+  comb, the levels of its first eight harmonics, two noise floors) separates abnormal from normal with an average area
+  under the curve of 0.874 on fans and 0.91 on pumps. A generic learned detector on the same clips does better (0.997
+  and 0.964), and the MIMII paper's autoencoder reaches 0.913 and 0.805 on its own split, so physics wins against that
+  published baseline on pumps and loses on fans. Where physics helps is in saying which quantity moved (on one fan
+  the rotation rate alone separates the classes); where a learned detector wins is raw separation.
+- **Coast-down** (an in-wheel motor's published spin-downs, CC BY 4.0): Coulomb plus viscous friction is chosen on
+  every run, and its two coefficients, 13.35 rad/s² and 0.0798 per second (mean over 5 runs), match the published
+  13.38 and 0.079 within their spread. A later coast-down would show a change of 8.8% in Coulomb drag.
+
+So the drift test is solid where the physics is a single law (a coast-down), sound gives a usable but not leading
+anomaly score, and the physics rule does not yet diagnose bearing faults on real data. The case stays **partial**.
+
 ## Sound as a second sensor
 
 The phone's microphone is an independent instrument, analyzed with local signal processing only (no model calls):
@@ -718,7 +895,7 @@ Client configuration (stdio):
 
 ## Physics audit
 
-Every analysis also asks a sharper question: does this motion break a law that every real object obeys? That makes PhysicsLens a lie detector for AI-generated video and for world models: upload a clip on the **Physics audit** page (or `POST /api/audit`, the same upload as `POST /api/runs`; every result carries `result["audit"]`). The audit is local math on the tracked motion, with no extra model calls, and it reports one of three verdicts:
+Every analysis also asks a sharper question: does this motion break a law that every real object obeys? So PhysicsLens flags physically impossible motion when it can judge, in generated video, world-model output or any footage (it is not a detector of fakes: most clips get "can't judge", and recall on generated clips is low, see the study below). Upload a clip on the **Physics audit** page (or `POST /api/audit`, the same upload as `POST /api/runs`; every result carries `result["audit"]`). The audit is local math on the tracked motion, with no extra model calls, and it reports one of three verdicts:
 
 - **violates physics**, listing each violation with its size and significance, for example "g = 14.2 ± 0.6 m/s² (scale from the A4 sheet in view), against 9.81 m/s²" or a bounce that gains 21% energy (e = 1.10);
 - **consistent**, when at least one dynamics check applies and none is violated;
@@ -780,8 +957,8 @@ The dataset has a card (`gallery/DATASET_CARD.md`: fields, units, how each value
 
 **On real footage**, with every reasoning step on Muse Spark Open (open weights, on Baseten) and tracking by SAM 3.1 (clips and licenses in `gallery/README.md`; the numbers are the gallery results, checked by `scripts/readme_numbers.py`):
 
-- **Pendulum** (0.5 m string, length given): g = 9.91 ± 0.04 m/s², against 9.81 (0.99% high), from both tied laws. Linear damping fits the whole swing 4 BIC better, short of the 10 needed to decide, and forecasts the held-out quarter worse (within 13.8% against 9.9% for the simple pendulum), so it is not confirmed; the agent asks for a release from about 35 degrees filmed for 7 s, where the two forecasts separate by about 8 times the tracking noise. A small swing can't tell sin θ from θ, so the exact law is kept over the small-angle one. The result rests on the given length: with the pivot out of frame the arc alone can't fix it (two stretches of the same swing gave radii 50% apart), so the app does not re-measure a length you supply. That length is the weak point: the 95% interval (9.83 to 9.99) excludes both 9.81 and Aachen's local 9.811, a systematic error, not noise. A second clip from the same teacher, also given as "half a metre", gives 9.51 (3.1% low) from a period that agrees with the teacher's own stopwatch within hand timing: two clips with the same nominal length missing in opposite directions point at the length (string length against the distance to the bob's centre), not the timing or the fit. So the lab case stays "not yet validated" until a clip with a measured length to the bob's centre.
-- **Paper bag thrown across a blackboard** (filmed at 200 fps, analyzed with a slow-motion factor of 20): free fall misses the held-out last quarter by 35% and is rejected; linear air drag forecasts it within 2.9%, with a velocity time constant of 0.41 s (scale-free); quadratic drag forecasts within 5.9% but scores 57 BIC worse.
+- **Pendulum** (0.5 m string, length given): g = 9.91 ± 0.04 m/s², against the local 9.811 at the filming site (0.98% high), from both tied laws. Linear damping fits the whole swing 4 BIC better, short of the 10 needed to decide, and forecasts the held-out quarter worse (within 13.8% against 9.9% for the simple pendulum), so it is not confirmed; the agent asks for a release from about 35 degrees filmed for 7 s, where the two forecasts separate by about 8 times the tracking noise. A small swing can't tell sin θ from θ, so the exact law is kept over the small-angle one. The result rests on the given length: with the pivot out of frame the arc alone can't fix it (two stretches of the same swing gave radii 50% apart), so the app does not re-measure a length you supply. That length is the weak point: the 95% interval (9.82 to 9.99) excludes Aachen's local 9.811 (WGS 84 normal gravity at 50.78° N and 173 m, `backend/physicslens/physics/gravity.py`), a systematic error, not noise. `scripts/pendulum_check.py` measures each candidate cause (`data/pendulum/check.json`): the clock is not it (the container's frames are exactly 0.04 s apart, and the stopwatch standing in the frame, read by tracking its sweep hand, would need to run 0.49% slow to explain the gap, where it reads 0.98 real seconds per video second, 95% 0.95 to 0.99, the other way); the bob's size is not it (the physical-pendulum correction is 0.11 mm, 0.02%); the amplitude is not it (the law fitted is the full nonlinear one; a small-angle law would have been off by only 0.16% at this 6° swing); and there is no reference object out of the swing plane, because the scale comes from the stated length. What remains is the length: 4.9 mm shorter than the stated 0.5 m explains the whole gap. A second clip from the same teacher, also given as "half a metre", gives 9.51 (3.1% low) from a period that agrees with the teacher's own stopwatch within hand timing: two clips with the same nominal length missing in opposite directions point at the length (string length against the distance to the bob's centre), not the timing or the fit. So the lab case stays "not yet validated" until a clip with a measured length to the bob's centre.
+- **Paper bag thrown across a blackboard** (filmed at 200 fps, analyzed with a slow-motion factor of 20): free fall misses the held-out last quarter by 35% and is rejected; linear air drag forecasts it within 2.9%, with a velocity time constant of 0.41 s (scale-free); quadratic drag forecasts within 5.9% but scores 57 BIC worse. The fair baseline is that quadratic law with its coefficient fitted to the same flight, the strongest version an engineer could use: a handbook drag coefficient times the bag's measured size would also need the bag's mass, which the clip does not give, and a fitted coefficient can only do better than a looked-up one on this flight. Linear drag, the law that wins, is the other textbook form. So the 2.0 times is measured against the best-tuned standard law, not a strawman.
 - **Air-track spring cart** (nothing of known size in view): dry (sliding) friction and viscous damping tie: dry friction forecasts the held-out motion within 8.8% while viscous damping misses by 10.9% and the undamped model by 48%, but the two damped laws are only 4 BIC apart, so neither is confirmed; both give ω = 2.7401 ± 0.0023 rad/s, and the agent asks for the same pull filmed for 15 s, where they separate by 33 times the tracking noise.
 - What didn't work, honestly: on 240p Apollo 16 TV footage of an astronaut jumping, with two jumps separated by standing and no usable scale, no equation passed, and the result is not in the gallery.
 
@@ -789,11 +966,11 @@ The dataset has a card (`gallery/DATASET_CARD.md`: fields, units, how each value
 
 | Clip | Truth | PhysicsLens (verified) | Textbook law, curve_fit | PySINDy alone | Closest to truth |
 |---|---|---|---|---|---|
-| apophis | 0.00029591 AU^3/day^2 | mu = 0.00029598 ± 9.8e-08; held-out 0.00494 | mu = 0.00029596 ± 1.5e-07; held-out 0.00605 | mu = n/a; held-out 1.4 | textbook curve_fit |
+| apophis | 0.00029591 AU^3/day^2 | mu = 0.00029598 ± 9.9e-08; held-out 0.00495 | mu = 0.00029596 ± 1.5e-07; held-out 0.00605 | mu = n/a; held-out 1.4 | textbook curve_fit |
 | halley | 0.00029591 AU^3/day^2 | mu = 0.00029563 ± 2e-07; held-out 0.00202 | mu = 0.00029494 ± 5.5e-08; held-out 0.00202 | mu = n/a; held-out 2.17 | PhysicsLens |
 | jupiter | 4.4933 R_J^3/hour^2 | mu = 4.4941 ± 0.0011; held-out 0.00143 | mu = 4.4979 ± 0.00043; held-out 0.00143 | mu = n/a; held-out 0.516 | PhysicsLens |
 | paperbag | none | k = 2.4191 ± 0.053; held-out 0.0292 | k = n/a; held-out 0.349 | k = -715.44; diverged | no independent truth |
-| pendulum | 9.81 m/s^2 | g = 9.9073 ± 0.041; held-out 0.138 | g = 9.9521 ± 0.032; held-out 0.103 | g = 8.6924; held-out 0.295 | PhysicsLens |
+| pendulum | 9.8109 m/s^2 | g = 9.9073 ± 0.041; held-out 0.138 | g = 9.9521 ± 0.032; held-out 0.103 | g = 8.6924; held-out 0.295 | PhysicsLens |
 | spring | none | omega = 2.7401 ± 0.0023; held-out 0.0884 | omega = 2.7398 ± 0.0012; held-out 0.11 | omega = 2.7594; held-out 0.525 | no independent truth |
 
 What it shows: where the textbook law is already the right law (the orbits, a nearly undamped swing), a careful curve fit does about as well, once (Apophis) a hair closer to the truth. What PhysicsLens adds is choosing the law: the textbook parabola has no drag, so on the paper bag its forecast misses by 35% against 2.9%, and it cannot report a drag rate at all; the damped oscillator misses the spring cart's held-out motion by 10.9% against dry friction's 8.8% (on this clip the two still tie). PySINDy alone cannot express an inverse-square pull with a polynomial library, so it reads no GM from any orbit, and on the paper bag its learned equations blow up.
@@ -802,13 +979,17 @@ What it shows: where the textbook law is already the right law (the orbits, a ne
 
 | Clip | Quantity | Truth | Model alone: median (range) over attempts | PhysicsLens (verified) | Closer to the truth |
 |---|---|---|---|---|---|
-| apophis | mu | 0.0002959 | 0.0002959 (0.0002959 to 0.0002959), 5 of 5 answers gave one | 0.00029598 ± 9.8e-08 | model alone (0.0% vs 0.02% off) |
+| apophis | mu | 0.0002959 | 0.0002959 (0.0002959 to 0.0002959), 5 of 5 answers gave one | 0.00029598 ± 9.9e-08 | model alone (0.0% vs 0.02% off) |
 | jupiter | mu | 4.493 | 4.5 (4.5 to 4.5), 5 of 5 answers gave one | 4.4941 ± 0.0011 | PhysicsLens (0.1% vs 0.02% off) |
 | paperbag | k | n/a | 0.4 (0.2 to 2), 5 of 5 answers gave one | 2.4191 ± 0.053 | no independent truth |
-| pendulum | g | 9.81 | 9.3 (9.3 to 9.8), 5 of 5 answers gave one | 9.9073 ± 0.041 | PhysicsLens (5.2% vs 0.99% off) |
+| pendulum | g | 9.811 | 9.3 (9.3 to 9.8), 5 of 5 answers gave one | 9.9073 ± 0.041 | PhysicsLens (5.2% vs 0.98% off) |
 | spring | omega | n/a | 2.9 (1.26 to 3), 4 of 5 answers gave one | 2.7401 ± 0.0023 | no independent truth |
+| ceres | mu | 0.0002959 | 0.0002959 (0.0002959 to 0.000296), 4 of 5 answers gave one | 0.00029596 ± 1.2e-07 | model alone (0.0% vs 0.02% off) |
+| encke | mu | 0.0002959 | 0.0002959 (0.0002959 to 0.0002959), 5 of 5 answers gave one | 0.00029314 ± 1.8e-07 | model alone (0.0% vs 0.94% off) |
+| mars | mu | 0.0002959 | 0.0002959 (0.0002959 to 0.0002959), 5 of 5 answers gave one | 0.00029583 ± 7.1e-08 | model alone (0.0% vs 0.03% off) |
+| mercury | mu | 0.0002959 | 0.0002959 (0.0002959 to 0.000296), 5 of 5 answers gave one | 0.00029586 ± 7.5e-08 | model alone (0.0% vs 0.02% off) |
 
-The model alone writes a sensible textbook law every time (inverse-square gravity for both orbits, the pendulum equation, drag for the paper bag), which is its job in PhysicsLens: proposing. But textbook is not always right: for the spring cart it wrote viscous damping in every answer, and verification prefers dry friction's forecast (8.8% against 10.9% for viscous damping), though on this short clip the two still tie. Its numbers are another matter. On the two orbits it gave the same value in all five attempts, the textbook constants (the Sun's GM in AU³/day² is a famous number), so it recalled rather than measured, and a changed system (a heavier Jupiter in the Solar System Lab) would get the same recalled answer. On the pendulum, where nothing can be recalled, it said g = 9.3 in four of five attempts, 5% low; the measured spring frequency ranged from 1.26 to 3 rad/s across attempts and the paper bag's drag rate from 0.2 to 2 per second, while the verified values carry intervals of a few parts in a thousand. One spring attempt returned no usable answer twice and is counted as such.
+The model alone writes a sensible textbook law every time (inverse-square gravity for both orbits, the pendulum equation, drag for the paper bag), which is its job in PhysicsLens: proposing. But textbook is not always right: for the spring cart it wrote viscous damping in every answer, and verification prefers dry friction's forecast (8.8% against 10.9% for viscous damping), though on this short clip the two still tie. Its numbers are another matter. On the six orbits it gave the same value in nearly every attempt, the textbook constants (the Sun's GM in AU³/day² is a famous number), so it recalled rather than measured. That is why it "wins" every orbit row, including comet Encke, where the measurement lands 0.94% off: a recalled constant is right for any real orbit around the Sun and would be just as confidently given for a changed system (a heavier Jupiter in the Solar System Lab), where only a measurement can be right. Encke's miss is also the measurement's honest answer for one clip of a comet whose orbit Jupiter and its own outgassing both bend. On the pendulum, where nothing can be recalled, it said g = 9.3 in four of five attempts, 5% low; the measured spring frequency ranged from 1.26 to 3 rad/s across attempts and the paper bag's drag rate from 0.2 to 2 per second, while the verified values carry intervals of a few parts in a thousand. One spring attempt returned no usable answer twice and is counted as such.
 
 **Exports:** for every exactly representable model, the MuJoCo export replayed in MuJoCo matches the fitted motion to under 0.1 mm; the generated Python script matches to 1e-9.
 
@@ -1110,7 +1291,7 @@ CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (782 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
+The suite (855 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.
@@ -1178,7 +1359,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Spin-down of rotating objects: friction law identified, exported to MuJoCo with native dry friction
 - [x] Public access: gallery of real analyses, judge access code, per-visitor limits, optional bot check, and open access for everyone during judging
 - [x] A static gallery site that finds the analysis server at runtime, and `llms.txt` for AI assistants
-- [x] Physics audit, a lie detector for AI-generated video and world models: gravity, energy, period drift, a forecasting law and frame-to-frame continuity, each violation reported with its size and significance, and "can't judge" when the clip can't support a verdict
+- [x] Physics audit, which flags physically impossible motion when it can judge (generated video, world models, any footage): gravity, energy, period drift, a forecasting law and frame-to-frame continuity, each violation reported with its size and significance, and "can't judge" when the clip can't support a verdict
 - [x] 3D from one phone for balls: depth from apparent size, blur and occlusion filters, per-frame depth error, 3D projectile laws verified like the 2D ones
 - [x] Muse Spark Open (open weights) on Baseten as the reasoning model, with Glimmer as the open-weight fallback, the model's reasoning one click away in the trail, and the provider of every step recorded
 - [x] A referee that tries to break every accepted law, three independent hypothesis samples, single-frame object locating, and agent tool steps (test models, inspect motion) with the verdict always recomputed by code
@@ -1207,6 +1388,16 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] A cases page and a README table of real-world cases, each status computed from its result file; ties report what the tied laws agree on, and a written law with wrong units is set aside instead of sinking the proposal
 - [x] What-ifs for the object itself (heavier, lighter, bigger, smaller), free and instant; laws that tie still report what they agree on; an extra term that makes the forecast worse is not accepted
 - [x] Classical baselines on the gallery tracks (textbook curve fit, PySINDy alone) and the reasoning model alone on the same frames, a dataset card with Croissant metadata, a filming checklist for new clips, and every README number checked against its source in CI
+- [x] The pendulum's truth from local gravity (WGS 84 normal gravity at the filming site) and every candidate cause of its 1% gap measured (frame timing, the stopwatch in the frame as a second clock, bob size, amplitude), leaving the stated length
+- [x] Summaries use 95% intervals throughout; detailed tables keep ± one standard deviation, said once on each page
+- [x] Kepler-88's companion refitted from 40 spread starting points (one basin, so the formal errors were never the uncertainty), the Sun's late returns tested as a term by leave-one-out, and the fireball scored blind against 68% and 95% landing regions fixed in advance (1 of 9, so partial)
+- [x] Pre-registered predictions: hashed, never edited, scored later in `outcomes/`, with a `/predictions` page that keeps misses, and a status ladder up to "solved" that climbs only on recorded evidence
+- [x] A site that shows everything on one page: each result opens with the verdict, the verified law with its numbers and the video, then every section in order (decision trail with every law's equation, forecast, every law compared, exports, measurement details) under a sticky row of jump links; case cards with filters and their full rule and limits; every main page in the header; an error page instead of a blank screen; and a glossary behind every technical word
+- [x] An open-source robot arm's simulator corrected from public recordings: per-joint servo laws for the SO-100 identified from 50 LeRobot episodes and put into its MuJoCo model, which then tracks held-out episodes about twice as closely as the public model (the case reaches "improves a public tool")
+- [x] Real ISS reboosts found in five years of archived NASA trajectories by a rule fixed in advance, scored against NASA's own records (the satellites case is now proven)
+- [x] Lab measurement on labelled real footage (Delfys75 pendulums): the real coverage of the 95% intervals is reported (0 of 12), and the bias is traced to the stated lengths and the time scale, not the fit
+- [x] Machine faults on public data scored against labels: the bearing rule fails its own test and says so; a motor's coast-down friction matches the published values
+- [x] The real-world cases run through the agent (Muse Spark Open proposing, verification deciding) beside the hand-chosen laws, and six blind predictions registered before their answers exist
 
 ## Roadmap
 

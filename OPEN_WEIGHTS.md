@@ -41,6 +41,7 @@ To check a local copy: `sha256sum Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf`.
 
 - Every step of every result records who made it. In each `result.json`, the `trail` items and the `llm_calls` list carry the provider and model id from the table above for reasoning steps (for example `"provider": "baseten", "model": "meta-models/muse-spark-open-1026"` in the pendulum; a step answered by the offline path carries `"provider": "glimmer", "model": "muse-glimmer-30b"`) (scene, hypotheses, track check, agent decision). Verification steps carry `"model": "simulate-and-compare"`: numerical code, not a language model.
 - `llm_calls` also keeps each step's reasoning text as the model returned it, plus any provider switch (`fallbacks`).
+- The real-world cases run through the same agent keep the same record: `data/cases_agent/*.json` (transit timings and the Winchcombe fireball, `scripts/cases_agent.py`, run with `APP_ENV=demo`, so only the open-weight model could answer) and `data/astro/sun/agent.json` (single sunspots) list `meta-models/muse-spark-open-1026` in every `llm_calls` entry.
 - The app shows the same labels on screen: every step of the decision trail names "Muse Spark Open (open weights, served by Baseten)", "Muse Glimmer 30B (open weights)" or the numerical method, with the model's reasoning one click away.
 
 ## What is not open weights, and why
