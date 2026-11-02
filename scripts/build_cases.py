@@ -60,11 +60,19 @@ def sim_to_real() -> dict[str, Any]:
         calibrated = (r.get("calibration") or {}).get("source", "none") != "none"
         v = compare_to_video(measured_coordinates(r), r["fit_state"], calibrated)  # deterministic, under a second
     ratio = v["ratio_heldout"] if v else None
+    # A stronger baseline than drag-free: the drag law an engineer would reach for, fitted to the same training window
+    # by the same verification (its held-out error against the accepted law's).
+    rank = {f["model_id"]: f for f in (r or {}).get("ranking", [])}
+    acc = (r or {}).get("fit_state", {}).get("model_id")
+    quad = (rank["quadratic_drag"]["heldout_nrmse"] / rank[acc]["heldout_nrmse"]
+            if acc in rank and "quadratic_drag" in rank and acc != "quadratic_drag" else None)
     return {"id": "robotics", "title": "Robotics: sim-to-real", "problem": "Simulators use textbook physics, so a controller tuned in simulation fails on the real machine.",
             "who": "robotics engineers",
             "gives": "a calibrated model with intervals, exported to MuJoCo, URDF and SDF, checked by replaying it in MuJoCo",
             "number": (f"on flight it never saw, the calibrated model of a thrown paper bag lands {ratio:.1f} times closer to the "
-                       "real track than the textbook (drag-free) one") if v else None,
+                       "real track than the textbook (drag-free) one"
+                       + (f", and {quad:.1f} times closer than the standard air-drag law (quadratic, its coefficient fitted to "
+                          "the same flight)" if quad else "")) if v else None,
             "status": "not yet validated" if v is None else "proven" if ratio > 1 else "partial",
             "status_rule": "proven when the calibrated model forecasts the real video's held-out quarter better than the textbook model",
             "cant": "one rigid body at a time, filmed side-on; the control comparison runs in simulation only",
