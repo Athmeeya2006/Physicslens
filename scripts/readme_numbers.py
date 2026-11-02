@@ -96,6 +96,10 @@ def sky(key: str) -> dict:
     return load("data/sky/validation_results.json")[key]
 
 
+def orbit_more(name: str) -> dict:
+    return json.loads((ROOT / "data" / "orbit_more" / "results.json").read_text())[name]
+
+
 def jupiter() -> dict:
     return load("data/jupiter/report.json")
 
@@ -254,6 +258,10 @@ CLAIMS = [
     Claim("Kepler-88: sine's miss (min)", r"a sine misses the later transits by (\d+)",
           lambda: timing_law("kepler88b", "sinusoid", "heldout_rms_min")),
     Claim("Kepler-88: N-body forecast (min)", r"forecasts them to (\d+) min and puts", lambda: timing("kepler88b")["companion"]["heldout_rms_min"]),
+    Claim("Mercury: Sun's GM % off JPL", r"\| Mercury \| [^|]+ \| ([\d.]+)% \|", lambda: abs(orbit_more("mercury")["gm_error_percent"])),
+    Claim("Mars: Sun's GM % off JPL", r"\| Mars \| [^|]+ \| ([\d.]+)% \|", lambda: abs(orbit_more("mars")["gm_error_percent"])),
+    Claim("Ceres: Sun's GM % off JPL", r"\| Ceres \| [^|]+ \| ([\d.]+)% \|", lambda: abs(orbit_more("ceres")["gm_error_percent"])),
+    Claim("Comet 2P/Encke: Sun's GM % off JPL", r"\| Comet 2P/Encke \| [^|]+ \| ([\d.]+)% \|", lambda: abs(orbit_more("encke")["gm_error_percent"])),
     Claim("Kepler-88 c: period (d)", r"unseen planet at\s+roughly ([\d.]+) days", lambda: timing("kepler88b")["companion"]["Pc"]),
     Claim("Kepler-88 c: period, formal sd", r"formal errors \(± ([\d.]+) days", lambda: timing("kepler88b")["companion"]["Pc_sigma"]),
     Claim("Kepler-88 c: mass (Earths)", r"roughly [\d.]+ days and (\d+) Earth masses", lambda: timing("kepler88b")["companion"]["mc_earth"]),

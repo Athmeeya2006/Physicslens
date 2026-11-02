@@ -1,0 +1,183 @@
+{
+ "generated": "scripts/orbit_more.py check",
+ "mercury": {
+  "object": "Mercury",
+  "status": "accepted",
+  "reason": "Newtonian point-mass inverse-square forecasts held-out data within 0.1%; next best (Newtonian with 1/r^4 post-Newtonian term) is 5 BIC worse.",
+  "training": "2024-01-01 to 2024-07-01, one frame per 0.4 days",
+  "frames": 455,
+  "candidates": [],
+  "gm_jpl_au3_d2": 0.0002959122082855911,
+  "law": "Newtonian point-mass inverse-square",
+  "latex": "\\ddot x = \\frac{-\\mu\\,x}{{\\sqrt{x^2 + y^2}}^{3}},\\quad \\ddot y = \\frac{-\\mu\\,y}{{\\sqrt{x^2 + y^2}}^{3}}",
+  "params": {
+   "mu": 0.0002958578526081721
+  },
+  "gm_recovered_au3_d2": 0.0002958578526081721,
+  "gm_sigma_au3_d2": 7.474929755791773e-08,
+  "gm_ci95_au3_d2": [
+   0.0002957113439849586,
+   0.0002960043612313856
+  ],
+  "jpl_inside_95": true,
+  "gm_error_percent": -0.018368852618111386,
+  "reasoning_calls": [
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026"
+  ],
+  "position_error_after_video": {
+   "0 days": {
+    "km": 67173.29885512289,
+    "of_distance_from_sun": 0.0011913637844116632
+   },
+   "90 days": {
+    "km": 71669.19656084971,
+    "of_distance_from_sun": 0.0012329821985100967
+   }
+  }
+ },
+ "mars": {
+  "object": "Mars",
+  "status": "accepted",
+  "reason": "Newtonian inverse-square gravity forecasts held-out data within 0.1%; next best (Inverse-square gravity with weak viscous drag) is 5 BIC worse.",
+  "training": "2022-01-01 to 2025-01-01, one frame per 3 days",
+  "frames": 366,
+  "candidates": [],
+  "gm_jpl_au3_d2": 0.0002959122082855911,
+  "law": "Newtonian point-mass inverse-square",
+  "latex": "\\ddot x = \\frac{-\\mu\\,x}{{\\sqrt{x^2 + y^2}}^{3}},\\quad \\ddot y = \\frac{-\\mu\\,y}{{\\sqrt{x^2 + y^2}}^{3}}",
+  "params": {
+   "mu": 0.0002958322108883674
+  },
+  "gm_recovered_au3_d2": 0.0002958322108883674,
+  "gm_sigma_au3_d2": 7.05062178903827e-08,
+  "gm_ci95_au3_d2": [
+   0.00029569401870130227,
+   0.00029597040307543257
+  ],
+  "jpl_inside_95": true,
+  "gm_error_percent": -0.02703416587208629,
+  "reasoning_calls": [
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026"
+  ],
+  "position_error_after_video": {
+   "0 days": {
+    "km": 414458.71404628915,
+    "of_distance_from_sun": 0.001718017001686289
+   },
+   "90 days": {
+    "km": 238880.0219475341,
+    "of_distance_from_sun": 0.0009591631379207182
+   },
+   "365 days": {
+    "km": 452344.5533678882,
+    "of_distance_from_sun": 0.0021164326593228824
+   }
+  }
+ },
+ "ceres": {
+  "object": "dwarf planet 1 Ceres",
+  "status": "accepted",
+  "reason": "Keplerian inverse-square gravity forecasts held-out data within 0.1%.",
+  "training": "2019-01-01 to 2025-01-01, one frame per 8 days",
+  "frames": 274,
+  "candidates": [],
+  "gm_jpl_au3_d2": 0.0002959122082855911,
+  "law": "Keplerian inverse-square gravity",
+  "latex": "\\ddot x = \\frac{-\\mu\\,x}{{\\sqrt{x^2 + y^2}}^{3}},\\quad \\ddot y = \\frac{-\\mu\\,y}{{\\sqrt{x^2 + y^2}}^{3}}",
+  "params": {
+   "mu": 0.0002959594109261184
+  },
+  "gm_recovered_au3_d2": 0.0002959594109261184,
+  "gm_sigma_au3_d2": 1.1749925123706887e-07,
+  "gm_ci95_au3_d2": [
+   0.00029572911239369374,
+   0.0002961897094585431
+  ],
+  "jpl_inside_95": true,
+  "gm_error_percent": 0.01595156914977469,
+  "reasoning_calls": [
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026"
+  ],
+  "position_error_after_video": {
+   "0 days": {
+    "km": 800013.6737322642,
+    "of_distance_from_sun": 0.001796610582487094
+   },
+   "90 days": {
+    "km": 1070545.6446312799,
+    "of_distance_from_sun": 0.0023968728138633634
+   },
+   "365 days": {
+    "km": 2144187.777245489,
+    "of_distance_from_sun": 0.004964658831339159
+   }
+  }
+ },
+ "encke": {
+  "object": "comet 2P/Encke",
+  "status": "accepted",
+  "reason": "Keplerian inverse-square gravity forecasts held-out data within 0.5%.",
+  "training": "2020-01-01 to 2023-06-01, one frame per 2 days",
+  "frames": 600,
+  "candidates": [],
+  "gm_jpl_au3_d2": 0.0002959122082855911,
+  "law": "Keplerian inverse-square gravity",
+  "latex": "\\ddot x = \\frac{-\\mu\\,x}{{\\sqrt{x^2 + y^2}}^{3}},\\quad \\ddot y = \\frac{-\\mu\\,y}{{\\sqrt{x^2 + y^2}}^{3}}",
+  "params": {
+   "mu": 0.0002931423588662256
+  },
+  "gm_recovered_au3_d2": 0.0002931423588662256,
+  "gm_sigma_au3_d2": 1.8331946638491938e-07,
+  "gm_ci95_au3_d2": [
+   0.00029278305271211117,
+   0.00029350166502034006
+  ],
+  "jpl_inside_95": false,
+  "gm_error_percent": -0.936037561752856,
+  "reasoning_calls": [
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026",
+   "meta-models/muse-spark-open-1026"
+  ],
+  "position_error_after_video": {
+   "0 days": {
+    "km": 1794131.5536744557,
+    "of_distance_from_sun": 0.005302022374343119
+   },
+   "90 days": {
+    "km": 2050917.0412924648,
+    "of_distance_from_sun": 0.011638891114910547
+   },
+   "365 days": {
+    "km": 1250054.3166690208,
+    "of_distance_from_sun": 0.00288106329863195
+   }
+  }
+ }
+}

@@ -303,6 +303,32 @@ Error budget for what remains: the video's GM, plus or minus one standard deviat
 
 **Why one passage cannot do better** (`data/halley/apparitions.json`, `python scripts/halley_demo.py apparitions`). Carried backward and forward from JPL's J2000 state with every planet, our engine puts Halley's perihelia of 1986 and 2061 within 0.01 days of JPL's, 1910's 4.1 days early and 1835's 7.7 days early (the outgassing JPL models accumulates over centuries); in between, the orbit-to-orbit period ranges from 74.4 to 75.8 years. The planets change Halley's period by more than a year from one orbit to the next, which is why no single passage can pin down the next return better than the planets allow.
 
+### Four more orbits, and a question: what about motion nobody has seen?
+
+The same video pipeline, unchanged, on rendered top-down videos of four more orbits from NASA/JPL positions
+(`scripts/orbit_more.py`; each video shows only a dot and the Sun). Muse Spark Open proposed the laws each time, and
+verification accepted inverse-square gravity for all four. The Sun's GM from each video, against JPL:
+
+| Orbit | Video | Sun's GM, off JPL | JPL inside the 95% interval | Position error after the video |
+|---|---|---|---|---|
+| Mercury | 6 months, 0.4 days per frame | 0.018% | yes | 0.12% of its distance after 90 days |
+| Mars | 3 years, 3 days per frame | 0.027% | yes | 0.21% after a year |
+| Ceres | 6 years, 8 days per frame | 0.016% | yes | 0.50% after a year |
+| Comet 2P/Encke | 3.4 years, 2 days per frame | 0.94% | no | 0.3% to 1.2% |
+
+Encke is the hard one: its orbit dives from beyond Jupiter's distance to inside Mercury's, its fastest passage is a
+few pixels from the Sun's disc, and its gas jets push it, which no gravity law includes. Its interval misses JPL's GM
+by about 0.9%, and that is reported, not tuned away.
+
+**Does it only check laws it already knows?** No. The reasoning model writes equations of its own (any law the code
+can parse, checked for units and grammar, then fitted like the rest; the Apophis law above came with a free exponent
+that the data set to 1.4991), PySINDy searches sparse combinations of terms with no physics assumed, and when nothing
+forecasts the motion it never saw, the answer is "no clean governing equation found", followed by a search of the
+leftovers for structure (a period, a trend). That last step is how unknown physics shows up: Neptune was found from
+the way Uranus drifted off its law, and the lab's hidden-Neptune scenario reproduces it. The limit is honest: a law must
+be expressible from the terms and functions the parser knows; anything beyond that appears as "no law fits, and here is
+what is left over", never as a confident wrong equation.
+
 ## Our own solar-system engine, checked against JPL
 
 The planets' part of the Apophis and Halley results needs an N-body simulator, so PhysicsLens has its own (`backend/physicslens/sky/`), built from scratch and checked against NASA/JPL rather than trusted because it "looks right". Newtonian gravity in AU and days, integrated with SciPy's DOP853 at a relative tolerance of 1e-12; massive bodies pull on each other in one vectorised pairwise sum, and test particles (asteroids, comets) feel every massive body and pull on none. Two frames: centred on the Sun, with the indirect term (every planet pulls the Sun too, and the frame moves with it), or around the barycentre. Optional terms, each off by default: the Sun's general relativity at first post-Newtonian order, the central body's oblateness J2 (for Jupiter's moons), bodies on a prescribed path (a passing star), a hypothetical extra body, and per-body mass scaling. Energy and angular momentum are monitored, and a run that drifts more than 1e-9 per century says so. REBOUND is supported as an optional backend when installed, never required.
