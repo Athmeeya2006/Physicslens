@@ -594,13 +594,13 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .lens-panel summary { cursor: pointer; font-size: 0.86rem; color: var(--ink-2); }
 .lens-panel[open] summary { margin-bottom: 8px; }
 .lens-panel ol { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
-.sky-uses { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-.sky-use { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: grid; gap: 8px; align-content: start; }
-.sky-use h3 { margin: 0; font-size: 1rem; }
-.sky-use p { margin: 0; }
+.sky-questions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sky-question { border-left: 3px solid var(--model); padding: 2px 0 2px 12px; }
+.sky-question h2 { font-size: 1.05rem; margin: 0; }
+.sky-question p { margin: 0; }
 .sky-pick { gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
 .sky-pick .chip { padding: 4px 9px; }
-.chip.on { background: var(--model); color: #fff; }
+.chip.on, .chip.on:hover:not(:disabled) { background: var(--model); color: var(--on-strong); }
 .sky-push { display: grid; grid-template-columns: minmax(0, 1fr) 7rem auto; gap: 4px 10px; align-items: center; }
 .sky-push > span:first-child { grid-column: 1 / -1; }
 .sky-push input[type=range] { width: 100%; }
@@ -673,3 +673,12 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .case-badge-inline.case-proven { background: var(--ok); color: var(--on-strong); }
 .case-badge-inline.case-partial { background: var(--tie); color: var(--on-strong); }
 .case-badge-inline.case-not-yet-validated { border: 1px solid var(--line); color: var(--ink-2); }
+
+/* Tabs (components/Tabs.tsx): a row of tabs over one panel; the row scrolls sideways on a phone instead of wrapping. */
+.tab-list { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: thin; }
+.tab { background: none; color: var(--ink-2); border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+  padding: 10px 14px; font-weight: 500; white-space: nowrap; margin-bottom: -1px; }
+.tab:hover:not(:disabled) { color: var(--ink); background: var(--surface-2); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--model); font-weight: 600; }
+.tab:focus-visible { outline: 2px solid var(--model); outline-offset: -2px; }
+.tab-panel { padding-top: 16px; }

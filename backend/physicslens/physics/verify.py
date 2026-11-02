@@ -110,13 +110,25 @@ def at_limit(f: FitResult) -> str | None:
     return None
 
 
+def error_words(nrmse: float) -> str:
+    """A forecast error as a reader can take it: a diverged simulation's 10^12 % says nothing a percentage can."""
+    if not math.isfinite(nrmse) or nrmse > 10:
+        return "more than ten times the motion's own spread"
+    return f"{nrmse:.0%}"
+
+
 def decide(fits: list[FitResult]) -> Verdict:
     fits = distinct(fits)
     ranked = tuple(sorted((f for f in fits if f.success), key=lambda f: f.bic))
     passing = [f for f in ranked if forecasts_well(f) and at_limit(f) is None]
     if not passing:
+        pinned = [f for f in ranked if forecasts_well(f)]
+        if pinned:
+            # It forecasts, but only by leaning on a limit: say that, not a forecast error that was fine.
+            return Verdict("no_fit", None, (), ranked, f"No candidate can be trusted: {title(pinned[0])} forecasts the "
+                                                       f"held-out motion only because {at_limit(pinned[0])}.")
         best = ranked[0] if ranked else None
-        why = f"best forecast error {best.heldout_nrmse:.0%} ({title(best)})" if best else "every simulation failed"
+        why = f"best forecast error {error_words(best.heldout_nrmse)} ({title(best)})" if best else "every simulation failed"
         return Verdict("no_fit", None, (), ranked, f"No candidate predicts the held-out motion: {why}.")
 
     best = passing[0]

@@ -60,10 +60,10 @@ def audit_page(browser, base: str, path: str, vp: str, theme: str, html: bool) -
     url = f"{base}/{name}{'.html' if html else ''}" if name != "index" else f"{base}/{'index.html' if html else ''}"
     url += f"?{query}" if query else ""
     try:
-        page.goto(url, wait_until="networkidle", timeout=45000)
+        page.goto(url, wait_until="load", timeout=45000)
     except PWError as e:
         return [f"could not load: {e}"]
-    page.wait_for_timeout(800)
+    page.wait_for_timeout(2500)  # "load", then time for data: a page that streams video never goes network-idle
     base_text = visible_text(page)
     if base_text < 80:
         problems.append(f"almost no text on load ({base_text} characters)")
@@ -101,7 +101,7 @@ def audit_page(browser, base: str, path: str, vp: str, theme: str, html: bool) -
             problems.append(f"after clicking '{label}': horizontal overflow")
         if page.url != before:  # a control navigated: come back for the rest
             try:
-                page.goto(url, wait_until="networkidle", timeout=45000)
+                page.goto(url, wait_until="load", timeout=45000)
                 page.wait_for_timeout(500)
             except PWError:
                 break

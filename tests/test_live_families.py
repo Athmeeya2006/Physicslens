@@ -40,8 +40,8 @@ class TrueSam:
         return "\n".join(out)
 
 
-def stream(harness, tmp_path, kind: str, n: int, size_m: float) -> dict:
-    pos = motion(kind, n)
+def stream(harness, tmp_path, kind: str, n: int, size_m: float | None, pos: np.ndarray | None = None) -> dict:
+    pos = motion(kind, n) if pos is None else pos
     harness.sdk("meta_api").script.extend([responses_result(text=json.dumps(SCENE)),
                                            responses_result(text=json.dumps(HYPOTHESES))])
     sent: list[dict] = []
@@ -83,6 +83,18 @@ def test_live_fits_a_throw_within_its_one_second_flight(harness, tmp_path):
     fit = stream(harness, tmp_path, "projectile", 45, 1.72)
     assert fit["status"] == "accepted" and fit["equation"]["model_id"] == "free_fall"
     assert {q["name"]: q["value"] for q in fit["parameters"]}["g"] == pytest.approx(9.81, rel=0.05)
+
+
+@pytest.mark.slow
+def test_an_unmeasured_slow_throw_takes_gravity_as_its_ruler(harness, tmp_path):
+    # A slow-motion throw with nothing of known size in view fell at 0.04 "m/s²" on the nominal scale, below any
+    # allowed g, and live mode showed no law (and a forecast error of 1506880239378%). Gravity now sets the scale.
+    t = np.arange(150) / FPS
+    pos = np.column_stack([60 + 90 * t, 300 - (110 * t - 18.3 * t**2)])
+    fit = stream(harness, tmp_path, "projectile", 150, None, pos)
+    assert fit["status"] == "accepted" and fit.get("scale_basis") == "gravity"
+    g = next(q for q in fit["parameters"] if q["name"] == "g")
+    assert g["value"] == 9.81 and "ruler" in g["assumed"]
 
 
 @pytest.mark.slow

@@ -226,6 +226,10 @@ export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, 
   pick.current = onPick;
   const chosen = useRef(picked);
   chosen.current = picked;
+  // Paused and untouched, nothing is drawn: a frame is drawn only while playing, while the camera moves (its damping
+  // settles over a second or so), and after anything changes. A still page then costs no CPU or GPU at all.
+  const redraw = useRef(30);
+  redraw.current = 30;  // every render of this component (a new run, a pick, play or pause) asks for fresh frames
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
   const live = useRef({ playing, daysPerSecond, follow, onTime });
@@ -249,7 +253,8 @@ export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, 
     w.camera.near = size / 5000; w.camera.far = size * 200; w.camera.updateProjectionMatrix();
     w.span = size;
   };
-  useImperativeHandle(handle, () => ({ setTime: (d: number) => { if (world.current) world.current.t = d; }, fit }));
+  useImperativeHandle(handle, () => ({ setTime: (d: number) => { if (world.current) world.current.t = d; redraw.current = 30; },
+                                       fit: () => { fit(); redraw.current = 60; } }));
 
   // The scene: built once.
   useEffect(() => {
@@ -269,6 +274,9 @@ export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.001, 1e5);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    controls.addEventListener("change", () => { redraw.current = Math.max(redraw.current, 2); });
+    controls.addEventListener("start", () => { redraw.current = 1e9; });
+    controls.addEventListener("end", () => { redraw.current = 90; });
     // A click (not a drag) picks the body drawn nearest the pointer, within a finger's width: the spheres are too
     // small on screen for a ray to hit them reliably.
     let down: [number, number] | null = null;
@@ -314,6 +322,7 @@ export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, 
                       size: new THREE.Vector2(512, 512) };
 
     const ro = new ResizeObserver(([e]) => {
+      redraw.current = 30;
       const { width, height } = e.contentRect;
       renderer.setSize(width, height, false);
       composer.setSize(width, height);
@@ -329,8 +338,15 @@ export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, 
 
     let raf = 0, last = performance.now(), told = 0;
     const v = new THREE.Vector3();
+    let toldT = -1;
     const loop = (now: number) => {
       const w = world.current!, L = live.current;
+      if (!L.playing && redraw.current <= 0) {
+        last = now;
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+      if (!L.playing) redraw.current -= 1;
       const end = Math.max(0, ...w.drawn.map((d) => d.body.points.at(-1)?.[0] ?? 0));
       if (L.playing && end > 0) w.t = (w.t + ((now - last) / 1000) * L.daysPerSecond) % end;
       last = now;
@@ -372,7 +388,7 @@ export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, 
       }
       controls.update();
       composer.render();
-      if (now - told > 120) { told = now; L.onTime(w.t, end); }
+      if (now - told > 120 && w.t !== toldT) { told = now; toldT = w.t; L.onTime(w.t, end); }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);

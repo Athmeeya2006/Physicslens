@@ -49,6 +49,7 @@ from .physics.regime import detect_change
 from .physics.uncertainty import bootstrap_builtin, bootstrap_samples
 from .physics.verify import assess
 from .pipeline import (
+    EARTH_G,
     MOVING_ID,
     NOMINAL_PX_PER_M,
     REFERENCE_ID,
@@ -74,6 +75,10 @@ HISTORY = 6  # recent fits used to show how well the parameters have converged
 SCENE_AFTER_FRAMES = 25  # ask the scene model after ~1 s of video
 REST_SPEED_FRACTION = 0.08  # below this share of the top speed the object counts as at rest (rolling or sliding)
 
+
+GRAVITY_RULER_NOTE = ("No reference of known size is in view, so Earth's gravity is the ruler for this throw: lengths are "
+                      "scaled so the fall accelerates at 9.81 m/s². g is assumed, not measured; drag and launch speed are "
+                      "measured on that scale. Put an A4 sheet in the plane of motion to measure g itself.")
 
 def moving_stretch(traj: Trajectory) -> Trajectory:
     """The longest stretch in which the object moves (speed above REST_SPEED_FRACTION of its peak), keeping the sample
@@ -143,6 +148,7 @@ class LiveSession:
         # arrival order would compress time (15 fps taken as 25 inflates g almost threefold).
         self.times: dict[int, float] = {}
         self.uncalibrated_noted = False
+        self.gravity_ruler_noted = False
         self.t0: float | None = None  # capture time of the first frame: session times are relative to it
         self.latest = -1
         self.size: tuple[int, int] | None = None
@@ -329,7 +335,7 @@ class LiveSession:
                       "observations": "Measured live from the camera; the fit uses the last seconds of the session.",
                       "motion_family": family},
             "clip": {"width": w, "height": h, "fps": self.cfg.fps, "frames": len(last["track"]), "slow_motion": 1.0},
-            "calibration": {"px_per_m": last["ppm"], "rel_std": 0.0, "source": "none" if last["uncalibrated"] else "live"},
+            "calibration": {"px_per_m": last["ppm"], "rel_std": 0.0, "source": "gravity" if last.get("ruler") else "none" if last["uncalibrated"] else "live"},
             "equation": msg.get("equation"), "parameters": params, "ranking": last["ranking"],
             "real_track_px": last["track"],
             "fit_state": {"model_id": last["spec_id"], "params": last["params"], "y0": last["y0"], "ctx": last["ctx"],
@@ -337,7 +343,7 @@ class LiveSession:
                           "first_frame": last["first_frame"]},
             "trail": [{"step": "agent", "provider": None, "model": "live session", "text": last["reason"]}],
             "llm_calls": [], "agent": {"action": "explain", "message": last["reason"], "reasoning_summary": ""},
-            **({"scale_note": SCALE_NOTE} if last["uncalibrated"] else {}),
+            **({"scale_note": GRAVITY_RULER_NOTE if last.get("ruler") else SCALE_NOTE} if last["uncalibrated"] else {}),
         }
         (run_dir / "result.json").write_text(json.dumps(result, default=float))
         return result
@@ -603,6 +609,7 @@ class LiveSession:
             return None
         ppm = self._scale(seg_centers)
         uncalibrated = ppm is None
+        ruler = False
         if uncalibrated:
             # Like recorded mode: keep going on a nominal scale; frequency and damping don't need one.
             ppm = NOMINAL_PX_PER_M
@@ -637,6 +644,19 @@ class LiveSession:
                 traj = max(pieces, key=lambda q: float(np.ptp(q.xy, axis=0).max()))
             if len(traj) < min_s * fps:
                 return None
+            if uncalibrated:
+                # With no reference, the nominal scale can put g far outside any allowed range (a slow-motion throw
+                # fell at 0.04 "m/s²"), and the law could only fit pinned at a limit. As in recorded mode, Earth's
+                # gravity becomes the ruler, here before the fit: the fall's own acceleration sets the scale.
+                fall = -2 * float(np.polyfit(traj.t, traj.xy[:, 1], 2)[0])
+                if fall > 0:
+                    f = EARTH_G / fall
+                    traj = Trajectory(t=traj.t, xy=traj.xy * f, frames=traj.frames, fps=traj.fps)
+                    ppm = ppm / f
+                    ruler = True
+                    if not self.gravity_ruler_noted:
+                        self.gravity_ruler_noted = True
+                        self.send({"type": "notice", "level": "info", "message": GRAVITY_RULER_NOTE})
         if self.family == "line":
             # A push, a slide and a stop is one law; the object lying still before or after it is not part of it.
             traj = moving_stretch(traj)
@@ -692,11 +712,16 @@ class LiveSession:
                  "spread": float(np.std([h[p.name] for h in same])) if len(same) >= 3 else None}
                 for p in spec.params
             ]
+            if ruler:
+                msg["scale_basis"] = "gravity"
+                for q in msg["parameters"]:
+                    if q["name"] == "g":
+                        q.update(value=EARTH_G, spread=None, assumed="Earth's gravity, used as the ruler")
             msg["ghost"] = self._prediction(spec, lead, coords, seg_frames, ts, rate, seg_centers[0], ppm)
             # Everything a saved session needs to become a normal result (save()): the law, the fitted state for
             # exports and what-ifs, and the track it was fitted to.
             self.last_fit = {"msg": msg, "spec_id": spec.id, "params": dict(lead.params), "y0": [float(v) for v in lead.y0],
-                             "ctx": {k: float(v) for k, v in coords.ctx.items()}, "fps": float(rate), "ppm": float(ppm),
+                             "ctx": {k: float(v) for k, v in coords.ctx.items()}, "fps": float(rate), "ppm": float(ppm), "ruler": ruler,
                              "origin_px": [float(v) for v in seg_centers[0]], "first_frame": int(seg_frames[0]),
                              "track": [[int(f), float(c[0]), float(c[1])] for f, c in zip(seg_frames, seg_centers, strict=True)],
                              "status": verdict.status, "reason": verdict.reason, "uncalibrated": uncalibrated,

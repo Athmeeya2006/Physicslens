@@ -115,3 +115,15 @@ def test_a_law_pinned_at_its_limits_is_not_accepted():
     nodrag = _fake("linear_drag", 2, -900.0, 0.12, 0.0)
     nodrag.params.update(g=9.8, k=0.0)
     assert decide([nodrag, honest]).winner.model_id == "linear_drag"
+
+
+def test_no_fit_says_why_in_words_a_reader_can_use():
+    from physicslens.physics.verify import error_words
+    # Only a pinned law forecasts: the verdict names the limit, not a forecast error that was fine.
+    pinned = _fake("linear_drag", 2, -900.0, 0.12, 0.0)
+    pinned.params.update(g=MODELS["linear_drag"].params[0].lower, k=MODELS["linear_drag"].params[1].upper)
+    v = decide([pinned])
+    assert v.status == "no_fit" and "can be trusted" in v.reason and "lowest allowed value" in v.reason
+    # A diverged simulation's error (a live throw showed 1506880239378%) reads as words, not a 13-digit percentage.
+    assert error_words(1.5e10) == "more than ten times the motion's own spread" and error_words(float("nan")).startswith("more")
+    assert error_words(0.42) == "42%"

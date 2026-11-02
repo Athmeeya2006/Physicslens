@@ -4,10 +4,11 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "npm run worker && next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
-    "build:static": "STATIC_EXPORT=1 next build"
+    "build:static": "npm run worker && STATIC_EXPORT=1 next build",
+    "worker": "tsc -p tsconfig.worker.json"
   },
   "dependencies": {
     "@types/leaflet": "1.9.12",

@@ -278,4 +278,13 @@ def static_bundle(name: str) -> dict[str, Any]:
                                "frame_step_days": sc.frame_step_days, "basis": sr_basis.tolist(),
                                "gr": options.gr, "c_scale": options.c_scale,
                                "bodies": [{"name": b.name, "gm": b.gm, "massive": b.massive, "state": b.state.tolist()}
-                                          for b in bodies]}}
+                                          for b in bodies],
+                               # A passing star's straight path (where(jd) = at_jd0 + velocity * (jd - start)), so the
+                               # browser's re-runs include its pull too.
+                               "prescribed": [{"name": p.name, "gm": p.gm, "at_start": p.where(start).tolist(),
+                                               "velocity": (p.where(start + 1.0) - p.where(start)).tolist()}
+                                              for p in options.prescribed],
+                               # The central body's flattening (Jupiter's moons), as nbody.j2_acceleration applies it.
+                               "j2": None if options.j2 is None else {"gm": options.j2.gm, "j2": options.j2.j2,
+                                                                     "radius": options.j2.radius,
+                                                                     "pole": list(options.j2.pole)}}}

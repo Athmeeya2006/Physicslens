@@ -3,6 +3,7 @@
 import { Clapperboard, Crosshair, Pause, Play, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Law, Tex } from "@/components/Equation";
+import { Tabs } from "@/components/Tabs";
 import { Sky3D, type Sky3DHandle } from "@/components/Sky3D";
 import { useBackend, useHealth } from "@/lib/api";
 import {
@@ -95,7 +96,7 @@ function Equations({ sim, init, changes, t, central, subject }: {
     + (terms.length > 6 ? String.raw` + \dots` : "") + (gr ? String.raw` + \mathbf a_{\mathrm{GR}}` : "");
   const unit = sim.units.length;
   return (
-    <section className="panel stack" style={{ gap: 10 }} aria-labelledby="eq-title">
+    <section className="stack" style={{ gap: 10 }} aria-labelledby="eq-title">
       <h2 id="eq-title">Every force on {target.name}, now</h2>
       <p className="small muted">Newton&apos;s law for {target.name}, one term per body (click any body in the view to see its own); each body also pulls {sun ? "the Sun" : central},
         so its term subtracts that pull (the indirect term). Shares are of {sun ? "the Sun" : central}&apos;s pull at this
@@ -237,7 +238,7 @@ function BodyCard({ name, base, modified, init, changes, central, onKick, onClos
     ["Speed at the start (km/s)", (o) => o.speed.toFixed(3)],
   ];
   return (
-    <section className="panel stack" style={{ gap: 12 }} aria-labelledby="body-title">
+    <section className="stack" style={{ gap: 12 }} aria-labelledby="body-title">
       <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
         <h2 id="body-title">{name === HYPOTHETICAL ? "Hypothetical planet (X)" : name}{name === base.target ? " (the body whose law is found)" : ""}</h2>
         {onClose && <button type="button" className="secondary" onClick={onClose}>Back to {base.target}</button>}
@@ -286,25 +287,25 @@ function BodyCard({ name, base, modified, init, changes, central, onKick, onClos
 const GREEK = new Set(["mu", "nu", "phi", "omega", "gamma", "beta", "alpha", "theta", "lambda", "sigma", "tau"]);
 
 // Real questions each scenario answers, one click each.
-const USES: { title: string; text: string; scenario: string; changes?: Partial<Changes>; link?: [string, string]; pick?: string }[] = [
-  { title: "Will a comet come back on time?", scenario: "halley_with_jupiter_saturn", changes: { disabled: ["Jupiter"] },
+const USES: { title: string; short: string; text: string; scenario: string; changes?: Partial<Changes>; link?: [string, string]; pick?: string }[] = [
+  { title: "Will a comet come back on time?", short: "Halley's return", scenario: "halley_with_jupiter_saturn", changes: { disabled: ["Jupiter"] },
     text: "Halley returns every 75 to 76 years, and the giant planets decide the exact date. Jupiter is switched off here: compare the period with the scenario as written.",
     link: ["/?run=gallery-halley", "Halley's law, found from a video"] },
-  { title: "How does a near miss change an asteroid?", scenario: "apophis_with_planets",
+  { title: "How does a near miss change an asteroid?", short: "Apophis in 2029", scenario: "apophis_with_planets",
     text: "Apophis passes 38,000 km from Earth in April 2029. The pull of every planet is in its equation; switch Earth off to see how much of the motion it explains.",
     link: ["/?run=gallery-apophis", "Apophis's law, found from a video"] },
-  { title: "Is there a planet nobody has seen?", scenario: "uranus_neptune_hidden",
+  { title: "Is there a planet nobody has seen?", short: "Finding Neptune", scenario: "uranus_neptune_hidden",
     text: "Le Verrier found Neptune in 1846 from the way Uranus drifted. Neptune pulls here but is not drawn: find the law, then read the residuals for its signature.", },
-  { title: "Is Newton enough? Testing gravity", scenario: "mercury_gr_exaggerated",
+  { title: "Is Newton enough? Testing gravity", short: "Mercury and relativity", scenario: "mercury_gr_exaggerated",
     text: "Mercury's perihelion turns 43 arcseconds a century more than Newton allows; relativity explains it. Here it is made 20,000 times stronger, so a few years show it.", },
-  { title: "Would the inner planets survive a heavier Jupiter?", scenario: "jupiter_x10",
+  { title: "Would the inner planets survive a heavier Jupiter?", short: "A heavier Jupiter", scenario: "jupiter_x10",
     text: "A fictional Jupiter ten times heavier: how far the inner orbits are pushed, as a stress test for a planetary system's stability.", },
-  { title: "Moons locked in rhythm", scenario: "galilean_resonance",
+  { title: "Moons locked in rhythm", short: "Jupiter's moons", scenario: "galilean_resonance",
     text: "Io, Europa and Ganymede orbit in a 1:2:4 resonance that missions such as Juno and Europa Clipper plan around; Jupiter's flattening (J2) is in their equations.", },
-  { title: "How much push gets you from Earth to Mars?", scenario: "real_inner_planets", pick: "Earth",
+  { title: "How much push gets you from Earth to Mars?", short: "Earth to Mars", scenario: "real_inner_planets", pick: "Earth",
     changes: { kicks: { Earth: [2940, 0, 0] } },
     text: "A spacecraft leaving Earth's orbit needs about 2.9 km/s more along its motion to coast out to Mars's distance (a Hohmann transfer, the route most Mars missions fly). Here Earth itself gets that push: its farthest point moves out to Mars's orbit, and the Moon is left behind.", },
-  { title: "How fast to leave the Sun for good?", scenario: "real_inner_planets", pick: "Earth",
+  { title: "How fast to leave the Sun for good?", short: "Escaping the Sun", scenario: "real_inner_planets", pick: "Earth",
     changes: { kicks: { Earth: [12400, 0, 0] } },
     text: "From Earth's distance the Sun's escape speed is about 42 km/s; Earth moves at about 30. Add 12.4 km/s along its motion and the orbit opens: no farthest point, no period. Try 12,000 to see it stay bound.", },
 ];
@@ -327,6 +328,17 @@ export default function SkyLab() {
   const [noise, setNoise] = useState(2);
   const [filmed, setFilmed] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
+  const [tab, setTab] = useState("body");
+  // The scrubber follows time closely; the force table (shares at "now") only once a second, so playing never
+  // re-renders the heavy panels several times a second.
+  const [eqTime, setEqTime] = useState(0);
+  const eqToldAt = useRef(0);
+  const onTime = useCallback((t: number, end: number) => {
+    setTime([t, end]);
+    const now = performance.now();
+    if (now - eqToldAt.current > 1000) { eqToldAt.current = now; setEqTime(t); }
+  }, []);
+  const [question, setQuestion] = useState<string | null>(null);
   const view = useRef<Sky3DHandle>(null);
   const request = useRef(0);
 
@@ -350,12 +362,67 @@ export default function SkyLab() {
     if (!name) return;
     setBase(null);
     setDiscovery(null);
-    const load = online ? simulateOnServer(name, NONE).catch(() => bundled(name)) : bundled(name);
-    load.then((sim) => {
-      if (!sim.initial) bundled(name).then((b) => setBase({ ...sim, initial: b.initial })).catch(() => setBase(sim));
-      else setBase(sim);
-    }).catch((e) => setError(`This scenario could not be loaded: ${(e as Error).message}`));
+    // The scenario as written is precomputed with the site (the server's own run): it shows at once, and the server
+    // is asked only when the bundle is missing.
+    bundled(name).catch(() => (online ? simulateOnServer(name, NONE) : Promise.reject(new Error("not bundled"))))
+      .then(setBase).catch((e) => setError(`This scenario could not be loaded: ${(e as Error).message}`));
   }, [name, online]);
+
+  // The browser's own run of every change, in a worker so a dragged slider stays smooth: a request made while one is
+  // computing waits, and only the newest waiting one is sent (a fast drag skips the values in between).
+  const worker = useRef<Worker | null>(null);
+  const inFlight = useRef(false);
+  const waiting = useRef<{ base: Simulation; changes: Changes; id: number } | null>(null);
+  const lastSent = useRef<{ base: Simulation; changes: Changes; id: number } | null>(null);
+  const serverDone = useRef(0);  // the newest change the server has answered: its run outranks the browser's
+  const showPreview = useCallback((sim: Simulation, bodies: Simulation["bodies"], c: Changes, id: number) => {
+    if (id !== request.current || serverDone.current === id) return;
+    const drawn = bodies.map((b) => {
+      const was = sim.bodies.find((x) => x.name === b.name);
+      return { ...b, colour: was?.colour ?? "#cccccc", hidden: c.hidden ? b.hidden : (was?.hidden ?? false) };
+    });
+    setModified({ ...sim, bodies: drawn, elements: [], detectability: null, preview: true,
+                  source: "simulation, no pixels (in this browser)" });
+  }, []);
+  const send = useCallback((job: { base: Simulation; changes: Changes; id: number }) => {
+    inFlight.current = true;
+    worker.current!.postMessage({ id: job.id, init: job.base.initial, changes: job.changes, target: job.base.target, base: job.base.bodies });
+    waiting.current = null;
+    lastSent.current = job;
+  }, []);
+  const preview = useCallback((sim: Simulation, c: Changes, id: number) => {
+    if (!worker.current) {
+      showPreview(sim, integrate(sim.initial!, c, sim.target, 1500, sim.bodies), c, id);
+      return;
+    }
+    const job = { base: sim, changes: c, id };
+    if (inFlight.current) waiting.current = job; else send(job);
+  }, [send, showPreview]);
+  useEffect(() => {
+    try {
+      // Compiled from lib/skyWorker.ts by `npm run worker` (the bundler copies a worker file instead of building it).
+      const w = new Worker("/sky-worker/skyWorker.js", { type: "module" });
+      // A worker that cannot start (or breaks) hands the work back to the page, never leaving a change unanswered.
+      w.onerror = () => {
+        w.terminate();
+        worker.current = null;
+        inFlight.current = false;
+        const job = waiting.current ?? lastSent.current;
+        waiting.current = null;
+        if (job) showPreview(job.base, integrate(job.base.initial!, job.changes, job.base.target, 1500, job.base.bodies), job.changes, job.id);
+      };
+      w.onmessage = (e: MessageEvent<{ id: number; bodies?: Simulation["bodies"]; error?: string }>) => {
+        inFlight.current = false;
+        const job = lastSent.current;
+        if (job && e.data.bodies) showPreview(job.base, e.data.bodies, job.changes, e.data.id);
+        if (waiting.current) send(waiting.current);
+      };
+      worker.current = w;
+      return () => w.terminate();
+    } catch {
+      worker.current = null;  // no workers here: the page runs the integrator itself
+    }
+  }, [send, showPreview]);
 
   // Every change: an instant preview in the browser, then (with a server) the authoritative run and the law, 400 ms
   // after the last change.
@@ -370,17 +437,13 @@ export default function SkyLab() {
       return;
     }
     const id = ++request.current;
-    if (base.initial && (changes.years ?? base.initial.clip_days / 365.25) <= 50 && base.initial.bodies.length <= 10) {
-      const bodies = integrate(base.initial, changes, base.target).map((b) => ({
-        ...b, colour: base.bodies.find((x) => x.name === b.name)?.colour ?? "#cccccc",
-      }));
-      setModified({ ...base, bodies, elements: [], detectability: null, preview: true, source: "simulation, no pixels (in this browser)" });
-    }
+    if (base.initial) preview(base, changes, id);
     if (!online) return;
     const timer = setTimeout(() => {
       setBusy("Simulating on the server");
       simulateOnServer(name, changes).then((sim) => {
         if (id !== request.current) return;
+        serverDone.current = id;
         setModified(sim);
         setBusy("Finding the law from the simulated track");
         return discoverOnServer(name, changes, noise).then((d) => id === request.current && setDiscovery(d));
@@ -392,7 +455,7 @@ export default function SkyLab() {
       }).finally(() => id === request.current && setBusy(null));
     }, 400);
     return () => clearTimeout(timer);
-  }, [base, changes, name, online, noise]);
+  }, [base, changes, name, online, noise, preview]);
 
   const discover = useCallback(() => {
     if (!name) return;
@@ -410,7 +473,7 @@ export default function SkyLab() {
     setChanges({ ...NONE, ...preset });
     setName(scenario);
     setPicked(pick ?? null);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (pick) setTab("body");
   };
 
   const sc = scenarios.find((s) => s.name === name);
@@ -422,147 +485,25 @@ export default function SkyLab() {
   const label = `${sc?.title ?? "Solar system"}: ${(shown?.bodies ?? []).filter((b) => !b.hidden).map((b) => b.name).join(", ")} `
     + `around the ${sc?.name.startsWith("galilean") ? "planet" : "Sun"}${modified ? ", the changed run dashed over the original" : ""}.`;
 
-  return (
-    <main id="main" className="stack" style={{ gap: 20 }}>
-      <header className="stack" style={{ gap: 6 }}>
-        <h1>Solar System Lab</h1>
-        <p className="lead">
-          Change the solar system and watch both the orbits and the law change. Simulated by PhysicsLens&apos;s own N-body
-          engine, checked against NASA/JPL; the law is found from a simulated track with tracker-like noise, not from video.
-        </p>
-      </header>
-      {error && <p className="error" role="alert">{error}</p>}
-      <section className="panel stack" style={{ gap: 12 }} aria-labelledby="uses-title">
-        <h2 id="uses-title">Start from a real-world question</h2>
-        <p className="small muted">The same equations astronomers and mission planners integrate, on real starting positions from JPL.
-          Each button loads a scenario, with a change where the question needs one.</p>
-        <div className="sky-uses">
-          {USES.filter((u) => scenarios.some((s) => s.name === u.scenario)).map((u) => (
-            <article key={u.title} className="sky-use">
-              <h3>{u.title}</h3>
-              <p className="small">{u.text}</p>
-              <div className="row" style={{ gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                <button type="button" className="secondary" onClick={() => load(u.scenario, u.changes, u.pick)}>Load it</button>
-                {u.link && <a className="small" href={u.link[0]}>{u.link[1]}</a>}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-      <div className="sky-layout">
-        <section className="sky-stage panel" aria-label="The simulation">
-          <Sky3D handle={view} base={base?.bodies ?? null} modified={modified?.bodies ?? null} playing={playing}
-                 daysPerSecond={speed} follow={follow} label={label} centre={sc?.name.startsWith("galilean") ? "Jupiter" : "Sun"}
-                 onTime={(t, end) => setTime([t, end])} onPick={setPicked} picked={subject} />
-          <p className="small muted">Drag to turn, scroll or pinch to zoom, right-drag to pan. Sizes are not to scale (at
-            scale every planet would be smaller than a pixel); positions are. The orange and blue dots are an illustrative
-            swarm of asteroids on Kepler orbits, as in NASA&apos;s charts.</p>
-          <div className="sky-transport">
-            <button type="button" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Pause" : "Play"}>
-              {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
-            </button>
-            <label className="sky-scrub">
-              <span className="visually-hidden">Time</span>
-              <input type="range" min={0} max={time[1] || 1} step={Math.max(time[1] / 1000, 0.01)} value={time[0]}
-                     onChange={(e) => { setPlaying(false); view.current?.setTime(Number(e.target.value)); }} />
-            </label>
-            <span className="small muted">{(time[0] / 365.25).toFixed(1)} / {(time[1] / 365.25).toFixed(1)} yr</span>
-            <label className="small">
-              <span className="visually-hidden">Speed</span>
-              <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
-                {SPEEDS.map((s) => <option key={s} value={s}>{s === 365 ? "1 year/s" : `${s} days/s`}</option>)}
-              </select>
-            </label>
-            <label className="small">
-              <Crosshair size={14} aria-hidden="true" /> <span className="visually-hidden">Follow</span>
-              <select value={follow ?? ""} onChange={(e) => setFollow(e.target.value || null)}>
-                <option value="">Sun-centred</option>
-                {(shown?.bodies ?? []).map((b) => <option key={b.name} value={b.name}>Follow {b.name}</option>)}
-              </select>
-            </label>
-            <button type="button" className="secondary" onClick={() => view.current?.fit()}>Fit</button>
-          </div>
-          <div className="row sky-pick" role="group" aria-label="See one body: its orbit, its equation, push it">
-            <span className="small muted">See:</span>
-            {(shown?.bodies ?? []).filter((b) => !b.hidden).map((b) => (
-              <button key={b.name} type="button" className={`chip${b.name === subject ? " on" : ""}`} aria-pressed={b.name === subject}
-                      onClick={() => setPicked(b.name)}>{b.name === HYPOTHETICAL ? "planet X" : b.name}</button>
-            ))}
-          </div>
-          {shown?.detectability && (
-            <p className={`badge ${shown.detectability.visible ? "ok" : "tie"}`}>
-              A phone-video tracker {shown.detectability.visible ? "would" : "would not"} see this: {shown.detectability.message}
-            </p>
-          )}
-          {modified?.preview && <p className="small muted">{modified.source.includes("cannot run pushes") ? "Computed in this browser (the analysis server cannot run pushes yet, so finding the law of a pushed system waits for it)." : `Preview computed in this browser${online ? "; the server's run replaces it when it arrives." : "."}`}</p>}
-        </section>
-
-        <aside className="sky-controls panel stack" style={{ gap: 14 }} aria-label="Change the system">
-          <label className="field">
-            Scenario
-            <select value={name} onChange={(e) => { setChanges(NONE); setPicked(null); setName(e.target.value); }}>
-              {scenarios.map((s) => <option key={s.name} value={s.name}>{s.title}</option>)}
-            </select>
-          </label>
-          {sc && <p className="small">{sc.description}</p>}
-          {fictional && <p className="badge bad">FICTIONAL: {changed(changes) ? "changed from the real system" : "not the real solar system"}</p>}
-          <fieldset className="stack" style={{ gap: 8 }}>
-            <legend>Bodies</legend>
-            {others.map((n) => {
-              const off = changes.disabled.includes(n);
-              const scale = changes.mass_scale[n] ?? sc?.mass_scale[n] ?? 1;
-              return (
-                <div key={n} className="sky-body-row">
-                  <label><input type="checkbox" checked={!off}
-                                onChange={(e) => set({ disabled: e.target.checked ? changes.disabled.filter((x) => x !== n) : [...changes.disabled, n] })} /> {n}</label>
-                  <label className="small">
-                    <span className="visually-hidden">{n} mass</span>
-                    <input type="range" min={-2} max={2} step={0.05} value={Math.log10(Math.max(scale, 0.01))} disabled={off}
-                           aria-valuetext={`${scale.toPrecision(3)} times its real mass`}
-                           onChange={(e) => set({ mass_scale: { ...changes.mass_scale, [n]: Number((10 ** Number(e.target.value)).toPrecision(3)) } })} />
-                    <span>{scale.toPrecision(3)}×</span>
-                  </label>
-                </div>
-              );
-            })}
-          </fieldset>
-          <fieldset className="stack" style={{ gap: 8 }}>
-            <legend>Relativity</legend>
-            <label><input type="checkbox" checked={changes.gr ?? sc?.gr ?? false} onChange={(e) => set({ gr: e.target.checked })} /> The Sun&apos;s general relativity</label>
-            <label className="small">
-              Strength (1 is real; anything else is fictional)
-              <input type="range" min={0} max={5} step={0.1} value={Math.log10(changes.c_scale ?? sc?.c_scale ?? 1)}
-                     aria-valuetext={`${(changes.c_scale ?? sc?.c_scale ?? 1).toPrecision(3)} times real`}
-                     onChange={(e) => set({ c_scale: Number((10 ** Number(e.target.value)).toPrecision(3)), gr: true })} />
-              <span>{(changes.c_scale ?? sc?.c_scale ?? 1).toPrecision(3)}×</span>
-            </label>
-          </fieldset>
-          <fieldset className="stack" style={{ gap: 8 }}>
-            <legend>Add a hypothetical body</legend>
-            <label><input type="checkbox" checked={!!changes.extra_body}
-                          onChange={(e) => set({ extra_body: e.target.checked ? { gm_suns: 0.001, a_au: 3, e: 0.05, i_deg: 0, M_deg: 0 } : null })} /> A planet that isn&apos;t there</label>
-            {changes.extra_body && (["gm_suns", "a_au", "e", "M_deg"] as const).map((k) => (
-              <label key={k} className="field small">
-                {{ gm_suns: "Mass (fraction of the Sun's)", a_au: "Distance (AU)", e: "Eccentricity", M_deg: "Phase (degrees)" }[k]}
-                <input type="number" step="any" value={changes.extra_body![k]}
-                       onChange={(e) => set({ extra_body: { ...changes.extra_body!, [k]: Number(e.target.value) } })} />
-              </label>
-            ))}
-          </fieldset>
-          <button type="button" className="secondary" onClick={() => setChanges(NONE)} disabled={!changed(changes)}>
-            <RotateCcw size={14} aria-hidden="true" /> Back to the scenario as written
-          </button>
-        </aside>
-      </div>
-
-      {base?.initial && subject && (
+  const use = USES.find((u) => u.title === question) ?? null;
+  // Everything below the view, rebuilt only when what it shows changes (not on every tick of the clock).
+  const details = useMemo(() => (
+      <section className="panel" aria-label="Details">
+        <Tabs label="Details" active={tab} onChange={setTab} tabs={[
+          ...(base?.initial && subject ? [{ id: "body", label: <>{subject === HYPOTHETICAL ? "Planet X" : subject}: orbit and push</>, panel: (
+            base?.initial && subject && (
         <BodyCard name={subject} base={base} modified={modified} init={base.initial} changes={changes}
                   central={sc?.name.startsWith("galilean") ? "Jupiter" : "the Sun"}
                   onKick={(k) => set({ kicks: { ...(changes.kicks ?? {}), [subject]: k } })}
                   onClose={subject !== base.target ? () => setPicked(null) : null} />
-      )}
-
-      <section className="panel stack" style={{ gap: 10 }} aria-labelledby="changed-title">
+      )
+          ) }] : []),
+          ...(base?.initial ? [{ id: "forces", label: "Every force on it", panel: (
+            base?.initial && <Equations sim={modified ?? base} init={base.initial} changes={changes} t={eqTime}
+                                   central={sc?.name.startsWith("galilean") ? "Jupiter" : "Sun"} subject={subject ?? base.target} />
+          ) }] : []),
+          { id: "orbit", label: <>{base?.target ?? "Target"} over time</>, panel: (
+            <section className="stack" style={{ gap: 10 }} aria-labelledby="changed-title">
         <h2 id="changed-title">What changed: {base?.target ?? "the target"}&apos;s orbit</h2>
         {shown?.precession_arcsec_per_century != null && (
           <p>Its perihelion turns by <strong>{shown.precession_arcsec_per_century.toLocaleString(undefined, { maximumSignificantDigits: 4 })}</strong> arcseconds a century{modified && base?.precession_arcsec_per_century != null ? ` (as written: ${base.precession_arcsec_per_century.toLocaleString(undefined, { maximumSignificantDigits: 4 })})` : ""}.</p>
@@ -575,11 +516,9 @@ export default function SkyLab() {
         </div>
         <p className="small muted">Solid: the scenario as written. Dashed: with your changes.</p>
       </section>
-
-      {base?.initial && <Equations sim={modified ?? base} init={base.initial} changes={changes} t={time[0]}
-                                   central={sc?.name.startsWith("galilean") ? "Jupiter" : "Sun"} subject={subject ?? base.target} />}
-
-      <section className="panel stack" style={{ gap: 10 }} aria-labelledby="law-title">
+          ) },
+          { id: "law", label: "The law, found", panel: (
+            <section className="stack" style={{ gap: 10 }} aria-labelledby="law-title">
         <h2 id="law-title">The law, found from the motion</h2>
         <p className="small muted">Found from a simulated track with tracker-like noise, not from video: the same fitting and held-out verification as a recorded clip, from a fixed list of laws (free).</p>
         <div className="row" style={{ gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -635,6 +574,141 @@ export default function SkyLab() {
           </div>
         )}
       </section>
+          ) },
+        ]} />
+      </section>
+  ), [base, modified, subject, changes, sc, eqTime, tab, discovery, busy, noise, online, health, filmed, name, discover]);  // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <main id="main" className="stack" style={{ gap: 16 }}>
+      <header className="stack" style={{ gap: 6 }}>
+        <h1>Solar System Lab</h1>
+        <p className="lead">
+          Change the solar system, push a planet, and watch the orbits and the law change. Click any body to see its orbit and
+          its equation. Simulated by PhysicsLens&apos;s own N-body engine from NASA/JPL starting positions.
+        </p>
+      </header>
+      {error && <p className="error" role="alert">{error}</p>}
+      <nav className="sky-questions" aria-label="Real-world questions">
+        <span className="small muted">Real-world questions:</span>
+        {USES.filter((u) => scenarios.some((s) => s.name === u.scenario)).map((u) => (
+          <button key={u.title} type="button" className={`chip${question === u.title ? " on" : ""}`} aria-pressed={question === u.title}
+                  title={u.title} onClick={() => { setQuestion(u.title); load(u.scenario, u.changes, u.pick); }}>{u.short}</button>
+        ))}
+      </nav>
+      <div className="sky-layout">
+        <section className="sky-stage panel" aria-label="The simulation">
+          <Sky3D handle={view} base={base?.bodies ?? null} modified={modified?.bodies ?? null} playing={playing}
+                 daysPerSecond={speed} follow={follow} label={label} centre={sc?.name.startsWith("galilean") ? "Jupiter" : "Sun"}
+                 onTime={onTime} onPick={(n) => { setPicked(n); setTab("body"); }} picked={subject} />
+          <p className="small muted">Drag to turn, scroll or pinch to zoom, right-drag to pan. Sizes are not to scale (at
+            scale every planet would be smaller than a pixel); positions are. The orange and blue dots are an illustrative
+            swarm of asteroids on Kepler orbits, as in NASA&apos;s charts.</p>
+          <div className="sky-transport">
+            <button type="button" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Pause" : "Play"}>
+              {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
+            </button>
+            <label className="sky-scrub">
+              <span className="visually-hidden">Time</span>
+              <input type="range" min={0} max={time[1] || 1} step={Math.max(time[1] / 1000, 0.01)} value={time[0]}
+                     onChange={(e) => { setPlaying(false); view.current?.setTime(Number(e.target.value)); }} />
+            </label>
+            <span className="small muted">{(time[0] / 365.25).toFixed(1)} / {(time[1] / 365.25).toFixed(1)} yr</span>
+            <label className="small">
+              <span className="visually-hidden">Speed</span>
+              <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
+                {SPEEDS.map((s) => <option key={s} value={s}>{s === 365 ? "1 year/s" : `${s} days/s`}</option>)}
+              </select>
+            </label>
+            <label className="small">
+              <Crosshair size={14} aria-hidden="true" /> <span className="visually-hidden">Follow</span>
+              <select value={follow ?? ""} onChange={(e) => setFollow(e.target.value || null)}>
+                <option value="">Sun-centred</option>
+                {(shown?.bodies ?? []).map((b) => <option key={b.name} value={b.name}>Follow {b.name}</option>)}
+              </select>
+            </label>
+            <button type="button" className="secondary" onClick={() => view.current?.fit()}>Fit</button>
+          </div>
+          <div className="row sky-pick" role="group" aria-label="See one body: its orbit, its equation, push it">
+            <span className="small muted">See:</span>
+            {(shown?.bodies ?? []).filter((b) => !b.hidden).map((b) => (
+              <button key={b.name} type="button" className={`chip${b.name === subject ? " on" : ""}`} aria-pressed={b.name === subject}
+                      onClick={() => { setPicked(b.name); setTab("body"); }}>{b.name === HYPOTHETICAL ? "planet X" : b.name}</button>
+            ))}
+          </div>
+          {shown?.detectability && (
+            <p className={`badge ${shown.detectability.visible ? "ok" : "tie"}`}>
+              A phone-video tracker {shown.detectability.visible ? "would" : "would not"} see this: {shown.detectability.message}
+            </p>
+          )}
+          {modified?.preview && <p className="small muted">{modified.source.includes("cannot run pushes") ? "Computed in this browser (the analysis server cannot run pushes yet, so finding the law of a pushed system waits for it)." : `Preview computed in this browser${online ? "; the server's run replaces it when it arrives." : "."}`}</p>}
+        </section>
+
+        <aside className="sky-controls panel stack" style={{ gap: 14 }} aria-label="Change the system">
+          {use && (
+            <div className="sky-question stack" style={{ gap: 6 }}>
+              <h2>{use.title}</h2>
+              <p className="small">{use.text}</p>
+              {use.link && <a className="small" href={use.link[0]}>{use.link[1]}</a>}
+            </div>
+          )}
+          <label className="field">
+            Scenario
+            <select value={name} onChange={(e) => { setChanges(NONE); setPicked(null); setQuestion(null); setName(e.target.value); }}>
+              {scenarios.map((s) => <option key={s.name} value={s.name}>{s.title}</option>)}
+            </select>
+          </label>
+          {sc && <p className="small">{sc.description}</p>}
+          {fictional && <p className="badge bad">FICTIONAL: {changed(changes) ? "changed from the real system" : "not the real solar system"}</p>}
+          <fieldset className="stack" style={{ gap: 8 }}>
+            <legend>Bodies</legend>
+            {others.map((n) => {
+              const off = changes.disabled.includes(n);
+              const scale = changes.mass_scale[n] ?? sc?.mass_scale[n] ?? 1;
+              return (
+                <div key={n} className="sky-body-row">
+                  <label><input type="checkbox" checked={!off}
+                                onChange={(e) => set({ disabled: e.target.checked ? changes.disabled.filter((x) => x !== n) : [...changes.disabled, n] })} /> {n}</label>
+                  <label className="small">
+                    <span className="visually-hidden">{n} mass</span>
+                    <input type="range" min={-2} max={2} step={0.05} value={Math.log10(Math.max(scale, 0.01))} disabled={off}
+                           aria-valuetext={`${scale.toPrecision(3)} times its real mass`}
+                           onChange={(e) => set({ mass_scale: { ...changes.mass_scale, [n]: Number((10 ** Number(e.target.value)).toPrecision(3)) } })} />
+                    <span>{scale.toPrecision(3)}×</span>
+                  </label>
+                </div>
+              );
+            })}
+          </fieldset>
+          <fieldset className="stack" style={{ gap: 8 }}>
+            <legend>Relativity</legend>
+            <label><input type="checkbox" checked={changes.gr ?? sc?.gr ?? false} onChange={(e) => set({ gr: e.target.checked })} /> The Sun&apos;s general relativity</label>
+            <label className="small">
+              Strength (1 is real; anything else is fictional)
+              <input type="range" min={0} max={5} step={0.1} value={Math.log10(changes.c_scale ?? sc?.c_scale ?? 1)}
+                     aria-valuetext={`${(changes.c_scale ?? sc?.c_scale ?? 1).toPrecision(3)} times real`}
+                     onChange={(e) => set({ c_scale: Number((10 ** Number(e.target.value)).toPrecision(3)), gr: true })} />
+              <span>{(changes.c_scale ?? sc?.c_scale ?? 1).toPrecision(3)}×</span>
+            </label>
+          </fieldset>
+          <fieldset className="stack" style={{ gap: 8 }}>
+            <legend>Add a hypothetical body</legend>
+            <label><input type="checkbox" checked={!!changes.extra_body}
+                          onChange={(e) => set({ extra_body: e.target.checked ? { gm_suns: 0.001, a_au: 3, e: 0.05, i_deg: 0, M_deg: 0 } : null })} /> A planet that isn&apos;t there</label>
+            {changes.extra_body && (["gm_suns", "a_au", "e", "M_deg"] as const).map((k) => (
+              <label key={k} className="field small">
+                {{ gm_suns: "Mass (fraction of the Sun's)", a_au: "Distance (AU)", e: "Eccentricity", M_deg: "Phase (degrees)" }[k]}
+                <input type="number" step="any" value={changes.extra_body![k]}
+                       onChange={(e) => set({ extra_body: { ...changes.extra_body!, [k]: Number(e.target.value) } })} />
+              </label>
+            ))}
+          </fieldset>
+          <button type="button" className="secondary" onClick={() => setChanges(NONE)} disabled={!changed(changes)}>
+            <RotateCcw size={14} aria-hidden="true" /> Back to the scenario as written
+          </button>
+        </aside>
+      </div>
+
+      {details}
     </main>
   );
 }

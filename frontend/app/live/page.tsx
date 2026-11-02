@@ -12,7 +12,7 @@ const TRAIL = 25;
 
 type Point = [number, number, number];
 
-interface LiveParam { name: string; latex: string; unit: string; value: number; spread: number | null }
+interface LiveParam { name: string; latex: string; unit: string; value: number; spread: number | null; assumed?: string }
 interface FitMsg {
   type: "fit";
   status: "accepted" | "ambiguous" | "no_fit";
@@ -386,7 +386,7 @@ export default function LivePage() {
               {fit.parameters?.map((p) => (
                 <p key={p.name}>
                   <Tex tex={p.latex} /> = {p.value.toPrecision(4)} {formatUnit(p.unit)}
-                  {p.spread !== null && <span className="muted"> (± {p.spread.toPrecision(2)} across recent fits)</span>}
+                  {p.assumed ? <span className="muted"> (assumed: {p.assumed})</span> : p.spread !== null && <span className="muted"> (± {p.spread.toPrecision(2)} across recent fits)</span>}
                 </p>
               ))}
               <p className="muted small">{fit.reason}</p>
