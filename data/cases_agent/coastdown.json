@@ -1,0 +1,89 @@
+{
+ "generated": "scripts/cases_agent.py",
+ "case": "coastdown",
+ "mock": false,
+ "points": 52,
+ "status": "accepted",
+ "reason": "Constant acceleration forecasts held-out data within 4.4%.",
+ "equation": {
+  "model_id": "line_constant_accel",
+  "title": "Constant acceleration",
+  "latex": "\\ddot s = a_0"
+ },
+ "parameters": [
+  {
+   "name": "a0",
+   "latex": "a_0",
+   "unit": "m/s^2",
+   "value": -17.347020211438128,
+   "std": 0.121544085049893,
+   "ci95": [
+    -17.58524661813592,
+    -17.108793804740337
+   ]
+  }
+ ],
+ "agent_ranking": [
+  {
+   "model_id": "line_constant_accel",
+   "title": "Constant acceleration",
+   "heldout_nrmse": 0.044180748541082435,
+   "bic": -4.007466759145097,
+   "status": "accepted",
+   "why": "forecasts held-out motion within 4.4% and has the best BIC; from 4 later starting points, median error 1.2%"
+  },
+  {
+   "model_id": "line_constant_velocity",
+   "title": "Constant velocity (no net force)",
+   "heldout_nrmse": 0.7083091151403923,
+   "bic": 61.81991533228401,
+   "status": "rejected",
+   "why": "forecast error 71% on held-out data"
+  }
+ ],
+ "agent_proposed_free_form": [],
+ "hand_chosen": [
+  {
+   "law": "coulomb",
+   "title": "coulomb friction (hand-chosen)",
+   "heldout_rmse_rpm": 39.26
+  },
+  {
+   "law": "coulomb+viscous",
+   "title": "coulomb+viscous friction (hand-chosen)",
+   "heldout_rmse_rpm": 2.82
+  },
+  {
+   "law": "coulomb+viscous+quadratic",
+   "title": "coulomb+viscous+quadratic friction (hand-chosen)",
+   "heldout_rmse_rpm": 3.37
+  }
+ ],
+ "trail": [
+  {
+   "step": "data",
+   "provider": null,
+   "model": "provenance",
+   "text": "in-wheel motor coast-down, first run (published bench data, CC BY 4.0); times from logger timestamps (\u00b10.01 s)."
+  },
+  {
+   "step": "hypotheses",
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026",
+   "text": "Proposed 2 laws: Constant velocity (no net force), Constant acceleration."
+  },
+  {
+   "step": "verdict",
+   "provider": null,
+   "model": "held-out verification",
+   "text": "Constant acceleration forecasts held-out data within 4.4%."
+  }
+ ],
+ "llm_calls": [
+  {
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026"
+  }
+ ],
+ "seconds": 26.10124707221985
+}

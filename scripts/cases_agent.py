@@ -72,7 +72,26 @@ def fireball() -> dict:
                      {"law": "alpha_beta", "title": "alpha-beta (hand-chosen)", "heldout_rms_kms": f["alpha_beta"]["heldout_rms_kms"]}]}
 
 
-CASES = {"wasp12b": wasp12b, "kepler88b": kepler88b, "fireball": fireball}
+def coastdown() -> dict:
+    """An in-wheel motor coasting to a stop (published bench data, CC BY 4.0): the wheel's angle against time,
+    integrated from the logged speed, so the agent sees a motion like any other and proposes its friction law."""
+    import pandas as pd
+    df = pd.read_csv(ROOT / "var" / "health_public" / "spindown" / "bench_spindown_lifted.csv")
+    col = df.columns[1]
+    keep = df[col] >= 50.0  # the same floor as the hand-chosen fit: below it stiction and the encoder dominate
+    t = df["t_s"][keep].to_numpy()
+    w = df[col][keep].to_numpy() * 2 * np.pi / 60
+    angle = np.concatenate([[0.0], np.cumsum(0.5 * (w[1:] + w[:-1]) * np.diff(t))])
+    hp = json.loads((ROOT / "data/health_public/result.json").read_text())["spindown"]
+    return {"t": t - t[0], "y": angle, "name": "a motor wheel's turning angle while it coasts to a stop",
+            "value_unit": "rad", "time_unit": "s",
+            "provenance": {"data_source": "in-wheel motor coast-down, first run (published bench data, CC BY 4.0)",
+                           "time_source": "logger timestamps", "time_sigma_s": 0.01},
+            "hand": [{"law": law["model"], "title": f"{law['model']} friction (hand-chosen)",
+                      "heldout_rmse_rpm": law["heldout_rmse_rpm"]} for law in hp["runs"][0]["laws"]]}
+
+
+CASES = {"wasp12b": wasp12b, "kepler88b": kepler88b, "fireball": fireball, "coastdown": coastdown}
 
 
 def run(case: str, client, mock: bool) -> dict:

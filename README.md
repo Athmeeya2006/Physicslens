@@ -659,13 +659,14 @@ proposed laws (free-form ones included), and the same held-out verification rank
 |---|---|---|---|
 | WASP-12b timings | decaying orbit wins (held-out chi-square 1.79 per event) | none tested: the series looked like noise to the generic path | none tested |
 | Kepler-88 b timings | N-body second planet wins (forecast within 15 min) | no law verified (best forecast error 182%) | constant velocity, 182% |
+| Motor coast-down | Coulomb plus viscous friction wins (held-out 2.82 rpm; Coulomb alone 39.26 rpm) | none of its own reached fitting; the library's constant deceleration was accepted (Coulomb alone, 17.35 rad/s², the hand-chosen Coulomb-only value to four digits) | constant deceleration, accepted |
 | Winchcombe fireball | alpha-beta and single-body drag (held-out 4.95 and 6.41 km/s) | its own fragmenting-drag law forecast within 14%, refused because a parameter sat at its limit | constant acceleration, 22% |
 
 What this shows, honestly: the generic path does not weight each measurement by its own error bar, so on transit
 timings, where the signal is a few minutes against a minute of scatter per point, it calls the series noise; the
 dedicated timing laws, which do use the error bars, find the decay. On the fireball the agent wrote a fragmentation
 law by itself, which the hand-chosen set did not contain, and verification still refused it rather than accept a fit
-that leans on a bound. No agent-proposed law beat the hand-chosen ones on these three cases.
+that leans on a bound. On the coast-down the agent path settled for the simpler law, which forecasts the wheel's angle well but its speed far worse than the hand-chosen two-term law: the generic path judges positions, and the viscous term shows mainly in the speed. No agent-proposed law beat the hand-chosen ones on these four cases. The robot arm's joints are not in the table: each joint follows a known command, and the generic agent path does not yet take known inputs (the video pipeline does).
 
 ### Predictions made before the answer (`/predictions`)
 
@@ -1291,7 +1292,7 @@ CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (855 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
+The suite (856 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.
