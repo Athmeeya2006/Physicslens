@@ -117,6 +117,22 @@ def test_a_law_pinned_at_its_limits_is_not_accepted():
     assert decide([nodrag, honest]).winner.model_id == "linear_drag"
 
 
+def test_a_range_spanning_decades_is_judged_on_a_log_scale():
+    # A door closer's stiffness of 9 is not "at the lowest allowed value" of a range from 0.01 to 40,000; on a linear
+    # scale 0.1% of that span is 40 and it was refused. A value really at the floor still is.
+    from physicslens.physics.verify import at_limit
+    lo, hi = MODELS["spin_spring"].params[0].lower, MODELS["spin_spring"].params[0].upper
+    ok = _fake("spin_spring", 3, -1600.0, 0.01, 0.0)
+    ok.params.update(kappa=9.0, phi0=0.2, k=0.8)
+    assert at_limit(ok) is None
+    floor = _fake("spin_spring", 3, -1600.0, 0.01, 0.0)
+    floor.params.update(kappa=lo * 1.001, phi0=0.2, k=0.8)
+    assert "lowest" in (at_limit(floor) or "")
+    ceiling = _fake("spin_spring", 3, -1600.0, 0.01, 0.0)
+    ceiling.params.update(kappa=hi * 0.999, phi0=0.2, k=0.8)
+    assert "highest" in (at_limit(ceiling) or "")
+
+
 def test_no_fit_says_why_in_words_a_reader_can_use():
     from physicslens.physics.verify import error_words
     # Only a pinned law forecasts: the verdict names the limit, not a forecast error that was fine.

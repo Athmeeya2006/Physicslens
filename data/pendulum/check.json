@@ -1,0 +1,61 @@
+{
+ "generated": "scripts/pendulum_check.py",
+ "truth": {
+  "g": 9.810858791389036,
+  "site": "Aachen, Germany",
+  "lat_deg": 50.776,
+  "height_m": 173.0,
+  "site_note": "city centre; the clip's room is not stated, the city spans 125 to 410 m",
+  "source": "WGS 84 normal gravity (Somigliana's formula, NIMA TR8350.2) with the free-air correction for height"
+ },
+ "measured": {
+  "g": 9.907337922259321,
+  "ci95": [
+   9.824225143044197,
+   9.986196384422067
+  ],
+  "relative_error": 0.009833912904236852,
+  "truth_in_interval": false
+ },
+ "clock": {
+  "container": {
+   "declared_rate": "25/1",
+   "frames": 1598,
+   "interval_mean_s": 0.04,
+   "interval_min_s": 0.03999999999999915,
+   "interval_max_s": 0.04000000000000625
+  },
+  "stopwatch_hand": {
+   "deg_per_video_s": 5.883986687933049,
+   "ci95": [
+    5.692139225752625,
+    5.944949203779875
+   ],
+   "frames": 299,
+   "rms_residual_deg": 0.7830288719154853
+  },
+  "dial_deg_per_s": 6.0,
+  "real_s_per_video_s": 0.9806644479888416,
+  "real_s_per_video_s_ci95": [
+   0.9486898709587708,
+   0.9908248672966459
+  ],
+  "needed_to_explain": 1.0049049272962278,
+  "excluded": true,
+  "note": "the hand angle is read from yellow pixels and can be pulled by the pendulum's yellow string near the dial; taken at face value the reading points the other way (a camera running fast would make g still higher), and a 2% clock error is far beyond a mechanical stopwatch's or a camera's, so the reading bounds the clock rather than measuring it"
+ },
+ "length": {
+  "stated_m": 0.5,
+  "needed_m": 0.4951309256014413,
+  "shorter_by_mm": 4.869074398558714,
+  "bob_radius_m": 0.011752771571838619,
+  "physical_pendulum_correction_mm": 0.1105021116958544,
+  "physical_pendulum_correction_relative": 0.0002210042233917088
+ },
+ "amplitude": {
+  "theta0_rad": 0.11209519747592589,
+  "small_angle_bias_relative": 0.0015706666621458528,
+  "model": "full nonlinear pendulum (sin theta), so no amplitude bias in the fit"
+ },
+ "reference_plane": "not applicable: no reference object in the clip; the scale comes from the stated length"
+}

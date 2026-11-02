@@ -134,6 +134,12 @@ def dfn_example() -> dict:
 
 
 def main() -> None:
+    if "--outcome-only" in sys.argv:  # re-judge the stored result, no simulation
+        out = json.loads((DATA / "results.json").read_text())
+        out["outcome"] = outcome(out)
+        (DATA / "results.json").write_text(json.dumps(out, indent=1, default=float))
+        print(out["outcome"]["status"], out["outcome"]["confidence"])
+        return
     quick = "--quick" in sys.argv
     t0 = time.time()
     out: dict = {"generated": "scripts/fireball_demo.py", "event": "Winchcombe, 2021-02-28 21:54 UTC"}
@@ -206,6 +212,7 @@ def main() -> None:
             f[name] = {"along_range_m": [float(lo), float(hi)], "along_ok": bool(lo <= al <= hi),
                        "across_offset_m": float(cr - np.median(near[:, 1])), "across_sigma_m": float(np.std(near[:, 1]))}
         f["explained_by"] = next((k for k in scenarios if f[k]["along_ok"]), None)
+    blind_contours(end, scenarios["at_end"], masses, finds)
     out["finds"] = finds
     out["fall_line"] = [{k: b[k] for k in ("mass_kg", "lat", "lon", "east_m", "north_m", "n")} for b in line]
     out["strewn_points"] = {k: [[round(p["lon"], 6), round(p["lat"], 6), p["mass_kg"], round(p["shape_a"], 2)] for p in v["points"]]
@@ -215,13 +222,44 @@ def main() -> None:
     across = [abs(f["at_end"]["across_offset_m"]) for f in finds]
     out["summary"] = {"finds": len(finds), "median_across_m": float(np.median(across)), "max_across_m": float(max(across)),
                       "along_at_end": sum(f["at_end"]["along_ok"] for f in finds),
-                      "along_either": sum(f["explained_by"] is not None for f in finds)}
+                      "along_either": sum(f["explained_by"] is not None for f in finds),
+                      "blind_inside_68": sum(f["blind"]["inside_68"] for f in finds),
+                      "blind_inside_95": sum(f["blind"]["inside_95"] for f in finds),
+                      "blind_rule": BLIND_RULE}
     (DATA / "winchcombe_strewn_field.geojson").write_text(json.dumps(F.to_geojson(field, [
         {"lat": f["lat"], "lon": f["lon"], "mass_g": f["mass_g"], "site": f["site"]} for f in finds])))
     (DATA / "winchcombe_strewn_field.kml").write_text(F.to_kml(field, "Winchcombe strewn field (PhysicsLens simulation)"))
     out["outcome"] = outcome(out)
     (DATA / "results.json").write_text(json.dumps(out, indent=1, default=float))
     print("finds:", out["summary"], f"({time.time() - t0:.0f} s)")
+
+
+# Fixed before any find was compared: where stones are released and which mass bins they are sorted into.
+BLIND_RULE = ("stones released at the luminous end, plus at every fragmentation our own deceleration fit detects with a "
+              "BIC gain of at least 10 (none was detected for Winchcombe, so the luminous end only); mass bins 5, 10, 20, "
+              "50, 100, 160, 320 and 600 g; each find scored in the bin nearest its reported mass, against the 68% and "
+              "95% highest-density regions of that bin's simulated landing points")
+
+
+def blind_contours(end, field: dict, masses: list[float], finds: list[dict]) -> None:
+    """Score each find against the 68% and 95% landing regions of its fixed mass bin, computed from the simulation
+    alone. A find is inside the p region when fewer than p of the simulated stones land at a higher density than it
+    (highest-density regions, so a curved or lopsided field is not forced into an ellipse)."""
+    from scipy.stats import gaussian_kde
+
+    by_bin: dict[float, np.ndarray] = {}
+    for m in masses:
+        pts = [p for p in field["points"] if abs(p["mass_kg"] - m) < 1e-9]
+        by_bin[m] = np.array([along_cross(end, p["lat"], p["lon"]) for p in pts])
+    for f in finds:
+        m = min(masses, key=lambda x: abs(np.log(x / f["mass_kg"])))
+        ac = by_bin[m]
+        kde = gaussian_kde(ac.T)
+        dens = kde(ac.T)
+        at = float(kde(np.array([[f["along_m"]], [f["across_m"]]]))[0])
+        level = float(np.mean(dens > at))  # the smallest region that contains the find
+        f["blind"] = {"mass_bin_kg": m, "hdr_level": level, "inside_68": bool(level <= 0.68), "inside_95": bool(level <= 0.95),
+                      "simulated": len(ac)}
 
 
 def read_report_reference() -> dict:
@@ -240,31 +278,39 @@ def read_report_reference() -> dict:
 def outcome(out: dict) -> dict:
     s = out["summary"]
     pulls = out["orbit"]["pulls"]
-    main = next(f for f in out["finds"] if f["site"] == "Wilcock driveway")
     orbit_ok = all(abs(v) <= 2 for v in pulls.values())
-    # Judged only on what was fixed before comparing with the finds: the orbit, the fall line across the track, and the
-    # release rule chosen in advance (stones leave where the light ends) placing the main mass. Allowing release anywhere
-    # after the last flare was chosen after comparing, so it is reported beside the blind result, never in the status.
-    proven = orbit_ok and main["at_end"]["along_ok"] and s["max_across_m"] <= 600
+    # Judged only on what was fixed before comparing with the finds: the orbit, and the blind landing regions (release
+    # rule and mass bins fixed in advance, 95% regions from the simulation alone). Proven needs at least two thirds of
+    # the finds inside them. The fall-line corridor and release anywhere after the last flare were chosen with the
+    # finds (or the paper's fragment table) in view, so they are reported as "after review", never in the status.
+    blind_ok = s.get("blind_inside_95", 0) * 3 >= 2 * s["finds"]
+    proven = orbit_ok and blind_ok
     late = [f"{f['mass_g']} g at {f['place']}" for f in out["finds"] if not f["at_end"]["along_ok"]]
     misses = [f"{f['mass_g']} g at {f['place']}" for f in out["finds"] if f["explained_by"] is None]
     return {
         "headline": (f"Winchcombe, from the published triangulated trajectory (not a video): the flight says it dropped meteorites "
-                     f"({out['alpha_beta']['triage']['verdict']} by alpha-beta); the simulated fall line runs within "
-                     f"{s['max_across_m']:.0f} m of all {s['finds']} stones found; with the release rule fixed in advance "
-                     f"{s['along_at_end']} of {s['finds']} also land in the predicted stretch along the track; and the orbit "
-                     f"before it met the Earth matches the published one to {max(abs(v) for v in pulls.values()):.1f} sigma."),
+                     f"({out['alpha_beta']['triage']['verdict']} by alpha-beta), and the orbit before it met the Earth matches "
+                     f"the published one to {max(abs(v) for v in pulls.values()):.1f} sigma. Blind, with the release rule fixed in "
+                     f"advance, {s.get('blind_inside_95', 0)} of {s['finds']} stones land inside their predicted 95% regions and "
+                     f"{s['along_at_end']} of {s['finds']} in the predicted stretch along the track; the fall line runs within "
+                     f"{s['max_across_m']:.0f} m of all of them, but the predicted spread across the track is too narrow."),
         "action": "Search along the fall line, heavier stones further along the track; download the strewn field (GeoJSON or KML).",
         "artifacts": [{"kind": "geojson"}, {"kind": "kml"}],
         "checked_against": {"name": "perihelion distance q (AU)", "truth": PUBLISHED_ORBIT["q_au"][0], "measured": out["orbit"]["ours"]["q_au"],
                             "relative_error": (out["orbit"]["ours"]["q_au"] - PUBLISHED_ORBIT["q_au"][0]) / PUBLISHED_ORBIT["q_au"][0],
                             "within_interval": abs(pulls["q_au"]) <= 1.96, "source": "McMullan et al. 2023 (orbit); Russell et al. 2024 (find sites)"},
-        "confidence": (f"blind (rule fixed in advance: stones released at the luminous end): across the track every find within "
-                       f"{s['max_across_m']:.0f} m, along it {s['along_at_end']} of {s['finds']}. Chosen after comparing: allowing "
-                       f"release anywhere after the last flare (34.9 km), {s['along_either']} of {s['finds']} along it"),
+        "confidence": (f"blind (rule fixed before comparing): {s.get('blind_inside_95', 0)} of {s['finds']} finds inside the 95% "
+                       f"landing region of their mass bin ({s.get('blind_inside_68', 0)} inside the 68% one); along the track "
+                       f"{s['along_at_end']} of {s['finds']}. After review (with published fragment information): every find within "
+                       f"{s['max_across_m']:.0f} m of the fall line, and with release anywhere after the last flare (34.9 km) "
+                       f"{s['along_either']} of {s['finds']} along it"),
         "status": "proven" if proven else "partial",
-        "limits": ([f"along the track the rule fixed in advance misses {', '.join(late)}; they fit only if stones also left "
-                    "earlier, after the last flare, a choice made after seeing the finds"] if late else [])
+        "limits": ([] if blind_ok else [(f"blind, only {s.get('blind_inside_95', 0)} of {s['finds']} finds fall inside the 95% landing "
+                    "regions: the simulated stones of one mass land in a strip tens of metres wide across the track, while "
+                    "the real finds scatter over hundreds of metres, so the simulation's spread (end point within 100 m, "
+                    "winds within 30%, the shape range) is too narrow across the track")])
+                  + ([(f"along the track the rule fixed in advance misses {', '.join(late)}; they fit only if stones also left "
+                     "earlier, after the last flare, a choice made after seeing the finds")] if late else [])
                   + ([f"not reproduced along the track at all: {', '.join(misses)}"] if misses else []),
         "readable": None}
 

@@ -842,7 +842,14 @@
     "across_offset_m": -409.02861338293104,
     "across_sigma_m": 44.00389821593653
    },
-   "explained_by": "at_end"
+   "explained_by": "at_end",
+   "blind": {
+    "mass_bin_kg": 0.32,
+    "hdr_level": 1.0,
+    "inside_68": false,
+    "inside_95": false,
+    "simulated": 150
+   }
   },
   {
    "site": "lawn",
@@ -873,7 +880,14 @@
     "across_offset_m": 66.84805126975806,
     "across_sigma_m": 44.287501479189096
    },
-   "explained_by": "at_end"
+   "explained_by": "at_end",
+   "blind": {
+    "mass_bin_kg": 0.01,
+    "hdr_level": 0.5,
+    "inside_68": true,
+    "inside_95": true,
+    "simulated": 150
+   }
   },
   {
    "site": "driveway",
@@ -904,7 +918,14 @@
     "across_offset_m": -237.37983528126534,
     "across_sigma_m": 39.60309611713861
    },
-   "explained_by": "at_end"
+   "explained_by": "at_end",
+   "blind": {
+    "mass_bin_kg": 0.02,
+    "hdr_level": 1.0,
+    "inside_68": false,
+    "inside_95": false,
+    "simulated": 150
+   }
   },
   {
    "site": "field",
@@ -935,7 +956,14 @@
     "across_offset_m": -557.3143657996226,
     "across_sigma_m": 36.42189917504484
    },
-   "explained_by": "at_end"
+   "explained_by": "at_end",
+   "blind": {
+    "mass_bin_kg": 0.16,
+    "hdr_level": 1.0,
+    "inside_68": false,
+    "inside_95": false,
+    "simulated": 150
+   }
   },
   {
    "site": "field",
@@ -966,7 +994,14 @@
     "across_offset_m": -137.73014734582986,
     "across_sigma_m": 47.59317989532562
    },
-   "explained_by": "fragmentation_zone"
+   "explained_by": "fragmentation_zone",
+   "blind": {
+    "mass_bin_kg": 0.02,
+    "hdr_level": 1.0,
+    "inside_68": false,
+    "inside_95": false,
+    "simulated": 150
+   }
   },
   {
    "site": "grass verge",
@@ -997,7 +1032,14 @@
     "across_offset_m": 192.411909550463,
     "across_sigma_m": 42.80546823168401
    },
-   "explained_by": "at_end"
+   "explained_by": "at_end",
+   "blind": {
+    "mass_bin_kg": 0.01,
+    "hdr_level": 1.0,
+    "inside_68": false,
+    "inside_95": false,
+    "simulated": 150
+   }
   },
   {
    "site": "park",
@@ -1028,7 +1070,14 @@
     "across_offset_m": -106.09673801400892,
     "across_sigma_m": 47.040292525799586
    },
-   "explained_by": "fragmentation_zone"
+   "explained_by": "fragmentation_zone",
+   "blind": {
+    "mass_bin_kg": 0.02,
+    "hdr_level": 1.0,
+    "inside_68": false,
+    "inside_95": false,
+    "simulated": 150
+   }
   },
   {
    "site": "grass verge",
@@ -1059,7 +1108,14 @@
     "across_offset_m": -162.2855578042525,
     "across_sigma_m": 47.321296490067695
    },
-   "explained_by": "fragmentation_zone"
+   "explained_by": "fragmentation_zone",
+   "blind": {
+    "mass_bin_kg": 0.02,
+    "hdr_level": 1.0,
+    "inside_68": false,
+    "inside_95": false,
+    "simulated": 150
+   }
   },
   {
    "site": "footpath",
@@ -1090,7 +1146,14 @@
     "across_offset_m": -249.50668972504587,
     "across_sigma_m": 51.4702241433677
    },
-   "explained_by": "fragmentation_zone"
+   "explained_by": "fragmentation_zone",
+   "blind": {
+    "mass_bin_kg": 0.005,
+    "hdr_level": 1.0,
+    "inside_68": false,
+    "inside_95": false,
+    "simulated": 150
+   }
   }
  ],
  "fall_line": [
@@ -15584,10 +15647,13 @@
   "median_across_m": 169.19007289341243,
   "max_across_m": 563.3522362341723,
   "along_at_end": 5,
-  "along_either": 9
+  "along_either": 9,
+  "blind_inside_68": 1,
+  "blind_inside_95": 1,
+  "blind_rule": "stones released at the luminous end, plus at every fragmentation our own deceleration fit detects with a BIC gain of at least 10 (none was detected for Winchcombe, so the luminous end only); mass bins 5, 10, 20, 50, 100, 160, 320 and 600 g; each find scored in the bin nearest its reported mass, against the 68% and 95% highest-density regions of that bin's simulated landing points"
  },
  "outcome": {
-  "headline": "Winchcombe, from the published triangulated trajectory (not a video): the flight says it dropped meteorites (likely by alpha-beta); the simulated fall line runs within 563 m of all 9 stones found; with the release rule fixed in advance 5 of 9 also land in the predicted stretch along the track; and the orbit before it met the Earth matches the published one to 0.4 sigma.",
+  "headline": "Winchcombe, from the published triangulated trajectory (not a video): the flight says it dropped meteorites (likely by alpha-beta), and the orbit before it met the Earth matches the published one to 0.4 sigma. Blind, with the release rule fixed in advance, 1 of 9 stones land inside their predicted 95% regions and 5 of 9 in the predicted stretch along the track; the fall line runs within 563 m of all of them, but the predicted spread across the track is too narrow.",
   "action": "Search along the fall line, heavier stones further along the track; download the strewn field (GeoJSON or KML).",
   "artifacts": [
    {
@@ -15605,9 +15671,10 @@
    "within_interval": true,
    "source": "McMullan et al. 2023 (orbit); Russell et al. 2024 (find sites)"
   },
-  "confidence": "blind (rule fixed in advance: stones released at the luminous end): across the track every find within 563 m, along it 5 of 9. Chosen after comparing: allowing release anywhere after the last flare (34.9 km), 9 of 9 along it",
-  "status": "proven",
+  "confidence": "blind (rule fixed before comparing): 1 of 9 finds inside the 95% landing region of their mass bin (1 inside the 68% one); along the track 5 of 9. After review (with published fragment information): every find within 563 m of the fall line, and with release anywhere after the last flare (34.9 km) 9 of 9 along it",
+  "status": "partial",
   "limits": [
+   "blind, only 1 of 9 finds fall inside the 95% landing regions: the simulated stones of one mass land in a strip tens of metres wide across the track, while the real finds scatter over hundreds of metres, so the simulation's spread (end point within 100 m, winds within 30%, the shape range) is too narrow across the track",
    "along the track the rule fixed in advance misses 16.5 g at Solar farm, 17.5 g at Bishop's Cleeve, 19.2 g at Bishop's Cleeve, 5.2 g at Bishop's Cleeve; they fit only if stones also left earlier, after the last flare, a choice made after seeing the finds"
   ],
   "readable": null

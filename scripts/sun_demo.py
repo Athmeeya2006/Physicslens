@@ -1,6 +1,7 @@
 """The Sun's rotation law from real SDO/HMI images, and active-region return forecasts checked against NOAA.
 
   python scripts/sun_demo.py            # fetch what is missing (Helioviewer, NOAA), then analyse
+  python scripts/sun_demo.py --bias-only   # only the return-bias check, from the stored returns
   python scripts/sun_demo.py --offline  # analyse cached frames only
 
 Five 14-day periods across two solar cycles, one image every 6 hours. Frames are cached under var/astro/sun/
@@ -10,6 +11,7 @@ Five 14-day periods across two solar cycles, one image every 6 hours. Frames are
 from __future__ import annotations
 
 import json
+import math
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -136,6 +138,12 @@ def validate_returns(period_start: str, tracks: list[S.Track], law: S.LawFit, ea
 
 
 def main() -> None:
+    if "--bias-only" in sys.argv:  # recompute the return-bias check from the stored returns, no fetching
+        out = json.loads((OUT / "results.json").read_text())
+        out["return_bias"] = return_bias(out["returns"])
+        (OUT / "results.json").write_text(json.dumps(out, indent=1, default=float))
+        print(out["return_bias"])
+        return
     offline = "--offline" in sys.argv
     t_start = time.time()
     periods, rates = [], []
@@ -184,10 +192,37 @@ def main() -> None:
                             "later_than_forecast": sum(r["error_days"] > 0 for r in returns if "error_days" in r),
                             "noaa_later_than_forecast": sum(r["noaa_error_days"] > 0 for r in returns if "noaa_error_days" in r)},
     }
+    out["return_bias"] = return_bias(returns)
     out["outcome"] = outcome(out)
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "results.json").write_text(json.dumps(out, indent=1, default=float))
     print(out["status"], out["reason"], out["returns_summary"], f"({time.time() - t_start:.0f} s)")
+
+
+def return_bias(returns: list[dict]) -> dict:
+    """Every region came back later than forecast (and later than NOAA's forecast too). Is that a term the forecast
+    should carry? Three candidates, each judged by leave-one-out: fit it on the other returns, forecast the one left
+    out. No bias; a constant delay; a delay that grows with latitude. Physical candidates, not decided here: spots
+    drifting relative to the surface (proper motion), and a region decaying and re-forming slightly east."""
+    rows = [(abs(r["lat"]), r["error_days"]) for r in returns if "error_days" in r]
+    lat, err = np.array([r[0] for r in rows]), np.array([r[1] for r in rows])
+    n = len(err)
+
+    def loo(predict) -> float:
+        return float(np.mean([abs(err[i] - predict(np.delete(lat, i), np.delete(err, i), lat[i])) for i in range(n)]))
+
+    def lin(la, e, x):
+        return float(np.polyval(np.polyfit(la, e, 1), x))
+
+    out = {"returns": n, "late": int((err > 0).sum()),
+           # Two-sided sign test: how often n fair coins come out this lopsided.
+           "sign_test_p": float(min(1.0, 2 * sum(math.comb(n, k) for k in range(max((err > 0).sum(), (err < 0).sum()), n + 1)) / 2**n)),
+           "constant_days": float(err.mean()), "constant_sd_days": float(err.std(ddof=1) / math.sqrt(n)),
+           "loo_mae_days": {"none": loo(lambda la, e, x: 0.0), "constant": loo(lambda la, e, x: float(e.mean())),
+                            "latitude": loo(lin)},
+           "candidates": "spot proper motion relative to the surface; regions decaying and re-forming further east"}
+    out["best"] = min(out["loo_mae_days"], key=out["loo_mae_days"].get)
+    return out
 
 
 def outcome(out: dict) -> dict:

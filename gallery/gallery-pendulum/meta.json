@@ -1,11 +1,11 @@
 {
  "title": "Pendulum: damping not confirmed, so the agent asks for a bigger swing",
- "description": "A 0.5 m pendulum swinging for 6.5 s. Linear damping fits the whole swing slightly better, but forecasts the held-out quarter worse than the simple pendulum (13.8% against 9.9%), so verification does not pick it: the two laws tie. Both give g = 9.91 ± 0.04 m/s², 1% above 9.81 (the length is the uploader's stated 0.5 m), so g is measured either way. The agent designs the recording that would decide: release from about 35 degrees and film 7 s, where the two forecasts separate by 24 mm against 2.9 mm of tracking noise.",
+ "description": "A 0.5 m pendulum swinging for 6.5 s. Linear damping fits the whole swing slightly better, but forecasts the held-out quarter worse than the simple pendulum (13.8% against 9.9%), so verification does not pick it: the two laws tie. Both give g = 9.91 m/s² (95%: 9.82 to 9.99), 1% above Aachen's local 9.811 (the length is the uploader's stated 0.5 m), so g is measured either way. The agent designs the recording that would decide: release from about 35 degrees and film 7 s, where the two forecasts separate by 24 mm against 2.9 mm of tracking noise.",
  "credit": "Video: Rhetos / Mathe-AC Lernwerkstatt, Wikimedia Commons, CC BY-SA 4.0 (trimmed and downscaled)",
  "order": 3,
  "truth": {
   "name": "g",
-  "value": 9.81,
-  "source": "standard gravity at the filming site (Aachen, 9.811 m/s^2); string length 0.5 m given"
+  "value": 9.8109,
+  "source": "local gravity at the filming site (Aachen: WGS 84 normal gravity at 50.78 N, 173 m, scripts/pendulum_check.py); string length 0.5 m given"
  }
 }

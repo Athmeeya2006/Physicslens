@@ -68,6 +68,14 @@ def _fmt(v: float, s: float | None = None) -> str:
     return f"{v:.4g}"
 
 
+def _fmt_short(v: float, half_width: float) -> str:
+    """Summary precision: one digit of the 95% half-width (9.91, not 9.907), as the summaries' convention says."""
+    if half_width > 0 and math.isfinite(half_width) and v != 0 and math.isfinite(v):
+        sig = max(1, min(10, math.floor(math.log10(abs(v))) - math.floor(math.log10(half_width)) + 1))
+        return f"{v:.{sig}g}"
+    return f"{v:.3g}"
+
+
 def _why_not(r: dict[str, Any], winner_bic: float | None) -> str:
     """Why a rival lost, from its own measured numbers (the verdict's rule, stated plainly)."""
     if r.get("why"):
@@ -171,7 +179,11 @@ def build_outcome(result: dict[str, Any], truth: dict[str, Any] | None = None, a
         if agreed:
             a = agreed[0]
             unit = f" {a['unit']}" if a.get("unit") and not a.get("uncalibrated") else ""
-            headline += f" Both give {a['name']} = {_fmt(a['value'], a['std'])} ± {_fmt(a['std'], a['std'])}{unit}, so that is measured either way."
+            # Summaries give a 95% interval as a range (the convention on every page), not a one-sigma ±.
+            lo, hi = a.get("ci95") or (a["value"] - 1.96 * a["std"], a["value"] + 1.96 * a["std"])
+            hw = (hi - lo) / 2
+            headline += (f" Both give {a['name']} = {_fmt_short(a['value'], hw)}{unit} (95%: {_fmt_short(lo, hw)} to "
+                         f"{_fmt_short(hi, hw)}), so that is measured either way.")
             if truth:
                 p = next((q for q in agreed if q["name"] == truth["name"]), None)
                 if p is not None:

@@ -1,6 +1,7 @@
 """Transit timing on real data: WASP-12b's decaying orbit, Kepler-88's hidden planet, and the ephemeris-rot list.
 
   python scripts/timing_demo.py [--skip-nbody]
+  python scripts/timing_demo.py --family 40   # the Kepler-88 companion refitted from 40 spread starts
 
 Reads data/astro/timing/ (published WASP-12b timings, Kepler-88 b transit times measured here from Kepler light
 curves, the NASA Exoplanet Archive table) and writes data/astro/timing/results.json plus transit windows (CSV, ICS).
@@ -22,7 +23,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from astropy.time import Time
 from physicslens.astro import timing
-from physicslens.astro.ttv import Setup, companion_candidates, fit_companion, nbody_times
+from physicslens.astro.ttv import Setup, companion_candidates, fit_companion, fit_from, nbody_times, spread_starts
 
 DATA = ROOT / "data" / "astro" / "timing"
 NOW = Time("2026-11-01T00:00:00", scale="utc")
@@ -119,6 +120,74 @@ def kepler88(nbody: bool) -> dict:
     return result
 
 
+# Starting points refined further: the coarse fits stop after 300 evaluations, which is enough to rank them but not to
+# converge the best few.
+FAMILY_REFINE = 10
+
+
+def _family_member(args: tuple) -> dict | None:
+    p0, cand, p_b, nfev = args
+    d = timing.Timings.from_rows(read_rows("kepler88b_transits.csv"))
+    tr, te = split(d)
+    s = Setup(KOI142_MSTAR, int(d.epoch.min()))
+    f = fit_from(p0, d.epoch[tr], d.time[tr], d.err[tr], cand, s, p_b, max_nfev=nfev)
+    if f is None:
+        return None
+    pred = nbody_times(f.theta, d.epoch[te], s)
+    scale = max(1.0, np.sqrt(f.chi2 / max(tr.sum() - len(f.theta), 1)))
+    f.heldout_chi2 = float(np.nanmean(((pred - d.time[te]) / (d.err[te] * scale)) ** 2))
+    f.heldout_rms_min = float(np.sqrt(np.nanmean(((pred - d.time[te]) * 1440) ** 2)))
+    return f.summary()
+
+
+def split(d: timing.Timings) -> tuple[np.ndarray, np.ndarray]:
+    order = np.argsort(d.time)
+    cut = d.time[order[int(len(order) * timing.TRAIN_FRACTION)]]
+    return d.time < cut, d.time >= cut
+
+
+def kepler88_family(result: dict, n: int, workers: int = 12) -> dict:
+    """Refit the winning companion from n starting points spread over the period window and both eccentricities,
+    refine the best of them, and keep every fit that matches the training transits as well as the best (chi-square
+    within the decisive BIC margin; every fit has the same 9 parameters) and passes the held-out rule that admitted
+    the best (it forecasts the later transits better than the best simple law). The range they span is the
+    uncertainty the timing data actually allow, which the one fit's formal errors understated."""
+    from multiprocessing import Pool
+
+    best = result["companion"]
+    cand, p_b = best["candidate"], best["Pb"]
+    d = timing.Timings.from_rows(read_rows("kepler88b_transits.csv"))
+    starts = spread_starts(cand, p_b, float(d.time[np.argmin(d.epoch)]), n)
+    t0 = time.time()
+    names = ["T0", "Pb", "kb", "hb", "Pc", "lam_c", "kc", "hc", "mc_earth"]
+    with Pool(workers) as pool:
+        coarse = [f for f in pool.map(_family_member, [(p0, cand, p_b, 300) for p0 in starts]) if f]
+        coarse.sort(key=lambda f: f["chi2"])
+        fine = [f for f in pool.map(_family_member, [(np.array([f[k] for k in names]), cand, p_b, 1500)
+                                                       for f in coarse[:FAMILY_REFINE]]) if f]
+    fits = fine + coarse[FAMILY_REFINE:] + [dict(best)]
+    sinus = next(x["heldout_rms_min"] for x in result["laws"] if x["law"] == "sinusoid")
+    floor = min(f["chi2"] for f in fits)
+    kept = [f for f in fits if f["chi2"] - floor < timing.DECISIVE_DELTA_BIC and f["heldout_rms_min"] < sinus]
+    top = min(f["heldout_rms_min"] for f in kept)
+    pc = [f["Pc"] for f in kept]
+    mc = [f["mc_earth"] for f in kept]
+    pub = NESVORNY_2013
+    print(f"  family: {len(fits)} fits from {n} starts, {len(kept)} kept, Pc {min(pc):.3f} to {max(pc):.3f}, "
+          f"mc {min(mc):.0f} to {max(mc):.0f} ({time.time() - t0:.0f} s)", flush=True)
+    return {"starts": n, "fits": len(fits), "refined": FAMILY_REFINE, "kept": len(kept),
+            "rule": (f"training chi-square within {timing.DECISIVE_DELTA_BIC:g} of the lowest (the decisive BIC margin) and "
+                     "a held-out forecast better than the best simple law's"),
+            "best_heldout_rms_min": top, "Pc_range": [min(pc), max(pc)], "mc_earth_range": [min(mc), max(mc)],
+            "eb_range": [min(f["eb"] for f in kept), max(f["eb"] for f in kept)],
+            "ec_range": [min(f["ec"] for f in kept), max(f["ec"] for f in kept)],
+            "published_period_inside": bool(min(pc) <= pub["Pc_days"] <= max(pc)),
+            "published_mass_inside": bool(min(mc) - pub["mc_sigma"] <= pub["mc_earth"] <= max(mc) + pub["mc_sigma"]),
+            "members": [{k: f[k] for k in ("Pc", "mc_earth", "eb", "ec", "chi2", "heldout_rms_min")} for f in kept],
+            "all_fits": sorted(({k: f[k] for k in ("Pc", "mc_earth", "eb", "ec", "chi2", "heldout_rms_min")} for f in fits),
+                               key=lambda f: f["chi2"])}
+
+
 def kepler88_outcome(result: dict) -> dict:
     """Proven only when the N-body law passes the same held-out rule as every law and the period agrees within the
     combined interval; otherwise partial, with the misses stated."""
@@ -130,7 +199,22 @@ def kepler88_outcome(result: dict) -> dict:
     passes = bs["heldout_chi2"] <= timing.HELDOUT_CHI2
     sinus = next(x["heldout_rms_min"] for x in result["laws"] if x["law"] == "sinusoid")
     off_sigmas = abs(pc - pub["Pc_days"]) / max(bs["Pc_sigma"], 1e-12)
-    if within:
+    fam = result.get("companion_family")
+    if fam:
+        # The range over every fit that forecasts as well as the best is the uncertainty; the one fit's formal errors
+        # are not (they ignore the mass-eccentricity trade-off).
+        (p_lo, p_hi), (m_lo, m_hi) = fam["Pc_range"], fam["mc_earth_range"]
+        within = fam["published_period_inside"]
+        found = (f"{p_lo:.2f} to {p_hi:.2f} days and {m_lo:.0f} to {m_hi:.0f} Earth masses" if fam["kept"] > 1 else
+                 f"about {p_lo:.2f} days and {m_lo:.0f} Earth masses")
+        conf = ((f"the range over {fam['kept']} of {fam['fits']} N-body fits from {fam['starts']} spread starting points "
+                 f"that fit the earlier transits as well as the best and pass the same held-out rule; the published period "
+                 f"is {'inside' if within else 'outside'} it. ") if fam["kept"] > 1 else
+                (f"{fam['fits']} N-body fits from {fam['starts']} starting points spread over the period window and both "
+                 f"eccentricities find one basin: no other fit comes within the decisive margin of it, so the timing data "
+                 f"allow no wider family here, and the published period ({abs(p_lo / pub['Pc_days'] - 1):.1%} away) stays "
+                 f"outside. "))
+    elif within:
         found = f"about {pc:.2f} days and {mc:.0f} ± {bs['mc_earth_sigma']:.0f} Earth masses"
         conf = (f"period {pc:.3f} ± {bs['Pc_sigma']:.3f} d, mass {mc - 1.96 * bs['mc_earth_sigma']:.0f} to "
                 f"{mc + 1.96 * bs['mc_earth_sigma']:.0f} Earth masses (95%, at the fitted eccentricities). ")
@@ -144,7 +228,8 @@ def kepler88_outcome(result: dict) -> dict:
                 "data the companion's mass trades off against its eccentricity. ")
     return {
         "headline": (f"An unseen planet pulls Kepler-88 b: {found}, found from transit times alone. It forecasts the later "
-                     f"transits to {bs['heldout_rms_min']:.0f} min; the best simple law misses by {sinus:.0f} min."),
+                     f"transits to {(fam['best_heldout_rms_min'] if fam else bs['heldout_rms_min']):.0f} min; the best "
+                     f"simple law misses by {sinus:.0f} min."),
         "action": "Confirm with radial velocities, or schedule transit observations from the N-body forecast.",
         "artifacts": [],
         "checked_against": {"name": "companion period", "truth": pub["Pc_days"], "measured": pc, "relative_error": err_p,
@@ -193,6 +278,13 @@ def add_curves(out: dict) -> None:
 
 
 def main() -> None:
+    if "--family" in sys.argv:
+        out = json.loads((DATA / "results.json").read_text())
+        out["kepler88b"]["companion_family"] = kepler88_family(out["kepler88b"], int(sys.argv[sys.argv.index("--family") + 1]))
+        out["kepler88b"]["outcome"] = kepler88_outcome(out["kepler88b"])
+        (DATA / "results.json").write_text(json.dumps(out, indent=1, default=float))
+        print(out["kepler88b"]["outcome"]["headline"])
+        return
     if "--curves-only" in sys.argv:
         out = json.loads((DATA / "results.json").read_text())
         if out["kepler88b"].get("companion"):

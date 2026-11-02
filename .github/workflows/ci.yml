@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "17 3 * * *"  # nightly: the slow statistical checks in full (for example 20 noise seeds, not 2)
 
 permissions:
   contents: read
@@ -62,7 +64,7 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: frontend
@@ -80,3 +82,13 @@ jobs:
         run: npm run build:static
         env:
           NEXT_PUBLIC_API_BASE: ""
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Every page renders with no analysis server
+        run: |
+          pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+          (cd out && python -m http.server 8777 --bind 127.0.0.1 &)
+          sleep 2
+          python ../scripts/static_pages_check.py http://127.0.0.1:8777

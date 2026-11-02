@@ -9,25 +9,25 @@
    "unit": "AU^3/day^2",
    "source": "the Sun's GM, JPL DE440"
   },
-  "coordinates_check_nrmse": 0.004836272497993318,
+  "coordinates_check_nrmse": 0.004837619612429874,
   "physicslens": {
    "status": "accepted",
-   "law": "Newtonian gravity with Stokes drag",
+   "law": "Kepler + constant along-track push",
    "parameters": [
     {
      "name": "mu",
-     "value": 0.0002959806931690096,
-     "std": 9.78496403802456e-08,
+     "value": 0.00029598149023432363,
+     "std": 9.880812309447029e-08,
      "unit": "AU^3/day^2"
     },
     {
-     "name": "b",
-     "value": 2.410500886931571e-07,
-     "std": 2.3710481944125528e-08,
-     "unit": "1/day"
+     "name": "A0",
+     "value": -4.363121712853704e-09,
+     "std": 4.3097152952672996e-10,
+     "unit": "AU/day^2"
     }
    ],
-   "heldout_nrmse": 0.004944874875092772
+   "heldout_nrmse": 0.004949246077575476
   },
   "textbook_curve_fit": {
    "law": "Kepler ellipse (elements and GM)",
@@ -166,9 +166,9 @@
   "samples": 164,
   "truth": {
    "name": "g",
-   "value": 9.81,
+   "value": 9.8109,
    "unit": "m/s^2",
-   "source": "standard gravity at the filming site (Aachen, 9.811); length 0.5 m given"
+   "source": "local gravity at the filming site (Aachen, WGS 84 normal gravity at 50.78 N, 173 m); length 0.5 m given"
   },
   "coordinates_check_nrmse": 0.0960511473463868,
   "physicslens": {

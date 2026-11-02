@@ -2613,5 +2613,19 @@
   "status": "proven",
   "limits": [],
   "readable": null
+ },
+ "return_bias": {
+  "returns": 7,
+  "late": 7,
+  "sign_test_p": 0.015625,
+  "constant_days": 1.1781746031746032,
+  "constant_sd_days": 0.24144762245945692,
+  "loo_mae_days": {
+   "none": 1.1781746031746032,
+   "constant": 0.6330357142857143,
+   "latitude": 0.38317859301625795
+  },
+  "candidates": "spot proper motion relative to the surface; regions decaying and re-forming further east",
+  "best": "latitude"
  }
 }

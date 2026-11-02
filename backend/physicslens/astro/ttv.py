@@ -155,3 +155,46 @@ def fit_companion(epochs: np.ndarray, times: np.ndarray, err: np.ndarray, candid
     except np.linalg.LinAlgError:
         cov = np.full((k, k), np.inf)
     return CompanionFit(candidate, best.x, cov, chi2, chi2 + k * math.log(n))
+
+
+def spread_starts(candidate: dict[str, Any], p_transiting: float, first: float, n: int,
+                  seed: int = 0) -> list[np.ndarray]:
+    """n starting points spread over what the timing data leave open: the companion's period across the candidate's
+    window (the super-period fixes the distance to resonance only to a few percent), both eccentricity vectors up to
+    0.2 in any direction, any phase, and masses from 10 to 1000 Earth masses on a log scale. A single fit from a few
+    phases found one member of a family whose formal errors missed the published answer by many of themselves; the
+    spread of the fits that forecast as well is the honest uncertainty."""
+    rng = np.random.default_rng(seed)
+    out = []
+    for i in range(n):
+        u = (i + rng.random()) / n  # stratified in period so the window is covered evenly
+        eb, wb, ec, wc = 0.2 * math.sqrt(rng.random()), rng.uniform(0, 2 * math.pi), 0.2 * math.sqrt(rng.random()), \
+            rng.uniform(0, 2 * math.pi)
+        out.append(np.array([first, p_transiting, eb * math.cos(wb), eb * math.sin(wb),
+                             candidate["period"] * (0.97 + 0.06 * u), rng.uniform(0, 2 * math.pi),
+                             ec * math.cos(wc), ec * math.sin(wc), 10 ** rng.uniform(1, 3)]))
+    return out
+
+
+def fit_from(p0: np.ndarray, epochs: np.ndarray, times: np.ndarray, err: np.ndarray, candidate: dict[str, Any],
+             s: Setup, p_transiting: float, max_nfev: int = 300) -> CompanionFit | None:
+    """One N-body fit from one starting point, in the same bounds as fit_companion."""
+    pc0, first = candidate["period"], float(times[np.argmin(epochs)])
+    lo = [first - 0.6, p_transiting * 0.995, -0.25, -0.25, pc0 * 0.97, -10, -0.25, -0.25, 0.1]
+    hi = [first + 0.6, p_transiting * 1.005, 0.25, 0.25, pc0 * 1.03, 10, 0.25, 0.25, 5000]
+
+    def resid(p: np.ndarray) -> np.ndarray:
+        r = (nbody_times(p, epochs, s) - times) / err
+        return np.where(np.isfinite(r), r, 1e3)
+    try:
+        best = least_squares(resid, np.clip(p0, lo, hi), bounds=(lo, hi), x_scale="jac", max_nfev=max_nfev,
+                             diff_step=1e-7)
+    except (ValueError, RuntimeError):
+        return None
+    chi2 = float(2 * best.cost)
+    n, k = len(times), len(best.x)
+    try:
+        cov = np.linalg.inv(best.jac.T @ best.jac) * max(1.0, chi2 / max(n - k, 1))
+    except np.linalg.LinAlgError:
+        cov = np.full((k, k), np.inf)
+    return CompanionFit(candidate, best.x, cov, chi2, chi2 + k * math.log(n))

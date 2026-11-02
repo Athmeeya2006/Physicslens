@@ -32,6 +32,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 from physicslens.physics.coords import to_coordinates
 from physicslens.physics.custom import spec_for
 from physicslens.physics.fit import TRAIN_FRACTION, simulate
+from physicslens.physics.gravity import AACHEN, local_g
 from physicslens.sigproc.trajectory import Trajectory
 
 OUT = ROOT / "benchmark" / "results"
@@ -39,8 +40,9 @@ GM_SUN_AU3_D2 = 2.9591220828559115e-4  # JPL DE440, AU^3/day^2
 GM_JUPITER_KM3_S2 = 1.26686531e8  # JPL Horizons, Jupiter system
 R_JUPITER_KM = 71492.0  # the equatorial radius the Jupiter demo used as its unit
 TRUTHS: dict[str, dict[str, Any]] = {
-    "gallery-pendulum": {"name": "g", "value": 9.81, "unit": "m/s^2",
-                         "source": "standard gravity at the filming site (Aachen, 9.811); length 0.5 m given"},
+    "gallery-pendulum": {"name": "g", "value": round(local_g(AACHEN), 4), "unit": "m/s^2",
+                         "source": "local gravity at the filming site (Aachen, WGS 84 normal gravity at 50.78 N, 173 m); "
+                                   "length 0.5 m given"},
     "gallery-apophis": {"name": "mu", "value": GM_SUN_AU3_D2, "unit": "AU^3/day^2", "source": "the Sun's GM, JPL DE440"},
     "gallery-halley": {"name": "mu", "value": GM_SUN_AU3_D2, "unit": "AU^3/day^2", "source": "the Sun's GM, JPL DE440"},
     "gallery-jupiter": {"name": "mu", "value": GM_JUPITER_KM3_S2 * 3600**2 / R_JUPITER_KM**3, "unit": "R_J^3/hour^2",

@@ -39,6 +39,14 @@ def test_period_matching_names_the_synodic_period():
     assert matches and matches[0]["body"] == "Saturn" and matches[0]["kind"] == "synodic period"
 
 
+def test_no_planet_is_invented_from_noise_quick():
+    # The fast CI version of the check below: two fixed seeds (deterministic, so never flaky), both must stay clean.
+    # The full 20-seed bound runs in the slow job and nightly.
+    sr = S.run(S.load("apophis_sun_only"))
+    for s in (0, 1):
+        assert "No perturbation needed" in (discover(sr, noise_px=2.0, seed=s, bootstrap_reps=8).get("perturbation") or "")
+
+
 @pytest.mark.slow
 def test_no_planet_is_invented_from_noise():
     # A pure Sun-only orbit plus tracker noise: the system must not find a perturbation (at least 19 of 20 seeds).

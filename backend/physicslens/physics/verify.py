@@ -102,6 +102,15 @@ def at_limit(f: FitResult) -> str | None:
         v = f.params.get(p.name)
         if v is None:
             continue
+        if p.lower > 0 and p.upper / p.lower > 100 and v > 0:
+            # A range spanning decades (a stiffness from 0.01 to 40,000) is measured on a log scale: on a linear one,
+            # 0.1% of the span is 40, and a door closer's true 9.0 was refused as "at its lowest allowed value".
+            span_log = math.log(p.upper / p.lower)
+            if math.log(v / p.lower) <= AT_LIMIT * span_log:
+                return f"{p.name} = {v:.4g} sits at its lowest allowed value"
+            if math.log(p.upper / v) <= AT_LIMIT * span_log:
+                return f"{p.name} = {v:.4g} sits at its highest allowed value"
+            continue
         span = p.upper - p.lower
         if p.lower != 0 and abs(v - p.lower) <= AT_LIMIT * span:
             return f"{p.name} = {v:.4g} sits at its lowest allowed value"
