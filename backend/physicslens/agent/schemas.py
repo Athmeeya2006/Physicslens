@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Literal
@@ -332,6 +333,12 @@ class StudyPlan(Strict):
     @classmethod
     def no_dashes(cls, v: str) -> str:
         return _plain_dashes(v)
+
+    @field_validator("done_when")
+    @classmethod
+    def no_leading_done_when(cls, v: str) -> str:
+        # Shown after "Done when": the model sometimes starts with the same words ("done when both corners agree").
+        return re.sub(r"^\s*done when[:,]?\s*", "", v, flags=re.IGNORECASE) or v
 
 
 class StudyTurn(Strict):

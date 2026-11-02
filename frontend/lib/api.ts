@@ -221,6 +221,7 @@ export interface AnalysisResult {
   scale_note?: string;
   rolling_shutter?: { skew_px: number; note: string | null };
   prediction_available?: boolean;  // a gallery orbit result with a forecast file (static build)
+  setup_guide_available?: boolean;  // a gallery result with a stored picture guide (static build)
   camera_level?: { roll_deg: number; pitch_deg: number; note: string | null } | null;
   video_kept?: boolean;  // false for a live session saved without its video
   source?: string;

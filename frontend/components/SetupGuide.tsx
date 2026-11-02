@@ -8,12 +8,13 @@ interface Props {
   runId: string;
   stepRef: number;
   instruction: string;
+  canDraw?: boolean;  // false for a gallery example with no stored picture: the instruction alone, no request
 }
 
 const CAPTION = "Illustration by Muse Image. A drawing of the setup, not a measurement.";
 
 // The written instruction comes from the simulated experiment design and always leads; the picture only illustrates it.
-export function SetupGuide({ runId, stepRef, instruction }: Props) {
+export function SetupGuide({ runId, stepRef, instruction, canDraw = true }: Props) {
   const [guide, setGuide] = useState<SetupGuideView | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +46,7 @@ export function SetupGuide({ runId, stepRef, instruction }: Props) {
       ) : (
         <>
           {guide?.reason && <p className="small muted">{guide.reason}</p>}
-          {!guide && (
+          {!guide && canDraw && (
             <button type="button" className="secondary" onClick={show} disabled={busy}>
               <PencilRuler size={14} strokeWidth={2.2} aria-hidden="true" /> {busy ? "Drawing the setup..." : "Show me"}
             </button>

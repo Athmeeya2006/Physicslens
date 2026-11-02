@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type { TrailStep } from "@/lib/api";
 import { SetupGuide } from "./SetupGuide";
+import { isGallery } from "@/lib/api";
 import { Law } from "./Equation";
 
 const STEP: Record<TrailStep["step"], { label: string; icon: LucideIcon }> = {
@@ -73,7 +74,7 @@ function designInstruction(step: TrailStep): string {
   return first ? `${first}.` : step.text;
 }
 
-export function AgentTrail({ steps, runId }: { steps: TrailStep[]; runId?: string }) {
+export function AgentTrail({ steps, runId, guideStored }: { steps: TrailStep[]; runId?: string; guideStored?: boolean }) {
   return (
     <ol className="trail">
       {steps.map((s, i) => {
@@ -113,7 +114,8 @@ export function AgentTrail({ steps, runId }: { steps: TrailStep[]; runId?: strin
                   <p>{s.reasoning}</p>
                 </details>
               )}
-              {runId && s.step === "design" && <SetupGuide runId={runId} stepRef={i} instruction={designInstruction(s)} />}
+              {runId && s.step === "design" && <SetupGuide runId={runId} stepRef={i} instruction={designInstruction(s)}
+                canDraw={!isGallery(runId) || !!guideStored} />}
             </div>
           </li>
         );

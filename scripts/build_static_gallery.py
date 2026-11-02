@@ -56,6 +56,8 @@ def main() -> None:
             index.append({"id": gid, **meta, "status": study.get("status")})
             continue
         result = json.loads((src / "result.json").read_text())
+        if (src / "setup_guide.json").is_file():
+            result["setup_guide_available"] = True  # only then does the page offer to show the stored picture
         if (src / "prediction.json").is_file():
             # Tells the page there is a forecast to fetch, so results without one make no request that would 404.
             result["prediction_available"] = True

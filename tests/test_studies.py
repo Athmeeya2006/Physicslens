@@ -148,3 +148,11 @@ def test_assumed_g_is_not_a_measurement_for_a_sweep():
     r = pendulum_result(0.5)
     r["parameters"][0]["derived"] = "assumed: Earth's gravity, used as the ruler"
     assert observable(r, "period") is None and observable(pendulum_result(0.5), "g") == (9.81, 0.05)
+
+
+def test_plan_does_not_repeat_done_when():
+    from physicslens.agent.schemas import StudyPlan
+    fields = StudyPlan.model_fields
+    assert "done_when" in fields
+    assert StudyPlan.no_leading_done_when("done when both corners agree") == "both corners agree"
+    assert StudyPlan.no_leading_done_when("Done when: x") == "x" and StudyPlan.no_leading_done_when("both agree") == "both agree"

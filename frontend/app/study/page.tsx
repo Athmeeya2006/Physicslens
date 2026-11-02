@@ -203,7 +203,7 @@ export default function StudyPage() {
             <div className="stack">
               <section className="panel">
                 <h3>The plan: {DELIVERABLE[study.plan.deliverable]}</h3>
-                <p className="small muted" style={{ marginBottom: 8 }}>Measure {study.plan.quantities.join("; ")}. Done when {lowerFirst(study.plan.done_when)}</p>
+                <p className="small muted" style={{ marginBottom: 8 }}>Measure {study.plan.quantities.join("; ")}. Done when {lowerFirst(study.plan.done_when.replace(/^\s*done when[:,]?\s*/i, ""))}</p>
                 <ol className="checklist">
                   {study.plan.recordings.map((p) => {
                     const done = study.recordings.some((r) => r.label === p.label);
