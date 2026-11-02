@@ -6,6 +6,7 @@ import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
 import { OnThisPage } from "@/components/OnThisPage";
 import { ProofNav } from "@/components/ProofNav";
+import { Term } from "@/components/Term";
 
 // The Sun's rotation law from real SDO/HMI images (scripts/sun_demo.py), and region-return forecasts checked against
 // NOAA's records. Everything is precomputed and served as static files.
@@ -118,7 +119,7 @@ export default function SunPage() {
             <RateChart d={d} />
             <div className="table-wrap">
               <table className="cards">
-                <thead><tr><th>Law</th><th>Coefficients (°/day)</th><th>Forecast of the last quarter</th><th>BIC behind the best</th></tr></thead>
+                <thead><tr><th>Law</th><th>Coefficients (°/day)</th><th>Forecast of the last quarter</th><th><Term k="bic" /> behind the best</th></tr></thead>
                 <tbody>
                   {d.laws.map((l) => (
                     <tr key={l.law}>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { OutcomeCard } from "@/components/OutcomeCard";
 import type { Outcome } from "@/lib/api";
 import { ProofNav } from "@/components/ProofNav";
+import { Term } from "@/components/Term";
 
 // Umbriel's outline from the 2020 stellar occultation (scripts/occultation_demo.py): every observer's chord in the
 // plane perpendicular to the star, the fitted circle, and the observers who saw nothing. Precomputed, served static.
@@ -109,7 +110,7 @@ export default function OccultationPage() {
               errors are honest: on synthetic light curves with known edges, the measured time lands within one stated sigma about two thirds of the time.</p>
             <div className="table-wrap">
               <table className="cards">
-                <thead><tr><th>Exposure</th><th>Typical timing error</th><th>Within one sigma</th></tr></thead>
+                <thead><tr><th>Exposure</th><th>Typical timing error</th><th>Within one <Term k="sigma">sigma</Term></th></tr></thead>
                 <tbody>{d.edge_trials.map((t) => (
                   <tr key={t.exposure_s}><td data-label="Exposure" className="num">{t.exposure_s} s</td><td data-label="Error" className="num">{(t.rms_error_s * 1000).toFixed(0)} ms</td>
                     <td data-label="Within" className="num">{(t.within_1_sigma * 100).toFixed(0)}% (68% expected)</td></tr>))}</tbody>

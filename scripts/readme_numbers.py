@@ -52,6 +52,12 @@ def param(name: str, p: str, field: str = "value") -> float:
     return next(x[field] for x in r.get("parameters") or r.get("agreed_parameters") or [] if x["name"] == p)
 
 
+def load_index_rows() -> list:
+    sys.path.insert(0, str(ROOT / "backend"))
+    from physicslens import prereg
+    return prereg.index_rows()
+
+
 def pendulum_check() -> dict:
     return load("data/pendulum/check.json")
 
@@ -387,6 +393,8 @@ CLAIMS = [
           lambda: next(h["heldout_rmse_rpm"] for h in load("data/cases_agent/coastdown.json")["hand_chosen"] if h["law"] == "coulomb")),
     Claim("Agent cases: coast-down deceleration", r"\(Coulomb alone, ([\d.]+) rad/s²",
           lambda: -load("data/cases_agent/coastdown.json")["parameters"][0]["value"]),
+    Claim("Summary: predictions registered", r"case has reached is \*improves a public tool\*.*?; (\w+) blind predictions",
+          lambda: len(load_index_rows())),
     Claim("Kepler-88 family: starts", r"the fit was repeated from (\d+) starting points spread",
           lambda: timing("kepler88b")["companion_family"]["starts"]),
     Claim("Kepler-88 family: refined", r"with the best (\d+)\s+refined", lambda: timing("kepler88b")["companion_family"]["refined"]),

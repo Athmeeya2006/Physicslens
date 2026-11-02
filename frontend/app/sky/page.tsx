@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Law, Tex } from "@/components/Equation";
 import { Sky3D, type Sky3DHandle } from "@/components/Sky3D";
 import { useBackend, useHealth } from "@/lib/api";
+import { Term } from "@/components/Term";
 import {
   bundled, bundledDiscovery, changed, type Changes, decodeState, type Discovery, discoverOnServer, type Elements, encodeState, filmOnServer,
   HYPOTHETICAL, integrate, kicked, listScenarios, type ScenarioSummary, type Simulation, simulateOnServer, SUN_GM,
@@ -140,7 +141,7 @@ function Chosen({ d }: { d: Discovery }) {
         on the rest{d.n_eff ? `; BIC with ${Math.round(d.n_eff)} effective samples` : ""}</span></summary>
       <div className="table-wrap">
         <table className="cards">
-          <thead><tr><th>Candidate law</th><th>Forecast error on the held-out quarter</th><th>BIC behind the best</th><th>Verdict and why</th></tr></thead>
+          <thead><tr><th>Candidate law</th><th>Forecast error on the <Term k="heldout">held-out</Term> quarter</th><th><Term k="bic" /> behind the best</th><th>Verdict and why</th></tr></thead>
           <tbody>
             {d.ranking.map((r) => (
               <tr key={r.title}>
