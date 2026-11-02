@@ -45,6 +45,8 @@ export interface Changes {
   c_scale?: number;
   years?: number;
   extra_body?: { gm_suns: number; a_au: number; e: number; i_deg: number; M_deg: number } | null;
+  // A push to a body's starting velocity, m/s: [along its motion, outward from the centre, out of its orbit's plane].
+  kicks?: Record<string, [number, number, number]>;
 }
 
 export interface Discovery {
@@ -66,9 +68,13 @@ export interface Discovery {
 
 export const changed = (c: Changes) =>
   Object.keys(c.mass_scale).length > 0 || c.disabled.length > 0 || c.hidden !== undefined || c.gr !== undefined
-  || c.c_scale !== undefined || c.years !== undefined || !!c.extra_body;
+  || c.c_scale !== undefined || c.years !== undefined || !!c.extra_body
+  || Object.values(c.kicks ?? {}).some((k) => k.some((v) => v !== 0));
 
-const body = (name: string, c: Changes) => JSON.stringify({ scenario: name, ...c, extra_body: c.extra_body ?? undefined });
+const body = (name: string, c: Changes) => JSON.stringify({
+  scenario: name, ...c, extra_body: c.extra_body ?? undefined,
+  kicks: c.kicks ? Object.fromEntries(Object.entries(c.kicks).filter(([, k]) => k.some((v) => v !== 0))) : undefined,
+});
 
 export async function listScenarios(online: boolean): Promise<ScenarioSummary[]> {
   if (online) {
@@ -106,6 +112,20 @@ export const filmOnServer = (name: string, c: Changes): Promise<{ run_id: string
 const C_AU_PER_DAY = 173.144632674;
 export const SUN_GM = 2.9591220828559115e-4;  // AU^3/day^2, as the server's catalogue
 export const HYPOTHETICAL = "hypothetical body";
+const M_S_TO_AU_DAY = 86400 / 149_597_870_700;
+
+/** The state with its velocity pushed by dv (m/s) along the motion, outward and along the orbit's normal, exactly as
+ * the server does it (sky/scenarios.kicked). */
+export function kicked(state: number[], dv: [number, number, number]): number[] {
+  const r = state.slice(0, 3), v = state.slice(3, 6);
+  const len = (a: number[]) => Math.hypot(a[0], a[1], a[2]);
+  const cross = (a: number[], b: number[]) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const along = v.map((x) => x / len(v));
+  const h = cross(r, v), normal = h.map((x) => x / len(h));
+  let out = cross(along, normal);
+  if (out[0] * r[0] + out[1] * r[1] + out[2] * r[2] < 0) out = out.map((x) => -x);
+  return [...r, ...v.map((x, i) => x + (dv[0] * along[i] + dv[1] * out[i] + dv[2] * normal[i]) * M_S_TO_AU_DAY)];
+}
 
 /** Heliocentric position and velocity from elements in the reference plane (node and perihelion at zero), as the
  * server places a hypothetical body: Kepler's equation by Newton's method. */
@@ -123,7 +143,8 @@ export function stateFromElements(a: number, e: number, iDeg: number, mDeg: numb
  * fastest orbit. Good to a fraction of a pixel for the lab's spans; the server's DOP853 run is the real answer. */
 export function integrate(init: Initial, c: Changes, target: string, maxPoints = 1500): Simulation["bodies"] {
   const bodies = init.bodies.filter((b) => !c.disabled.includes(b.name)).map((b) => ({
-    ...b, gm: b.massive ? b.gm * (c.mass_scale[b.name] ?? 1) : 0, state: [...b.state],
+    ...b, gm: b.massive ? b.gm * (c.mass_scale[b.name] ?? 1) : 0,
+    state: c.kicks?.[b.name]?.some((v) => v !== 0) ? kicked(b.state, c.kicks[b.name]) : [...b.state],
   }));
   const x = c.extra_body;
   if (x && x.a_au > 0 && x.e >= 0 && x.e < 1 && x.gm_suns >= 0) {

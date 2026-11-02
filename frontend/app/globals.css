@@ -575,7 +575,10 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .sky3d-canvas { position: absolute; inset: 0; touch-action: none; }
 .sky3d-canvas canvas { display: block; }
 .sky3d-labels { position: absolute; inset: 0; pointer-events: none; }
-.sky3d-label { position: absolute; left: 0; top: 0; font-size: 12px; color: #dfe6f5; text-shadow: 0 0 4px #000; white-space: nowrap; }
+.sky3d-label { position: absolute; left: 0; top: 0; font-size: 12px; color: #dfe6f5; text-shadow: 0 0 4px #000; white-space: nowrap;
+  pointer-events: auto; cursor: pointer; }
+.sky3d-label.picked { color: #fff; font-weight: 600; outline: 1px solid #8fb4ff; outline-offset: 2px; border-radius: 3px; }
+.sky3d-canvas canvas { cursor: crosshair; }
 .law-scroll { overflow-x: auto; }
 
 /* Bubble level for filming: words carry the state, colour only repeats it. */
@@ -595,6 +598,13 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
 .sky-use { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: grid; gap: 8px; align-content: start; }
 .sky-use h3 { margin: 0; font-size: 1rem; }
 .sky-use p { margin: 0; }
+.sky-pick { gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.sky-pick .chip { padding: 4px 9px; }
+.chip.on { background: var(--model); color: #fff; }
+.sky-push { display: grid; grid-template-columns: minmax(0, 1fr) 7rem auto; gap: 4px 10px; align-items: center; }
+.sky-push > span:first-child { grid-column: 1 / -1; }
+.sky-push input[type=range] { width: 100%; }
+.sky-push input[type=number] { width: 7rem; }
 .law-cell { overflow-x: auto; max-width: 420px; }
 
 /* Outcome card: what the result means and what to do, above the equation. The status word carries the meaning. */

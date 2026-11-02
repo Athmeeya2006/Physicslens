@@ -32,6 +32,8 @@ interface Props {
   onTime: (days: number, end: number) => void;
   label: string;
   handle: React.Ref<Sky3DHandle>;
+  onPick?: (name: string) => void;  // a click on a body (or its label)
+  picked?: string | null;
 }
 
 // ---------- appearance ----------
@@ -219,7 +221,11 @@ interface Drawn { body: SkyBody; mesh: THREE.Object3D; path: THREE.Object3D; tra
 
 const GM_SUN = 2.9591220828559115e-4;  // AU^3/day^2, for the illustrative swarm only
 
-export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, onTime, label, handle }: Props) {
+export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, onTime, label, handle, onPick, picked }: Props) {
+  const pick = useRef(onPick);
+  pick.current = onPick;
+  const chosen = useRef(picked);
+  chosen.current = picked;
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
   const live = useRef({ playing, daysPerSecond, follow, onTime });
@@ -263,6 +269,24 @@ export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.001, 1e5);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    // A click (not a drag) picks the body drawn nearest the pointer, within a finger's width: the spheres are too
+    // small on screen for a ray to hit them reliably.
+    let down: [number, number] | null = null;
+    renderer.domElement.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
+    renderer.domElement.addEventListener("pointerup", (e) => {
+      const w = world.current;
+      if (!down || !w || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+      const box = renderer.domElement.getBoundingClientRect();
+      let best: [number, string] | null = null;
+      for (const d of w.drawn) {
+        if (!d.mesh.visible) continue;
+        const p = d.mesh.getWorldPosition(new THREE.Vector3()).project(camera);
+        if (p.z > 1) continue;
+        const dist = Math.hypot((p.x + 1) / 2 * box.width - (e.clientX - box.left), (1 - p.y) / 2 * box.height - (e.clientY - box.top));
+        if (dist < 28 && (!best || dist < best[0])) best = [dist, d.body.name];
+      }
+      if (best) pick.current?.(best[1]);
+    });
     // Stars: far enough to sit behind everything, fixed to the camera's world.
     const stars = new THREE.BufferGeometry();
     const sr = rng(42), pos: number[] = [];
@@ -331,6 +355,7 @@ export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, 
         const clear = !placed.some(([px, py]) => Math.abs(px - sx) < 46 && Math.abs(py - sy) < 14);
         const visible = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1 && !d.body.hidden && (clear || d.body.target);
         d.label.style.display = visible ? "block" : "none";
+        d.label.classList.toggle("picked", d.body.name === chosen.current);
         if (visible) {
           placed.push([sx, sy]);
           d.label.style.transform = `translate(${sx + 8}px, ${sy - 8}px)`;
@@ -447,6 +472,7 @@ export function Sky3D({ base, modified, playing, daysPerSecond, follow, centre, 
         const tag = document.createElement("span");
         tag.className = "sky3d-label";
         tag.textContent = dashed ? `${body.name} (changed)` : body.name;
+        tag.addEventListener("click", () => pick.current?.(body.name));
         labels.current?.appendChild(tag);
         w.drawn.push({ body, mesh, path, trail, label: tag, tail });
       }

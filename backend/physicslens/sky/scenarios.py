@@ -82,6 +82,8 @@ class Scenario:
     extra_particle: dict[str, Any] | None = None
     extra_body: dict[str, Any] | None = None  # a hypothetical massive body: gm_suns plus elements as extra_particle
     star: dict[str, Any] | None = None
+    # A push to a body's starting velocity, in m/s: [along its motion, outward from the centre, out of its orbit's plane].
+    kicks: dict[str, list[float]] = field(default_factory=dict)
     baseline: str | None = None
     compare: str = "none"
 
@@ -117,6 +119,9 @@ def validate(sc: Scenario) -> None:
             raise ScenarioError(f"mass_scale for {k} must be between 0 and 1000.")
     if not (math.isfinite(sc.c_scale) and 0 < sc.c_scale <= 1e6):
         raise ScenarioError("c_scale must be between 0 and 1,000,000.")
+    for k, v in sc.kicks.items():
+        if len(v) != 3 or not all(math.isfinite(x) and abs(x) <= MAX_KICK_M_S for x in v):
+            raise ScenarioError(f"The push on {k} must be three speeds of at most {MAX_KICK_M_S:,.0f} m/s.")
     if sc.clip_days / sc.frame_step_days > 20_000:
         raise ScenarioError("Too many frames (at most 20,000).")
 
@@ -135,6 +140,31 @@ def _particle_from_elements(spec: dict[str, Any], gm: float) -> np.ndarray:
                   math.radians(float(spec.get("node_deg", 0.0))), math.radians(float(spec.get("peri_deg", 0.0))),
                   math.radians(float(spec.get("M_deg", 0.0))), gm)
     return to_state(el)
+
+
+MAX_KICK_M_S = 20_000.0
+M_S_TO_AU_DAY = 86400.0 / 149_597_870_700.0
+
+
+def kicked(state: np.ndarray, dv_m_s: list[float]) -> np.ndarray:
+    """The state with its velocity pushed by dv (m/s) along the motion, outward (radial, made perpendicular to the
+    motion) and along the orbit's normal: the three directions a thruster or a close encounter is described in."""
+    r, v = state[:3], state[3:6]
+    along = v / np.linalg.norm(v)
+    normal = np.cross(r, v)
+    normal /= np.linalg.norm(normal)
+    out = np.cross(along, normal)  # in the plane, perpendicular to the motion, pointing away from the centre
+    if np.dot(out, r) < 0:
+        out = -out
+    dv = (dv_m_s[0] * along + dv_m_s[1] * out + dv_m_s[2] * normal) * M_S_TO_AU_DAY
+    return np.concatenate([r, v + dv, state[6:]])
+
+
+def _kick_all(bodies: list[Body], kicks: dict[str, list[float]]) -> list[Body]:
+    for b in bodies:
+        if b.name in kicks and any(kicks[b.name]):
+            b.state = kicked(np.asarray(b.state, float), kicks[b.name])
+    return bodies
 
 
 @dataclass
@@ -159,7 +189,7 @@ def build(sc: Scenario) -> tuple[float, list[Body], Options, float]:
         states = jovian_states()
         bodies = [Body(n, gm_au3_d2(gms[n]) * sc.mass_scale.get(n, 1.0), states[n].copy()) for n in sc.bodies]
         j2 = J2Field(central, JUPITER_J2, JUPITER_J2_RADIUS_KM / AU_KM, JUPITER_POLE) if sc.j2 else None
-        return central, bodies, Options(j2=j2), start
+        return central, _kick_all(bodies, sc.kicks), Options(j2=j2), start
     seed = tuple(sc.seed_bodies or EVERY_MASSIVE)
     particles = tuple(n for n in (sc.target,) if n in ("Apophis", "Halley"))
     states = _seeded(start, seed, particles)
@@ -177,7 +207,7 @@ def build(sc: Scenario) -> tuple[float, list[Body], Options, float]:
     if sc.star:
         prescribed = (passing_star(sun_gm() * float(sc.star["gm_suns"]), float(sc.star["closest_au"]),
                                    km_per_s_to_au_per_day(float(sc.star["speed_km_s"])), jd_of(sc.star["closest"])),)
-    return sun_gm(), bodies, Options(gr=sc.gr, c_scale=sc.c_scale, prescribed=prescribed), start
+    return sun_gm(), _kick_all(bodies, sc.kicks), Options(gr=sc.gr, c_scale=sc.c_scale, prescribed=prescribed), start
 
 
 def run(sc: Scenario, extra_jd: np.ndarray | None = None) -> ScenarioRun:

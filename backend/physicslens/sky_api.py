@@ -17,7 +17,7 @@ from typing import Annotated, Any
 
 import numpy as np
 from fastapi import APIRouter, Body, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .costguard.limiter import RequestWindows
 from .sky import scenarios as S
@@ -77,6 +77,14 @@ class SimulateRequest(Lax):
     gr: bool | None = None
     c_scale: float | None = Field(default=None, gt=0, le=1e6)
     years: float | None = Field(default=None, gt=0, le=300)
+    # m/s: along the motion, outward, out of the plane (see scenarios.kicked)
+    kicks: dict[str, Annotated[list[Annotated[float, Field(ge=-20000, le=20000)]], Field(min_length=3, max_length=3)]] = Field(
+        default_factory=dict, max_length=30)
+
+    @field_validator("kicks")
+    @classmethod
+    def _no_zero_pushes(cls, v: dict[str, list[float]]) -> dict[str, list[float]]:
+        return {k: d for k, d in v.items() if any(d)}  # a zero push is no change (and keeps the cache key and labels honest)
 
 
 class DiscoverRequest(SimulateRequest):
@@ -122,7 +130,7 @@ def scenario_for(req: SimulateRequest) -> S.Scenario:
     except S.ScenarioError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     known = set(sc.bodies) | {sc.target}
-    for name in (*req.mass_scale, *req.disabled, *(req.hidden or [])):
+    for name in (*req.mass_scale, *req.disabled, *(req.hidden or []), *req.kicks):
         if name not in known:
             raise HTTPException(status_code=400, detail=f"{name!r} is not in this scenario ({', '.join(sorted(known))}).")
     if sc.target in req.disabled:
@@ -139,6 +147,8 @@ def scenario_for(req: SimulateRequest) -> S.Scenario:
         sc = replace(sc, extra_body={**req.extra_body.model_dump(), "node_deg": 0.0, "peri_deg": 0.0})
     if req.star is not None:
         sc = replace(sc, star=req.star.model_dump())
+    if req.kicks:
+        sc = replace(sc, kicks={k: list(v) for k, v in req.kicks.items() if any(v)})
     edited = req.model_dump(exclude={"scenario", "noise_px"}, exclude_defaults=True)
     if edited:
         # Anything changed from the file is a what-if: marked as such, and compared with the scenario as written.

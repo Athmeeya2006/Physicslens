@@ -51,6 +51,28 @@ def test_a_change_makes_it_fictional_and_is_compared_with_the_original(lab):
     assert out["scenario"]["fictional"] and out["detectability"] is not None
 
 
+def test_a_push_changes_the_orbit_the_way_a_push_should(lab):
+    import numpy as np
+    from physicslens.sky import scenarios as S
+    client, _, _ = lab
+
+    def far_near(kick):
+        out = client.post("/api/sky/simulate", json={"scenario": "real_inner_planets", "kicks": {"Mars": kick}}).json()
+        mars = next(b for b in out["bodies"] if b["name"] == "Mars")
+        d = np.linalg.norm(np.asarray(mars["points"])[:, 1:4], axis=1)
+        return d.max(), d.min(), out["scenario"]["fictional"]
+    far0, near0, fict0 = far_near([0, 0, 0])
+    far, near, fict = far_near([3000, 0, 0])
+    assert not fict0 and fict
+    assert far > far0 + 0.5 and near == pytest.approx(near0, abs=0.05)  # faster along the motion: a bigger orbit
+    # The three directions are orthonormal and the speed added is exactly the one asked for.
+    state = np.array([1.0, 0.2, 0.05, -0.003, 0.016, 0.001])
+    for dv in ([1000, 0, 0], [0, 1000, 0], [0, 0, 1000]):
+        assert np.linalg.norm(S.kicked(state, dv)[3:] - state[3:]) == pytest.approx(1000 * S.M_S_TO_AU_DAY)
+    out = S.kicked(state, [0, 1000, 0])[3:] - state[3:]
+    assert np.dot(out, state[:3]) > 0 and abs(np.dot(out, state[3:])) < 1e-12
+
+
 @pytest.mark.parametrize(("body", "status"), [
     ({"scenario": "jupiter_x10", "mass_scale": {"Jupiter": 5000}}, 422),
     ({"scenario": "jupiter_x10", "mass_scale": {"Jupiter": "NaN"}}, 422),
@@ -59,6 +81,9 @@ def test_a_change_makes_it_fictional_and_is_compared_with_the_original(lab):
     ({"scenario": "jupiter_x10", "mass_scale": {"Pluto": 2}}, 400),
     ({"scenario": "jupiter_x10", "disabled": ["Mars"]}, 400),
     ({"scenario": "no_such_thing"}, 404),
+    ({"scenario": "jupiter_x10", "kicks": {"Mars": [30000, 0, 0]}}, 422),
+    ({"scenario": "jupiter_x10", "kicks": {"Mars": [100, 0]}}, 422),
+    ({"scenario": "jupiter_x10", "kicks": {"Pluto": [100, 0, 0]}}, 400),
     ({"scenario": "jupiter_x10", "surprise": 1}, 422),
 ])
 def test_bad_requests_are_refused_with_a_reason(lab, body, status):
