@@ -1,0 +1,1223 @@
+{
+ "id": "qatar-8-b-2026-11",
+ "case": "transit-timing",
+ "created_utc": "2026-11-02T10:57:18Z",
+ "code_version": {
+  "commit": "fad8a0c14cb04c914d5e758279d224a94ea7846f",
+  "uncommitted_changes": true
+ },
+ "title": "Qatar-8 b: transit mid-times from November 2026 to May 2027",
+ "question": "When will Qatar-8 b transit between 2026-11-15 and 2027-05-15 (BJD_TDB)?",
+ "inputs": [
+  {
+   "name": "NASA Exoplanet Archive pscomppars row for Qatar-8 b",
+   "source": "NASA Exoplanet Archive",
+   "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name%2Chostname%2Ctic_id%2Cpl_trandep%2Cpl_ratror%2Cpl_tranmid%2Cpl_tranmiderr1%2Cpl_tranmiderr2%2Cpl_orbper%2Cpl_orbpererr1%2Cpl_orbpererr2%2Cpl_trandur%2Csy_vmag%2Csy_tmag%2Cpl_tranmid_reflink%2Cpl_orbper_reflink%2Cra%2Cdec+from+pscomppars+where+tran_flag%3D1+and+pl_name%3D%27Qatar-8+b%27&format=csv",
+   "retrieved": "2026-11-02",
+   "values": {
+    "tic_id": "TIC 103751498",
+    "pl_tranmid": "2458210.83980000",
+    "pl_tranmiderr1": "0.00085000",
+    "pl_tranmiderr2": "-0.00085000",
+    "pl_orbper": "3.71495000000",
+    "pl_orbpererr1": "0.00100000000",
+    "pl_orbpererr2": "-0.00100000000",
+    "pl_trandur": "4.0272000",
+    "pl_trandep": "1.26200000",
+    "sy_vmag": "11.7100000"
+   },
+   "t0_reference": {
+    "name": "Alsubai et al. 2019",
+    "url": "https://ui.adsabs.harvard.edu/abs/2019AJ....157..224A/abstract"
+   },
+   "period_reference": {
+    "name": "Alsubai et al. 2019",
+    "url": "https://ui.adsabs.harvard.edu/abs/2019AJ....157..224A/abstract"
+   }
+  },
+  {
+   "name": "TESS sector 40, TIC 103751498, SPOC 2-min light curve",
+   "source": "MAST (TESS SPOC)",
+   "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:TESS/product/tess2021175071901-s0040-0000000103751498-0211-s_lc.fits",
+   "retrieved": "2026-11-02",
+   "mast_obs_id": "tess2021175071901-s0040-0000000103751498-0211-s",
+   "mast_obsid": "62348705",
+   "product": "tess2021175071901-s0040-0000000103751498-0211-s_lc.fits",
+   "transits_used": 8
+  },
+  {
+   "name": "TESS sector 41, TIC 103751498, SPOC 2-min light curve",
+   "source": "MAST (TESS SPOC)",
+   "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:TESS/product/tess2021204101404-s0041-0000000103751498-0212-s_lc.fits",
+   "retrieved": "2026-11-02",
+   "mast_obs_id": "tess2021204101404-s0041-0000000103751498-0212-s",
+   "mast_obsid": "62792064",
+   "product": "tess2021204101404-s0041-0000000103751498-0212-s_lc.fits",
+   "transits_used": 6
+  },
+  {
+   "name": "TESS sector 47, TIC 103751498, SPOC 2-min light curve",
+   "source": "MAST (TESS SPOC)",
+   "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:TESS/product/tess2021364111932-s0047-0000000103751498-0218-s_lc.fits",
+   "retrieved": "2026-11-02",
+   "mast_obs_id": "tess2021364111932-s0047-0000000103751498-0218-s",
+   "mast_obsid": "71654034",
+   "product": "tess2021364111932-s0047-0000000103751498-0218-s_lc.fits",
+   "transits_used": 7
+  },
+  {
+   "name": "TESS sector 60, TIC 103751498, SPOC 2-min light curve",
+   "source": "MAST (TESS SPOC)",
+   "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:TESS/product/tess2022357055054-s0060-0000000103751498-0249-s_lc.fits",
+   "retrieved": "2026-11-02",
+   "mast_obs_id": "tess2022357055054-s0060-0000000103751498-0249-s",
+   "mast_obsid": "114307313",
+   "product": "tess2022357055054-s0060-0000000103751498-0249-s_lc.fits",
+   "transits_used": 5
+  },
+  {
+   "name": "TESS sector 74, TIC 103751498, SPOC 2-min light curve",
+   "source": "MAST (TESS SPOC)",
+   "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:TESS/product/tess2024003055635-s0074-0000000103751498-0269-s_lc.fits",
+   "retrieved": "2026-11-02",
+   "mast_obs_id": "tess2024003055635-s0074-0000000103751498-0269-s",
+   "mast_obsid": "212264919",
+   "product": "tess2024003055635-s0074-0000000103751498-0269-s_lc.fits",
+   "transits_used": 6
+  }
+ ],
+ "prediction": {
+  "kind": "transit_times",
+  "items": [
+   {
+    "label": "transit N=848",
+    "epoch": 848,
+    "value": 2461360.8595231073,
+    "sigma_days": 0.0010724608120636654,
+    "ci68": [
+     2461360.8584506465,
+     2461360.860595568
+    ],
+    "ci95": [
+     2461360.8574211225,
+     2461360.861625092
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-11-16T08:36:33Z",
+    "published_ephemeris_value": 2461361.1174000003,
+    "published_ci95": [
+     2461359.4553496935,
+     2461362.779450307
+    ],
+    "shift_min": -371.3427259773016
+   },
+   {
+    "label": "transit N=849",
+    "epoch": 849,
+    "value": 2461364.574168906,
+    "sigma_days": 0.0010744002314669319,
+    "ci68": [
+     2461364.573094506,
+     2461364.5752433063
+    ],
+    "ci95": [
+     2461364.57206312,
+     2461364.576274692
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-11-20T01:45:39Z",
+    "published_ephemeris_value": 2461364.8323500003,
+    "published_ci95": [
+     2461363.1683397302,
+     2461366.4963602703
+    ],
+    "shift_min": -371.78077563643456
+   },
+   {
+    "label": "transit N=850",
+    "epoch": 850,
+    "value": 2461368.288814705,
+    "sigma_days": 0.0010763399502697099,
+    "ci68": [
+     2461368.287738365,
+     2461368.2898910446
+    ],
+    "ci95": [
+     2461368.286705117,
+     2461368.2909242925
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-11-23T18:54:44Z",
+    "published_ephemeris_value": 2461368.5473,
+    "published_ci95": [
+     2461366.8813297674,
+     2461370.213270233
+    ],
+    "shift_min": -372.2188252955675
+   },
+   {
+    "label": "transit N=851",
+    "epoch": 851,
+    "value": 2461372.003460503,
+    "sigma_days": 0.0010782799668562293,
+    "ci68": [
+     2461372.002382223,
+     2461372.0045387833
+    ],
+    "ci95": [
+     2461372.0013471134,
+     2461372.005573893
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-11-27T12:03:49Z",
+    "published_ephemeris_value": 2461372.26225,
+    "published_ci95": [
+     2461370.594319804,
+     2461373.930180196
+    ],
+    "shift_min": -372.6568756252527
+   },
+   {
+    "label": "transit N=852",
+    "epoch": 852,
+    "value": 2461375.718106302,
+    "sigma_days": 0.0010802202796220798,
+    "ci68": [
+     2461375.717026082,
+     2461375.719186522
+    ],
+    "ci95": [
+     2461375.715989109,
+     2461375.720223495
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-01T05:12:55Z",
+    "published_ephemeris_value": 2461375.9772,
+    "published_ci95": [
+     2461374.3073098413,
+     2461377.647090159
+    ],
+    "shift_min": -373.0949252843857
+   },
+   {
+    "label": "transit N=853",
+    "epoch": 853,
+    "value": 2461379.4327521008,
+    "sigma_days": 0.0010821608869741144,
+    "ci68": [
+     2461379.43166994,
+     2461379.4338342617
+    ],
+    "ci95": [
+     2461379.4306311044,
+     2461379.434873097
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-04T22:22:00Z",
+    "published_ephemeris_value": 2461379.69215,
+    "published_ci95": [
+     2461378.020299878,
+     2461381.364000122
+    ],
+    "shift_min": -373.53297494351864
+   },
+   {
+    "label": "transit N=854",
+    "epoch": 854,
+    "value": 2461383.147397899,
+    "sigma_days": 0.0010841017873303525,
+    "ci68": [
+     2461383.146313797,
+     2461383.148482001
+    ],
+    "ci95": [
+     2461383.1452730987,
+     2461383.1495226994
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-08T15:31:05Z",
+    "published_ephemeris_value": 2461383.4071000004,
+    "published_ci95": [
+     2461381.733289915,
+     2461385.0809100857
+    ],
+    "shift_min": -373.9710259437561
+   },
+   {
+    "label": "transit N=855",
+    "epoch": 855,
+    "value": 2461386.862043698,
+    "sigma_days": 0.001086042979119883,
+    "ci68": [
+     2461386.8609576547,
+     2461386.863129741
+    ],
+    "ci95": [
+     2461386.8599150926,
+     2461386.864172303
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-12T08:40:11Z",
+    "published_ephemeris_value": 2461387.1220500004,
+    "published_ci95": [
+     2461385.4462799523,
+     2461388.7978200484
+    ],
+    "shift_min": -374.40907560288906
+   },
+   {
+    "label": "transit N=856",
+    "epoch": 856,
+    "value": 2461390.5766894966,
+    "sigma_days": 0.0010879844607827732,
+    "ci68": [
+     2461390.575601512,
+     2461390.577777481
+    ],
+    "ci95": [
+     2461390.5745570865,
+     2461390.578821907
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-16T01:49:16Z",
+    "published_ephemeris_value": 2461390.8370000003,
+    "published_ci95": [
+     2461389.159269989,
+     2461392.5147300116
+    ],
+    "shift_min": -374.847125262022
+   },
+   {
+    "label": "transit N=857",
+    "epoch": 857,
+    "value": 2461394.291335295,
+    "sigma_days": 0.0010899262307699715,
+    "ci68": [
+     2461394.2902453686,
+     2461394.2924252213
+    ],
+    "ci95": [
+     2461394.289199079,
+     2461394.293471511
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-19T18:58:22Z",
+    "published_ephemeris_value": 2461394.55195,
+    "published_ci95": [
+     2461392.872260026,
+     2461396.2316399743
+    ],
+    "shift_min": -375.28517559170723
+   },
+   {
+    "label": "transit N=858",
+    "epoch": 858,
+    "value": 2461398.0059810937,
+    "sigma_days": 0.0010918682875432166,
+    "ci68": [
+     2461398.0048892256,
+     2461398.007072962
+    ],
+    "ci95": [
+     2461398.0038410714,
+     2461398.008121116
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-23T12:07:27Z",
+    "published_ephemeris_value": 2461398.2669,
+    "published_ci95": [
+     2461396.585250063,
+     2461399.9485499375
+    ],
+    "shift_min": -375.7232252508402
+   },
+   {
+    "label": "transit N=859",
+    "epoch": 859,
+    "value": 2461401.7206268925,
+    "sigma_days": 0.0010938106295749466,
+    "ci68": [
+     2461401.719533082,
+     2461401.721720703
+    ],
+    "ci95": [
+     2461401.718483063,
+     2461401.722770722
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-27T05:16:32Z",
+    "published_ephemeris_value": 2461401.98185,
+    "published_ci95": [
+     2461400.2982401,
+     2461403.6654599
+    ],
+    "shift_min": -376.16127490997314
+   },
+   {
+    "label": "transit N=860",
+    "epoch": 860,
+    "value": 2461405.435272691,
+    "sigma_days": 0.0010957532553482053,
+    "ci68": [
+     2461405.4341769377,
+     2461405.436368444
+    ],
+    "ci95": [
+     2461405.433125054,
+     2461405.4374203277
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-30T22:25:38Z",
+    "published_ephemeris_value": 2461405.6968,
+    "published_ci95": [
+     2461404.0112301367,
+     2461407.3823698633
+    ],
+    "shift_min": -376.59932523965836
+   },
+   {
+    "label": "transit N=861",
+    "epoch": 861,
+    "value": 2461409.1499184896,
+    "sigma_days": 0.0010976961633565555,
+    "ci68": [
+     2461409.1488207933,
+     2461409.151016186
+    ],
+    "ci95": [
+     2461409.1477670446,
+     2461409.1520699346
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-03T15:34:43Z",
+    "published_ephemeris_value": 2461409.41175,
+    "published_ci95": [
+     2461407.7242201734,
+     2461411.0992798265
+    ],
+    "shift_min": -377.0373748987913
+   },
+   {
+    "label": "transit N=862",
+    "epoch": 862,
+    "value": 2461412.8645642884,
+    "sigma_days": 0.001099639352103988,
+    "ci68": [
+     2461412.863464649,
+     2461412.865663928
+    ],
+    "ci95": [
+     2461412.8624090347,
+     2461412.866719542
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-07T08:43:49Z",
+    "published_ephemeris_value": 2461413.1267000004,
+    "published_ci95": [
+     2461411.437210211,
+     2461414.8161897897
+    ],
+    "shift_min": -377.4754252284765
+   },
+   {
+    "label": "transit N=863",
+    "epoch": 863,
+    "value": 2461416.579210087,
+    "sigma_days": 0.0011015828201048346,
+    "ci68": [
+     2461416.5781085044,
+     2461416.58031167
+    ],
+    "ci95": [
+     2461416.5770510244,
+     2461416.58136915
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-11T01:52:54Z",
+    "published_ephemeris_value": 2461416.8416500003,
+    "published_ci95": [
+     2461415.1502002478,
+     2461418.533099753
+    ],
+    "shift_min": -377.9134748876095
+   },
+   {
+    "label": "transit N=864",
+    "epoch": 864,
+    "value": 2461420.2938558855,
+    "sigma_days": 0.0011035265658836792,
+    "ci68": [
+     2461420.292752359,
+     2461420.294959412
+    ],
+    "ci95": [
+     2461420.291693013,
+     2461420.296018758
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-14T19:01:59Z",
+    "published_ephemeris_value": 2461420.5566000002,
+    "published_ci95": [
+     2461418.863190285,
+     2461422.2500097156
+    ],
+    "shift_min": -378.3515252172947
+   },
+   {
+    "label": "transit N=865",
+    "epoch": 865,
+    "value": 2461424.0085016843,
+    "sigma_days": 0.0011054705879752734,
+    "ci68": [
+     2461424.0073962137,
+     2461424.009607155
+    ],
+    "ci95": [
+     2461424.006335002,
+     2461424.0106683667
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-18T12:11:05Z",
+    "published_ephemeris_value": 2461424.27155,
+    "published_ci95": [
+     2461422.5761803216,
+     2461425.9669196787
+    ],
+    "shift_min": -378.78957487642765
+   },
+   {
+    "label": "transit N=866",
+    "epoch": 866,
+    "value": 2461427.723147483,
+    "sigma_days": 0.0011074148849244492,
+    "ci68": [
+     2461427.7220400684,
+     2461427.724254898
+    ],
+    "ci95": [
+     2461427.7209769897,
+     2461427.7253179764
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-22T05:20:10Z",
+    "published_ephemeris_value": 2461427.9865,
+    "published_ci95": [
+     2461426.2891703583,
+     2461429.683829642
+    ],
+    "shift_min": -379.2276245355606
+   },
+   {
+    "label": "transit N=867",
+    "epoch": 867,
+    "value": 2461431.4377932814,
+    "sigma_days": 0.0011093594552860357,
+    "ci68": [
+     2461431.436683922,
+     2461431.4389026407
+    ],
+    "ci95": [
+     2461431.4356189766,
+     2461431.439967586
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-25T22:29:16Z",
+    "published_ephemeris_value": 2461431.70145,
+    "published_ci95": [
+     2461430.0021603955,
+     2461433.4007396046
+    ],
+    "shift_min": -379.6656748652458
+   },
+   {
+    "label": "transit N=868",
+    "epoch": 868,
+    "value": 2461435.15243908,
+    "sigma_days": 0.0011113042976247742,
+    "ci68": [
+     2461435.151327776,
+     2461435.1535503846
+    ],
+    "ci95": [
+     2461435.150260964,
+     2461435.1546171964
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-29T15:38:21Z",
+    "published_ephemeris_value": 2461435.4164,
+    "published_ci95": [
+     2461433.715150432,
+     2461437.117649568
+    ],
+    "shift_min": -380.1037245243788
+   },
+   {
+    "label": "transit N=869",
+    "epoch": 869,
+    "value": 2461438.867084879,
+    "sigma_days": 0.0011132494105152361,
+    "ci68": [
+     2461438.8659716295,
+     2461438.8681981284
+    ],
+    "ci95": [
+     2461438.8649029504,
+     2461438.8692668076
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-02T08:47:26Z",
+    "published_ephemeris_value": 2461439.1313500004,
+    "published_ci95": [
+     2461437.42814047,
+     2461440.834559531
+    ],
+    "shift_min": -380.541774854064
+   },
+   {
+    "label": "transit N=870",
+    "epoch": 870,
+    "value": 2461442.5817306773,
+    "sigma_days": 0.0011151947925417392,
+    "ci68": [
+     2461442.5806154823,
+     2461442.5828458723
+    ],
+    "ci95": [
+     2461442.579544936,
+     2461442.5839164187
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-06T01:56:32Z",
+    "published_ephemeris_value": 2461442.8463000003,
+    "published_ci95": [
+     2461441.1411305065,
+     2461444.551469494
+    ],
+    "shift_min": -380.9798251837492
+   },
+   {
+    "label": "transit N=871",
+    "epoch": 871,
+    "value": 2461446.296376476,
+    "sigma_days": 0.0011171404422982676,
+    "ci68": [
+     2461446.2952593355,
+     2461446.2974936166
+    ],
+    "ci95": [
+     2461446.294186921,
+     2461446.2985660313
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-09T19:05:37Z",
+    "published_ephemeris_value": 2461446.5612500003,
+    "published_ci95": [
+     2461444.854120543,
+     2461448.2683794573
+    ],
+    "shift_min": -381.41787484288216
+   },
+   {
+    "label": "transit N=872",
+    "epoch": 872,
+    "value": 2461450.011022275,
+    "sigma_days": 0.0011190863583883908,
+    "ci68": [
+     2461450.0099031883,
+     2461450.0121413614
+    ],
+    "ci95": [
+     2461450.008828906,
+     2461450.013215644
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-13T12:14:43Z",
+    "published_ephemeris_value": 2461450.2762,
+    "published_ci95": [
+     2461448.5671105804,
+     2461451.98528942
+    ],
+    "shift_min": -381.8559245020151
+   },
+   {
+    "label": "transit N=873",
+    "epoch": 873,
+    "value": 2461453.7256680736,
+    "sigma_days": 0.001121032539425183,
+    "ci68": [
+     2461453.724547041,
+     2461453.726789106
+    ],
+    "ci95": [
+     2461453.7234708904,
+     2461453.727865257
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-17T05:23:48Z",
+    "published_ephemeris_value": 2461453.99115,
+    "published_ci95": [
+     2461452.280100617,
+     2461455.702199383
+    ],
+    "shift_min": -382.29397416114807
+   },
+   {
+    "label": "transit N=874",
+    "epoch": 874,
+    "value": 2461457.440313872,
+    "sigma_days": 0.0011229789840311456,
+    "ci68": [
+     2461457.439190893,
+     2461457.441436851
+    ],
+    "ci95": [
+     2461457.4381128736,
+     2461457.4425148703
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-20T22:32:53Z",
+    "published_ephemeris_value": 2461457.7061,
+    "published_ci95": [
+     2461455.993090654,
+     2461459.4191093463
+    ],
+    "shift_min": -382.7320244908333
+   },
+   {
+    "label": "transit N=875",
+    "epoch": 875,
+    "value": 2461461.1549596707,
+    "sigma_days": 0.0011249256908381273,
+    "ci68": [
+     2461461.153834745,
+     2461461.1560845966
+    ],
+    "ci95": [
+     2461461.1527548567,
+     2461461.1571644847
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-24T15:41:59Z",
+    "published_ephemeris_value": 2461461.42105,
+    "published_ci95": [
+     2461459.706080691,
+     2461463.136019309
+    ],
+    "shift_min": -383.17007414996624
+   },
+   {
+    "label": "transit N=876",
+    "epoch": 876,
+    "value": 2461464.8696054695,
+    "sigma_days": 0.0011268726584872473,
+    "ci68": [
+     2461464.8684785967,
+     2461464.8707323424
+    ],
+    "ci95": [
+     2461464.86739684,
+     2461464.871814099
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-28T08:51:04Z",
+    "published_ephemeris_value": 2461465.1360000004,
+    "published_ci95": [
+     2461463.419070728,
+     2461466.8529292727
+    ],
+    "shift_min": -383.60812447965145
+   },
+   {
+    "label": "transit N=877",
+    "epoch": 877,
+    "value": 2461468.584251268,
+    "sigma_days": 0.0011288198856288184,
+    "ci68": [
+     2461468.583122448,
+     2461468.5853800876
+    ],
+    "ci95": [
+     2461468.5820388217,
+     2461468.586463714
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-04T02:00:10Z",
+    "published_ephemeris_value": 2461468.8509500003,
+    "published_ci95": [
+     2461467.132060765,
+     2461470.569839236
+    ],
+    "shift_min": -384.04617480933666
+   },
+   {
+    "label": "transit N=878",
+    "epoch": 878,
+    "value": 2461472.2988970666,
+    "sigma_days": 0.0011307673709222714,
+    "ci68": [
+     2461472.2977662995,
+     2461472.300027834
+    ],
+    "ci95": [
+     2461472.2966808034,
+     2461472.30111333
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-07T19:09:15Z",
+    "published_ephemeris_value": 2461472.5659000003,
+    "published_ci95": [
+     2461470.845050802,
+     2461474.2867491986
+    ],
+    "shift_min": -384.4842244684696
+   },
+   {
+    "label": "transit N=879",
+    "epoch": 879,
+    "value": 2461476.0135428654,
+    "sigma_days": 0.0011327151130360786,
+    "ci68": [
+     2461476.0124101504,
+     2461476.0146755804
+    ],
+    "ci95": [
+     2461476.0113227847,
+     2461476.015762946
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-11T12:18:20Z",
+    "published_ephemeris_value": 2461476.28085,
+    "published_ci95": [
+     2461474.5580408387,
+     2461478.0036591617
+    ],
+    "shift_min": -384.9222741276026
+   },
+   {
+    "label": "transit N=880",
+    "epoch": 880,
+    "value": 2461479.7281886637,
+    "sigma_days": 0.0011346631106476813,
+    "ci68": [
+     2461479.727054001,
+     2461479.7293233266
+    ],
+    "ci95": [
+     2461479.725964765,
+     2461479.7304125624
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-15T05:27:26Z",
+    "published_ephemeris_value": 2461479.9958,
+    "published_ci95": [
+     2461478.2710308754,
+     2461481.720569125
+    ],
+    "shift_min": -385.3603244572878
+   },
+   {
+    "label": "transit N=881",
+    "epoch": 881,
+    "value": 2461483.4428344625,
+    "sigma_days": 0.0011366113624434134,
+    "ci68": [
+     2461483.4416978513,
+     2461483.4439710737
+    ],
+    "ci95": [
+     2461483.440606745,
+     2461483.44506218
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-18T22:36:31Z",
+    "published_ephemeris_value": 2461483.71075,
+    "published_ci95": [
+     2461481.9840209126,
+     2461485.4374790876
+    ],
+    "shift_min": -385.79837411642075
+   },
+   {
+    "label": "transit N=882",
+    "epoch": 882,
+    "value": 2461487.1574802613,
+    "sigma_days": 0.00113855986711843,
+    "ci68": [
+     2461487.1563417013,
+     2461487.1586188213
+    ],
+    "ci95": [
+     2461487.155248725,
+     2461487.1597117977
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-22T15:45:37Z",
+    "published_ephemeris_value": 2461487.4257,
+    "published_ci95": [
+     2461485.6970109493,
+     2461489.154389051
+    ],
+    "shift_min": -386.2364237755537
+   },
+   {
+    "label": "transit N=883",
+    "epoch": 883,
+    "value": 2461490.87212606,
+    "sigma_days": 0.0011405086233766343,
+    "ci68": [
+     2461490.8709855513,
+     2461490.873266569
+    ],
+    "ci95": [
+     2461490.8698907043,
+     2461490.874361416
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-26T08:54:42Z",
+    "published_ephemeris_value": 2461491.1406500004,
+    "published_ci95": [
+     2461489.4100009864,
+     2461492.8712990144
+    ],
+    "shift_min": -386.6744741052389
+   },
+   {
+    "label": "transit N=884",
+    "epoch": 884,
+    "value": 2461494.5867718584,
+    "sigma_days": 0.0011424576299306065,
+    "ci68": [
+     2461494.585629401,
+     2461494.587914316
+    ],
+    "ci95": [
+     2461494.584532683,
+     2461494.589011034
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-30T02:03:47Z",
+    "published_ephemeris_value": 2461494.8556000004,
+    "published_ci95": [
+     2461493.1229910236,
+     2461496.588208977
+    ],
+    "shift_min": -387.1125244349241
+   },
+   {
+    "label": "transit N=885",
+    "epoch": 885,
+    "value": 2461498.301417657,
+    "sigma_days": 0.0011444068855015316,
+    "ci68": [
+     2461498.3002732503,
+     2461498.302562064
+    ],
+    "ci95": [
+     2461498.299174661,
+     2461498.3036606535
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-02T19:12:53Z",
+    "published_ephemeris_value": 2461498.5705500003,
+    "published_ci95": [
+     2461496.8359810603,
+     2461500.3051189403
+    ],
+    "shift_min": -387.5505740940571
+   },
+   {
+    "label": "transit N=886",
+    "epoch": 886,
+    "value": 2461502.016063456,
+    "sigma_days": 0.0011463563888191306,
+    "ci68": [
+     2461502.0149170994,
+     2461502.0172098125
+    ],
+    "ci95": [
+     2461502.013816639,
+     2461502.018310273
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-06T12:21:58Z",
+    "published_ephemeris_value": 2461502.2855,
+    "published_ci95": [
+     2461500.548971097,
+     2461504.0220289035
+    ],
+    "shift_min": -387.98862375319004
+   },
+   {
+    "label": "transit N=887",
+    "epoch": 887,
+    "value": 2461505.7307092543,
+    "sigma_days": 0.001148306138621589,
+    "ci68": [
+     2461505.729560948,
+     2461505.7318575606
+    ],
+    "ci95": [
+     2461505.7284586155,
+     2461505.732959893
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-10T05:31:04Z",
+    "published_ephemeris_value": 2461506.00045,
+    "published_ci95": [
+     2461504.261961134,
+     2461507.738938866
+    ],
+    "shift_min": -388.42667408287525
+   },
+   {
+    "label": "transit N=888",
+    "epoch": 888,
+    "value": 2461509.445355053,
+    "sigma_days": 0.0011502561336554891,
+    "ci68": [
+     2461509.444204797,
+     2461509.446505309
+    ],
+    "ci95": [
+     2461509.4431005926,
+     2461509.4476095135
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-13T22:40:09Z",
+    "published_ephemeris_value": 2461509.7154,
+    "published_ci95": [
+     2461507.974951171,
+     2461511.4558488294
+    ],
+    "shift_min": -388.8647237420082
+   },
+   {
+    "label": "transit N=889",
+    "epoch": 889,
+    "value": 2461513.160000852,
+    "sigma_days": 0.0011522063726757412,
+    "ci68": [
+     2461513.1588486456,
+     2461513.161153058
+    ],
+    "ci95": [
+     2461513.1577425688,
+     2461513.162259135
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-17T15:49:14Z",
+    "published_ephemeris_value": 2461513.43035,
+    "published_ci95": [
+     2461511.6879412076,
+     2461515.1727587925
+    ],
+    "shift_min": -389.30277340114117
+   },
+   {
+    "label": "transit N=890",
+    "epoch": 890,
+    "value": 2461516.87464665,
+    "sigma_days": 0.0011541568544455162,
+    "ci68": [
+     2461516.8734924933,
+     2461516.875800807
+    ],
+    "ci95": [
+     2461516.8723845445,
+     2461516.876908756
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-21T08:58:20Z",
+    "published_ephemeris_value": 2461517.1453,
+    "published_ci95": [
+     2461515.4009312443,
+     2461518.8896687557
+    ],
+    "shift_min": -389.7408237308264
+   },
+   {
+    "label": "transit N=891",
+    "epoch": 891,
+    "value": 2461520.589292449,
+    "sigma_days": 0.0011561075777361774,
+    "ci68": [
+     2461520.5881363414,
+     2461520.5904485565
+    ],
+    "ci95": [
+     2461520.5870265197,
+     2461520.591558378
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-25T02:07:25Z",
+    "published_ephemeris_value": 2461520.8602500004,
+    "published_ci95": [
+     2461519.113921282,
+     2461522.606578719
+    ],
+    "shift_min": -390.1788740605116
+   },
+   {
+    "label": "transit N=892",
+    "epoch": 892,
+    "value": 2461524.3039382477,
+    "sigma_days": 0.0011580585413272163,
+    "ci68": [
+     2461524.302780189,
+     2461524.3050963064
+    ],
+    "ci95": [
+     2461524.3016684945,
+     2461524.306208001
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-28T19:16:31Z",
+    "published_ephemeris_value": 2461524.5752000003,
+    "published_ci95": [
+     2461522.8269113186,
+     2461526.323488682
+    ],
+    "shift_min": -390.61692371964455
+   },
+   {
+    "label": "transit N=893",
+    "epoch": 893,
+    "value": 2461528.018584046,
+    "sigma_days": 0.001160009744006184,
+    "ci68": [
+     2461528.0174240363,
+     2461528.019744056
+    ],
+    "ci95": [
+     2461528.016310469,
+     2461528.0208576233
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-05-02T12:25:36Z",
+    "published_ephemeris_value": 2461528.2901500002,
+    "published_ci95": [
+     2461526.5399013553,
+     2461530.040398645
+    ],
+    "shift_min": -391.05497404932976
+   },
+   {
+    "label": "transit N=894",
+    "epoch": 894,
+    "value": 2461531.733229845,
+    "sigma_days": 0.001161961184568628,
+    "ci68": [
+     2461531.7320678835,
+     2461531.734391806
+    ],
+    "ci95": [
+     2461531.7309524426,
+     2461531.735507247
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-05-06T05:34:41Z",
+    "published_ephemeris_value": 2461532.0051,
+    "published_ci95": [
+     2461530.252891392,
+     2461533.7573086084
+    ],
+    "shift_min": -391.4930237084627
+   },
+   {
+    "label": "transit N=895",
+    "epoch": 895,
+    "value": 2461535.4478756436,
+    "sigma_days": 0.0011639128618180271,
+    "ci68": [
+     2461535.4467117307,
+     2461535.4490395566
+    ],
+    "ci95": [
+     2461535.4455944165,
+     2461535.4501568708
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-05-09T22:43:47Z",
+    "published_ephemeris_value": 2461535.72005,
+    "published_ci95": [
+     2461533.965881429,
+     2461537.474218571
+    ],
+    "shift_min": -391.9310733675957
+   },
+   {
+    "label": "transit N=896",
+    "epoch": 896,
+    "value": 2461539.1625214424,
+    "sigma_days": 0.001165864774565728,
+    "ci68": [
+     2461539.1613555774,
+     2461539.1636873074
+    ],
+    "ci95": [
+     2461539.1602363894,
+     2461539.1648064954
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-05-13T15:52:52Z",
+    "published_ephemeris_value": 2461539.435,
+    "published_ci95": [
+     2461537.678871466,
+     2461541.1911285343
+    ],
+    "shift_min": -392.36912302672863
+   }
+  ],
+  "ephemeris": {
+   "t0_bjd_tdb": 2458210.8398858584,
+   "t0_err_days": 0.0007479194249422178,
+   "period_days": 3.7146457986426946,
+   "period_err_days": 2.020792723705448e-06,
+   "cov_t0_p": -1.3831053605352853e-09,
+   "pivot_epoch": 339,
+   "pivot_bjd_tdb": 2459470.104811598,
+   "pivot_err_days": 0.00030154568278858464,
+   "error_scale": 1.860913777613195,
+   "chi2_red_new_times": 3.4630000877106117,
+   "n_new_times": 31,
+   "used_prior": true,
+   "prior_tension_sigma": 0.30394702544904006,
+   "prior_note": "published ephemeris agrees with the new times (0.3 sigma) and is a prior",
+   "law": "t(N) = t0 + N P, N counted from the published reference transit (N = 0)",
+   "published": {
+    "t0_bjd_tdb": 2458210.8398,
+    "t0_err_days": 0.00085,
+    "period_days": 3.71495,
+    "period_err_days": 0.001
+   },
+   "heldout": {
+    "passed": true,
+    "chi2_per_transit": 1.3157098607418538,
+    "rms_min": 4.257441320172155,
+    "max_abs_z": 1.8963212034987518,
+    "inside_95": 1.0,
+    "n_train": 26,
+    "n_test": 5,
+    "train_until_bjd": 2459960.4379267623,
+    "test_from_bjd": 2460313.324028714,
+    "forecast_gap_days": 352.88610195182264,
+    "forecast_sigma_min_median": 0.9535059155274233,
+    "rule": "chi2 per held-out transit <= 4.0",
+    "reason": "forecast 5 later transits 353 days ahead with chi-square 1.32 per transit"
+   },
+   "tic_id": "TIC 103751498",
+   "duration_days": 0.16779999999999998,
+   "method": "weighted least squares on TESS mid-times (errors scaled by their own scatter, never down) plus the published t0 and P as independent Gaussian prior rows when they agree within 3 sigma; intervals from the fit covariance (68%: 1 sigma, 95%: 1.96 sigma)"
+  }
+ },
+ "scoring": {
+  "rule": "a hit when an independently measured mid-time (new TESS sector or ExoClock/ETD amateur timing) lies inside the 95% window; reported per transit and as the share of hits. The window is widened in quadrature by the measurement's own 95% error (fixed now, before any measurement: an amateur timing good to 1 to 2 minutes cannot test a window of seconds); how many fall inside the window as registered is reported too. Transits nobody measured count as neither.",
+  "score_after_utc": "2026-11-16T10:40:24Z",
+  "sources_to_check": [
+   "TESS SPOC 2-min light curves of TIC 103751498 observed after registration (MAST, lightkurve; scripts/score_predictions.py)",
+   "ExoClock observations of Qatar-8 b: https://www.exoclock.space/database/planets",
+   "Exoplanet Transit Database (VarAstro) transits of Qatar-8: https://var.astro.cz/ETD"
+  ]
+ },
+ "status": "open"
+}

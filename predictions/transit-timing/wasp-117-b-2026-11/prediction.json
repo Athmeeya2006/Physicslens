@@ -1,0 +1,531 @@
+{
+ "id": "wasp-117-b-2026-11",
+ "case": "transit-timing",
+ "created_utc": "2026-11-02T10:59:29Z",
+ "code_version": {
+  "commit": "fad8a0c14cb04c914d5e758279d224a94ea7846f",
+  "uncommitted_changes": true
+ },
+ "title": "WASP-117 b: transit mid-times from November 2026 to May 2027",
+ "question": "When will WASP-117 b transit between 2026-11-15 and 2027-05-15 (BJD_TDB)?",
+ "inputs": [
+  {
+   "name": "NASA Exoplanet Archive pscomppars row for WASP-117 b",
+   "source": "NASA Exoplanet Archive",
+   "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name%2Chostname%2Ctic_id%2Cpl_trandep%2Cpl_ratror%2Cpl_tranmid%2Cpl_tranmiderr1%2Cpl_tranmiderr2%2Cpl_orbper%2Cpl_orbpererr1%2Cpl_orbpererr2%2Cpl_trandur%2Csy_vmag%2Csy_tmag%2Cpl_tranmid_reflink%2Cpl_orbper_reflink%2Cra%2Cdec+from+pscomppars+where+tran_flag%3D1+and+pl_name%3D%27WASP-117+b%27&format=csv",
+   "retrieved": "2026-11-02",
+   "values": {
+    "tic_id": "TIC 166739520",
+    "pl_tranmid": "2458728.33417500",
+    "pl_tranmiderr1": "0.00006800",
+    "pl_tranmiderr2": "-0.00006800",
+    "pl_orbper": "10.02165000000",
+    "pl_orbpererr1": "0.00055000000",
+    "pl_orbpererr2": "-0.00055000000",
+    "pl_trandur": "5.9400000",
+    "pl_trandep": "0.80000000",
+    "sy_vmag": "10.1390000"
+   },
+   "t0_reference": {
+    "name": "Kokori et al. 2023",
+    "url": "https://ui.adsabs.harvard.edu/abs/2023ApJS..265....4K/abstract"
+   },
+   "period_reference": {
+    "name": "Stassun et al. 2017",
+    "url": "https://ui.adsabs.harvard.edu/abs/2017AJ....153..136S/abstract"
+   }
+  },
+  {
+   "name": "TESS sector 29, TIC 166739520, SPOC 2-min light curve",
+   "source": "MAST (TESS SPOC)",
+   "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:TESS/product/tess2020238165205-s0029-0000000166739520-0193-s_lc.fits",
+   "retrieved": "2026-11-02",
+   "mast_obs_id": "tess2020238165205-s0029-0000000166739520-0193-s",
+   "mast_obsid": "27905775",
+   "product": "tess2020238165205-s0029-0000000166739520-0193-s_lc.fits",
+   "transits_used": 3
+  },
+  {
+   "name": "TESS sector 96, TIC 166739520, SPOC 2-min light curve",
+   "source": "MAST (TESS SPOC)",
+   "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:TESS/product/tess2025232030459-s0096-0000000166739520-0293-s_lc.fits",
+   "retrieved": "2026-11-02",
+   "mast_obs_id": "tess2025232030459-s0096-0000000166739520-0293-s",
+   "mast_obsid": "354010722",
+   "product": "tess2025232030459-s0096-0000000166739520-0293-s_lc.fits",
+   "transits_used": 3
+  },
+  {
+   "name": "TESS sector 97, TIC 166739520, SPOC 2-min light curve",
+   "source": "MAST (TESS SPOC)",
+   "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:TESS/product/tess2025258001959-s0097-0000000166739520-0294-s_lc.fits",
+   "retrieved": "2026-11-02",
+   "mast_obs_id": "tess2025258001959-s0097-0000000166739520-0294-s",
+   "mast_obsid": "365501139",
+   "product": "tess2025258001959-s0097-0000000166739520-0294-s_lc.fits",
+   "transits_used": 4
+  },
+  {
+   "name": "TESS sector 104, TIC 166739520, SPOC 2-min light curve",
+   "source": "MAST (TESS SPOC)",
+   "url": "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:TESS/product/tess2026137223500-s0104-0000000166739520-0306-s_lc.fits",
+   "retrieved": "2026-11-02",
+   "mast_obs_id": "tess2026137223500-s0104-0000000166739520-0306-s",
+   "mast_obsid": "426768706",
+   "product": "tess2026137223500-s0104-0000000166739520-0306-s_lc.fits",
+   "transits_used": 3
+  }
+ ],
+ "prediction": {
+  "kind": "transit_times",
+  "items": [
+   {
+    "label": "transit N=263",
+    "epoch": 263,
+    "value": 2461363.7502432973,
+    "sigma_days": 0.0004727793077204521,
+    "ci68": [
+     2461363.749770518,
+     2461363.7507160767
+    ],
+    "ci95": [
+     2461363.7493166667,
+     2461363.751169928
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-11-19T05:59:11Z",
+    "published_ephemeris_value": 2461364.028125,
+    "published_ci95": [
+     2461363.7446161765,
+     2461364.311633824
+    ],
+    "shift_min": -400.1496521383524
+   },
+   {
+    "label": "transit N=264",
+    "epoch": 264,
+    "value": 2461373.7708367105,
+    "sigma_days": 0.00047458492781362157,
+    "ci68": [
+     2461373.7703621257,
+     2461373.771311295
+    ],
+    "ci95": [
+     2461373.769906541,
+     2461373.77176688
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-11-29T06:28:51Z",
+    "published_ephemeris_value": 2461374.049775,
+    "published_ci95": [
+     2461373.765188196,
+     2461374.334361804
+    ],
+    "shift_min": -401.67113721370697
+   },
+   {
+    "label": "transit N=265",
+    "epoch": 265,
+    "value": 2461383.7914301236,
+    "sigma_days": 0.0004763906866662949,
+    "ci68": [
+     2461383.790953733,
+     2461383.791906514
+    ],
+    "ci95": [
+     2461383.790496415,
+     2461383.7923638322
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-09T06:58:30Z",
+    "published_ephemeris_value": 2461384.0714249997,
+    "published_ci95": [
+     2461383.7857602155,
+     2461384.357089784
+    ],
+    "shift_min": -403.1926216185093
+   },
+   {
+    "label": "transit N=266",
+    "epoch": 266,
+    "value": 2461393.8120235363,
+    "sigma_days": 0.0004781965827065274,
+    "ci68": [
+     2461393.81154534,
+     2461393.8125017327
+    ],
+    "ci95": [
+     2461393.811086288,
+     2461393.8129607844
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-19T07:28:09Z",
+    "published_ephemeris_value": 2461394.0930749997,
+    "published_ci95": [
+     2461393.8063322357,
+     2461394.379817764
+    ],
+    "shift_min": -404.7141073644161
+   },
+   {
+    "label": "transit N=267",
+    "epoch": 267,
+    "value": 2461403.8326169495,
+    "sigma_days": 0.00048000261438591204,
+    "ci68": [
+     2461403.8321369467,
+     2461403.833096952
+    ],
+    "ci95": [
+     2461403.8316761614,
+     2461403.8335577375
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2026-12-29T07:57:48Z",
+    "published_ephemeris_value": 2461404.1147249998,
+    "published_ci95": [
+     2461403.8269042554,
+     2461404.402545744
+    ],
+    "shift_min": -406.2355924397707
+   },
+   {
+    "label": "transit N=268",
+    "epoch": 268,
+    "value": 2461413.8532103626,
+    "sigma_days": 0.0004818087801791428,
+    "ci68": [
+     2461413.852728554,
+     2461413.853692171
+    ],
+    "ci95": [
+     2461413.8522660346,
+     2461413.8541546906
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-08T08:27:28Z",
+    "published_ephemeris_value": 2461414.136375,
+    "published_ci95": [
+     2461413.8474762756,
+     2461414.425273724
+    ],
+    "shift_min": -407.7570775151253
+   },
+   {
+    "label": "transit N=269",
+    "epoch": 269,
+    "value": 2461423.8738037758,
+    "sigma_days": 0.00048361507858358767,
+    "ci68": [
+     2461423.873320161,
+     2461423.8742873906
+    ],
+    "ci95": [
+     2461423.872855908,
+     2461423.8747516437
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-18T08:57:07Z",
+    "published_ephemeris_value": 2461424.158025,
+    "published_ci95": [
+     2461423.8680482954,
+     2461424.448001704
+    ],
+    "shift_min": -409.27856259047985
+   },
+   {
+    "label": "transit N=270",
+    "epoch": 270,
+    "value": 2461433.8943971884,
+    "sigma_days": 0.0004854215081188708,
+    "ci68": [
+     2461433.893911767,
+     2461433.89488261
+    ],
+    "ci95": [
+     2461433.8934457796,
+     2461433.8953485973
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-01-28T09:26:46Z",
+    "published_ephemeris_value": 2461434.179675,
+    "published_ci95": [
+     2461433.888620315,
+     2461434.4707296845
+    ],
+    "shift_min": -410.8000483363867
+   },
+   {
+    "label": "transit N=271",
+    "epoch": 271,
+    "value": 2461443.9149906016,
+    "sigma_days": 0.00048722806732646404,
+    "ci68": [
+     2461443.9145033737,
+     2461443.9154778295
+    ],
+    "ci95": [
+     2461443.9140356523,
+     2461443.915945551
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-07T09:56:26Z",
+    "published_ephemeris_value": 2461444.201325,
+    "published_ci95": [
+     2461443.9091923353,
+     2461444.4934576643
+    ],
+    "shift_min": -412.32153341174126
+   },
+   {
+    "label": "transit N=272",
+    "epoch": 272,
+    "value": 2461453.9355840147,
+    "sigma_days": 0.0004890347547692873,
+    "ci68": [
+     2461453.93509498,
+     2461453.9360730494
+    ],
+    "ci95": [
+     2461453.934625524,
+     2461453.9365425054
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-17T10:26:05Z",
+    "published_ephemeris_value": 2461454.222975,
+    "published_ci95": [
+     2461453.929764355,
+     2461454.5161856445
+    ],
+    "shift_min": -413.84301848709583
+   },
+   {
+    "label": "transit N=273",
+    "epoch": 273,
+    "value": 2461463.9561774274,
+    "sigma_days": 0.0004908415690313175,
+    "ci68": [
+     2461463.955686586,
+     2461463.956668269
+    ],
+    "ci95": [
+     2461463.9552153954,
+     2461463.9571394594
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-02-27T10:55:44Z",
+    "published_ephemeris_value": 2461464.244625,
+    "published_ci95": [
+     2461463.950336375,
+     2461464.538913625
+    ],
+    "shift_min": -415.36450423300266
+   },
+   {
+    "label": "transit N=274",
+    "epoch": 274,
+    "value": 2461473.9767708406,
+    "sigma_days": 0.0004926485087172064,
+    "ci68": [
+     2461473.976278192,
+     2461473.9772634893
+    ],
+    "ci95": [
+     2461473.975805267,
+     2461473.977736414
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-09T11:25:23Z",
+    "published_ephemeris_value": 2461474.266275,
+    "published_ci95": [
+     2461473.970908395,
+     2461474.5616416046
+    ],
+    "shift_min": -416.88598930835724
+   },
+   {
+    "label": "transit N=275",
+    "epoch": 275,
+    "value": 2461483.9973642537,
+    "sigma_days": 0.0004944555724519063,
+    "ci68": [
+     2461483.9968697983,
+     2461483.997858709
+    ],
+    "ci95": [
+     2461483.9963951386,
+     2461483.998333369
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-19T11:55:03Z",
+    "published_ephemeris_value": 2461484.287925,
+    "published_ci95": [
+     2461483.9914804148,
+     2461484.584369585
+    ],
+    "shift_min": -418.4074743837118
+   },
+   {
+    "label": "transit N=276",
+    "epoch": 276,
+    "value": 2461494.0179576664,
+    "sigma_days": 0.0004962627588803037,
+    "ci68": [
+     2461494.0174614037,
+     2461494.018453929
+    ],
+    "ci95": [
+     2461494.0169850094,
+     2461494.0189303234
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-03-29T12:24:42Z",
+    "published_ephemeris_value": 2461494.309575,
+    "published_ci95": [
+     2461494.012052435,
+     2461494.6070975647
+    ],
+    "shift_min": -419.92896012961864
+   },
+   {
+    "label": "transit N=277",
+    "epoch": 277,
+    "value": 2461504.0385510796,
+    "sigma_days": 0.0004980700666668614,
+    "ci68": [
+     2461504.0380530097,
+     2461504.0390491495
+    ],
+    "ci95": [
+     2461504.0375748803,
+     2461504.039527279
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-08T12:54:21Z",
+    "published_ephemeris_value": 2461504.331225,
+    "published_ci95": [
+     2461504.0326244547,
+     2461504.629825545
+    ],
+    "shift_min": -421.4504452049732
+   },
+   {
+    "label": "transit N=278",
+    "epoch": 278,
+    "value": 2461514.0591444927,
+    "sigma_days": 0.0004998774944952674,
+    "ci68": [
+     2461514.058644615,
+     2461514.0596443703
+    ],
+    "ci95": [
+     2461514.0581647507,
+     2461514.0601242348
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-18T13:24:00Z",
+    "published_ephemeris_value": 2461514.352875,
+    "published_ci95": [
+     2461514.0531964744,
+     2461514.6525535253
+    ],
+    "shift_min": -422.9719302803278
+   },
+   {
+    "label": "transit N=279",
+    "epoch": 279,
+    "value": 2461524.079737906,
+    "sigma_days": 0.0005016850410680924,
+    "ci68": [
+     2461524.079236221,
+     2461524.0802395907
+    ],
+    "ci95": [
+     2461524.078754621,
+     2461524.0807211907
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-04-28T13:53:40Z",
+    "published_ephemeris_value": 2461524.374525,
+    "published_ci95": [
+     2461524.0737684947,
+     2461524.675281505
+    ],
+    "shift_min": -424.4934153556824
+   },
+   {
+    "label": "transit N=280",
+    "epoch": 280,
+    "value": 2461534.1003313186,
+    "sigma_days": 0.0005034927051064535,
+    "ci68": [
+     2461534.099827826,
+     2461534.100834811
+    ],
+    "ci95": [
+     2461534.099344491,
+     2461534.101318146
+    ],
+    "unit": "BJD_TDB",
+    "utc_approx": "2027-05-08T14:23:19Z",
+    "published_ephemeris_value": 2461534.396175,
+    "published_ci95": [
+     2461534.0943405144,
+     2461534.6980094854
+    ],
+    "shift_min": -426.0149011015892
+   }
+  ],
+  "ephemeris": {
+   "t0_bjd_tdb": 2458728.334175675,
+   "t0_err_days": 6.777992879544998e-05,
+   "period_days": 10.020593413012497,
+   "period_err_days": 1.8238332288254383e-06,
+   "cov_t0_p": -2.1207925255391912e-11,
+   "pivot_epoch": 6,
+   "pivot_bjd_tdb": 2458788.457736153,
+   "pivot_err_days": 6.677853607056693e-05,
+   "error_scale": 1.8236128327364867,
+   "chi2_red_new_times": 3.3255637637211932,
+   "n_new_times": 13,
+   "used_prior": true,
+   "prior_tension_sigma": 1.9208618513895828,
+   "prior_note": "published ephemeris agrees with the new times (1.9 sigma) and is a prior",
+   "law": "t(N) = t0 + N P, N counted from the published reference transit (N = 0)",
+   "published": {
+    "t0_bjd_tdb": 2458728.334175,
+    "t0_err_days": 6.8e-05,
+    "period_days": 10.02165,
+    "period_err_days": 0.00055
+   },
+   "heldout": {
+    "passed": true,
+    "chi2_per_transit": 2.561796562738462,
+    "rms_min": 3.0193237572552865,
+    "max_abs_z": 2.3434497662432743,
+    "inside_95": 0.6666666666666666,
+    "n_train": 10,
+    "n_test": 3,
+    "train_until_bjd": 2460982.9676383873,
+    "test_from_bjd": 2461183.381017863,
+    "forecast_gap_days": 200.41337947547436,
+    "forecast_sigma_min_median": 0.6151972823194906,
+    "rule": "chi2 per held-out transit <= 4.0",
+    "reason": "forecast 3 later transits 200 days ahead with chi-square 2.56 per transit"
+   },
+   "tic_id": "TIC 166739520",
+   "duration_days": 0.24750000000000003,
+   "method": "weighted least squares on TESS mid-times (errors scaled by their own scatter, never down) plus the published t0 and P as independent Gaussian prior rows when they agree within 3 sigma; intervals from the fit covariance (68%: 1 sigma, 95%: 1.96 sigma)"
+  }
+ },
+ "scoring": {
+  "rule": "a hit when an independently measured mid-time (new TESS sector or ExoClock/ETD amateur timing) lies inside the 95% window; reported per transit and as the share of hits. The window is widened in quadrature by the measurement's own 95% error (fixed now, before any measurement: an amateur timing good to 1 to 2 minutes cannot test a window of seconds); how many fall inside the window as registered is reported too. Transits nobody measured count as neither.",
+  "score_after_utc": "2026-11-19T08:58:43Z",
+  "sources_to_check": [
+   "TESS SPOC 2-min light curves of TIC 166739520 observed after registration (MAST, lightkurve; scripts/score_predictions.py)",
+   "ExoClock observations of WASP-117 b: https://www.exoclock.space/database/planets",
+   "Exoplanet Transit Database (VarAstro) transits of WASP-117: https://var.astro.cz/ETD"
+  ]
+ },
+ "status": "open"
+}
