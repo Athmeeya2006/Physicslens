@@ -88,10 +88,32 @@ def distinct(fits: list[FitResult]) -> list[FitResult]:
     return kept
 
 
+AT_LIMIT = 1e-3  # a fitted value within this share of its range from a limit is "at" the limit
+
+
+def at_limit(f: FitResult) -> str | None:
+    """Which fitted parameter sits at a limit of its allowed range, if any. Such a law only fits by leaning on the
+    limit (g pinned at its lowest allowed value while drag takes its highest), so its numbers mean nothing. A limit
+    of zero is exempt: "no damping" or "no drag" is a real answer, not a pinned one."""
+    spec = _spec(f.model_id)
+    if spec is None:
+        return None
+    for p in spec.params:
+        v = f.params.get(p.name)
+        if v is None:
+            continue
+        span = p.upper - p.lower
+        if p.lower != 0 and abs(v - p.lower) <= AT_LIMIT * span:
+            return f"{p.name} = {v:.4g} sits at its lowest allowed value"
+        if p.upper != 0 and abs(v - p.upper) <= AT_LIMIT * span:
+            return f"{p.name} = {v:.4g} sits at its highest allowed value"
+    return None
+
+
 def decide(fits: list[FitResult]) -> Verdict:
     fits = distinct(fits)
     ranked = tuple(sorted((f for f in fits if f.success), key=lambda f: f.bic))
-    passing = [f for f in ranked if forecasts_well(f)]
+    passing = [f for f in ranked if forecasts_well(f) and at_limit(f) is None]
     if not passing:
         best = ranked[0] if ranked else None
         why = f"best forecast error {best.heldout_nrmse:.0%} ({title(best)})" if best else "every simulation failed"
@@ -198,6 +220,8 @@ def judge_candidates(v: Verdict) -> dict[str, tuple[str, str]]:
             out[f.model_id] = ("approximation", f"{what}: indistinguishable at this amplitude, so the exact law is kept")
         elif not _within(f.heldout_nrmse, f.heldout_rmse, f.noise_sigma):
             out[f.model_id] = ("rejected", f"forecast error {f.heldout_nrmse:.0%} on held-out data")
+        elif (why := at_limit(f)) is not None:
+            out[f.model_id] = ("rejected", f"{why}: the law only fits by leaning on a limit, so its numbers mean nothing")
         elif not forecasts_well(f):
             med = rolling_median(f)
             why = (f"forecasts the last quarter, but not from later starting points (median error "

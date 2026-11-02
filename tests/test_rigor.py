@@ -100,3 +100,18 @@ def test_tied_laws_report_the_parameter_they_agree_on():
     o = build_outcome(result, truth={"name": "g", "value": 9.81, "source": "test"})
     assert "measured either way" in o["headline"] and o["checked_against"]["within_interval"]
     assert o["status"] == "not yet validated" and o["confidence"].startswith("g between")
+
+
+def test_a_law_pinned_at_its_limits_is_not_accepted():
+    # g at its lowest allowed value while drag takes its highest: it "forecasts", but only by leaning on the limits.
+    pinned = _fake("linear_drag", 2, -900.0, 0.12, 0.0)
+    pinned.params.update(g=MODELS["linear_drag"].params[0].lower, k=MODELS["linear_drag"].params[1].upper)
+    honest = _fake("free_fall", 1, -100.0, 0.13, 0.1)
+    honest.params.update(g=9.8)
+    v = decide([pinned, honest])
+    assert v.status == "accepted" and v.winner.model_id == "free_fall"
+    assert "leaning on a limit" in judge_candidates(v)["linear_drag"][1]
+    # A parameter at zero is a real answer ("no drag"), not a pinned one.
+    nodrag = _fake("linear_drag", 2, -900.0, 0.12, 0.0)
+    nodrag.params.update(g=9.8, k=0.0)
+    assert decide([nodrag, honest]).winner.model_id == "linear_drag"

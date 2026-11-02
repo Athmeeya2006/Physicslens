@@ -2,6 +2,7 @@
 
   python scripts/live_browser_check.py make           # synthetic camera videos (y4m) under var/live_check/
   python3.12 scripts/live_browser_check.py run URL      # URL: the site (e.g. http://127.0.0.1:8777, its live.html)
+  DEMO_ACCESS_CODE=... python3.12 scripts/live_browser_check.py run https://physicslens.vercel.app   # production (paid: SAM)
 
 Each video shows one bright ball on a textured background moving as one family does (a swing, a spring, a throw, a
 slide). The check starts live analysis, taps the ball where it is on screen, picks the motion type, and waits for a
@@ -82,9 +83,17 @@ def run(base: str) -> None:
             page = browser.new_page(viewport={"width": 1280, "height": 900})
             errors: list[str] = []
             page.on("pageerror", lambda e, errors=errors: errors.append(str(e)))
-            page.goto(f"{base}/live.html", wait_until="networkidle")
+            import os
+            from urllib.parse import quote
+            local = base.startswith(("http://127.0.0.1", "http://localhost"))
+            url = f"{base}/live.html" if local else f"{base}/live"
+            code = os.environ.get("DEMO_ACCESS_CODE")  # the judges' code, for a production check (never printed)
+            if code and not local:
+                url += f"?code={quote(code)}"
+            page.goto(url, wait_until="load")
+            page.wait_for_timeout(2000)
             page.get_by_role("button", name="Start live analysis").wait_for(state="visible")
-            for _ in range(60):
+            for _ in range(120):
                 if page.get_by_role("button", name="Start live analysis").is_enabled():
                     break
                 time.sleep(0.5)

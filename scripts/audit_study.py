@@ -365,6 +365,26 @@ def _auc(pos: list[float], neg: list[float]) -> float | None:
     return wins / (len(pos) * len(neg))
 
 
+def pinned_at_limit(result: dict[str, Any]) -> bool:
+    """The accepted law's fitted value sits at a (non-zero) limit of its range (physics/verify.at_limit)."""
+    from physicslens.physics.custom import spec_for
+    from physicslens.physics.verify import AT_LIMIT
+    fs = result.get("fit_state")
+    if not fs:
+        return False
+    try:
+        spec = spec_for(fs)
+    except (KeyError, ValueError):
+        return False
+    for p in spec.params:
+        v = fs["params"].get(p.name)
+        span = p.upper - p.lower
+        if v is not None and ((p.lower != 0 and abs(v - p.lower) <= AT_LIMIT * span)
+                              or (p.upper != 0 and abs(v - p.upper) <= AT_LIMIT * span)):
+            return True
+    return False
+
+
 def final_rows() -> list[dict[str, Any]]:
     """Every clip's row under the current audit rules (replayed from its saved input, free), with the best law's
     held-out error and the model-alone verdict."""
@@ -384,6 +404,9 @@ def final_rows() -> list[dict[str, Any]]:
             res = json.loads(res_path.read_text())
             best = (res.get("ranking") or [{}])[0]
             row["heldout_nrmse"] = best.get("heldout_nrmse")
+            if row.get("status") == "accepted" and pinned_at_limit(res):
+                # Today's rule: a law whose fitted value sits at a limit of its range is not a verified law.
+                row["status"] = "no_fit"
         row["model_alone"] = (base.get(r["id"]) or {}).get("verdict")
         out.append(row)
     return out

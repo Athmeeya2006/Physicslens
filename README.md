@@ -45,7 +45,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | 2 | [Weighing Jupiter](https://physicslens.vercel.app/?run=gallery-jupiter) | Jupiter's GM from Io's orbit, within 0.018% of JPL |
 | 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | damping fits better but forecasts worse, so it is not confirmed; both laws give the same g, and the agent designs the swing that would decide |
 | 4 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | free fall rejected; a drag law accepted on held-out motion |
-| 4b | [Physics audit at scale](https://physicslens.vercel.app/audit) | 149 clips: real motion has a forecasting law 47% of the time, AI-generated 17%; no real clip falsely accused |
+| 4b | [Physics audit at scale](https://physicslens.vercel.app/audit) | 149 clips: real motion has a forecasting law 44% of the time, AI-generated 14%; no real clip falsely accused |
 | 4c | [Real-world cases](https://physicslens.vercel.app/cases) | ten cases, each ending in something to act on (a search map, a transit calendar, a return date, a report), with a status computed from its result and what it cannot do |
 | 5 | [Open dataset](https://physicslens.vercel.app/dataset) | every verified parameter, with its uncertainty, clip and licence |
 | 5b | [Solar System Lab](https://physicslens.vercel.app/sky) | a 3D solar system from JPL data: make Jupiter ten times heavier, switch Neptune off, turn relativity on, and watch the target's orbit and its perturbation equations change; with the analysis server online, "Find the law" runs discovery on the simulated track |
@@ -699,12 +699,12 @@ Each violation also needs at least 5 standard errors (8 for the frame-to-frame c
 
 ### Measured at scale: AI-generated video against real footage
 
-`scripts/audit_study.py` ran the same pipeline, with the same settings, on 149 public clips: 84 AI-generated videos from the VideoPhy-2 benchmark (CogVideoX, Cosmos, HunyuanVideo, Sora, VideoCrafter, Wan and Ray2; MIT licence) and 65 clips of real footage of the same kinds of motion from Physics-IQ (CC BY 4.0) as the control. Every verdict is replayed under the current audit rules from each clip's saved measurements (free), and the same keyframes were also shown to Muse Spark Open alone with the question "does this video violate physics?". [See the charts](https://physicslens.vercel.app/audit); every clip, its source, licence and verdict are in [`data/audit_study`](data/audit_study).
+`scripts/audit_study.py` ran the same pipeline, with the same settings, on 149 public clips: 84 AI-generated videos from the VideoPhy-2 benchmark (CogVideoX, Cosmos, HunyuanVideo, Sora, VideoCrafter, Wan and Ray2; MIT licence) and 65 clips of real footage of the same kinds of motion from Physics-IQ (CC BY 4.0) as the control. Every verdict is replayed under the current audit and verification rules from each clip's saved measurements (free; a law whose fitted value sits at a limit of its allowed range no longer counts), and the same keyframes were also shown to Muse Spark Open alone with the question "does this video violate physics?". [See the charts](https://physicslens.vercel.app/audit); every clip, its source, licence and verdict are in [`data/audit_study`](data/audit_study).
 
 | | Real footage | AI-generated |
 |---|---|---|
 | Object tracked by SAM 3.1 | 55 of 62 (89%) | 63 of 76 (83%) |
-| A law that forecasts the held-out motion, among tracked clips | **26 of 55 (47%)** | **11 of 63 (17%)** |
+| A law that forecasts the held-out motion, among tracked clips | **24 of 55 (44%)** | **9 of 63 (14%)** |
 | Median forecast error of the best law (share of the motion's spread) | **0.16** | **0.73** |
 | Judged by the audit (not "can't judge") | 13 | 14 |
 | Accused of breaking physics | **0 of 13** (at most 23% at 95% confidence) | 2 of 14 |
@@ -712,7 +712,7 @@ Each violation also needs at least 5 standard errors (8 for the frame-to-frame c
 
 What it shows, stated plainly:
 
-- **Real motion has laws; generated motion mostly does not.** A law fitted to the first part of a real clip forecasts the rest almost three times as often, and with about a fifth of the error. Picking one real and one generated clip at random, the generated one is the harder to forecast 69% of the time (AUC 0.69; 0.5 would mean no difference).
+- **Real motion has laws; generated motion mostly does not.** A law fitted to the first part of a real clip forecasts the rest about three times as often, and with about a fifth of the error. Picking one real and one generated clip at random, the generated one is the harder to forecast 69% of the time (AUC 0.69; 0.5 would mean no difference).
 - **No false accusations on real footage.** The audit flagged none of the 13 real clips it could judge. Its two catches are both CogVideoX: an axe whose mask shrinks 10 times in one moment, and a hammer that jumps its own length in one frame.
 - **The trade-off against the model alone.** Asked directly, the model calls far more generated clips fake, but it also accused 4 real clips, and it gives no measurement to check. The audit accuses only what it can measure and says "can't judge" otherwise, which is most clips: many are short, leave the frame, or show contact-rich motion with no single law.
 - **Limits.** The clips ran on the lighter profile (one hypothesis sample, no referee) to fit the study's budget, so the law rates are a floor; Ray2's benchmark links no longer serve video; the samples are small and the intervals wide.
@@ -1073,7 +1073,7 @@ CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (773 tests, counted by `pytest --collect-only -q`; 62 marked slow in `tests/conftest.py`) covers:
+The suite (775 tests, counted by `pytest --collect-only -q`; 62 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.
