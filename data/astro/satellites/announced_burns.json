@@ -1,0 +1,249 @@
+{
+ "about": "ISS burns with dated public NASA records, collected 2026-11-02 to score the manoeuvre detector after its rule was fixed. 'measured': NASA Glenn PIMS ISS Handbook reports (acceleration measured on board); 'announced': NASA blog posts; 'aborted': a burn that did not happen, kept so it is not mistaken for a miss. Not a complete list of ISS burns: PIMS documents some burns, not all. Entries with looked_up_after_detection=true were searched for only because the detector had flagged their gap: they turn would-be false alarms into hits, and are reported separately for that reason.",
+ "retrieved": "2026-11-02",
+ "burns": [
+  {
+   "event": "Progress 79P reboost",
+   "tig_utc": "2022-01-12T18:24:00",
+   "dv_ms": 0.73,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_79P_Reboost_2022-01-12.pdf",
+   "note": "delta-v from the report's SAMS interval average",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 79 reboost",
+   "tig_utc": "2022-04-23T13:25:00",
+   "dv_ms": null,
+   "kind": "announced",
+   "source": "https://www.nasa.gov/blogs/spacestation/2022/04/23/axiom-mission-1-undock-postponed-to-sunday-space-station-reboosts",
+   "note": "post says 9:25 a.m., read as Eastern Daylight Time (UTC-4); 10 min 23 s burn; no delta-v given",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Cygnus NG-17 reboost attempt (aborted after 5 s)",
+   "tig_utc": "2022-06-20T15:20:00",
+   "dv_ms": null,
+   "kind": "aborted",
+   "source": "https://www.nasa.gov/blogs/spacestation/2022/06/20/cygnus-reboost-aborted-next-steps-being-planned/",
+   "note": "10:20 a.m. Central (UTC-5); 5 s of a planned 5 min 1 s burn, so about 1/60 of the planned 0.3 m/s: below any detector, not scored as a burn",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "NG-17 Cygnus reboost",
+   "tig_utc": "2022-06-25T17:27:00",
+   "dv_ms": 0.33,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_NG-17_Cygnus_Reboost_2022-06-25.pdf",
+   "note": "magnitude of the report's SAMS estimate (its sign is the sensor axis)",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 81P reboost",
+   "tig_utc": "2022-10-01T11:05:17",
+   "dv_ms": 1.35,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_81P_Reboost_2022-10-01.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 81P reboost",
+   "tig_utc": "2022-10-17T12:00:00",
+   "dv_ms": null,
+   "kind": "announced",
+   "source": "https://www.nasa.gov/blogs/stationreport/2022/10/page/2",
+   "note": "ISS Daily Summary Report for 2022-10-17: 'Today, the ISS successfully performed a reboost using the Progress 81P thrusters.' Date only (time set to noon, so up to 12 h off). NASA's header table had listed it for 2022-10-20. Looked up after the detector flagged this gap.",
+   "looked_up_after_detection": true
+  },
+  {
+   "event": "Pre-Determined Debris Avoidance Maneuver (Progress 81)",
+   "tig_utc": "2022-12-21T13:42:00",
+   "dv_ms": 1.0,
+   "kind": "announced",
+   "source": "https://www.nasa.gov/blogs/stationreport/2022/12/21/iss-daily-summary-report-12-21-2022/",
+   "note": "'Thruster firing occurred at 7:42 AM CST' (UTC-6), 10 min 21 s, delta-v 1.0 m/s. NASA's header table had listed a reboost for 2022-12-24 instead. Looked up after the detector flagged this gap.",
+   "looked_up_after_detection": true
+  },
+  {
+   "event": "Progress 81P reboost",
+   "tig_utc": "2023-01-18T14:57:18",
+   "dv_ms": 0.95,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_81P_Reboost_2023-01-18.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Debris avoidance manoeuvre (Progress MS-22 / 83P)",
+   "tig_utc": "2023-03-06T12:42:00",
+   "dv_ms": 0.7,
+   "kind": "announced",
+   "source": "https://www.interfax.com/newsroom/top-stories/88483/",
+   "note": "Roscosmos via Interfax: engines on at '3:42 p.m. Moscow time' (UTC+3), 375.8 s, 0.7 m/s. NASA's blog also reported a little over six minutes of Progress 83 thrusters on March 6 (as quoted by news outlets; the post itself was not retrieved). Looked up after the detector flagged this gap.",
+   "looked_up_after_detection": true
+  },
+  {
+   "event": "Debris avoidance manoeuvre (Progress MS-22 / 83P)",
+   "tig_utc": "2023-03-14T11:54:00",
+   "dv_ms": 0.3,
+   "kind": "announced",
+   "source": "https://interfax.com/newsroom/top-stories/88682/",
+   "note": "Roscosmos via Interfax: engines on at '2:54 p.m. Moscow time' (UTC+3), 155 s, 0.3 m/s, mean altitude up 500 m (preliminary). Looked up after the detector flagged this gap.",
+   "looked_up_after_detection": true
+  },
+  {
+   "event": "Progress 83P reboost",
+   "tig_utc": "2023-07-04T21:17:18",
+   "dv_ms": 1.85,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_83P_Reboost_2023-07-04.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "NG-19 Cygnus reboost",
+   "tig_utc": "2023-08-11T14:35:00",
+   "dv_ms": 1.35,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_NG-19_Cygnus_Reboost_2023-08-11.pdf",
+   "note": "text says '233/14:35' but its date is 2023-08-11 (day 223) and its figure axis reads 223: day 223 used",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Debris avoidance manoeuvre (Zvezda engines, lowering)",
+   "tig_utc": "2023-08-24T15:00:00",
+   "dv_ms": null,
+   "kind": "announced",
+   "source": "https://www.nasa.gov/blogs/spacestation/2023/08/24/station-preps-for-new-cargo-crew-and-avoids-space-debris/",
+   "note": "NASA: Zvezda engines 'fired for 21.5 seconds beginning at 11 a.m. EDT' (UTC-4); no delta-v. Roscosmos via Interfax (https://www.interfax.com/newsroom/top-stories/93923/): the maneuver 'tentatively lowered the orbit of the ISS by 500 meters'. Looked up after the detector flagged this gap.",
+   "looked_up_after_detection": true
+  },
+  {
+   "event": "Progress 85P reboost",
+   "tig_utc": "2023-10-19T03:46:17",
+   "dv_ms": 1.6,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_85P_Reboost_2023-10-19.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 85P reboost",
+   "tig_utc": "2023-12-23T01:55:17",
+   "dv_ms": 1.83,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_85P_Reboost_2023-12-23.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 85P reboost",
+   "tig_utc": "2024-01-27T11:39:00",
+   "dv_ms": null,
+   "kind": "announced",
+   "source": "https://www.nasa.gov/blogs/stationreport/2024/01/29",
+   "note": "5:39 AM CST (UTC-6); no delta-v given",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 87P reboost",
+   "tig_utc": "2024-03-14T13:11:18",
+   "dv_ms": 1.58,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_87P_Reboost_2024-03-14.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 87P reboost",
+   "tig_utc": "2024-04-26T02:35:17",
+   "dv_ms": 0.6,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_87P_Reboost_2024-04-26.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Cygnus NG-20 reboost 1 of 2",
+   "tig_utc": "2024-05-24T14:16:00",
+   "dv_ms": 1.14,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Cygnus_NG-20_Two_Reboosts_2024-05-24.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Cygnus NG-20 reboost 2 of 2",
+   "tig_utc": "2024-05-24T23:03:00",
+   "dv_ms": 1.14,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Cygnus_NG-20_Two_Reboosts_2024-05-24.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Cygnus NG-20 reboost",
+   "tig_utc": "2024-06-08T15:52:00",
+   "dv_ms": 1.0,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Cygnus_NG-20_Reboost_2024-06-08.pdf",
+   "note": "report says 'just over 1' m/s (its SAMS figure gives 1.22)",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 91P reboost",
+   "tig_utc": "2025-03-17T16:00:18",
+   "dv_ms": 1.0,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_91P_Reboost_2025-03-17.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 91P reboost",
+   "tig_utc": "2025-07-16T14:45:17",
+   "dv_ms": 1.1,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_91P_Reboost_2025-07-16.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 91P reboost",
+   "tig_utc": "2025-08-14T04:28:00",
+   "dv_ms": 1.0,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_91P_Reboost_2025-08-14.pdf",
+   "note": "",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Dragon SpX-33 reboost",
+   "tig_utc": "2025-09-03T18:15:18",
+   "dv_ms": 0.5,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Dragon_SpX-33_Reboost_2025-09-03.pdf",
+   "note": "intended delta-v",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Dragon SpX-33 reboost",
+   "tig_utc": "2025-11-07T17:43:00",
+   "dv_ms": 0.7,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Dragon_SpX-33_Reboost_2025-11-07.pdf",
+   "note": "intended delta-v",
+   "looked_up_after_detection": false
+  },
+  {
+   "event": "Progress 93P reboost",
+   "tig_utc": "2026-03-13T16:58:00",
+   "dv_ms": 0.61,
+   "kind": "measured",
+   "source": "https://gipoc.grc.nasa.gov/pims/pimsdocs/public/ISS%20Handbook/hb_vib_vehicle_Progress_93P_Reboost_2026-03-13.pdf",
+   "note": "flight controllers' reported delta-v",
+   "looked_up_after_detection": false
+  }
+ ]
+}

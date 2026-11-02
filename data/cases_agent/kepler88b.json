@@ -1,0 +1,78 @@
+{
+ "generated": "scripts/cases_agent.py",
+ "case": "kepler88b",
+ "mock": false,
+ "points": 74,
+ "status": "no_fit",
+ "reason": "No candidate predicts the held-out motion: best forecast error 182% (Constant velocity (no net force)).",
+ "equation": null,
+ "parameters": null,
+ "agent_ranking": [
+  {
+   "model_id": "line_constant_velocity",
+   "title": "Constant velocity (no net force)",
+   "heldout_nrmse": 1.824617929876721,
+   "bic": 127.2996729658003,
+   "status": "rejected",
+   "why": "forecast error 182% on held-out data"
+  },
+  {
+   "model_id": "line_constant_accel",
+   "title": "Constant acceleration",
+   "heldout_nrmse": 5.467149218576766,
+   "bic": 129.1820324320545,
+   "status": "rejected",
+   "why": "forecast error 547% on held-out data"
+  }
+ ],
+ "agent_proposed_free_form": [],
+ "hand_chosen": [
+  {
+   "law": "linear",
+   "title": "Constant period (nothing happening)",
+   "heldout_chi2": 425.01973726723446
+  },
+  {
+   "law": "decay",
+   "title": "Changing period (orbital decay or growth)",
+   "heldout_chi2": 1929.5183117509594
+  },
+  {
+   "law": "sinusoid",
+   "title": "Periodic timing variation (a companion, or light-travel time)",
+   "heldout_chi2": 26.344871025484977
+  },
+  {
+   "law": "nbody",
+   "title": "N-body: a second planet",
+   "heldout_rms_min": 14.740553096154306
+  }
+ ],
+ "trail": [
+  {
+   "step": "data",
+   "provider": null,
+   "model": "provenance",
+   "text": "74 transit times measured from Kepler light curves (scripts/timing_demo.py); times from BJD_TDB (\u00b1180 s)."
+  },
+  {
+   "step": "hypotheses",
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026",
+   "text": "Proposed 2 laws: Constant velocity (no net force), Constant acceleration."
+  },
+  {
+   "step": "verdict",
+   "provider": null,
+   "model": "held-out verification",
+   "text": "No candidate predicts the held-out motion: best forecast error 182% (Constant velocity (no net force))."
+  }
+ ],
+ "llm_calls": [
+  {
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026"
+  }
+ ],
+ "seconds": 39.815128803253174
+}

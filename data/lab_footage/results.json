@@ -1,0 +1,387 @@
+{
+ "generated": "scripts/lab_footage.py",
+ "clips": 16,
+ "measured": 12,
+ "coverage_95": 0.0,
+ "coverage_95_with_length": 0.0,
+ "median_abs_error": 0.061567684584805105,
+ "length_offset_by_length": {
+  "0.45": [
+   0.04241716069340169,
+   0.04267255733905608,
+   0.03911638610314272,
+   0.03836066831264663
+  ],
+  "0.9": [
+   0.056550419442685955,
+   0.05982324640095327,
+   0.059046257482947895,
+   0.05730084504853803
+  ],
+  "1.5": [
+   0.09450368085280647,
+   0.09381907022301939,
+   0.0839263948335559,
+   0.08992789309527593
+  ]
+ },
+ "rows": [
+  {
+   "clip": "delfys-pendulum-45-1",
+   "source": "Delfys75",
+   "length_m": 0.45,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "accepted",
+   "reason": "Pendulum with linear damping forecasts held-out data within 10.6%.",
+   "law": "Pendulum with linear damping",
+   "g": 8.967220656642853,
+   "ci95": [
+    8.949562910781664,
+    8.984878402504043
+   ],
+   "error": -0.08614070361331749,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.04241716069340169,
+   "gamma": 0.10412089577547143,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-45-2",
+   "source": "Delfys75",
+   "length_m": 0.45,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "ambiguous",
+   "reason": "Pendulum with linear damping and Pendulum with air drag explain the data about equally well (BIC within 10).",
+   "law": null,
+   "gamma": 0.10410073691640387,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-45-3",
+   "source": "Delfys75",
+   "length_m": 0.45,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "accepted",
+   "reason": "Pendulum with linear damping forecasts held-out data within 14.2%.",
+   "law": "Pendulum with linear damping",
+   "g": 8.962572136966987,
+   "ci95": [
+    8.92576877897572,
+    8.999375494958255
+   ],
+   "error": -0.08661443935406565,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.04267255733905608,
+   "gamma": 0.09650142950812181,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-45-4",
+   "source": "Delfys75",
+   "length_m": 0.45,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "accepted",
+   "reason": "Pendulum with linear damping forecasts held-out data within 6.6%; next best (Pendulum with air drag) is 15 BIC worse.",
+   "law": "Pendulum with linear damping",
+   "g": 9.027735443981117,
+   "ci95": [
+    9.015471387939717,
+    9.039999500022516
+   ],
+   "error": -0.07997357523592363,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.03911638610314272,
+   "gamma": 0.09222086215037131,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-45-5",
+   "source": "Delfys75",
+   "length_m": 0.45,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "accepted",
+   "reason": "Pendulum with linear damping forecasts held-out data within 4.3%; next best (Pendulum with air drag) is 49 BIC worse.",
+   "law": "Pendulum with linear damping",
+   "g": 9.041705488510873,
+   "ci95": [
+    9.024352607188002,
+    9.059058369833744
+   ],
+   "error": -0.07854987266928759,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.03836066831264663,
+   "gamma": 0.11256264840834311,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-90-1",
+   "source": "Delfys75",
+   "length_m": 0.9,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "accepted",
+   "reason": "Pendulum with linear damping forecasts held-out data within 4.0%; next best (Pendulum with air drag) is 25 BIC worse.",
+   "law": "Pendulum with linear damping",
+   "g": 9.232369241190566,
+   "ci95": [
+    9.21877182512923,
+    9.245966657251904
+   ],
+   "error": -0.05911912042820899,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.056550419442685955,
+   "gamma": 0.07123132832629193,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-90-2",
+   "source": "Delfys75",
+   "length_m": 0.9,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "ambiguous",
+   "reason": "Pendulum with air drag and Pendulum with linear damping explain the data about equally well (BIC within 10).",
+   "law": null,
+   "g": 9.200888500278584,
+   "ci95": [
+    9.187753995675921,
+    9.214465543579314
+   ],
+   "error": -0.06232735727674066,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.05982324640095327,
+   "gamma": 0.07850435035790615,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-90-3",
+   "source": "Delfys75",
+   "length_m": 0.9,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "ambiguous",
+   "reason": "Pendulum with linear damping and Pendulum with air drag explain the data about equally well (BIC within 10).",
+   "law": null,
+   "g": 9.208342768875891,
+   "ci95": [
+    9.198315113456172,
+    9.221625209993888
+   ],
+   "error": -0.061567684584805105,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.059046257482947895,
+   "gamma": 0.07211332639757412,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-90-4",
+   "source": "Delfys75",
+   "length_m": 0.9,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "ambiguous",
+   "reason": "Pendulum with linear damping and Pendulum with air drag explain the data about equally well (BIC within 10).",
+   "law": null,
+   "gamma": 0.07743983227656308,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-90-5",
+   "source": "Delfys75",
+   "length_m": 0.9,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "accepted",
+   "reason": "Pendulum with linear damping forecasts held-out data within 2.3%; next best (Pendulum with air drag) is 10 BIC worse.",
+   "law": "Pendulum with linear damping",
+   "g": 9.22513201130917,
+   "ci95": [
+    9.210843501298823,
+    9.239420521319518
+   ],
+   "error": -0.0598566744664607,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.05730084504853803,
+   "gamma": 0.07540453103341808,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-150-1",
+   "source": "Delfys75",
+   "length_m": 1.5,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "ambiguous",
+   "reason": "Pendulum with linear damping and Pendulum with air drag explain the data about equally well (BIC within 10).",
+   "law": null,
+   "g": 9.230904446064876,
+   "ci95": [
+    9.212309709723687,
+    9.245762396454356
+   ],
+   "error": -0.05926839930671213,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.09450368085280647,
+   "gamma": 0.050694029950555095,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-150-2",
+   "source": "Delfys75",
+   "length_m": 1.5,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "ambiguous",
+   "reason": "Nonlinear pendulum with viscous damping and periodic drive and Driven harmonic oscillator explain the data about equally well (BIC within 10).",
+   "law": null
+  },
+  {
+   "clip": "delfys-pendulum-150-3",
+   "source": "Delfys75",
+   "length_m": 1.5,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "ambiguous",
+   "reason": "Pendulum with linear damping and Pendulum with air drag explain the data about equally well (BIC within 10).",
+   "law": null,
+   "g": 9.234869497948363,
+   "ci95": [
+    9.206789769592174,
+    9.248673431191778
+   ],
+   "error": -0.05886431651861934,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.09381907022301939,
+   "gamma": 0.05161780614399979,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-150-4",
+   "source": "Delfys75",
+   "length_m": 1.5,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "ambiguous",
+   "reason": "Pendulum with linear damping and Pendulum with air drag explain the data about equally well (BIC within 10).",
+   "law": null,
+   "g": 9.292547409311702,
+   "ci95": [
+    9.23621427045276,
+    9.337280777038295
+   ],
+   "error": -0.05298629728458748,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.0839263948335559,
+   "gamma": 0.05594461618448032,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "delfys-pendulum-150-5",
+   "source": "Delfys75",
+   "length_m": 1.5,
+   "truth_g": 9.812474077900655,
+   "site": "Delft, Netherlands (author affiliation)",
+   "status": "ambiguous",
+   "reason": "Pendulum with linear damping and Pendulum with air drag explain the data about equally well (BIC within 10).",
+   "law": null,
+   "g": 9.257470845546685,
+   "ci95": [
+    9.222384663026947,
+    9.308042959669557
+   ],
+   "error": -0.056560988385582656,
+   "inside": false,
+   "inside_with_length": false,
+   "length_offset_m": 0.08992789309527593,
+   "gamma": 0.0589796061735787,
+   "gamma_label": {
+    "mean": 0.05924,
+    "std": 0.00776,
+    "note": "the dataset's -0.0592 read as the coefficient of the angular velocity"
+   }
+  },
+  {
+   "clip": "commons-fadenpendel-60cm",
+   "source": "Wikimedia Commons",
+   "length_m": 0.6,
+   "truth_g": 9.810858791389036,
+   "site": "Aachen, Germany",
+   "status": "no_fit",
+   "reason": "The motion looks like noise: no candidate law explains more than 2% of the measured acceleration, the velocity's spectrum is flat (0.97, where 1 is white noise), and no smooth trend explains the track (75%). Simulation fits were skipped.",
+   "law": null
+  }
+ ],
+ "length_offset_fit": {
+  "fixed_m": 0.01764274675630079,
+  "per_metre": 0.04787294901337023,
+  "rms_m": 0.00331018785054537
+ }
+}

@@ -1,0 +1,87 @@
+{
+ "generated": "scripts/cases_agent.py",
+ "case": "fireball",
+ "mock": false,
+ "points": 165,
+ "status": "no_fit",
+ "reason": "No candidate can be trusted: Fragmenting fireball - drag jump forecasts the held-out motion only because d = 10 sits at its highest allowed value.",
+ "equation": null,
+ "parameters": null,
+ "agent_ranking": [
+  {
+   "model_id": "custom_e4f046b09f",
+   "title": "Fragmenting fireball - drag jump",
+   "heldout_nrmse": 0.1360417654106412,
+   "bic": 0.15778464127494196,
+   "status": "rejected",
+   "why": "d = 10 sits at its highest allowed value: the law only fits by leaning on a limit, so its numbers mean nothing"
+  },
+  {
+   "model_id": "line_constant_accel",
+   "title": "Constant acceleration",
+   "heldout_nrmse": 0.222209317098607,
+   "bic": 11.038054789893264,
+   "status": "rejected",
+   "why": "forecast error 22% on held-out data"
+  },
+  {
+   "model_id": "custom_a8dd3759ed",
+   "title": "Quadratic drag - constant density",
+   "heldout_nrmse": 0.22671939308212255,
+   "bic": 14.446603417856243,
+   "status": "rejected",
+   "why": "forecast error 23% on held-out data"
+  },
+  {
+   "model_id": "line_constant_velocity",
+   "title": "Constant velocity (no net force)",
+   "heldout_nrmse": 0.2841080044036356,
+   "bic": 24.845579266889487,
+   "status": "rejected",
+   "why": "forecast error 28% on held-out data"
+  }
+ ],
+ "agent_proposed_free_form": [
+  "Fragmenting fireball - drag jump",
+  "Quadratic drag - constant density"
+ ],
+ "hand_chosen": [
+  {
+   "law": "single_body",
+   "title": "single-body ablation and drag (hand-chosen)",
+   "heldout_rms_kms": 6.413821294768903
+  },
+  {
+   "law": "alpha_beta",
+   "title": "alpha-beta (hand-chosen)",
+   "heldout_rms_kms": 4.951601182249775
+  }
+ ],
+ "trail": [
+  {
+   "step": "data",
+   "provider": null,
+   "model": "provenance",
+   "text": "published triangulated trajectory (McMullan et al. 2023, WMPL report), all stations; times from station clocks (\u00b10.01 s)."
+  },
+  {
+   "step": "hypotheses",
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026",
+   "text": "Proposed 4 laws: Constant velocity (no net force), Constant acceleration, Quadratic drag - constant density, Fragmenting fireball - drag jump."
+  },
+  {
+   "step": "verdict",
+   "provider": null,
+   "model": "held-out verification",
+   "text": "No candidate can be trusted: Fragmenting fireball - drag jump forecasts the held-out motion only because d = 10 sits at its highest allowed value."
+  }
+ ],
+ "llm_calls": [
+  {
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026"
+  }
+ ],
+ "seconds": 20.6052086353302
+}

@@ -1,0 +1,6237 @@
+{
+ "bearings": {
+  "rule": "Envelope spectrum of the band with the highest kurtosis. For each defect rate (BPFO, BPFI, BSF, FTF) take harmonics 1 to 3; a harmonic stands out when the peak within +-1% (at least +-0.5 Hz) of the expected line, ignoring bins within 0.3 Hz of a shaft harmonic, is at least 6 dB above the median of the spectrum within 10 Hz. A defect is present when at least 2 of its 3 harmonics stand out; the diagnosis is the present defect with the highest mean peak level over its harmonics, or 'none' when no defect is present.",
+  "pass_rule": {
+   "type_accuracy_lower95_above": 0.4,
+   "max_false_alarms_of_20": 2
+  },
+  "geometry": {
+   "n_balls": 8,
+   "ball_diameter_mm": 6.77,
+   "pitch_diameter_mm": 28.5,
+   "contact_angle_deg": 0.0
+  },
+  "recordings": [
+   {
+    "file": "B_11_1.mat",
+    "label": "ball",
+    "stage": "developing",
+    "tach_rpm": 1709.0,
+    "shaft_hz": 28.483,
+    "band_hz": [
+     5500.0,
+     7500.0
+    ],
+    "expected_hz": {
+     "outer": 86.87,
+     "inner": 141.0,
+     "ball": 56.57,
+     "cage": 10.86
+    },
+    "snr_db": {
+     "outer": [
+      4.6,
+      -0.2,
+      11.2
+     ],
+     "inner": [
+      3.5,
+      4.7,
+      5.0
+     ],
+     "ball": [
+      5.3,
+      -0.4,
+      6.0
+     ],
+     "cage": [
+      12.5,
+      7.4,
+      5.4
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "B_11_2.mat",
+    "label": "ball",
+    "stage": "faulty",
+    "tach_rpm": 1709.0,
+    "shaft_hz": 29.25,
+    "band_hz": [
+     5500.0,
+     6500.0
+    ],
+    "expected_hz": {
+     "outer": 89.21,
+     "inner": 144.79,
+     "ball": 58.09,
+     "cage": 11.15
+    },
+    "snr_db": {
+     "outer": [
+      5.7,
+      13.6,
+      6.3
+     ],
+     "inner": [
+      12.1,
+      9.0,
+      8.4
+     ],
+     "ball": [
+      3.1,
+      -1.7,
+      6.4
+     ],
+     "cage": [
+      20.6,
+      15.9,
+      3.2
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "B_12_1.mat",
+    "label": "ball",
+    "stage": "developing",
+    "tach_rpm": 1720.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     6500.0,
+     7500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      11.2,
+      11.7,
+      6.2
+     ],
+     "inner": [
+      1.3,
+      6.8,
+      6.3
+     ],
+     "ball": [
+      1.4,
+      6.5,
+      3.2
+     ],
+     "cage": [
+      12.9,
+      4.3,
+      1.3
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "B_12_2.mat",
+    "label": "ball",
+    "stage": "faulty",
+    "tach_rpm": 1720.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     14500.0,
+     15500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      3.9,
+      5.5,
+      5.4
+     ],
+     "inner": [
+      1.8,
+      3.8,
+      3.6
+     ],
+     "ball": [
+      1.6,
+      3.4,
+      1.3
+     ],
+     "cage": [
+      13.7,
+      9.2,
+      3.1
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "B_13_1.mat",
+    "label": "ball",
+    "stage": "developing",
+    "tach_rpm": 1725.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     4500.0,
+     6500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      10.2,
+      6.7,
+      1.0
+     ],
+     "inner": [
+      23.4,
+      19.5,
+      21.8
+     ],
+     "ball": [
+      -0.9,
+      11.3,
+      15.5
+     ],
+     "cage": [
+      3.1,
+      3.5,
+      -0.9
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "B_13_2.mat",
+    "label": "ball",
+    "stage": "faulty",
+    "tach_rpm": 1725.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     4500.0,
+     6500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      14.0,
+      2.3,
+      4.3
+     ],
+     "inner": [
+      24.5,
+      18.7,
+      21.8
+     ],
+     "ball": [
+      1.1,
+      4.9,
+      14.6
+     ],
+     "cage": [
+      5.5,
+      4.6,
+      2.0
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": true,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "B_14_1.mat",
+    "label": "ball",
+    "stage": "developing",
+    "tach_rpm": 1736.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     16000.0,
+     17000.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      0.7,
+      2.9,
+      1.8
+     ],
+     "inner": [
+      4.0,
+      2.3,
+      3.3
+     ],
+     "ball": [
+      0.6,
+      4.5,
+      2.5
+     ],
+     "cage": [
+      5.6,
+      4.5,
+      4.3
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "B_14_2.mat",
+    "label": "ball",
+    "stage": "faulty",
+    "tach_rpm": 1736.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     16500.0,
+     17500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      5.5,
+      5.2,
+      2.6
+     ],
+     "inner": [
+      5.5,
+      2.7,
+      3.3
+     ],
+     "ball": [
+      0.6,
+      4.9,
+      2.0
+     ],
+     "cage": [
+      8.0,
+      6.5,
+      7.0
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "B_15_1.mat",
+    "label": "ball",
+    "stage": "developing",
+    "tach_rpm": 1720.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     7000.0,
+     8000.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      4.6,
+      3.2,
+      6.9
+     ],
+     "inner": [
+      2.5,
+      7.7,
+      5.2
+     ],
+     "ball": [
+      -1.1,
+      4.2,
+      3.1
+     ],
+     "cage": [
+      7.1,
+      2.1,
+      3.1
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "B_15_2.mat",
+    "label": "ball",
+    "stage": "faulty",
+    "tach_rpm": 1722.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     17000.0,
+     18000.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      4.0,
+      8.2,
+      2.0
+     ],
+     "inner": [
+      1.1,
+      0.5,
+      3.5
+     ],
+     "ball": [
+      3.0,
+      0.2,
+      1.7
+     ],
+     "cage": [
+      9.8,
+      -0.1,
+      0.6
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "C_16_1.mat",
+    "label": "cage",
+    "stage": "developing",
+    "tach_rpm": 1780.0,
+    "shaft_hz": 29.667,
+    "band_hz": [
+     12500.0,
+     16500.0
+    ],
+    "expected_hz": {
+     "outer": 90.48,
+     "inner": 146.86,
+     "ball": 58.92,
+     "cage": 11.31
+    },
+    "snr_db": {
+     "outer": [
+      2.6,
+      1.0,
+      4.1
+     ],
+     "inner": [
+      3.3,
+      3.6,
+      3.3
+     ],
+     "ball": [
+      5.2,
+      3.5,
+      4.4
+     ],
+     "cage": [
+      2.5,
+      3.0,
+      0.8
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "C_16_2.mat",
+    "label": "cage",
+    "stage": "faulty",
+    "tach_rpm": 1700.0,
+    "shaft_hz": 28.333,
+    "band_hz": [
+     15500.0,
+     17500.0
+    ],
+    "expected_hz": {
+     "outer": 86.41,
+     "inner": 140.25,
+     "ball": 56.27,
+     "cage": 10.8
+    },
+    "snr_db": {
+     "outer": [
+      1.2,
+      4.3,
+      4.9
+     ],
+     "inner": [
+      2.8,
+      3.0,
+      3.4
+     ],
+     "ball": [
+      0.5,
+      4.6,
+      4.7
+     ],
+     "cage": [
+      2.9,
+      3.5,
+      4.8
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "C_17_1.mat",
+    "label": "cage",
+    "stage": "developing",
+    "tach_rpm": 1800.0,
+    "shaft_hz": 30.0,
+    "band_hz": [
+     14500.0,
+     15500.0
+    ],
+    "expected_hz": {
+     "outer": 91.49,
+     "inner": 148.51,
+     "ball": 59.58,
+     "cage": 11.44
+    },
+    "snr_db": {
+     "outer": [
+      3.2,
+      5.0,
+      3.9
+     ],
+     "inner": [
+      2.3,
+      1.3,
+      4.4
+     ],
+     "ball": [
+      0.9,
+      2.0,
+      1.8
+     ],
+     "cage": [
+      2.0,
+      2.7,
+      -0.1
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "C_17_2.mat",
+    "label": "cage",
+    "stage": "faulty",
+    "tach_rpm": 1730.0,
+    "shaft_hz": 28.833,
+    "band_hz": [
+     12000.0,
+     13000.0
+    ],
+    "expected_hz": {
+     "outer": 87.94,
+     "inner": 142.73,
+     "ball": 57.27,
+     "cage": 10.99
+    },
+    "snr_db": {
+     "outer": [
+      1.6,
+      2.5,
+      3.0
+     ],
+     "inner": [
+      1.0,
+      3.3,
+      7.1
+     ],
+     "ball": [
+      1.7,
+      3.0,
+      3.9
+     ],
+     "cage": [
+      -0.3,
+      2.3,
+      2.6
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "C_18_1.mat",
+    "label": "cage",
+    "stage": "developing",
+    "tach_rpm": 1780.0,
+    "shaft_hz": 29.667,
+    "band_hz": [
+     500.0,
+     1500.0
+    ],
+    "expected_hz": {
+     "outer": 90.48,
+     "inner": 146.86,
+     "ball": 58.92,
+     "cage": 11.31
+    },
+    "snr_db": {
+     "outer": [
+      3.2,
+      2.2,
+      13.5
+     ],
+     "inner": [
+      0.6,
+      5.7,
+      8.8
+     ],
+     "ball": [
+      6.2,
+      4.6,
+      5.0
+     ],
+     "cage": [
+      -0.7,
+      3.6,
+      -0.3
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "C_18_2.mat",
+    "label": "cage",
+    "stage": "faulty",
+    "tach_rpm": 1780.0,
+    "shaft_hz": 29.667,
+    "band_hz": [
+     13500.0,
+     15500.0
+    ],
+    "expected_hz": {
+     "outer": 90.48,
+     "inner": 146.86,
+     "ball": 58.92,
+     "cage": 11.31
+    },
+    "snr_db": {
+     "outer": [
+      2.4,
+      1.6,
+      5.7
+     ],
+     "inner": [
+      0.8,
+      3.6,
+      4.7
+     ],
+     "ball": [
+      2.4,
+      5.0,
+      4.9
+     ],
+     "cage": [
+      0.7,
+      5.5,
+      1.7
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "C_19_1.mat",
+    "label": "cage",
+    "stage": "developing",
+    "tach_rpm": 1785.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     14500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      3.6,
+      8.0,
+      5.1
+     ],
+     "inner": [
+      2.3,
+      6.8,
+      5.8
+     ],
+     "ball": [
+      5.0,
+      12.8,
+      8.3
+     ],
+     "cage": [
+      -0.9,
+      5.9,
+      2.8
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "ball"
+   },
+   {
+    "file": "C_19_2.mat",
+    "label": "cage",
+    "stage": "faulty",
+    "tach_rpm": 1785.0,
+    "shaft_hz": 30.0,
+    "band_hz": [
+     6000.0,
+     7000.0
+    ],
+    "expected_hz": {
+     "outer": 91.49,
+     "inner": 148.51,
+     "ball": 59.58,
+     "cage": 11.44
+    },
+    "snr_db": {
+     "outer": [
+      2.1,
+      7.1,
+      8.9
+     ],
+     "inner": [
+      8.3,
+      6.4,
+      6.4
+     ],
+     "ball": [
+      1.2,
+      2.8,
+      4.7
+     ],
+     "cage": [
+      2.0,
+      4.2,
+      1.7
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "C_20_1.mat",
+    "label": "cage",
+    "stage": "developing",
+    "tach_rpm": 1778.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     4000.0,
+     5000.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      0.9,
+      2.5,
+      4.2
+     ],
+     "inner": [
+      1.3,
+      6.2,
+      4.1
+     ],
+     "ball": [
+      5.2,
+      3.6,
+      3.1
+     ],
+     "cage": [
+      19.6,
+      19.8,
+      15.3
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "C_20_2.mat",
+    "label": "cage",
+    "stage": "faulty",
+    "tach_rpm": 1767.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     12500.0,
+     14500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      2.3,
+      13.6,
+      13.1
+     ],
+     "inner": [
+      10.4,
+      17.6,
+      21.5
+     ],
+     "ball": [
+      2.3,
+      8.3,
+      12.4
+     ],
+     "cage": [
+      8.8,
+      4.3,
+      4.2
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "H_10_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1796.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     4000.0,
+     5000.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      19.0,
+      11.0,
+      10.5
+     ],
+     "inner": [
+      30.2,
+      28.8,
+      27.0
+     ],
+     "ball": [
+      2.3,
+      21.1,
+      23.2
+     ],
+     "cage": [
+      18.2,
+      13.4,
+      12.1
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": true,
+     "cage": true
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "H_11_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1709.0,
+    "shaft_hz": 28.483,
+    "band_hz": [
+     14500.0,
+     16500.0
+    ],
+    "expected_hz": {
+     "outer": 86.87,
+     "inner": 141.0,
+     "ball": 56.57,
+     "cage": 10.86
+    },
+    "snr_db": {
+     "outer": [
+      0.9,
+      3.9,
+      3.7
+     ],
+     "inner": [
+      4.5,
+      2.3,
+      1.9
+     ],
+     "ball": [
+      1.6,
+      2.0,
+      3.1
+     ],
+     "cage": [
+      4.5,
+      -0.9,
+      0.5
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "H_12_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1720.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     7500.0,
+     8500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      3.3,
+      6.1,
+      3.7
+     ],
+     "inner": [
+      2.1,
+      3.8,
+      2.9
+     ],
+     "ball": [
+      -4.2,
+      3.9,
+      2.6
+     ],
+     "cage": [
+      12.0,
+      12.6,
+      5.0
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "H_13_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1725.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     4500.0,
+     6500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      9.2,
+      1.1,
+      2.8
+     ],
+     "inner": [
+      21.3,
+      19.7,
+      21.3
+     ],
+     "ball": [
+      -2.5,
+      11.9,
+      16.5
+     ],
+     "cage": [
+      5.0,
+      3.0,
+      1.8
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": true,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "H_14_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1736.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     9500.0,
+     11500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      3.0,
+      11.2,
+      7.8
+     ],
+     "inner": [
+      7.5,
+      9.8,
+      11.1
+     ],
+     "ball": [
+      1.9,
+      5.8,
+      9.7
+     ],
+     "cage": [
+      11.6,
+      11.7,
+      11.5
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "H_15_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1720.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     6500.0,
+     8500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      9.0,
+      13.3,
+      13.7
+     ],
+     "inner": [
+      2.3,
+      11.0,
+      11.6
+     ],
+     "ball": [
+      3.4,
+      7.2,
+      7.3
+     ],
+     "cage": [
+      8.5,
+      11.4,
+      5.5
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": true,
+     "cage": true
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "H_16_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1780.0,
+    "shaft_hz": 30.0,
+    "band_hz": [
+     10500.0,
+     12500.0
+    ],
+    "expected_hz": {
+     "outer": 91.49,
+     "inner": 148.51,
+     "ball": 59.58,
+     "cage": 11.44
+    },
+    "snr_db": {
+     "outer": [
+      0.8,
+      0.8,
+      2.0
+     ],
+     "inner": [
+      0.6,
+      1.6,
+      0.6
+     ],
+     "ball": [
+      0.9,
+      2.3,
+      1.0
+     ],
+     "cage": [
+      0.3,
+      1.5,
+      1.0
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "H_17_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1800.0,
+    "shaft_hz": 30.0,
+    "band_hz": [
+     8500.0,
+     10500.0
+    ],
+    "expected_hz": {
+     "outer": 91.49,
+     "inner": 148.51,
+     "ball": 59.58,
+     "cage": 11.44
+    },
+    "snr_db": {
+     "outer": [
+      15.8,
+      11.5,
+      7.6
+     ],
+     "inner": [
+      7.8,
+      7.3,
+      4.3
+     ],
+     "ball": [
+      2.4,
+      5.0,
+      9.3
+     ],
+     "cage": [
+      3.0,
+      16.3,
+      6.5
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "H_18_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1780.0,
+    "shaft_hz": 29.667,
+    "band_hz": [
+     16500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 90.48,
+     "inner": 146.86,
+     "ball": 58.92,
+     "cage": 11.31
+    },
+    "snr_db": {
+     "outer": [
+      7.3,
+      4.0,
+      9.3
+     ],
+     "inner": [
+      7.8,
+      3.2,
+      4.0
+     ],
+     "ball": [
+      -1.0,
+      6.3,
+      4.9
+     ],
+     "cage": [
+      5.3,
+      7.0,
+      4.1
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "H_19_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1785.0,
+    "shaft_hz": 30.0,
+    "band_hz": [
+     6000.0,
+     7000.0
+    ],
+    "expected_hz": {
+     "outer": 91.49,
+     "inner": 148.51,
+     "ball": 59.58,
+     "cage": 11.44
+    },
+    "snr_db": {
+     "outer": [
+      8.0,
+      9.2,
+      7.7
+     ],
+     "inner": [
+      9.4,
+      6.8,
+      5.3
+     ],
+     "ball": [
+      -2.3,
+      8.4,
+      8.3
+     ],
+     "cage": [
+      3.6,
+      10.3,
+      8.6
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": true,
+     "cage": true
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "H_1_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1819.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     16500.0,
+     17500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      3.6,
+      2.5,
+      2.4
+     ],
+     "inner": [
+      1.8,
+      3.2,
+      3.0
+     ],
+     "ball": [
+      0.7,
+      1.2,
+      2.0
+     ],
+     "cage": [
+      -0.2,
+      6.2,
+      9.6
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "H_20_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1778.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     11500.0,
+     13500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      4.3,
+      6.8,
+      10.3
+     ],
+     "inner": [
+      1.3,
+      9.0,
+      7.6
+     ],
+     "ball": [
+      0.9,
+      4.8,
+      1.7
+     ],
+     "cage": [
+      11.1,
+      10.7,
+      1.5
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "H_2_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1800.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     13500.0,
+     14500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      1.5,
+      1.8,
+      4.6
+     ],
+     "inner": [
+      3.2,
+      5.6,
+      3.8
+     ],
+     "ball": [
+      -0.2,
+      1.9,
+      8.6
+     ],
+     "cage": [
+      12.3,
+      11.3,
+      8.2
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "H_3_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1790.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     15000.0,
+     16000.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      1.5,
+      4.0,
+      2.3
+     ],
+     "inner": [
+      3.0,
+      4.1,
+      3.7
+     ],
+     "ball": [
+      1.0,
+      2.5,
+      1.5
+     ],
+     "cage": [
+      11.1,
+      6.0,
+      -0.2
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "H_4_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1789.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     15500.0,
+     17500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      8.0,
+      3.2,
+      6.7
+     ],
+     "inner": [
+      3.3,
+      4.2,
+      4.3
+     ],
+     "ball": [
+      -0.3,
+      2.7,
+      6.5
+     ],
+     "cage": [
+      15.1,
+      4.2,
+      7.3
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": false,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "H_5_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1799.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     11500.0,
+     13500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      3.0,
+      0.8,
+      10.4
+     ],
+     "inner": [
+      1.1,
+      10.0,
+      10.5
+     ],
+     "ball": [
+      0.6,
+      1.8,
+      7.0
+     ],
+     "cage": [
+      9.9,
+      17.4,
+      14.6
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": true,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "H_6_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1818.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     7500.0,
+     8500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      12.1,
+      5.8,
+      4.3
+     ],
+     "inner": [
+      6.3,
+      6.5,
+      5.6
+     ],
+     "ball": [
+      1.6,
+      3.9,
+      4.8
+     ],
+     "cage": [
+      12.7,
+      16.0,
+      10.4
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": true,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "cage"
+   },
+   {
+    "file": "H_7_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1880.0,
+    "shaft_hz": 30.75,
+    "band_hz": [
+     12500.0,
+     13500.0
+    ],
+    "expected_hz": {
+     "outer": 93.78,
+     "inner": 152.22,
+     "ball": 61.07,
+     "cage": 11.72
+    },
+    "snr_db": {
+     "outer": [
+      2.6,
+      1.1,
+      2.7
+     ],
+     "inner": [
+      2.9,
+      2.7,
+      4.1
+     ],
+     "ball": [
+      4.4,
+      2.6,
+      15.2
+     ],
+     "cage": [
+      3.3,
+      -0.4,
+      0.3
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "H_8_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1948.0,
+    "shaft_hz": 32.467,
+    "band_hz": [
+     2000.0,
+     3000.0
+    ],
+    "expected_hz": {
+     "outer": 99.02,
+     "inner": 160.72,
+     "ball": 64.48,
+     "cage": 12.38
+    },
+    "snr_db": {
+     "outer": [
+      2.7,
+      5.3,
+      5.0
+     ],
+     "inner": [
+      2.2,
+      3.5,
+      5.7
+     ],
+     "ball": [
+      0.6,
+      1.6,
+      2.0
+     ],
+     "cage": [
+      2.1,
+      0.2,
+      -0.8
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "H_9_0.mat",
+    "label": "none",
+    "stage": "healthy",
+    "tach_rpm": 1800.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     8500.0,
+     12500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      5.3,
+      10.5,
+      16.1
+     ],
+     "inner": [
+      5.2,
+      2.1,
+      2.5
+     ],
+     "ball": [
+      5.4,
+      3.3,
+      3.1
+     ],
+     "cage": [
+      2.4,
+      -3.3,
+      -0.8
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "I_1_1.mat",
+    "label": "inner",
+    "stage": "developing",
+    "tach_rpm": 1819.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     14500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      6.0,
+      9.0,
+      9.5
+     ],
+     "inner": [
+      7.8,
+      9.5,
+      8.7
+     ],
+     "ball": [
+      5.0,
+      4.2,
+      25.1
+     ],
+     "cage": [
+      4.9,
+      0.8,
+      1.5
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "I_1_2.mat",
+    "label": "inner",
+    "stage": "faulty",
+    "tach_rpm": 1819.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     3500.0,
+     5500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      18.4,
+      14.7,
+      18.5
+     ],
+     "inner": [
+      7.0,
+      3.7,
+      1.7
+     ],
+     "ball": [
+      10.6,
+      5.9,
+      8.3
+     ],
+     "cage": [
+      1.0,
+      2.9,
+      -2.3
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": false,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "I_2_1.mat",
+    "label": "inner",
+    "stage": "developing",
+    "tach_rpm": 1800.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     14500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      14.2,
+      2.1,
+      3.4
+     ],
+     "inner": [
+      21.5,
+      20.3,
+      20.4
+     ],
+     "ball": [
+      16.7,
+      22.9,
+      22.4
+     ],
+     "cage": [
+      3.7,
+      1.6,
+      2.9
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": true,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "I_2_2.mat",
+    "label": "inner",
+    "stage": "faulty",
+    "tach_rpm": 1790.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     16500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      4.3,
+      4.2,
+      3.6
+     ],
+     "inner": [
+      8.3,
+      13.5,
+      11.7
+     ],
+     "ball": [
+      3.4,
+      5.8,
+      9.8
+     ],
+     "cage": [
+      2.6,
+      -0.9,
+      4.8
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": true,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "I_3_1.mat",
+    "label": "inner",
+    "stage": "developing",
+    "tach_rpm": 1790.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     15500.0,
+     17500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      2.0,
+      6.9,
+      9.0
+     ],
+     "inner": [
+      8.8,
+      7.8,
+      12.4
+     ],
+     "ball": [
+      6.5,
+      8.0,
+      8.5
+     ],
+     "cage": [
+      1.6,
+      2.0,
+      -1.2
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "I_3_2.mat",
+    "label": "inner",
+    "stage": "faulty",
+    "tach_rpm": 1790.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     16500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      5.3,
+      17.8,
+      17.4
+     ],
+     "inner": [
+      7.0,
+      18.5,
+      17.1
+     ],
+     "ball": [
+      5.8,
+      6.2,
+      7.8
+     ],
+     "cage": [
+      1.9,
+      2.2,
+      3.2
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "I_4_1.mat",
+    "label": "inner",
+    "stage": "developing",
+    "tach_rpm": 1789.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     16500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      2.1,
+      8.9,
+      8.4
+     ],
+     "inner": [
+      11.6,
+      20.4,
+      20.9
+     ],
+     "ball": [
+      5.8,
+      9.6,
+      14.0
+     ],
+     "cage": [
+      5.2,
+      -0.8,
+      2.6
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "I_4_2.mat",
+    "label": "inner",
+    "stage": "faulty",
+    "tach_rpm": 1792.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     8500.0,
+     12500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      13.5,
+      14.2,
+      14.1
+     ],
+     "inner": [
+      15.3,
+      13.9,
+      6.3
+     ],
+     "ball": [
+      0.4,
+      14.4,
+      17.6
+     ],
+     "cage": [
+      3.6,
+      2.0,
+      2.8
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "I_5_1.mat",
+    "label": "inner",
+    "stage": "developing",
+    "tach_rpm": 1799.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     10500.0,
+     14500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      7.5,
+      5.1,
+      5.7
+     ],
+     "inner": [
+      9.6,
+      10.5,
+      12.3
+     ],
+     "ball": [
+      5.6,
+      9.9,
+      9.7
+     ],
+     "cage": [
+      4.0,
+      -1.7,
+      3.6
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": true,
+     "ball": true,
+     "cage": false
+    },
+    "diagnosis": "inner"
+   },
+   {
+    "file": "I_5_2.mat",
+    "label": "inner",
+    "stage": "faulty",
+    "tach_rpm": 1795.0,
+    "shaft_hz": 29.5,
+    "band_hz": [
+     15500.0,
+     16500.0
+    ],
+    "expected_hz": {
+     "outer": 89.97,
+     "inner": 146.03,
+     "ball": 58.59,
+     "cage": 11.25
+    },
+    "snr_db": {
+     "outer": [
+      3.5,
+      3.9,
+      4.1
+     ],
+     "inner": [
+      3.6,
+      3.7,
+      1.8
+     ],
+     "ball": [
+      2.4,
+      3.8,
+      7.7
+     ],
+     "cage": [
+      1.5,
+      0.2,
+      1.5
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "O_10_1.mat",
+    "label": "outer",
+    "stage": "developing",
+    "tach_rpm": 1796.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     14500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      34.0,
+      34.9,
+      32.0
+     ],
+     "inner": [
+      7.5,
+      15.0,
+      29.8
+     ],
+     "ball": [
+      1.4,
+      5.5,
+      5.2
+     ],
+     "cage": [
+      20.6,
+      14.9,
+      9.2
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "O_10_2.mat",
+    "label": "outer",
+    "stage": "faulty",
+    "tach_rpm": 1796.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     14500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      32.1,
+      30.5,
+      29.4
+     ],
+     "inner": [
+      9.4,
+      9.3,
+      21.4
+     ],
+     "ball": [
+      1.9,
+      4.0,
+      5.3
+     ],
+     "cage": [
+      5.8,
+      10.2,
+      5.9
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "O_6_1.mat",
+    "label": "outer",
+    "stage": "developing",
+    "tach_rpm": 1818.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     10500.0,
+     14500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      3.2,
+      2.8,
+      3.7
+     ],
+     "inner": [
+      3.5,
+      2.8,
+      16.8
+     ],
+     "ball": [
+      -2.2,
+      1.0,
+      1.3
+     ],
+     "cage": [
+      11.7,
+      2.6,
+      -0.8
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "O_6_2.mat",
+    "label": "outer",
+    "stage": "faulty",
+    "tach_rpm": 1818.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     12500.0,
+     16500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      2.6,
+      2.2,
+      2.7
+     ],
+     "inner": [
+      2.3,
+      3.8,
+      13.1
+     ],
+     "ball": [
+      1.6,
+      0.2,
+      1.3
+     ],
+     "cage": [
+      13.1,
+      3.8,
+      2.3
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "O_7_1.mat",
+    "label": "outer",
+    "stage": "developing",
+    "tach_rpm": 1880.0,
+    "shaft_hz": 31.333,
+    "band_hz": [
+     16500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 95.56,
+     "inner": 155.11,
+     "ball": 62.23,
+     "cage": 11.95
+    },
+    "snr_db": {
+     "outer": [
+      3.2,
+      4.7,
+      4.5
+     ],
+     "inner": [
+      8.7,
+      3.1,
+      4.3
+     ],
+     "ball": [
+      0.0,
+      0.5,
+      1.1
+     ],
+     "cage": [
+      1.0,
+      1.7,
+      0.7
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "O_7_2.mat",
+    "label": "outer",
+    "stage": "faulty",
+    "tach_rpm": 2190.0,
+    "shaft_hz": 36.5,
+    "band_hz": [
+     8500.0,
+     12500.0
+    ],
+    "expected_hz": {
+     "outer": 111.32,
+     "inner": 180.68,
+     "ball": 72.49,
+     "cage": 13.91
+    },
+    "snr_db": {
+     "outer": [
+      17.2,
+      9.6,
+      12.1
+     ],
+     "inner": [
+      3.8,
+      6.2,
+      3.9
+     ],
+     "ball": [
+      1.7,
+      8.6,
+      3.6
+     ],
+     "cage": [
+      4.4,
+      1.4,
+      1.6
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "O_8_1.mat",
+    "label": "outer",
+    "stage": "developing",
+    "tach_rpm": 1948.0,
+    "shaft_hz": 31.5,
+    "band_hz": [
+     3000.0,
+     4000.0
+    ],
+    "expected_hz": {
+     "outer": 96.07,
+     "inner": 155.93,
+     "ball": 62.56,
+     "cage": 12.01
+    },
+    "snr_db": {
+     "outer": [
+      3.8,
+      3.4,
+      2.4
+     ],
+     "inner": [
+      2.8,
+      3.8,
+      2.9
+     ],
+     "ball": [
+      -1.7,
+      -0.6,
+      2.7
+     ],
+     "cage": [
+      4.0,
+      4.0,
+      5.6
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "O_8_2.mat",
+    "label": "outer",
+    "stage": "faulty",
+    "tach_rpm": 1945.0,
+    "shaft_hz": 31.75,
+    "band_hz": [
+     14500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 96.83,
+     "inner": 157.17,
+     "ball": 63.06,
+     "cage": 12.1
+    },
+    "snr_db": {
+     "outer": [
+      1.4,
+      4.5,
+      4.5
+     ],
+     "inner": [
+      4.5,
+      4.8,
+      2.1
+     ],
+     "ball": [
+      -1.7,
+      1.1,
+      2.5
+     ],
+     "cage": [
+      2.2,
+      1.0,
+      2.6
+     ]
+    },
+    "present": {
+     "outer": false,
+     "inner": false,
+     "ball": false,
+     "cage": false
+    },
+    "diagnosis": "none"
+   },
+   {
+    "file": "O_9_1.mat",
+    "label": "outer",
+    "stage": "developing",
+    "tach_rpm": 1800.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     14500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      35.8,
+      34.4,
+      33.8
+     ],
+     "inner": [
+      2.3,
+      13.5,
+      12.5
+     ],
+     "ball": [
+      2.3,
+      2.1,
+      8.5
+     ],
+     "cage": [
+      23.4,
+      23.4,
+      15.0
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": true,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "outer"
+   },
+   {
+    "file": "O_9_2.mat",
+    "label": "outer",
+    "stage": "faulty",
+    "tach_rpm": 1800.0,
+    "shaft_hz": 29.75,
+    "band_hz": [
+     14500.0,
+     18500.0
+    ],
+    "expected_hz": {
+     "outer": 90.73,
+     "inner": 147.27,
+     "ball": 59.09,
+     "cage": 11.34
+    },
+    "snr_db": {
+     "outer": [
+      36.8,
+      35.6,
+      36.1
+     ],
+     "inner": [
+      5.7,
+      5.6,
+      9.9
+     ],
+     "ball": [
+      2.1,
+      3.5,
+      12.1
+     ],
+     "cage": [
+      21.1,
+      26.4,
+      17.8
+     ]
+    },
+    "present": {
+     "outer": true,
+     "inner": false,
+     "ball": false,
+     "cage": true
+    },
+    "diagnosis": "outer"
+   }
+  ],
+  "faulty": {
+   "type_accuracy": {
+    "k": 5,
+    "n": 20,
+    "rate": 0.25,
+    "wilson95": [
+     0.112,
+     0.469
+    ]
+   },
+   "detected_any_fault": {
+    "k": 13,
+    "n": 20,
+    "rate": 0.65,
+    "wilson95": [
+     0.433,
+     0.819
+    ]
+   },
+   "per_type": {
+    "outer": {
+     "k": 3,
+     "n": 5,
+     "rate": 0.6,
+     "wilson95": [
+      0.231,
+      0.882
+     ]
+    },
+    "inner": {
+     "k": 2,
+     "n": 5,
+     "rate": 0.4,
+     "wilson95": [
+      0.118,
+      0.769
+     ]
+    },
+    "ball": {
+     "k": 0,
+     "n": 5,
+     "rate": 0.0,
+     "wilson95": [
+      0.0,
+      0.434
+     ]
+    },
+    "cage": {
+     "k": 0,
+     "n": 5,
+     "rate": 0.0,
+     "wilson95": [
+      0.0,
+      0.434
+     ]
+    }
+   },
+   "confusion": {
+    "outer": {
+     "outer": 3,
+     "inner": 0,
+     "ball": 0,
+     "cage": 0,
+     "none": 2
+    },
+    "inner": {
+     "outer": 2,
+     "inner": 2,
+     "ball": 0,
+     "cage": 0,
+     "none": 1
+    },
+    "ball": {
+     "outer": 0,
+     "inner": 1,
+     "ball": 0,
+     "cage": 3,
+     "none": 1
+    },
+    "cage": {
+     "outer": 0,
+     "inner": 2,
+     "ball": 0,
+     "cage": 0,
+     "none": 3
+    }
+   }
+  },
+  "developing": {
+   "type_accuracy": {
+    "k": 8,
+    "n": 20,
+    "rate": 0.4,
+    "wilson95": [
+     0.219,
+     0.613
+    ]
+   },
+   "detected_any_fault": {
+    "k": 12,
+    "n": 20,
+    "rate": 0.6,
+    "wilson95": [
+     0.387,
+     0.781
+    ]
+   },
+   "per_type": {
+    "outer": {
+     "k": 2,
+     "n": 5,
+     "rate": 0.4,
+     "wilson95": [
+      0.118,
+      0.769
+     ]
+    },
+    "inner": {
+     "k": 5,
+     "n": 5,
+     "rate": 1.0,
+     "wilson95": [
+      0.566,
+      1.0
+     ]
+    },
+    "ball": {
+     "k": 0,
+     "n": 5,
+     "rate": 0.0,
+     "wilson95": [
+      0.0,
+      0.434
+     ]
+    },
+    "cage": {
+     "k": 1,
+     "n": 5,
+     "rate": 0.2,
+     "wilson95": [
+      0.036,
+      0.624
+     ]
+    }
+   },
+   "confusion": {
+    "outer": {
+     "outer": 2,
+     "inner": 0,
+     "ball": 0,
+     "cage": 0,
+     "none": 3
+    },
+    "inner": {
+     "outer": 0,
+     "inner": 5,
+     "ball": 0,
+     "cage": 0,
+     "none": 0
+    },
+    "ball": {
+     "outer": 1,
+     "inner": 1,
+     "ball": 0,
+     "cage": 1,
+     "none": 2
+    },
+    "cage": {
+     "outer": 0,
+     "inner": 0,
+     "ball": 1,
+     "cage": 1,
+     "none": 3
+    }
+   }
+  },
+  "healthy_false_alarms": {
+   "k": 15,
+   "n": 20,
+   "rate": 0.75,
+   "wilson95": [
+    0.531,
+    0.888
+   ]
+  },
+  "healthy_alarm_types": {
+   "outer": 5,
+   "inner": 2,
+   "ball": 0,
+   "cage": 8
+  },
+  "shaft_rate_vs_tacho_max_rel": 0.0298,
+  "passed": false,
+  "post_hoc_baseline_rule": {
+   "rule": "Shaft rate: the 1x vibration line within the motor's slip range (synchronous speed down to 10% slip), interpolated. Envelope spectra of the test recording and of the same bearing's healthy recording, both in the test recording's highest-kurtosis band. A defect series grew when at least 2 of its 3 harmonics both stand out in the test recording (at least 6 dB over local background) and rose at least 6 dB over the healthy recording; the diagnosis is the grown series with the largest mean rise, or 'none'.",
+   "post_hoc": true,
+   "shaft_range_hz": [
+    27.0,
+    30.0
+   ],
+   "recordings": [
+    {
+     "file": "B_11_1.mat",
+     "baseline": "H_11_0.mat",
+     "label": "ball",
+     "stage": "developing",
+     "tach_rpm": 1709.0,
+     "shaft_rpm": 1782.8,
+     "band_hz": [
+      5500.0,
+      7500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -11.1,
+       3.4,
+       5.4
+      ],
+      "inner": [
+       -5.0,
+       -4.2,
+       4.4
+      ],
+      "ball": [
+       -0.7,
+       -7.0,
+       5.4
+      ],
+      "cage": [
+       16.3,
+       12.1,
+       9.9
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": true
+     },
+     "diagnosis": "cage"
+    },
+    {
+     "file": "B_11_2.mat",
+     "baseline": "H_11_0.mat",
+     "label": "ball",
+     "stage": "faulty",
+     "tach_rpm": 1709.0,
+     "shaft_rpm": 1781.2,
+     "band_hz": [
+      5500.0,
+      6500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -6.3,
+       6.5,
+       6.6
+      ],
+      "inner": [
+       1.1,
+       -1.5,
+       4.9
+      ],
+      "ball": [
+       -4.6,
+       -6.3,
+       7.1
+      ],
+      "cage": [
+       17.0,
+       15.7,
+       12.6
+      ]
+     },
+     "grown": {
+      "outer": true,
+      "inner": false,
+      "ball": false,
+      "cage": true
+     },
+     "diagnosis": "cage"
+    },
+    {
+     "file": "B_12_1.mat",
+     "baseline": "H_12_0.mat",
+     "label": "ball",
+     "stage": "developing",
+     "tach_rpm": 1720.0,
+     "shaft_rpm": 1784.5,
+     "band_hz": [
+      6500.0,
+      7500.0
+     ],
+     "growth_db": {
+      "outer": [
+       5.2,
+       -5.8,
+       2.5
+      ],
+      "inner": [
+       -2.7,
+       0.6,
+       -0.7
+      ],
+      "ball": [
+       3.5,
+       0.5,
+       6.9
+      ],
+      "cage": [
+       3.8,
+       -3.1,
+       -7.9
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "B_12_2.mat",
+     "baseline": "H_12_0.mat",
+     "label": "ball",
+     "stage": "faulty",
+     "tach_rpm": 1720.0,
+     "shaft_rpm": 1784.9,
+     "band_hz": [
+      14500.0,
+      15500.0
+     ],
+     "growth_db": {
+      "outer": [
+       1.0,
+       1.2,
+       3.0
+      ],
+      "inner": [
+       -6.5,
+       -0.7,
+       -3.9
+      ],
+      "ball": [
+       0.8,
+       0.7,
+       -1.8
+      ],
+      "cage": [
+       4.7,
+       2.1,
+       -0.5
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "B_13_1.mat",
+     "baseline": "H_13_0.mat",
+     "label": "ball",
+     "stage": "developing",
+     "tach_rpm": 1725.0,
+     "shaft_rpm": 1785.5,
+     "band_hz": [
+      4500.0,
+      6500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -7.7,
+       -1.4,
+       -0.8
+      ],
+      "inner": [
+       1.8,
+       0.1,
+       0.7
+      ],
+      "ball": [
+       1.5,
+       -2.0,
+       -0.5
+      ],
+      "cage": [
+       -1.8,
+       1.1,
+       -2.7
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "B_13_2.mat",
+     "baseline": "H_13_0.mat",
+     "label": "ball",
+     "stage": "faulty",
+     "tach_rpm": 1725.0,
+     "shaft_rpm": 1784.8,
+     "band_hz": [
+      4500.0,
+      6500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -2.9,
+       -1.2,
+       -2.4
+      ],
+      "inner": [
+       3.3,
+       -0.4,
+       1.9
+      ],
+      "ball": [
+       5.7,
+       -2.7,
+       -2.4
+      ],
+      "cage": [
+       0.5,
+       0.8,
+       3.8
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "B_14_1.mat",
+     "baseline": "H_14_0.mat",
+     "label": "ball",
+     "stage": "developing",
+     "tach_rpm": 1736.0,
+     "shaft_rpm": 1784.6,
+     "band_hz": [
+      16000.0,
+      17000.0
+     ],
+     "growth_db": {
+      "outer": [
+       -2.0,
+       -1.2,
+       0.8
+      ],
+      "inner": [
+       -0.1,
+       -1.3,
+       0.3
+      ],
+      "ball": [
+       0.3,
+       3.1,
+       1.4
+      ],
+      "cage": [
+       2.5,
+       2.5,
+       1.0
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "B_14_2.mat",
+     "baseline": "H_14_0.mat",
+     "label": "ball",
+     "stage": "faulty",
+     "tach_rpm": 1736.0,
+     "shaft_rpm": 1785.1,
+     "band_hz": [
+      16500.0,
+      17500.0
+     ],
+     "growth_db": {
+      "outer": [
+       3.4,
+       2.0,
+       -0.9
+      ],
+      "inner": [
+       1.0,
+       -0.3,
+       -1.6
+      ],
+      "ball": [
+       -0.3,
+       3.5,
+       0.3
+      ],
+      "cage": [
+       3.4,
+       5.6,
+       5.9
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "B_15_1.mat",
+     "baseline": "H_15_0.mat",
+     "label": "ball",
+     "stage": "developing",
+     "tach_rpm": 1720.0,
+     "shaft_rpm": 1783.0,
+     "band_hz": [
+      7000.0,
+      8000.0
+     ],
+     "growth_db": {
+      "outer": [
+       -1.1,
+       -4.7,
+       -6.2
+      ],
+      "inner": [
+       -0.9,
+       -2.7,
+       -5.5
+      ],
+      "ball": [
+       0.2,
+       2.2,
+       -5.0
+      ],
+      "cage": [
+       -0.9,
+       -8.4,
+       -5.8
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "B_15_2.mat",
+     "baseline": "H_15_0.mat",
+     "label": "ball",
+     "stage": "faulty",
+     "tach_rpm": 1722.0,
+     "shaft_rpm": 1783.9,
+     "band_hz": [
+      17000.0,
+      18000.0
+     ],
+     "growth_db": {
+      "outer": [
+       0.3,
+       6.0,
+       -2.1
+      ],
+      "inner": [
+       -5.5,
+       0.4,
+       -2.2
+      ],
+      "ball": [
+       -2.0,
+       -0.8,
+       -3.3
+      ],
+      "cage": [
+       10.2,
+       0.2,
+       -0.4
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "C_16_1.mat",
+     "baseline": "H_16_0.mat",
+     "label": "cage",
+     "stage": "developing",
+     "tach_rpm": 1780.0,
+     "shaft_rpm": 1676.7,
+     "band_hz": [
+      12500.0,
+      16500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -1.8,
+       -0.4,
+       -2.4
+      ],
+      "inner": [
+       1.8,
+       -1.7,
+       1.1
+      ],
+      "ball": [
+       1.9,
+       -6.0,
+       -2.8
+      ],
+      "cage": [
+       2.2,
+       -6.0,
+       -2.7
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "C_16_2.mat",
+     "baseline": "H_16_0.mat",
+     "label": "cage",
+     "stage": "faulty",
+     "tach_rpm": 1700.0,
+     "shaft_rpm": 1700.0,
+     "band_hz": [
+      15500.0,
+      17500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -1.6,
+       3.1,
+       1.4
+      ],
+      "inner": [
+       1.3,
+       -0.2,
+       -0.3
+      ],
+      "ball": [
+       -1.7,
+       -1.0,
+       2.5
+      ],
+      "cage": [
+       2.5,
+       -0.5,
+       0.4
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "C_17_1.mat",
+     "baseline": "H_17_0.mat",
+     "label": "cage",
+     "stage": "developing",
+     "tach_rpm": 1800.0,
+     "shaft_rpm": 1792.8,
+     "band_hz": [
+      14500.0,
+      15500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -7.1,
+       -0.2,
+       0.3
+      ],
+      "inner": [
+       -3.1,
+       -2.2,
+       1.3
+      ],
+      "ball": [
+       -4.7,
+       -0.6,
+       -1.3
+      ],
+      "cage": [
+       1.3,
+       -8.3,
+       -6.2
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "C_17_2.mat",
+     "baseline": "H_17_0.mat",
+     "label": "cage",
+     "stage": "faulty",
+     "tach_rpm": 1730.0,
+     "shaft_rpm": 1701.8,
+     "band_hz": [
+      12000.0,
+      13000.0
+     ],
+     "growth_db": {
+      "outer": [
+       -6.1,
+       0.5,
+       -2.4
+      ],
+      "inner": [
+       -1.6,
+       2.0,
+       1.9
+      ],
+      "ball": [
+       -2.2,
+       -9.9,
+       -1.6
+      ],
+      "cage": [
+       1.7,
+       -3.2,
+       2.1
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "C_18_1.mat",
+     "baseline": "H_18_0.mat",
+     "label": "cage",
+     "stage": "developing",
+     "tach_rpm": 1780.0,
+     "shaft_rpm": 1632.5,
+     "band_hz": [
+      500.0,
+      1500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -8.1,
+       -9.6,
+       7.6
+      ],
+      "inner": [
+       9.3,
+       6.8,
+       -3.1
+      ],
+      "ball": [
+       2.9,
+       -6.0,
+       -4.8
+      ],
+      "cage": [
+       -2.2,
+       6.4,
+       2.1
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": true,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "inner"
+    },
+    {
+     "file": "C_18_2.mat",
+     "baseline": "H_18_0.mat",
+     "label": "cage",
+     "stage": "faulty",
+     "tach_rpm": 1780.0,
+     "shaft_rpm": 1635.6,
+     "band_hz": [
+      13500.0,
+      15500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -6.1,
+       -1.5,
+       -3.4
+      ],
+      "inner": [
+       1.6,
+       1.0,
+       0.9
+      ],
+      "ball": [
+       1.0,
+       -6.0,
+       -6.1
+      ],
+      "cage": [
+       -5.4,
+       -8.3,
+       -1.5
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "C_19_1.mat",
+     "baseline": "H_19_0.mat",
+     "label": "cage",
+     "stage": "developing",
+     "tach_rpm": 1785.0,
+     "shaft_rpm": 1638.4,
+     "band_hz": [
+      14500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -2.6,
+       1.4,
+       -0.1
+      ],
+      "inner": [
+       -1.3,
+       0.4,
+       -3.3
+      ],
+      "ball": [
+       -6.0,
+       -4.8,
+       2.9
+      ],
+      "cage": [
+       -2.9,
+       -4.6,
+       2.0
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "C_19_2.mat",
+     "baseline": "H_19_0.mat",
+     "label": "cage",
+     "stage": "faulty",
+     "tach_rpm": 1785.0,
+     "shaft_rpm": 1796.9,
+     "band_hz": [
+      6000.0,
+      7000.0
+     ],
+     "growth_db": {
+      "outer": [
+       -4.5,
+       -2.3,
+       1.2
+      ],
+      "inner": [
+       -1.5,
+       -0.5,
+       0.7
+      ],
+      "ball": [
+       3.5,
+       -5.7,
+       -5.8
+      ],
+      "cage": [
+       -1.6,
+       -6.0,
+       -6.9
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "C_20_1.mat",
+     "baseline": "H_20_0.mat",
+     "label": "cage",
+     "stage": "developing",
+     "tach_rpm": 1778.0,
+     "shaft_rpm": 1782.6,
+     "band_hz": [
+      4000.0,
+      5000.0
+     ],
+     "growth_db": {
+      "outer": [
+       -6.2,
+       -10.2,
+       -10.0
+      ],
+      "inner": [
+       0.9,
+       1.2,
+       -0.1
+      ],
+      "ball": [
+       5.0,
+       -1.2,
+       -1.4
+      ],
+      "cage": [
+       6.7,
+       8.8,
+       -2.6
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": true
+     },
+     "diagnosis": "cage"
+    },
+    {
+     "file": "C_20_2.mat",
+     "baseline": "H_20_0.mat",
+     "label": "cage",
+     "stage": "faulty",
+     "tach_rpm": 1767.0,
+     "shaft_rpm": 1768.4,
+     "band_hz": [
+      12500.0,
+      14500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -5.8,
+       6.4,
+       8.0
+      ],
+      "inner": [
+       9.2,
+       2.3,
+       2.5
+      ],
+      "ball": [
+       0.9,
+       6.2,
+       10.6
+      ],
+      "cage": [
+       0.1,
+       -8.8,
+       6.6
+      ]
+     },
+     "grown": {
+      "outer": true,
+      "inner": false,
+      "ball": true,
+      "cage": false
+     },
+     "diagnosis": "ball"
+    },
+    {
+     "file": "H_10_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1796.0,
+     "shaft_rpm": 1784.1,
+     "band_hz": [
+      4000.0,
+      5000.0
+     ],
+     "growth_db": {
+      "outer": [
+       -2.4,
+       4.5,
+       2.2
+      ],
+      "inner": [
+       0.6,
+       1.4,
+       0.4
+      ],
+      "ball": [
+       1.3,
+       -1.3,
+       0.0
+      ],
+      "cage": [
+       -1.1,
+       -2.0,
+       -1.3
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_11_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1709.0,
+     "shaft_rpm": 1783.9,
+     "band_hz": [
+      14500.0,
+      16500.0
+     ],
+     "growth_db": {
+      "outer": [
+       0.9,
+       -0.8,
+       4.1
+      ],
+      "inner": [
+       1.3,
+       -0.4,
+       -3.5
+      ],
+      "ball": [
+       0.7,
+       5.6,
+       2.5
+      ],
+      "cage": [
+       -4.3,
+       -1.1,
+       -1.9
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_12_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1720.0,
+     "shaft_rpm": 1783.7,
+     "band_hz": [
+      7500.0,
+      8500.0
+     ],
+     "growth_db": {
+      "outer": [
+       1.0,
+       -3.6,
+       -1.5
+      ],
+      "inner": [
+       -5.1,
+       -2.3,
+       -0.4
+      ],
+      "ball": [
+       8.6,
+       -7.0,
+       -4.8
+      ],
+      "cage": [
+       1.0,
+       -0.4,
+       -0.7
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_13_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1725.0,
+     "shaft_rpm": 1782.4,
+     "band_hz": [
+      4500.0,
+      6500.0
+     ],
+     "growth_db": {
+      "outer": [
+       3.3,
+       6.8,
+       3.0
+      ],
+      "inner": [
+       0.8,
+       1.8,
+       -1.1
+      ],
+      "ball": [
+       1.6,
+       -1.5,
+       -0.5
+      ],
+      "cage": [
+       -3.5,
+       -2.9,
+       -4.4
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_14_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1736.0,
+     "shaft_rpm": 1784.0,
+     "band_hz": [
+      9500.0,
+      11500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -0.1,
+       -1.1,
+       2.3
+      ],
+      "inner": [
+       1.6,
+       2.6,
+       -0.9
+      ],
+      "ball": [
+       2.4,
+       1.4,
+       -0.8
+      ],
+      "cage": [
+       2.0,
+       -1.8,
+       -0.1
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_15_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1720.0,
+     "shaft_rpm": 1782.7,
+     "band_hz": [
+      7500.0,
+      8500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -1.2,
+       -0.3,
+       3.7
+      ],
+      "inner": [
+       1.4,
+       5.3,
+       6.0
+      ],
+      "ball": [
+       3.9,
+       1.0,
+       -0.2
+      ],
+      "cage": [
+       -1.4,
+       -1.1,
+       0.0
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_16_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1780.0,
+     "shaft_rpm": 1803.5,
+     "band_hz": [
+      10500.0,
+      12500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -3.1,
+       -3.2,
+       -5.1
+      ],
+      "inner": [
+       -5.2,
+       -6.0,
+       -4.0
+      ],
+      "ball": [
+       -1.1,
+       -7.7,
+       -5.1
+      ],
+      "cage": [
+       0.1,
+       -0.0,
+       -1.8
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_17_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1800.0,
+     "shaft_rpm": 1800.0,
+     "band_hz": [
+      8500.0,
+      10500.0
+     ],
+     "growth_db": {
+      "outer": [
+       0.9,
+       -1.6,
+       -0.6
+      ],
+      "inner": [
+       1.0,
+       0.3,
+       -2.2
+      ],
+      "ball": [
+       -2.1,
+       4.1,
+       -1.2
+      ],
+      "cage": [
+       2.6,
+       1.8,
+       1.2
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_18_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1780.0,
+     "shaft_rpm": 1780.0,
+     "band_hz": [
+      8500.0,
+      12500.0
+     ],
+     "growth_db": {
+      "outer": [
+       0.6,
+       -0.9,
+       3.0
+      ],
+      "inner": [
+       0.7,
+       -2.0,
+       0.7
+      ],
+      "ball": [
+       2.8,
+       1.7,
+       -0.6
+      ],
+      "cage": [
+       10.5,
+       2.8,
+       0.5
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_19_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1785.0,
+     "shaft_rpm": 1801.9,
+     "band_hz": [
+      6000.0,
+      7000.0
+     ],
+     "growth_db": {
+      "outer": [
+       -0.8,
+       -1.6,
+       -2.9
+      ],
+      "inner": [
+       -1.3,
+       -5.3,
+       -0.6
+      ],
+      "ball": [
+       4.9,
+       -0.4,
+       -4.7
+      ],
+      "cage": [
+       -1.2,
+       2.4,
+       0.9
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_1_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1819.0,
+     "shaft_rpm": 1781.9,
+     "band_hz": [
+      16500.0,
+      17500.0
+     ],
+     "growth_db": {
+      "outer": [
+       2.3,
+       0.2,
+       -5.4
+      ],
+      "inner": [
+       -1.8,
+       -0.5,
+       -1.1
+      ],
+      "ball": [
+       -1.4,
+       -3.9,
+       -4.3
+      ],
+      "cage": [
+       -3.9,
+       -7.1,
+       -8.0
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_20_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1778.0,
+     "shaft_rpm": 1784.5,
+     "band_hz": [
+      11500.0,
+      13500.0
+     ],
+     "growth_db": {
+      "outer": [
+       5.9,
+       -1.0,
+       0.9
+      ],
+      "inner": [
+       2.4,
+       -0.5,
+       1.6
+      ],
+      "ball": [
+       1.0,
+       0.4,
+       2.6
+      ],
+      "cage": [
+       -0.5,
+       -1.5,
+       0.0
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_2_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1800.0,
+     "shaft_rpm": 1785.1,
+     "band_hz": [
+      16500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       2.4,
+       -0.2,
+       2.9
+      ],
+      "inner": [
+       5.9,
+       0.5,
+       3.8
+      ],
+      "ball": [
+       2.9,
+       5.2,
+       5.4
+      ],
+      "cage": [
+       -0.5,
+       0.4,
+       -0.6
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_3_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1790.0,
+     "shaft_rpm": 1784.5,
+     "band_hz": [
+      15000.0,
+      16000.0
+     ],
+     "growth_db": {
+      "outer": [
+       -3.6,
+       5.6,
+       1.0
+      ],
+      "inner": [
+       -1.0,
+       1.7,
+       -0.9
+      ],
+      "ball": [
+       -3.6,
+       -0.3,
+       -1.0
+      ],
+      "cage": [
+       -3.6,
+       -4.7,
+       -6.3
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_4_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1789.0,
+     "shaft_rpm": 1784.1,
+     "band_hz": [
+      15500.0,
+      17500.0
+     ],
+     "growth_db": {
+      "outer": [
+       2.9,
+       -1.6,
+       -1.8
+      ],
+      "inner": [
+       -1.1,
+       -3.5,
+       -1.0
+      ],
+      "ball": [
+       -0.2,
+       2.3,
+       -5.6
+      ],
+      "cage": [
+       -0.8,
+       2.6,
+       2.0
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_5_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1799.0,
+     "shaft_rpm": 1783.6,
+     "band_hz": [
+      11500.0,
+      13500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -1.4,
+       1.4,
+       -1.6
+      ],
+      "inner": [
+       0.2,
+       -1.9,
+       -0.4
+      ],
+      "ball": [
+       -9.8,
+       -1.3,
+       -1.1
+      ],
+      "cage": [
+       -0.8,
+       0.4,
+       -0.3
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_6_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1818.0,
+     "shaft_rpm": 1784.0,
+     "band_hz": [
+      11500.0,
+      13500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -2.2,
+       -2.4,
+       -0.1
+      ],
+      "inner": [
+       0.5,
+       -0.2,
+       5.9
+      ],
+      "ball": [
+       -2.0,
+       2.2,
+       0.2
+      ],
+      "cage": [
+       -0.8,
+       -0.8,
+       -1.5
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_7_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1880.0,
+     "shaft_rpm": 1782.1,
+     "band_hz": [
+      12500.0,
+      13500.0
+     ],
+     "growth_db": {
+      "outer": [
+       2.3,
+       1.2,
+       3.2
+      ],
+      "inner": [
+       -0.6,
+       -1.6,
+       -1.4
+      ],
+      "ball": [
+       -2.1,
+       3.4,
+       -4.2
+      ],
+      "cage": [
+       2.8,
+       -9.2,
+       -2.1
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_8_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1948.0,
+     "shaft_rpm": 1785.8,
+     "band_hz": [
+      2000.0,
+      3000.0
+     ],
+     "growth_db": {
+      "outer": [
+       -3.3,
+       0.3,
+       4.0
+      ],
+      "inner": [
+       -1.1,
+       0.3,
+       -5.0
+      ],
+      "ball": [
+       -1.4,
+       1.8,
+       0.5
+      ],
+      "cage": [
+       -1.2,
+       0.6,
+       -3.4
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "H_9_0.mat",
+     "baseline": "first half",
+     "label": "none",
+     "stage": "healthy",
+     "tach_rpm": 1800.0,
+     "shaft_rpm": 1784.9,
+     "band_hz": [
+      8500.0,
+      12500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -0.2,
+       -1.5,
+       -1.8
+      ],
+      "inner": [
+       -0.8,
+       -3.5,
+       -0.6
+      ],
+      "ball": [
+       3.2,
+       0.7,
+       -2.7
+      ],
+      "cage": [
+       -0.5,
+       1.4,
+       3.4
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "I_1_1.mat",
+     "baseline": "H_1_0.mat",
+     "label": "inner",
+     "stage": "developing",
+     "tach_rpm": 1819.0,
+     "shaft_rpm": 1774.0,
+     "band_hz": [
+      14500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       0.2,
+       5.7,
+       3.2
+      ],
+      "inner": [
+       9.7,
+       1.2,
+       6.1
+      ],
+      "ball": [
+       9.8,
+       6.2,
+       10.1
+      ],
+      "cage": [
+       -4.2,
+       -7.6,
+       -8.5
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": true,
+      "ball": true,
+      "cage": false
+     },
+     "diagnosis": "ball"
+    },
+    {
+     "file": "I_1_2.mat",
+     "baseline": "H_1_0.mat",
+     "label": "inner",
+     "stage": "faulty",
+     "tach_rpm": 1819.0,
+     "shaft_rpm": 1782.7,
+     "band_hz": [
+      3500.0,
+      5500.0
+     ],
+     "growth_db": {
+      "outer": [
+       10.2,
+       4.6,
+       6.9
+      ],
+      "inner": [
+       -6.7,
+       -13.6,
+       -8.0
+      ],
+      "ball": [
+       2.9,
+       3.2,
+       -13.8
+      ],
+      "cage": [
+       -16.5,
+       -1.7,
+       -6.3
+      ]
+     },
+     "grown": {
+      "outer": true,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "outer"
+    },
+    {
+     "file": "I_2_1.mat",
+     "baseline": "H_2_0.mat",
+     "label": "inner",
+     "stage": "developing",
+     "tach_rpm": 1800.0,
+     "shaft_rpm": 1777.9,
+     "band_hz": [
+      14500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       14.2,
+       12.8,
+       -6.7
+      ],
+      "inner": [
+       11.8,
+       2.7,
+       5.1
+      ],
+      "ball": [
+       1.5,
+       8.1,
+       3.0
+      ],
+      "cage": [
+       -11.2,
+       -12.7,
+       -11.3
+      ]
+     },
+     "grown": {
+      "outer": true,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "outer"
+    },
+    {
+     "file": "I_2_2.mat",
+     "baseline": "H_2_0.mat",
+     "label": "inner",
+     "stage": "faulty",
+     "tach_rpm": 1790.0,
+     "shaft_rpm": 1767.2,
+     "band_hz": [
+      16500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       2.0,
+       2.3,
+       -2.7
+      ],
+      "inner": [
+       0.8,
+       -0.6,
+       2.2
+      ],
+      "ball": [
+       2.7,
+       2.8,
+       -4.7
+      ],
+      "cage": [
+       -11.5,
+       -13.9,
+       -6.5
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "I_3_1.mat",
+     "baseline": "H_3_0.mat",
+     "label": "inner",
+     "stage": "developing",
+     "tach_rpm": 1790.0,
+     "shaft_rpm": 1768.6,
+     "band_hz": [
+      15500.0,
+      17500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -1.4,
+       2.7,
+       6.1
+      ],
+      "inner": [
+       4.9,
+       2.2,
+       6.1
+      ],
+      "ball": [
+       5.0,
+       6.6,
+       7.5
+      ],
+      "cage": [
+       -14.1,
+       -11.1,
+       -11.7
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": true,
+      "cage": false
+     },
+     "diagnosis": "ball"
+    },
+    {
+     "file": "I_3_2.mat",
+     "baseline": "H_3_0.mat",
+     "label": "inner",
+     "stage": "faulty",
+     "tach_rpm": 1790.0,
+     "shaft_rpm": 1769.5,
+     "band_hz": [
+      16500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       3.3,
+       15.3,
+       14.9
+      ],
+      "inner": [
+       3.4,
+       15.1,
+       13.5
+      ],
+      "ball": [
+       6.1,
+       5.2,
+       15.6
+      ],
+      "cage": [
+       -13.7,
+       -11.7,
+       -7.8
+      ]
+     },
+     "grown": {
+      "outer": true,
+      "inner": true,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "outer"
+    },
+    {
+     "file": "I_4_1.mat",
+     "baseline": "H_4_0.mat",
+     "label": "inner",
+     "stage": "developing",
+     "tach_rpm": 1789.0,
+     "shaft_rpm": 1767.8,
+     "band_hz": [
+      16500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -4.7,
+       8.4,
+       3.5
+      ],
+      "inner": [
+       10.1,
+       3.3,
+       5.0
+      ],
+      "ball": [
+       4.7,
+       7.5,
+       -4.1
+      ],
+      "cage": [
+       -9.8,
+       -6.5,
+       -3.3
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "I_4_2.mat",
+     "baseline": "H_4_0.mat",
+     "label": "inner",
+     "stage": "faulty",
+     "tach_rpm": 1792.0,
+     "shaft_rpm": 1776.7,
+     "band_hz": [
+      8500.0,
+      12500.0
+     ],
+     "growth_db": {
+      "outer": [
+       6.7,
+       11.4,
+       6.4
+      ],
+      "inner": [
+       10.4,
+       8.7,
+       6.4
+      ],
+      "ball": [
+       3.7,
+       10.5,
+       7.9
+      ],
+      "cage": [
+       -18.6,
+       -1.6,
+       -0.4
+      ]
+     },
+     "grown": {
+      "outer": true,
+      "inner": true,
+      "ball": true,
+      "cage": false
+     },
+     "diagnosis": "inner"
+    },
+    {
+     "file": "I_5_1.mat",
+     "baseline": "H_5_0.mat",
+     "label": "inner",
+     "stage": "developing",
+     "tach_rpm": 1799.0,
+     "shaft_rpm": 1780.1,
+     "band_hz": [
+      10500.0,
+      14500.0
+     ],
+     "growth_db": {
+      "outer": [
+       2.6,
+       8.3,
+       -6.5
+      ],
+      "inner": [
+       5.3,
+       -5.9,
+       -5.3
+      ],
+      "ball": [
+       3.4,
+       0.6,
+       1.9
+      ],
+      "cage": [
+       -7.1,
+       -20.7,
+       -16.6
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "I_5_2.mat",
+     "baseline": "H_5_0.mat",
+     "label": "inner",
+     "stage": "faulty",
+     "tach_rpm": 1795.0,
+     "shaft_rpm": 1775.0,
+     "band_hz": [
+      15500.0,
+      16500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -1.3,
+       0.9,
+       -0.1
+      ],
+      "inner": [
+       -1.0,
+       0.7,
+       -1.5
+      ],
+      "ball": [
+       0.8,
+       -1.2,
+       -0.2
+      ],
+      "cage": [
+       -8.4,
+       -6.0,
+       -6.4
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "O_10_1.mat",
+     "baseline": "H_10_0.mat",
+     "label": "outer",
+     "stage": "developing",
+     "tach_rpm": 1796.0,
+     "shaft_rpm": 1784.4,
+     "band_hz": [
+      14500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       16.6,
+       28.4,
+       28.7
+      ],
+      "inner": [
+       -3.4,
+       10.3,
+       23.9
+      ],
+      "ball": [
+       1.4,
+       2.3,
+       -0.2
+      ],
+      "cage": [
+       15.7,
+       9.7,
+       3.1
+      ]
+     },
+     "grown": {
+      "outer": true,
+      "inner": true,
+      "ball": false,
+      "cage": true
+     },
+     "diagnosis": "outer"
+    },
+    {
+     "file": "O_10_2.mat",
+     "baseline": "H_10_0.mat",
+     "label": "outer",
+     "stage": "faulty",
+     "tach_rpm": 1796.0,
+     "shaft_rpm": 1783.9,
+     "band_hz": [
+      14500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       14.7,
+       23.7,
+       26.1
+      ],
+      "inner": [
+       -1.4,
+       4.9,
+       5.2
+      ],
+      "ball": [
+       1.8,
+       0.7,
+       -0.0
+      ],
+      "cage": [
+       0.9,
+       4.9,
+       -0.2
+      ]
+     },
+     "grown": {
+      "outer": true,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "outer"
+    },
+    {
+     "file": "O_6_1.mat",
+     "baseline": "H_6_0.mat",
+     "label": "outer",
+     "stage": "developing",
+     "tach_rpm": 1818.0,
+     "shaft_rpm": 1783.9,
+     "band_hz": [
+      10500.0,
+      14500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -9.8,
+       -7.3,
+       -12.5
+      ],
+      "inner": [
+       -5.3,
+       -5.3,
+       7.5
+      ],
+      "ball": [
+       -3.4,
+       -5.2,
+       -4.4
+      ],
+      "cage": [
+       2.8,
+       -2.8,
+       -7.8
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "O_6_2.mat",
+     "baseline": "H_6_0.mat",
+     "label": "outer",
+     "stage": "faulty",
+     "tach_rpm": 1818.0,
+     "shaft_rpm": 1784.3,
+     "band_hz": [
+      12500.0,
+      16500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -2.9,
+       -5.3,
+       -9.5
+      ],
+      "inner": [
+       -8.1,
+       -6.5,
+       2.8
+      ],
+      "ball": [
+       1.8,
+       -5.8,
+       -4.3
+      ],
+      "cage": [
+       5.2,
+       -2.3,
+       -2.7
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "O_7_1.mat",
+     "baseline": "H_7_0.mat",
+     "label": "outer",
+     "stage": "developing",
+     "tach_rpm": 1880.0,
+     "shaft_rpm": 1784.2,
+     "band_hz": [
+      16500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -2.2,
+       0.6,
+       -2.0
+      ],
+      "inner": [
+       1.5,
+       -1.7,
+       4.5
+      ],
+      "ball": [
+       10.6,
+       -0.4,
+       7.4
+      ],
+      "cage": [
+       5.0,
+       6.7,
+       -0.5
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": true,
+      "cage": false
+     },
+     "diagnosis": "ball"
+    },
+    {
+     "file": "O_7_2.mat",
+     "baseline": "H_7_0.mat",
+     "label": "outer",
+     "stage": "faulty",
+     "tach_rpm": 2190.0,
+     "shaft_rpm": 1785.1,
+     "band_hz": [
+      8500.0,
+      12500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -16.2,
+       -11.6,
+       0.0
+      ],
+      "inner": [
+       -9.4,
+       -1.3,
+       10.8
+      ],
+      "ball": [
+       -0.4,
+       -1.8,
+       10.3
+      ],
+      "cage": [
+       7.5,
+       17.2,
+       -4.0
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": true
+     },
+     "diagnosis": "cage"
+    },
+    {
+     "file": "O_8_1.mat",
+     "baseline": "H_8_0.mat",
+     "label": "outer",
+     "stage": "developing",
+     "tach_rpm": 1948.0,
+     "shaft_rpm": 1785.8,
+     "band_hz": [
+      3000.0,
+      4000.0
+     ],
+     "growth_db": {
+      "outer": [
+       -7.9,
+       -9.6,
+       -1.8
+      ],
+      "inner": [
+       -7.4,
+       -3.6,
+       -3.3
+      ],
+      "ball": [
+       -11.2,
+       -4.6,
+       -11.8
+      ],
+      "cage": [
+       8.7,
+       18.5,
+       4.1
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": true
+     },
+     "diagnosis": "cage"
+    },
+    {
+     "file": "O_8_2.mat",
+     "baseline": "H_8_0.mat",
+     "label": "outer",
+     "stage": "faulty",
+     "tach_rpm": 1945.0,
+     "shaft_rpm": 1785.7,
+     "band_hz": [
+      14500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       -4.7,
+       -1.3,
+       -0.5
+      ],
+      "inner": [
+       0.6,
+       -0.8,
+       -4.0
+      ],
+      "ball": [
+       -3.5,
+       -5.2,
+       -3.5
+      ],
+      "cage": [
+       4.5,
+       3.2,
+       -4.4
+      ]
+     },
+     "grown": {
+      "outer": false,
+      "inner": false,
+      "ball": false,
+      "cage": false
+     },
+     "diagnosis": "none"
+    },
+    {
+     "file": "O_9_1.mat",
+     "baseline": "H_9_0.mat",
+     "label": "outer",
+     "stage": "developing",
+     "tach_rpm": 1800.0,
+     "shaft_rpm": 1784.9,
+     "band_hz": [
+      14500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       22.6,
+       28.1,
+       19.0
+      ],
+      "inner": [
+       0.2,
+       12.6,
+       9.2
+      ],
+      "ball": [
+       1.2,
+       -1.0,
+       6.9
+      ],
+      "cage": [
+       25.0,
+       22.3,
+       16.7
+      ]
+     },
+     "grown": {
+      "outer": true,
+      "inner": true,
+      "ball": false,
+      "cage": true
+     },
+     "diagnosis": "outer"
+    },
+    {
+     "file": "O_9_2.mat",
+     "baseline": "H_9_0.mat",
+     "label": "outer",
+     "stage": "faulty",
+     "tach_rpm": 1800.0,
+     "shaft_rpm": 1784.9,
+     "band_hz": [
+      14500.0,
+      18500.0
+     ],
+     "growth_db": {
+      "outer": [
+       23.6,
+       29.3,
+       21.4
+      ],
+      "inner": [
+       3.6,
+       4.7,
+       6.6
+      ],
+      "ball": [
+       1.0,
+       0.4,
+       10.5
+      ],
+      "cage": [
+       22.7,
+       25.3,
+       19.5
+      ]
+     },
+     "grown": {
+      "outer": true,
+      "inner": false,
+      "ball": false,
+      "cage": true
+     },
+     "diagnosis": "outer"
+    }
+   ],
+   "faulty": {
+    "type_accuracy": {
+     "k": 3,
+     "n": 20,
+     "rate": 0.15,
+     "wilson95": [
+      0.052,
+      0.36
+     ]
+    },
+    "detected_any_fault": {
+     "k": 8,
+     "n": 20,
+     "rate": 0.4,
+     "wilson95": [
+      0.219,
+      0.613
+     ]
+    },
+    "per_type": {
+     "outer": {
+      "k": 2,
+      "n": 5,
+      "rate": 0.4,
+      "wilson95": [
+       0.118,
+       0.769
+      ]
+     },
+     "inner": {
+      "k": 1,
+      "n": 5,
+      "rate": 0.2,
+      "wilson95": [
+       0.036,
+       0.624
+      ]
+     },
+     "ball": {
+      "k": 0,
+      "n": 5,
+      "rate": 0.0,
+      "wilson95": [
+       0.0,
+       0.434
+      ]
+     },
+     "cage": {
+      "k": 0,
+      "n": 5,
+      "rate": 0.0,
+      "wilson95": [
+       0.0,
+       0.434
+      ]
+     }
+    },
+    "confusion": {
+     "outer": {
+      "outer": 2,
+      "inner": 0,
+      "ball": 0,
+      "cage": 1,
+      "none": 2
+     },
+     "inner": {
+      "outer": 2,
+      "inner": 1,
+      "ball": 0,
+      "cage": 0,
+      "none": 2
+     },
+     "ball": {
+      "outer": 0,
+      "inner": 0,
+      "ball": 0,
+      "cage": 1,
+      "none": 4
+     },
+     "cage": {
+      "outer": 0,
+      "inner": 0,
+      "ball": 1,
+      "cage": 0,
+      "none": 4
+     }
+    }
+   },
+   "developing": {
+    "type_accuracy": {
+     "k": 3,
+     "n": 20,
+     "rate": 0.15,
+     "wilson95": [
+      0.052,
+      0.36
+     ]
+    },
+    "detected_any_fault": {
+     "k": 10,
+     "n": 20,
+     "rate": 0.5,
+     "wilson95": [
+      0.299,
+      0.701
+     ]
+    },
+    "per_type": {
+     "outer": {
+      "k": 2,
+      "n": 5,
+      "rate": 0.4,
+      "wilson95": [
+       0.118,
+       0.769
+      ]
+     },
+     "inner": {
+      "k": 0,
+      "n": 5,
+      "rate": 0.0,
+      "wilson95": [
+       0.0,
+       0.434
+      ]
+     },
+     "ball": {
+      "k": 0,
+      "n": 5,
+      "rate": 0.0,
+      "wilson95": [
+       0.0,
+       0.434
+      ]
+     },
+     "cage": {
+      "k": 1,
+      "n": 5,
+      "rate": 0.2,
+      "wilson95": [
+       0.036,
+       0.624
+      ]
+     }
+    },
+    "confusion": {
+     "outer": {
+      "outer": 2,
+      "inner": 0,
+      "ball": 1,
+      "cage": 1,
+      "none": 1
+     },
+     "inner": {
+      "outer": 1,
+      "inner": 0,
+      "ball": 2,
+      "cage": 0,
+      "none": 2
+     },
+     "ball": {
+      "outer": 0,
+      "inner": 0,
+      "ball": 0,
+      "cage": 1,
+      "none": 4
+     },
+     "cage": {
+      "outer": 0,
+      "inner": 1,
+      "ball": 0,
+      "cage": 1,
+      "none": 3
+     }
+    }
+   },
+   "healthy_false_alarms": {
+    "k": 0,
+    "n": 20,
+    "rate": 0.0,
+    "wilson95": [
+     0.0,
+     0.161
+    ]
+   },
+   "healthy_alarm_types": {
+    "outer": 0,
+    "inner": 0,
+    "ball": 0,
+    "cage": 0
+   },
+   "tach_vs_vibration_rel_gap": {
+    "median": 0.019,
+    "max": 0.2268
+   },
+   "shaft_rpm_range": [
+    1632.5,
+    1803.5
+   ]
+  }
+ },
+ "spindown": {
+  "runs": [
+   {
+    "run": "n1_rpm",
+    "points": 52,
+    "selected": "coulomb+viscous",
+    "laws": [
+     {
+      "model": "coulomb",
+      "params": {
+       "w0": 91.49585,
+       "a": 17.35386
+      },
+      "stderr": {
+       "w0": 0.36776,
+       "a": 0.12429
+      },
+      "rmse_rpm": 12.6,
+      "heldout_rmse_rpm": 39.26,
+      "bic": 36.7
+     },
+     {
+      "model": "coulomb+viscous",
+      "params": {
+       "w0": 94.37559,
+       "a": 13.83975,
+       "b": 0.07532
+      },
+      "stderr": {
+       "w0": 0.03692,
+       "a": 0.03393,
+       "b": 0.00071
+      },
+      "rmse_rpm": 0.82,
+      "heldout_rmse_rpm": 2.82,
+      "bic": -243.2
+     },
+     {
+      "model": "coulomb+viscous+quadratic",
+      "params": {
+       "w0": 94.37559,
+       "a": 13.83975,
+       "b": 0.07532,
+       "c": 0.0
+      },
+      "stderr": {
+       "w0": 0.04823,
+       "a": 0.09453,
+       "b": 0.00453,
+       "c": 5e-05
+      },
+      "rmse_rpm": 0.82,
+      "heldout_rmse_rpm": 3.37,
+      "bic": -239.3
+     }
+    ]
+   },
+   {
+    "run": "n2_rpm",
+    "points": 54,
+    "selected": "coulomb+viscous",
+    "laws": [
+     {
+      "model": "coulomb",
+      "params": {
+       "w0": 91.02261,
+       "a": 16.75948
+      },
+      "stderr": {
+       "w0": 0.40484,
+       "a": 0.13168
+      },
+      "rmse_rpm": 14.13,
+      "heldout_rmse_rpm": 41.86,
+      "bic": 50.3
+     },
+     {
+      "model": "coulomb+viscous",
+      "params": {
+       "w0": 94.27827,
+       "a": 13.02677,
+       "b": 0.08124
+      },
+      "stderr": {
+       "w0": 0.03795,
+       "a": 0.03284,
+       "b": 0.00069
+      },
+      "rmse_rpm": 0.86,
+      "heldout_rmse_rpm": 1.03,
+      "bic": -248.4
+     },
+     {
+      "model": "coulomb+viscous+quadratic",
+      "params": {
+       "w0": 94.27867,
+       "a": 13.02782,
+       "b": 0.08118,
+       "c": 0.0
+      },
+      "stderr": {
+       "w0": 0.04963,
+       "a": 0.08992,
+       "b": 0.00438,
+       "c": 5e-05
+      },
+      "rmse_rpm": 0.86,
+      "heldout_rmse_rpm": 1.03,
+      "bic": -244.4
+     }
+    ]
+   },
+   {
+    "run": "n3_rpm",
+    "points": 51,
+    "selected": "coulomb+viscous",
+    "laws": [
+     {
+      "model": "coulomb",
+      "params": {
+       "w0": 91.34887,
+       "a": 17.56589
+      },
+      "stderr": {
+       "w0": 0.39539,
+       "a": 0.13629
+      },
+      "rmse_rpm": 13.41,
+      "heldout_rmse_rpm": 41.44,
+      "bic": 42.5
+     },
+     {
+      "model": "coulomb+viscous",
+      "params": {
+       "w0": 94.41383,
+       "a": 13.71714,
+       "b": 0.08223
+      },
+      "stderr": {
+       "w0": 0.04176,
+       "a": 0.03947,
+       "b": 0.00082
+      },
+      "rmse_rpm": 0.92,
+      "heldout_rmse_rpm": 4.65,
+      "bic": -227.0
+     },
+     {
+      "model": "coulomb+viscous+quadratic",
+      "params": {
+       "w0": 94.41383,
+       "a": 13.71714,
+       "b": 0.08223,
+       "c": 0.0
+      },
+      "stderr": {
+       "w0": 0.05453,
+       "a": 0.11179,
+       "b": 0.00532,
+       "c": 5e-05
+      },
+      "rmse_rpm": 0.92,
+      "heldout_rmse_rpm": 4.65,
+      "bic": -223.1
+     }
+    ]
+   },
+   {
+    "run": "n4_rpm",
+    "points": 54,
+    "selected": "coulomb+viscous",
+    "laws": [
+     {
+      "model": "coulomb",
+      "params": {
+       "w0": 91.25257,
+       "a": 16.77315
+      },
+      "stderr": {
+       "w0": 0.3971,
+       "a": 0.12917
+      },
+      "rmse_rpm": 13.86,
+      "heldout_rmse_rpm": 41.92,
+      "bic": 48.2
+     },
+     {
+      "model": "coulomb+viscous",
+      "params": {
+       "w0": 94.44344,
+       "a": 13.09858,
+       "b": 0.07961
+      },
+      "stderr": {
+       "w0": 0.02824,
+       "a": 0.02453,
+       "b": 0.00052
+      },
+      "rmse_rpm": 0.64,
+      "heldout_rmse_rpm": 1.95,
+      "bic": -280.3
+     },
+     {
+      "model": "coulomb+viscous+quadratic",
+      "params": {
+       "w0": 94.44344,
+       "a": 13.09858,
+       "b": 0.07961,
+       "c": 0.0
+      },
+      "stderr": {
+       "w0": 0.03692,
+       "a": 0.06741,
+       "b": 0.00327,
+       "c": 3e-05
+      },
+      "rmse_rpm": 0.64,
+      "heldout_rmse_rpm": 1.95,
+      "bic": -276.3
+     }
+    ]
+   },
+   {
+    "run": "n5_rpm",
+    "points": 53,
+    "selected": "coulomb+viscous",
+    "laws": [
+     {
+      "model": "coulomb",
+      "params": {
+       "w0": 91.14039,
+       "a": 16.84135
+      },
+      "stderr": {
+       "w0": 0.3921,
+       "a": 0.12998
+      },
+      "rmse_rpm": 13.56,
+      "heldout_rmse_rpm": 41.85,
+      "bic": 45.1
+     },
+     {
+      "model": "coulomb+viscous",
+      "params": {
+       "w0": 94.26339,
+       "a": 13.07252,
+       "b": 0.08067
+      },
+      "stderr": {
+       "w0": 0.00685,
+       "a": 0.00623,
+       "b": 0.00013
+      },
+      "rmse_rpm": 0.15,
+      "heldout_rmse_rpm": 0.32,
+      "bic": -426.0
+     },
+     {
+      "model": "coulomb+viscous+quadratic",
+      "params": {
+       "w0": 94.28005,
+       "a": 13.12097,
+       "b": 0.07824,
+       "c": 3e-05
+      },
+      "stderr": {
+       "w0": 0.00813,
+       "a": 0.01605,
+       "b": 0.00076,
+       "c": 1e-05
+      },
+      "rmse_rpm": 0.14,
+      "heldout_rmse_rpm": 0.32,
+      "bic": -432.2
+     }
+    ]
+   }
+  ],
+  "selected_laws": [
+   "coulomb+viscous",
+   "coulomb+viscous",
+   "coulomb+viscous",
+   "coulomb+viscous",
+   "coulomb+viscous"
+  ],
+  "two_term_mean_sd": {
+   "a_rad_s2": [
+    13.351,
+    0.393
+   ],
+   "b_per_s": [
+    0.0798,
+    0.0027
+   ]
+  },
+  "published_mean_sd": {
+   "a_rad_s2": [
+    13.38,
+    0.38
+   ],
+   "b_per_s": [
+    0.079,
+    0.0028
+   ]
+  },
+  "agrees_with_published": true,
+  "smallest_detectable_relative_change": {
+   "a_rad_s2": 0.088,
+   "b_per_s": 0.102
+  }
+ },
+ "status": "not proven",
+ "sounds": {
+  "features": [
+   "rotation_hz",
+   "h1_db",
+   "h2_db",
+   "h3_db",
+   "h4_db",
+   "h5_db",
+   "h6_db",
+   "h7_db",
+   "h8_db",
+   "floor_low_db",
+   "floor_high_db"
+  ],
+  "score": "root mean square of robust z-scores (median, 1.4826 MAD) against 60 normal clips",
+  "machines": {
+   "fan/id_00": {
+    "n_anomalous": 40,
+    "n_normal_test": 40,
+    "n_normal_ref": 60,
+    "reference_comb_hz": 22.45,
+    "physics_auc": [
+     0.999,
+     0.996,
+     1.0
+    ],
+    "generic_template_auc": [
+     0.998,
+     0.994,
+     1.0
+    ],
+    "mimii_paper_autoencoder_auc_6db": 0.75,
+    "dcase2020_baseline_auc": 0.5441,
+    "post_hoc_feature_auc": {
+     "rotation_hz": 1.0,
+     "h1_db": 0.811,
+     "h2_db": 0.861,
+     "h3_db": 0.688,
+     "h4_db": 0.532,
+     "h5_db": 0.565,
+     "h6_db": 0.784,
+     "h7_db": 0.483,
+     "h8_db": 0.512,
+     "floor_low_db": 0.626,
+     "floor_high_db": 0.409
+    },
+    "median_anomalous_rate_shift_hz": 0.44
+   },
+   "fan/id_02": {
+    "n_anomalous": 40,
+    "n_normal_test": 40,
+    "n_normal_ref": 60,
+    "reference_comb_hz": 99.8,
+    "physics_auc": [
+     0.887,
+     0.818,
+     0.957
+    ],
+    "generic_template_auc": [
+     0.993,
+     0.979,
+     1.0
+    ],
+    "mimii_paper_autoencoder_auc_6db": 0.99,
+    "dcase2020_baseline_auc": 0.734,
+    "post_hoc_feature_auc": {
+     "rotation_hz": 0.605,
+     "h1_db": 0.6,
+     "h2_db": 0.466,
+     "h3_db": 0.519,
+     "h4_db": 0.544,
+     "h5_db": 0.534,
+     "h6_db": 0.534,
+     "h7_db": 0.647,
+     "h8_db": 0.491,
+     "floor_low_db": 0.859,
+     "floor_high_db": 0.936
+    },
+    "median_anomalous_rate_shift_hz": -0.1
+   },
+   "fan/id_04": {
+    "n_anomalous": 40,
+    "n_normal_test": 40,
+    "n_normal_ref": 60,
+    "reference_comb_hz": 47.15,
+    "physics_auc": [
+     0.873,
+     0.786,
+     0.96
+    ],
+    "generic_template_auc": [
+     0.999,
+     0.998,
+     1.0
+    ],
+    "mimii_paper_autoencoder_auc_6db": 0.92,
+    "dcase2020_baseline_auc": 0.6161,
+    "post_hoc_feature_auc": {
+     "rotation_hz": 0.941,
+     "h1_db": 0.963,
+     "h2_db": 0.809,
+     "h3_db": 0.637,
+     "h4_db": 0.414,
+     "h5_db": 0.885,
+     "h6_db": 0.626,
+     "h7_db": 0.537,
+     "h8_db": 0.482,
+     "floor_low_db": 0.926,
+     "floor_high_db": 0.703
+    },
+    "median_anomalous_rate_shift_hz": 0.58
+   },
+   "fan/id_06": {
+    "n_anomalous": 40,
+    "n_normal_test": 40,
+    "n_normal_ref": 60,
+    "reference_comb_hz": 71.15,
+    "physics_auc": [
+     0.735,
+     0.611,
+     0.859
+    ],
+    "generic_template_auc": [
+     0.997,
+     0.991,
+     1.0
+    ],
+    "mimii_paper_autoencoder_auc_6db": 0.99,
+    "dcase2020_baseline_auc": 0.7392,
+    "post_hoc_feature_auc": {
+     "rotation_hz": 0.579,
+     "h1_db": 0.507,
+     "h2_db": 0.503,
+     "h3_db": 0.507,
+     "h4_db": 0.829,
+     "h5_db": 0.414,
+     "h6_db": 0.476,
+     "h7_db": 0.499,
+     "h8_db": 0.885,
+     "floor_low_db": 0.574,
+     "floor_high_db": 0.796
+    },
+    "median_anomalous_rate_shift_hz": 0.32
+   },
+   "pump/id_00": {
+    "n_anomalous": 40,
+    "n_normal_test": 40,
+    "n_normal_ref": 60,
+    "reference_comb_hz": 99.65,
+    "physics_auc": [
+     0.959,
+     0.923,
+     0.995
+    ],
+    "generic_template_auc": [
+     0.989,
+     0.975,
+     1.0
+    ],
+    "mimii_paper_autoencoder_auc_6db": 0.84,
+    "dcase2020_baseline_auc": 0.6715,
+    "post_hoc_feature_auc": {
+     "rotation_hz": 0.572,
+     "h1_db": 0.827,
+     "h2_db": 0.792,
+     "h3_db": 0.713,
+     "h4_db": 0.642,
+     "h5_db": 0.846,
+     "h6_db": 0.644,
+     "h7_db": 0.708,
+     "h8_db": 0.694,
+     "floor_low_db": 0.933,
+     "floor_high_db": 0.977
+    },
+    "median_anomalous_rate_shift_hz": 0.04
+   },
+   "pump/id_02": {
+    "n_anomalous": 40,
+    "n_normal_test": 40,
+    "n_normal_ref": 60,
+    "reference_comb_hz": 95.35,
+    "physics_auc": [
+     0.769,
+     0.666,
+     0.872
+    ],
+    "generic_template_auc": [
+     0.897,
+     0.829,
+     0.966
+    ],
+    "mimii_paper_autoencoder_auc_6db": 0.45,
+    "dcase2020_baseline_auc": 0.6153,
+    "post_hoc_feature_auc": {
+     "rotation_hz": 0.621,
+     "h1_db": 0.649,
+     "h2_db": 0.575,
+     "h3_db": 0.491,
+     "h4_db": 0.566,
+     "h5_db": 0.519,
+     "h6_db": 0.813,
+     "h7_db": 0.422,
+     "h8_db": 0.679,
+     "floor_low_db": 0.801,
+     "floor_high_db": 0.859
+    },
+    "median_anomalous_rate_shift_hz": 2.2
+   },
+   "pump/id_04": {
+    "n_anomalous": 40,
+    "n_normal_test": 40,
+    "n_normal_ref": 60,
+    "reference_comb_hz": 71.85,
+    "physics_auc": [
+     0.936,
+     0.874,
+     0.997
+    ],
+    "generic_template_auc": [
+     0.994,
+     0.985,
+     1.0
+    ],
+    "mimii_paper_autoencoder_auc_6db": 0.99,
+    "dcase2020_baseline_auc": 0.8833,
+    "post_hoc_feature_auc": {
+     "rotation_hz": 0.715,
+     "h1_db": 0.428,
+     "h2_db": 0.724,
+     "h3_db": 0.532,
+     "h4_db": 0.641,
+     "h5_db": 0.434,
+     "h6_db": 0.954,
+     "h7_db": 0.329,
+     "h8_db": 0.951,
+     "floor_low_db": 0.754,
+     "floor_high_db": 0.762
+    },
+    "median_anomalous_rate_shift_hz": -0.08
+   },
+   "pump/id_06": {
+    "n_anomalous": 40,
+    "n_normal_test": 40,
+    "n_normal_ref": 60,
+    "reference_comb_hz": 94.2,
+    "physics_auc": [
+     0.976,
+     0.93,
+     1.0
+    ],
+    "generic_template_auc": [
+     0.977,
+     0.944,
+     1.0
+    ],
+    "mimii_paper_autoencoder_auc_6db": 0.94,
+    "dcase2020_baseline_auc": 0.7455,
+    "post_hoc_feature_auc": {
+     "rotation_hz": 0.855,
+     "h1_db": 0.644,
+     "h2_db": 0.958,
+     "h3_db": 0.877,
+     "h4_db": 0.691,
+     "h5_db": 0.795,
+     "h6_db": 0.907,
+     "h7_db": 0.864,
+     "h8_db": 0.739,
+     "floor_low_db": 0.856,
+     "floor_high_db": 0.723
+    },
+    "median_anomalous_rate_shift_hz": 1.52
+   }
+  },
+  "fan_mean": {
+   "physics_auc": 0.874,
+   "generic_template_auc": 0.997,
+   "mimii_paper_autoencoder_auc_6db": 0.913,
+   "dcase2020_baseline_auc": 0.658
+  },
+  "pump_mean": {
+   "physics_auc": 0.91,
+   "generic_template_auc": 0.964,
+   "mimii_paper_autoencoder_auc_6db": 0.805,
+   "dcase2020_baseline_auc": 0.729
+  }
+ }
+}
