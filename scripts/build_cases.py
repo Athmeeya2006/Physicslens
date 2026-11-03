@@ -109,6 +109,11 @@ def robot_arm() -> dict[str, Any]:
                   f"real joints to {h['identified']['arm_total']['rms_deg']:.2f}° RMS against {h['default']['arm_total']['rms_deg']:.2f}° for "
                   f"the MuJoCo Menagerie model ({cmp['default_minus_identified']['ratio']:.1f} times closer; "
                   f"{cmp['fair_baseline_minus_identified']['ratio']:.1f} times closer than the default with a fitted delay)")
+        fleet = _json("data/robot/fleet.json")
+        if fleet:
+            f = fleet["summary"]
+            number += (f"; per unit: on {f['arms']} owners' arms a borrowed calibration tracks worse than the arm's own in "
+                       f"{f['pairs_significantly_worse']} of {f['pairs']} pairs ({f['borrowed_mean_deg']:.2f}° against {f['own_mean_deg']:.2f}°)")
     return {"id": "robot-arm", "title": "Open-source robot arm: simulator corrected from public recordings",
             "problem": "A robot's simulator model has guessed joint dynamics, so what works in simulation drifts on the real arm.",
             "who": "anyone who simulates the SO-100 arm (MuJoCo Menagerie, LeRobot users)",
