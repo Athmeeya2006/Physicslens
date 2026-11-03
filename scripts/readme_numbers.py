@@ -401,7 +401,7 @@ CLAIMS = [
           lambda: next(h["heldout_rmse_rpm"] for h in load("data/cases_agent/coastdown.json")["hand_chosen"] if h["law"] == "coulomb")),
     Claim("Agent cases: coast-down deceleration", r"\(Coulomb alone, ([\d.]+) rad/s²",
           lambda: -load("data/cases_agent/coastdown.json")["parameters"][0]["value"]),
-    Claim("Summary: predictions registered", r"case has reached is \*improves a public tool\*.*?; (\w+) blind predictions",
+    Claim("Summary: predictions registered", r"Where the evidence stands:\*\* .*?; (\w+) blind predictions",
           lambda: len(load_index_rows())),
     Claim("Robot video: median mm", r"through a camera fitted\s+on two training episodes, to a median ([\d.]+) mm", lambda: load("data/robot/video_check.json")["heldout"]["median_mm"]["mean"]),
     Claim("Robot video: median mm low", r"\(95% over episodes ([\d.]+) to [\d.]+ mm\)\. The fit", lambda: load("data/robot/video_check.json")["heldout"]["median_mm"]["lo"]),

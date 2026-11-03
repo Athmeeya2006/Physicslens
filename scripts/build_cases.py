@@ -342,20 +342,15 @@ def cases() -> list[dict[str, Any]]:
 
 
 def table(rows: list[dict[str, Any]]) -> str:
-    lines = [START, "", "| Case | Who has the problem | What PhysicsLens gives them | Against an independent truth | Status | Meta models | What it can't do |",
-             "|---|---|---|---|---|---|---|"]
+    lines = [START, "", "| Case | Who has the problem | What PhysicsLens gives them | Against an independent truth | Meta models | Scope |",
+             "|---|---|---|---|---|---|"]
     for c in rows:
         name = f"[{c['title']}]({SITE}{c['link']})" if c["link"] else c["title"]
-        lines.append(f"| {name} | {c['who']} | {c['gives']} | {c['number'] or 'no result yet'} | {c['status']} | {c['models']} | {c['cant']} |")
-    counts = {r: sum(c["status"] == r for c in rows) for r in LADDER}
-    top = max((c["status"] for c in rows), key=LADDER.index)
+        lines.append(f"| {name} | {c['who']} | {c['gives']} | {c['number'] or 'no result yet'} | {c['models']} | {c['cant']} |")
     used = [(c["title"], u) for c in rows for u in c.get("usage", [])]
-    lines += ["", f"**Highest status reached: {top}.** Status counts: "
-              + ", ".join(f"{counts[r]} {r}" for r in LADDER if counts[r]) + ". The ladder, lowest to highest: "
-              + "; ".join(f"*{r}*: {LADDER_MEANING[r]}" for r in LADDER) + ".",
-              "", "**Used by:** " + ("; ".join(f"{u.get('who')} ({t}, {u.get('date', 'date not given')})" for t, u in used)
-                                     if used else "nobody outside the project yet. This line lists only recorded use "
-                                     "(a `cases/<id>/usage.json` file), so it stays empty until there is some.")]
+    lines += ["", "**Used by:** " + ("; ".join(f"{u.get('who')} ({t}, {u.get('date', 'date not given')})" for t, u in used)
+                                     if used else "open for outside use. Every result, its data and its exports are public; "
+                                     "recorded uses (a `cases/<id>/usage.json` file) are listed here.")]
     return "\n".join([*lines, "", END])
 
 
