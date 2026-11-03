@@ -46,8 +46,9 @@ def main() -> None:
         for vp, (w, h) in VIEWPORTS.items():
             for theme in ("dark", "light"):
                 ctx = browser.new_context(viewport={"width": w, "height": h}, color_scheme=theme)
-                ctx.add_init_script(f"try {{ localStorage.setItem('theme', '{theme}'); }} catch (e) {{}}"
-                                    + ("document.documentElement.dataset.theme = 'light';" if theme == "light" else ""))
+                # The site's own switch: light is the default, dark is data-theme="dark", remembered in localStorage.
+                ctx.add_init_script(f"try {{ localStorage.setItem('physicslens-theme', '{theme}'); }} catch (e) {{}}"
+                                    + ("document.documentElement.dataset.theme = 'dark';" if theme == "dark" else ""))
                 page = ctx.new_page()
                 for name, path in PAGES.items():
                     page.goto(f"{base}/{path}", wait_until="load")

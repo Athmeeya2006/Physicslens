@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Schibsted_Grotesk } from "next/font/google";
+import { Geologica } from "next/font/google";
 import "katex/dist/katex.min.css";
 import { Shell } from "@/components/Shell";
 import "./globals.css";
 
-// Self-hosted at build time by next/font; a grotesk with real character and tabular figures for data.
-const ui = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-ui", display: "swap" });
+// Self-hosted at build time by next/font: Geologica for all UI and headings (KaTeX keeps the math).
+const ui = Geologica({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700"], variable: "--font-ui", display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://physicslens.vercel.app"),
@@ -18,10 +18,10 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#000000" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#eef1ee" };
 
-// Applied before the first paint, so a visitor who chose light never sees a dark flash (dark is the default).
-const THEME_SCRIPT = `try{if(localStorage.getItem("physicslens-theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}`;
+// Applied before the first paint, so a visitor who chose dark never sees a light flash (light is the default).
+const THEME_SCRIPT = `try{if(localStorage.getItem("physicslens-theme")==="dark")document.documentElement.dataset.theme="dark"}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

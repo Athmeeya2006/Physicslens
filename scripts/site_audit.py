@@ -58,6 +58,9 @@ def dark_fraction(page) -> float:
 def audit_page(browser, base: str, path: str, vp: str, theme: str, html: bool) -> list[str]:
     problems: list[str] = []
     ctx = browser.new_context(viewport=VIEWPORTS[vp], color_scheme=theme)
+    # The site follows its own switch, not the browser's scheme: set it the way the theme button does.
+    ctx.add_init_script(f"try {{ localStorage.setItem('physicslens-theme', '{theme}'); }} catch (e) {{}}"
+                        + ("document.documentElement.dataset.theme = 'dark';" if theme == "dark" else ""))
     page = ctx.new_page()
     page.on("pageerror", lambda e: problems.append(f"page error: {e}"))
     host = urlparse(base).netloc
