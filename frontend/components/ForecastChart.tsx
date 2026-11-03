@@ -12,7 +12,7 @@ import type { AnalysisResult } from "@/lib/api";
 
 type Forecast = NonNullable<AnalysisResult["forecast"]>;
 
-const PAD = { left: 52, right: 12, top: 26, bottom: 34 };
+const PAD = { left: 64, right: 12, top: 30, bottom: 34 };
 
 function ticks(lo: number, hi: number, n: number): number[] {
   const raw = (hi - lo) / n;
@@ -44,7 +44,7 @@ export function ForecastChart({ f, uncalibrated = false, units = null }: {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const H = Math.round(Math.min(Math.max(W * 0.34, 200), 280));
+  const H = Math.round(Math.min(Math.max(W * 0.4, 300), 360));
   const { x, y, yTicks, xTicks, path } = useMemo(() => {
     const all = [...f.measured, ...f.forecast];
     let lo = Math.min(...all);
@@ -57,7 +57,10 @@ export function ForecastChart({ f, uncalibrated = false, units = null }: {
     const x = (t: number) => PAD.left + ((t - t0) / (t1 - t0 || 1)) * (W - PAD.left - PAD.right);
     const y = (v: number) => PAD.top + (1 - (v - lo) / (hi - lo)) * (H - PAD.top - PAD.bottom);
     const path = f.forecast.map((v, i) => `${i ? "L" : "M"}${x(f.t[i]).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    return { x, y, yTicks: ticks(lo, hi, 4), xTicks: ticks(t0, t1, Math.max(3, Math.floor(W / 130))), path };
+    return { x, y, yTicks: ticks(lo, hi, 4), // A tick every second when they fit (about 44 px apart), else the usual round steps.
+      xTicks: (t1 - t0) / 1 <= (W - PAD.left - PAD.right) / 44 && t1 - t0 >= 2
+        ? Array.from({ length: Math.floor(t1) - Math.ceil(t0) + 1 }, (_, i) => Math.ceil(t0) + i)
+        : ticks(t0, t1, Math.max(3, Math.floor(W / 130))), path };
   }, [f, W, H]);
 
   const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -83,8 +86,11 @@ export function ForecastChart({ f, uncalibrated = false, units = null }: {
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" onPointerMove={onMove} onPointerLeave={() => setHover(null)}
            aria-label={`${f.label} over time: measured motion and the forecast of the ${f.title} fitted without the held-out part`}>
         <rect className="heldout-band" x={bandX} y={PAD.top} width={W - PAD.right - bandX} height={H - PAD.top - PAD.bottom} />
-        <text className="heldout-label" x={narrowBand ? W - PAD.right : bandX + 8} y={PAD.top - 9}
+        <text className="fitted-label" x={PAD.left} y={PAD.top - 10}>{W < 520 ? "Fitted" : "Fitted on this part"}</text>
+        <text className="heldout-label" x={narrowBand ? W - PAD.right : bandX + 8} y={PAD.top - 10}
               textAnchor={narrowBand ? "end" : "start"}>{bandLabel}</text>
+        <text className="axis-title" transform={`translate(14 ${(PAD.top + H - PAD.bottom) / 2}) rotate(-90)`} textAnchor="middle">
+          {f.label.replace(/^Swing /, "").toLowerCase()}{unitText ? `, ${unitText}` : ""}</text>
         {yTicks.map((v) => (
           <g key={`y${v}`}>
             <line className="axis" x1={PAD.left} x2={W - PAD.right} y1={y(v)} y2={y(v)} opacity={0.5} />
@@ -92,7 +98,7 @@ export function ForecastChart({ f, uncalibrated = false, units = null }: {
           </g>
         ))}
         {xTicks.map((t) => (
-          <text key={`x${t}`} className="tick" x={x(t)} y={H - 12} textAnchor="middle">{fmt(t)} {timeUnit}</text>
+          <text key={`x${t}`} className="tick" x={x(t)} y={H - 12} textAnchor="middle">{Number.isInteger(t) ? t : fmt(t)} {timeUnit}</text>
         ))}
         {f.measured.map((v, i) => (
           <circle key={i} className="measured" cx={x(f.t[i])} cy={y(v)} r={2.1} opacity={0.75} />

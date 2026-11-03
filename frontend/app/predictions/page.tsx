@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { ProofNav } from "@/components/ProofNav";
+import { StatusChip } from "@/components/StatusChip";
 
 // Every pre-registered prediction (predictions/, scripts/build_predictions.py): made and hashed before the answer
 // existed, scored later in outcomes/. Misses stay visible; a file changed after registration is flagged, not hidden.
@@ -59,9 +61,14 @@ export default function PredictionsPage() {
       {error && <p className="error">{error}</p>}
       {d && (
         <>
-          <p className="small"><strong>Running score:</strong> {d.scored} scored ({d.hits} hits, {d.misses} misses), {d.open} still open.</p>
+          <ul className="stat-strip count-strip" aria-label="Running score">
+            <li><span className="stat-number">{d.open}</span><span className="stat-label">still open</span></li>
+            <li><span className="stat-number">{d.scored}</span><span className="stat-label">scored</span></li>
+            <li><span className="stat-number">{d.hits}</span><span className="stat-label">hits</span></li>
+            <li><span className="stat-number">{d.misses}</span><span className="stat-label">misses</span></li>
+          </ul>
           {d.integrity_problems.length > 0 && <p className="error" role="alert">Changed after registration: {d.integrity_problems.join("; ")}</p>}
-          <section className="panel stack">
+          <section className="stack" style={{ gap: 12 }}>
             <h2>How a prediction is kept honest</h2>
             <ol>
               <li><strong>Written before the answer exists.</strong> Each prediction is a file with its inputs and their
@@ -76,39 +83,48 @@ export default function PredictionsPage() {
             </ol>
             <p className="small">Registered so far: transit times of eight exoplanets whose published timetables have drifted
               by up to hours (refreshed from newer TESS data and checked on a held-out season first), and where meteorites
-              from a new fireball should be found. Each card below says when it can first be scored.</p>
+              from a new fireball should be found. Each row below says when it can first be scored.</p>
           </section>
           {d.predictions.length === 0 && <p className="muted">No prediction is registered yet: the first ones appear here
             as soon as their files are written.</p>}
-          <div className="case-grid">
-            {d.predictions.map((p) => (
-              <article key={`${p.case}/${p.id}`} className="panel case-card" aria-labelledby={`pred-${p.id}`}>
-                <p className="case-badge" style={{ background: p.outcome ? (p.outcome.hits ? "var(--ok)" : "var(--bad)") : "var(--surface-2)", color: p.outcome ? "var(--on-strong)" : "var(--ink-2)" }}>
-                  {p.outcome ? (p.outcome.hits ? "Hit" : "Miss") : "Open"}
-                </p>
-                <h2 id={`pred-${p.id}`}>{p.title ?? p.id}</h2>
-                {p.question && <p className="small">{p.question}</p>}
-                <p className="small">Predicted on {day(p.created_utc)}{p.outcome ? `, scored on ${day(p.outcome.scored_utc)}` : `, can be scored after ${day(p.score_after_utc)}`}.</p>
-                {p.outcome && <p className="case-number">{p.outcome.summary}</p>}
-                <details className="case-details" open>
-                  <summary>The prediction, the rule and the file</summary>
-                  {p.prediction?.items && (
-                    <ul className="small">
-                      {p.prediction.items.slice(0, 8).map((it) => (
-                        <li key={it.label}>{describe(it)}</li>
-                      ))}
-                      {p.prediction.items.length > 8 && <li>and {p.prediction.items.length - 8} more in the file</li>}
-                    </ul>
-                  )}
-                  {p.scoring?.rule && <p className="small"><strong>Scored by:</strong> {p.scoring.rule}</p>}
-                  <p className="small muted">
-                    <a href={`${REPO}/predictions/${p.case}/${p.id}/prediction.json`}>prediction.json</a>, SHA-256 <code>{p.sha256.slice(0, 16)}…</code>
-                    {p.intact ? " (matches the registered hash)" : " (does NOT match the registered hash)"}
-                  </p>
+          <ul className="case-rows">
+            {d.predictions.map((p, i) => (
+              <li key={`${p.case}/${p.id}`}>
+                <details className="case-row" open={i === 0}>
+                  <summary>
+                    <span className="case-row-status">
+                      <StatusChip status={p.outcome ? (p.outcome.hits ? "hit" : "miss") : "predicted"} label={p.outcome ? (p.outcome.hits ? "Hit" : "Miss") : "Open"} />
+                      <span className="small">{p.outcome ? `scored ${day(p.outcome.scored_utc)}` : `scored after ${day(p.score_after_utc)}`}</span>
+                    </span>
+                    <span className="case-row-main">
+                      <strong className="case-row-title" id={`pred-${p.id}`}>{p.title ?? p.id}</strong>
+                      {p.question && <span className="small">{p.question}</span>}
+                      {p.outcome && <span className="case-row-number">{p.outcome.summary}</span>}
+                    </span>
+                    <ChevronDown size={20} className="case-row-chev" aria-hidden="true" />
+                  </summary>
+                  <div className="case-row-body">
+                    <p className="small">Predicted on {day(p.created_utc)}{p.outcome ? `, scored on ${day(p.outcome.scored_utc)}` : `, can be scored after ${day(p.score_after_utc)}`}.</p>
+                    {p.prediction?.items && (
+                      <ul className="small">
+                        {p.prediction.items.slice(0, 8).map((it) => (
+                          <li key={it.label}>{describe(it)}</li>
+                        ))}
+                        {p.prediction.items.length > 8 && <li>and {p.prediction.items.length - 8} more in the file</li>}
+                      </ul>
+                    )}
+                    <dl className="facts">
+                      {p.scoring?.rule && <><dt>Scored by</dt><dd>{p.scoring.rule}</dd></>}
+                      <dt>File</dt><dd>
+                        <a href={`${REPO}/predictions/${p.case}/${p.id}/prediction.json`}>prediction.json</a>, SHA-256 <code>{p.sha256.slice(0, 16)}…</code>
+                        {p.intact ? " (matches the registered hash)" : " (does NOT match the registered hash)"}
+                      </dd>
+                    </dl>
+                  </div>
                 </details>
-              </article>
+              </li>
             ))}
-          </div>
+          </ul>
         </>
       )}
     </main>

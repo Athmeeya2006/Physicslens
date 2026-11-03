@@ -14,13 +14,14 @@ const STATUS: Record<string, { text: string; cls: string }> = {
 // Three recordings first; the rest on request, so the home page stays short.
 const FIRST = 99;
 
-export function Gallery({ items, onOpen, activeId }: { items: GalleryItem[]; onOpen: (id: string) => void; activeId?: string }) {
+export function Gallery({ items, onOpen, activeId, title = "Real recordings, analyzed" }:
+  { items: GalleryItem[]; onOpen: (id: string) => void; activeId?: string; title?: string }) {
   const [all, setAll] = useState(false);
   if (!items.length) return null;
   return (
     <section aria-labelledby="gallery-title" className="stack">
       <div>
-        <h2 id="gallery-title">Real recordings, analyzed</h2>
+        <h2 id="gallery-title">{title}</h2>
         <p className="muted small">Each one went through the full pipeline with Meta&apos;s models. Open one to see the ghost, the decision trail and the exports.</p>
       </div>
       <ul className="gallery-list">

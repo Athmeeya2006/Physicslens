@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { ProofNav } from "@/components/ProofNav";
+import { StatusChip } from "@/components/StatusChip";
 
-// One card per real-world case (scripts/build_cases.py): answer first (title, the problem in one line, the number
-// against an independent truth, the status), evidence on demand (who, what they get, the models, the status rule and
-// the ladder, the limits) in a disclosure. The status is the highest rung of the ladder the case has evidence for.
+// One row per real-world case (scripts/build_cases.py): answer first (status, title, the problem in one line, the
+// number against an independent truth), evidence when the row is opened (who, what they get, the models, the status
+// rule and the ladder, the limits). The status is the highest rung of the ladder the case has evidence for.
 
 interface Rung { rung: string; evidence: string }
+interface Meaning { rung: string; meaning: string }
 interface Case {
   id: string; title: string; problem: string; who: string; gives: string; number: string | null;
   status: string; checked?: string; ladder?: Rung[]; status_rule: string; cant: string; link: string | null; models?: string;
@@ -26,25 +29,30 @@ function label(s: string): string {
 
 export default function CasesPage() {
   const [cases, setCases] = useState<Case[] | null>(null);
+  const [ladder, setLadder] = useState<Meaning[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [group, setGroup] = useState("All");
   useEffect(() => {
     fetch("/cases.json").then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       // The strongest evidence leads: highest rung first.
-      .then((d) => setCases([...d.cases].sort((a: Case, b: Case) => LADDER.indexOf(a.status) - LADDER.indexOf(b.status))))
+      .then((d) => {
+        setCases([...d.cases].sort((a: Case, b: Case) => LADDER.indexOf(a.status) - LADDER.indexOf(b.status)));
+        setLadder(d.ladder ?? []);
+      })
       .catch((e) => setError(`The cases could not be loaded (${(e as Error).message}).`));
   }, []);
   const counts = useMemo(() => {
     const m = new Map<string, number>();
     for (const c of cases ?? []) m.set(c.status, (m.get(c.status) ?? 0) + 1);
-    return LADDER.filter((r) => m.has(r)).map((r) => `${m.get(r)} ${r}`).join(" · ");
+    return LADDER.filter((r) => m.has(r)).map((r) => ({ rung: r, n: m.get(r)! }));
   }, [cases]);
   const shown = (cases ?? []).filter((c) => group === "All" || GROUP[c.id] === group);
+  const inGroup = (g: string) => (cases ?? []).filter((c) => g === "All" || GROUP[c.id] === g).length;
 
   return (
     <main id="main">
       <ProofNav />
-      <header className="page-head">
+      <header className="page-head-split">
         <h1>Real-world cases</h1>
         <p className="tagline">
           Each case ends in something a person can act on, is tested on real data and validated against an independent
@@ -54,36 +62,58 @@ export default function CasesPage() {
       {error && <p className="error">{error}</p>}
       {cases && (
         <>
-          <p className="small"><strong>{cases.length} cases:</strong> {counts}</p>
+          <ul className="stat-strip count-strip" aria-label={`${cases.length} cases by status`}>
+            {counts.map((c) => (
+              <li key={c.rung}><span className="stat-number">{c.n}</span><span className="stat-label">{c.rung}</span></li>
+            ))}
+          </ul>
           <div className="chips" role="group" aria-label="Filter cases">
             {GROUPS.map((g) => (
-              <button key={g} type="button" className={`chip${group === g ? " on" : ""}`} aria-pressed={group === g} onClick={() => setGroup(g)}>{g}</button>
+              <button key={g} type="button" className={`chip${group === g ? " on" : ""}`} aria-pressed={group === g} onClick={() => setGroup(g)}>
+                {g} {inGroup(g)}</button>
             ))}
           </div>
-          <div className="case-grid">
-            {shown.map((c) => (
-              <article key={c.id} className={`panel case-card case-${c.status.replaceAll(" ", "-")}`} aria-labelledby={`case-${c.id}`}>
-                <p className="case-badge" title={`Status rule: ${c.status_rule}`}>{label(c.status)}</p>
-                <h2 id={`case-${c.id}`}>{c.title}</h2>
-                <p className="small">{c.problem}</p>
-                <p className="case-number">{c.number ?? "No result yet."}</p>
-                {c.link && <a className="button secondary" href={c.link}>See the result</a>}
-                <div className="case-details">
-                  <p className="small"><strong>Who:</strong> {c.who}</p>
-                  <p className="small"><strong>What they get:</strong> {c.gives}</p>
-                  {c.models && <p className="small case-models"><strong>Meta models:</strong> {c.models}</p>}
-                  <p className="small"><strong>Status rule:</strong> {c.status_rule}</p>
-                  {c.ladder && c.ladder.length > 1 && (
-                    <ul className="small">{c.ladder.map((r) => <li key={r.rung}><strong>{label(r.rung)}:</strong> {r.evidence}</li>)}</ul>
-                  )}
-                  <p className="small muted"><strong>What it can&apos;t do:</strong> {c.cant}</p>
-                </div>
-              </article>
+          <ul className="case-rows">
+            {shown.map((c, i) => (
+              <li key={c.id}>
+                <details className="case-row" open={i === 0 && group === "All"}>
+                  <summary>
+                    <span className="case-row-status"><StatusChip status={c.status} /><span className="small">{GROUP[c.id]}</span></span>
+                    <span className="case-row-main">
+                      <strong className="case-row-title" id={`case-${c.id}`}>{c.title}</strong>
+                      <span className="small">{c.problem}</span>
+                      <span className="case-row-number">{c.number ?? "No result yet."}</span>
+                    </span>
+                    <ChevronDown size={20} className="case-row-chev" aria-hidden="true" />
+                  </summary>
+                  <div className="case-row-body">
+                    <dl className="facts">
+                      <dt>Who</dt><dd>{c.who}</dd>
+                      <dt>What they get</dt><dd>{c.gives}</dd>
+                      {c.models && <><dt>Meta models</dt><dd>{c.models}</dd></>}
+                      <dt>Status rule</dt><dd>{c.status_rule}
+                        {c.ladder && c.ladder.length > 1 && (
+                          <ul className="small">{c.ladder.map((r) => <li key={r.rung}><strong>{label(r.rung)}:</strong> {r.evidence}</li>)}</ul>
+                        )}</dd>
+                      <dt>What it can&apos;t do</dt><dd>{c.cant}</dd>
+                    </dl>
+                    {c.link && <a className="button" href={c.link}>See the result</a>}
+                  </div>
+                </details>
+              </li>
             ))}
-          </div>
-          <p className="small muted">The ladder, lowest to highest: not yet validated, partial, proven, predicted (a blind prediction
-            registered before the answer existed), confirmed (reality scored it a hit), improves a public tool, solved (someone outside
-            the project used it; recorded, never inferred). Open predictions are on the <a href="/predictions">predictions page</a>.</p>
+          </ul>
+          <section className="stack" style={{ gap: 12 }} aria-labelledby="ladder-title">
+            <h2 id="ladder-title">How a status is earned</h2>
+            {ladder.length > 0 && (
+              <dl className="ladder-list">
+                {ladder.map((r) => <div key={r.rung}><dt><StatusChip status={r.rung} /></dt><dd>{r.meaning}</dd></div>)}
+              </dl>
+            )}
+            <p className="small">The ladder, lowest to highest: not yet validated, partial, proven, predicted (a blind prediction
+              registered before the answer existed), confirmed (reality scored it a hit), improves a public tool, solved (someone outside
+              the project used it; recorded, never inferred). Open predictions are on the <a href="/predictions">predictions page</a>.</p>
+          </section>
         </>
       )}
     </main>

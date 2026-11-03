@@ -664,7 +664,7 @@ export default function SkyLab() {
             </select>
           </label>
           {sc && <p className="small">{sc.description}</p>}
-          {fictional && <p className="badge bad">FICTIONAL: {changed(changes) ? "changed from the real system" : "not the real solar system"}</p>}
+          {fictional && <p><span className="whatif-chip">Fictional: {changed(changes) ? "changed from the real system" : "not the real solar system"}</span></p>}
           <fieldset className="stack" style={{ gap: 8 }}>
             <legend>Bodies</legend>
             {others.map((n) => {

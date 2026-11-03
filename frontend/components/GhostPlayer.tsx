@@ -39,17 +39,27 @@ interface Props {
   whatIf?: { label: string; points: TrackPoint[] } | null;
   mujoco?: TrackPoint[];
   ghosts: { model_id: string; points: TrackPoint[] }[];
+  // The held-out stretch of the fitted segment, as fractions of the clip: tinted on the progress bar.
+  heldout?: [number, number] | null;
 }
 
 function byFrame(points: TrackPoint[]): Map<number, [number, number]> {
   return new Map(points.map(([f, x, y]) => [f, [x, y]]));
 }
 
-export function GhostPlayer({ src, width, height, fps, real, secondReal, objectSizePx, ghosts, whatIf, mujoco }: Props) {
+export function GhostPlayer({ src, width, height, fps, real, secondReal, objectSizePx, ghosts, whatIf, mujoco, heldout }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [showReal, setShowReal] = useState(true);
   const [showVectors, setShowVectors] = useState(true);
+  const [played, setPlayed] = useState(0);
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+    const tick = () => setPlayed(v.duration ? v.currentTime / v.duration : 0);
+    v.addEventListener("timeupdate", tick);
+    return () => v.removeEventListener("timeupdate", tick);
+  }, []);
 
   useEffect(() => {
     const v = video.current;
@@ -208,6 +218,11 @@ export function GhostPlayer({ src, width, height, fps, real, secondReal, objectS
                aria-label={`The clip with ${ghosts.length ? `the fitted law's prediction (${ghosts[0].model_id}) drawn over it` : "the measured trail drawn over it"}`} />
         <canvas ref={canvas} width={width} height={height} aria-hidden="true" />
       </div>
+      <div className="progress-track" aria-hidden="true">
+        {heldout && <span className="progress-heldout" style={{ left: `${heldout[0] * 100}%`, width: `${(heldout[1] - heldout[0]) * 100}%` }} />}
+        <span className="progress-played" style={{ width: `${played * 100}%` }} />
+      </div>
+      {heldout && <p className="small muted progress-note">The tinted stretch is the held-out part: the law was fitted without it.</p>}
       <div className="legend">
         {ghosts.map((g, i) => (
           <span key={g.model_id} className="key">
@@ -221,18 +236,19 @@ export function GhostPlayer({ src, width, height, fps, real, secondReal, objectS
         {whatIf && (
           <span className="key"><span className="swatch ring" style={{ borderColor: WHATIF_COLOR }} />What if: {whatIf.label}</span>
         )}
-        {ghosts.length > 0 && showVectors && (
-          <>
-            <span className="key"><span className="swatch dot" style={{ background: FORCE_COLOR }} />Net force (the law&apos;s acceleration)</span>
-            <span className="key"><span className="swatch dot" style={{ background: VEL_COLOR }} />Velocity</span>
-          </>
-        )}
+      </div>
+      <div className="overlay-toggles">
         <label>
-          <input type="checkbox" checked={showReal} onChange={(e) => setShowReal(e.target.checked)} /> Measured trail
+          <input type="checkbox" checked={showReal} onChange={(e) => setShowReal(e.target.checked)} />
+          <span className="swatch line" style={{ background: "rgba(255,255,255,0.9)", boxShadow: "0 0 0 1px var(--ink-3)" }} aria-hidden="true" />
+          Measured trail
         </label>
         {ghosts.length > 0 && (
           <label>
-            <input type="checkbox" checked={showVectors} onChange={(e) => setShowVectors(e.target.checked)} /> Vectors and prediction
+            <input type="checkbox" checked={showVectors} onChange={(e) => setShowVectors(e.target.checked)} />
+            <span className="swatch line" style={{ background: FORCE_COLOR }} aria-hidden="true" />
+            <span className="swatch line" style={{ background: VEL_COLOR }} aria-hidden="true" />
+            Net force (the law&apos;s acceleration), velocity and the next second&apos;s prediction
           </label>
         )}
       </div>

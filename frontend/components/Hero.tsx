@@ -1,5 +1,6 @@
 import { Route, Upload } from "lucide-react";
 import { Law, Tex } from "./Equation";
+import type { GalleryItem } from "@/lib/api";
 import { LoopVideo } from "./LoopVideo";
 
 // The first screen: what PhysicsLens found, shown working, before any form. Every number is from a stored gallery
@@ -15,7 +16,8 @@ const STATS = [
   { value: "1.4991", note: "95%: 1.4929 to 1.5053", label: "Kepler's third-law exponent, found from the tracks (true value 1.5)" },
 ];
 
-export function Hero() {
+// `apophis` is the gallery entry, for its credit line and the run's full description.
+export function Hero({ apophis }: { apophis?: GalleryItem }) {
   return (
     <>
       <section className="hero" aria-labelledby="hero-title">
@@ -64,7 +66,9 @@ export function Hero() {
               <p className="small">Carried 3.3 years forward, the law puts the 2029 Earth flyby 13 hours from JPL&apos;s time. Given
                 JPL&apos;s own Sun, planets and Moon instead, our N-body integrator lands it within a minute: the hours come from
                 what one video can measure.</p>
+              {apophis?.description && <p className="small">{apophis.description}</p>}
             </details>
+            {apophis?.credit && <p className="small muted">{apophis.credit}</p>}
           </figcaption>
         </figure>
       </section>

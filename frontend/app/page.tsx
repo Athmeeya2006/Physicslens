@@ -7,8 +7,9 @@ import { ArrowLeft, Check, Loader2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Gallery } from "@/components/Gallery";
 import { VoiceNotes } from "@/components/VoiceNotes";
-import { Problems } from "@/components/Problems";
-import { Discoveries } from "@/components/Discoveries";
+import { Problems, TryIt } from "@/components/Problems";
+import { Discoveries, STORY_RUNS } from "@/components/Discoveries";
+import { HowItDecides } from "@/components/HowItDecides";
 import { Hero } from "@/components/Hero";
 import { ResultView } from "@/components/ResultView";
 import type { Budget, GalleryItem, Health, LensCalibration, RunView } from "@/lib/api";
@@ -142,6 +143,21 @@ export default function Home() {
   const busy = run?.status === "queued" || run?.status === "running";
   const done = run?.status === "done" && run.result;
   const canUpload = !offline && (health?.can_upload ?? false);
+  // The stories and the hero already show every gallery recording; only anything else (a study) is listed below.
+  const others = gallery.filter((g) => g.id !== "gallery-apophis" && !STORY_RUNS.includes(g.id));
+  const sessionNote = offline && (
+    <div className="stack" style={{ gap: 6 }}>
+      {NEXT_SESSION_UTC && Date.parse(NEXT_SESSION_UTC) > Date.now() && (
+        <p className="small"><strong>Next live session:</strong> {new Date(NEXT_SESSION_UTC).toUTCString().replace(":00 GMT", " UTC")}
+          {" "}({new Date(NEXT_SESSION_UTC).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} your time).</p>
+      )}
+      <p className="muted small">
+        The analysis server is between sessions right now; it restarts on its own within minutes.
+        Every recording on this page is a complete, real analysis; a <a href="/study">study</a> shows the agent
+        planning several recordings toward one goal.
+      </p>
+    </div>
+  );
 
   return (
     <>
@@ -149,19 +165,21 @@ export default function Home() {
       <main id="main" className="stack" style={{ gap: 32 }}>
         {done ? (
           <div className="stack">
-            <p><button className="secondary" onClick={closeRun}><ArrowLeft size={16} aria-hidden="true" />All recordings</button></p>
-            {gallery.find((g) => g.id === run.run_id) && <p className="credit">{gallery.find((g) => g.id === run.run_id)!.credit}</p>}
-            <ResultView runId={run.run_id} result={run.result!} />
+            <p><button className="back-link" onClick={closeRun}><ArrowLeft size={16} aria-hidden="true" />All results</button></p>
+            <ResultView runId={run.run_id} result={run.result!} credit={gallery.find((g) => g.id === run.run_id)?.credit} />
           </div>
         ) : (
           <>
-            <Hero />
+            <Hero apophis={gallery.find((g) => g.id === "gallery-apophis")} />
+            <HowItDecides note={sessionNote} />
+            <Discoveries items={gallery} />
             <Problems />
+            <TryIt />
           </>
         )}
 
         {/* With a result open, the result is the page: the upload form and the list come back with "All recordings". */}
-        <div className="home-grid" hidden={!!done}>
+        <div className={`home-grid${others.length ? "" : " single"}`} hidden={!!done}>
           <section className="panel stack" aria-labelledby="analyze-title">
             <h2 id="analyze-title">Analyze a recording</h2>
             {health && !offline && (
@@ -174,22 +192,8 @@ export default function Home() {
               <p className="muted"><Loader2 size={14} className="spin" aria-hidden="true" /> Looking for the analysis server...</p>
             ) : offline ? (
               <div className="stack" style={{ gap: 14 }}>
-                <ol className="how">
-                  <li><strong>Film it.</strong> Anything that moves, from a phone held still: a swing, a bounce, a spin-down.</li>
-                  <li><strong>Meta&apos;s models measure and propose.</strong> SAM 3.1 tracks the object; Muse Spark Open, Meta&apos;s
-                    open-weight model, reads the scene and proposes equations, even ones it writes itself.</li>
-                  <li><strong>Math decides.</strong> Each equation must forecast motion it never saw; the winner comes with
-                    uncertainties, a ghost on the video and a MuJoCo model.</li>
-                </ol>
-                {NEXT_SESSION_UTC && Date.parse(NEXT_SESSION_UTC) > Date.now() && (
-                  <p className="small"><strong>Next live session:</strong> {new Date(NEXT_SESSION_UTC).toUTCString().replace(":00 GMT", " UTC")}
-                    {" "}({new Date(NEXT_SESSION_UTC).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} your time).</p>
-                )}
-                <p className="muted small">
-                  The analysis server is between sessions right now; it restarts on its own within minutes.
-                  Every recording on this page is a complete, real analysis; a <a href="/study">study</a> shows the agent
-                  planning several recordings toward one goal.
-                </p>
+                <p className="small">Uploading needs the analysis server. How an analysis works is <a href="#how-title">described above</a>.</p>
+                {sessionNote}
               </div>
             ) : health && !health.can_upload ? (
               <p className="muted">
@@ -294,9 +298,8 @@ export default function Home() {
               </p>
             )}
           </section>
-          <Gallery items={gallery} onOpen={openRun} activeId={run?.run_id} />
+          {others.length > 0 && <Gallery items={others} onOpen={openRun} activeId={run?.run_id} title="More analyses" />}
         </div>
-        {!done && <Discoveries />}
       </main>
     </>
   );

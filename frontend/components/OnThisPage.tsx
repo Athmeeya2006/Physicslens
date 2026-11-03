@@ -2,7 +2,6 @@
 export function OnThisPage({ items }: { items: { id: string; label: string }[] }) {
   return (
     <nav className="on-page" aria-label="On this page">
-      <span>On this page:</span>
       {items.map((i) => <a key={i.id} href={`#${i.id}`}>{i.label}</a>)}
     </nav>
   );

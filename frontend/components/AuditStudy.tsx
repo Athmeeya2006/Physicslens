@@ -170,15 +170,15 @@ export function AuditStudy() {
         public benchmarks (VideoPhy-2, MIT licence) and real footage of the same kinds of motion (Physics-IQ, CC BY 4.0)
         as the control. Every verdict below is from the current rules, replayed on each clip&apos;s saved measurements.
       </p>
-      <ul className="hero-stats">
-        <li><span className="hero-number">{pct(real.verified_law_among_tracked.rate ?? 0)} vs {pct(gen.verified_law_among_tracked.rate ?? 0)}</span>
-          <span className="hero-label">real vs AI motion with a law that forecasts what the model never saw</span></li>
-        <li><span className="hero-number">{(real.heldout_error_median ?? 0).toFixed(2)} vs {(gen.heldout_error_median ?? 0).toFixed(2)}</span>
-          <span className="hero-label">median forecast error of the best law, real vs AI (lower is more law-like)</span></li>
-        {fa && <li><span className="hero-number">{fa.accused} of {fa.judged_real}</span>
-          <span className="hero-label">real clips accused of breaking physics{fa.upper_95 !== null ? ` (at most ${pct(fa.upper_95)} at 95%)` : ""}</span></li>}
-        <li><span className="hero-number">{gen.flagged_among_judged.k} of {gen.flagged_among_judged.n}</span>
-          <span className="hero-label">generated clips it could judge that it flagged (recall: it flags physically impossible motion when it can judge, it is not a detector of fakes)</span></li>
+      <ul className="stat-strip count-strip">
+        <li><span className="stat-number">{pct(real.verified_law_among_tracked.rate ?? 0)} vs {pct(gen.verified_law_among_tracked.rate ?? 0)}</span>
+          <span className="stat-label">real vs AI motion with a law that forecasts what the model never saw</span></li>
+        <li><span className="stat-number">{(real.heldout_error_median ?? 0).toFixed(2)} vs {(gen.heldout_error_median ?? 0).toFixed(2)}</span>
+          <span className="stat-label">median forecast error of the best law, real vs AI (lower is more law-like)</span></li>
+        {fa && <li><span className="stat-number">{fa.accused} of {fa.judged_real}</span>
+          <span className="stat-label">real clips accused of breaking physics{fa.upper_95 !== null ? ` (at most ${pct(fa.upper_95)} at 95%)` : ""}</span></li>}
+        <li><span className="stat-number">{gen.flagged_among_judged.k} of {gen.flagged_among_judged.n}</span>
+          <span className="stat-label">generated clips it could judge that it flagged (recall: it flags physically impossible motion when it can judge, it is not a detector of fakes)</span></li>
       </ul>
       <h3>Is there a law at all?</h3>
       <p className="small muted">
@@ -233,6 +233,18 @@ export function AuditStudy() {
         &ldquo;can&apos;t judge&rdquo; is common by design. Every clip, its source, licence and verdict:{" "}
         <a href="https://github.com/Athmeeya2006/Physicslens/tree/main/data/audit_study">data/audit_study</a>.
       </p>
+      {/* Numbers from data/audit_study/scale_free.json, checked in the README by scripts/readme_numbers.py. */}
+      <details>
+        <summary>Scale-free checks: tried on held-out clips, not adopted</summary>
+        <p className="small">
+          Four more checks compare free fall with itself, so they need no ruler: one acceleration through a fall, a
+          parabolic path, no energy gained, each bounce no higher than the fall into it. Their sizes were tuned on half of
+          the clips, and the rule for using them was fixed before scoring the other half: flag no more real clips, and
+          more of the generated clips people rated physically wrong. On the held-out half they flagged no real clip (0 of
+          13 judged) and no additional rated-wrong clip (1 of 19, as before), so they stay out of the verdict.{" "}
+          <a href="https://github.com/Athmeeya2006/Physicslens/blob/main/data/audit_study/scale_free.json">The full result</a>.
+        </p>
+      </details>
     </section>
   );
 }

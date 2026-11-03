@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, Download, FileCode2, FileJson, FileText, Film } from "lucide-react";
+import { Boxes, Clock, Download, FileCode2, FileJson, FileText, Film, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
 import { clipUrl, type ExportKind, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
@@ -10,7 +10,8 @@ import { ControlPanel } from "./ControlPanel";
 import { DepthPanel } from "./DepthPanel";
 import { Law, Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
-import { OutcomeCard, ReadableLaw } from "./OutcomeCard";
+import { OutcomeCard, outcomeLabel, ReadableLaw } from "./OutcomeCard";
+import { StatusChip } from "./StatusChip";
 import { type Prediction, PredictionChart } from "./PredictionChart";
 import { GhostPlayer } from "./GhostPlayer";
 import { SimToReal } from "./SimToReal";
@@ -94,9 +95,24 @@ function prettyModel(id: string, titles: Record<string, string>): string {
 
 // Every part of a result is on the page, in this order, with jump links at the top: nothing hides behind a tab.
 const RESULT_TABS = ["trail", "forecast", "laws", "exports", "details"];
+const TAB_LABEL: Record<string, string> = { trail: "Decision trail", forecast: "Forecast", laws: "Every law compared",
+  exports: "Use the result", details: "Measurement details" };
 const SECTION_TITLE: Record<string, string> = {trail: "Decision trail: what the agent and the math did", forecast: "Forecast: does the law predict motion it never saw?", laws: "The law and every law compared", exports: "Use the result: exports, controller and what-ifs", details: "Measurement details"};
 
-export function ResultView({ runId, result }: { runId: string; result: AnalysisResult }) {
+// Where the held-out stretch falls in the clip: the forecast's own split mapped onto the ghost's frames, which span
+// exactly the fitted segment (that segment need not be the whole clip).
+function heldoutSpan(r: AnalysisResult): [number, number] | null {
+  const f = r.forecast;
+  const g = r.ghosts?.[0]?.points;
+  if (!f || !g?.length || !r.clip.frames || f.t.length < 2) return null;
+  const [f0, f1] = [g[0][0], g[g.length - 1][0]];
+  const t0 = f.t[0], t1 = f.t[f.t.length - 1];
+  if (!(t1 > t0) || !(f1 > f0)) return null;
+  const start = f0 + ((f.heldout_start - t0) / (t1 - t0)) * (f1 - f0);
+  return [Math.max(0, start / r.clip.frames), Math.min(1, f1 / r.clip.frames)];
+}
+
+export function ResultView({ runId, result, credit }: { runId: string; result: AnalysisResult; credit?: string }) {
   // Gallery orbit results carry a prediction file (scripts/halley_demo.py and orbit_demo.py prediction).
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   useEffect(() => {
@@ -109,10 +125,26 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
   const [share, setShare] = useState<{ state: "idle" | "busy" | "done" | "error"; url?: string; error?: string }>({ state: "idle" });
   const titles = Object.fromEntries(r.ranking.map((f) => [f.model_id, f.title]));
   const laws = useLaws();
-  const models = Array.from(new Set((r.trail ?? []).map((t) => t.model).filter((m) => m && m !== "simulate-and-compare")));
+  const used = Array.from(new Set((r.trail ?? []).map((t) => t.model).filter((m): m is string => !!m && m !== "simulate-and-compare")));
+  // Model ids get a model tag; any other trail entry names a numerical method and is tagged as math.
+  const isModel = (m: string) => /^(meta-models\/|muse-|sam-)/.test(m);
+  const models = used.filter(isModel);
+  const methods = used.filter((m) => !isModel(m));
   const online = useBackend();
   const canAsk = online === true || !isGallery(runId);
   const bestBic = Math.min(...r.ranking.map((f) => f.bic));
+
+  // Models in blue with a sparkle, the math in grey with a clock; the exact model id stays in the tooltip.
+  const modelTags = (
+    <ul className="model-tags">
+      {models.map((m) => (
+        <li key={m}><span className={`model-tag${isOpenWeight(m) ? " open" : ""}`} title={m}><Sparkles size={13} aria-hidden="true" />{modelName(m)}</span></li>
+      ))}
+      {["numerical verification", ...methods].map((m) => (
+        <li key={m}><span className="model-tag math"><Clock size={13} aria-hidden="true" />{m}</span></li>
+      ))}
+    </ul>
+  );
 
   const onShare = () => {
     setShare({ state: "busy" });
@@ -123,24 +155,15 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
 
   return (
     <section className="stack" aria-labelledby="result-title">
-      <div className="result-top">
-        <div className="stack" style={{ gap: 10 }}>
-          {r.outcome && <OutcomeCard o={r.outcome} exportHref={(k) => exportUrl(runId, k as ExportKind)} />}
-          {r.equation && (
-            <div className="panel top-law">
-              <p className="small muted">{r.status === "accepted" ? "The verified law" : "The leading law (not yet decided)"}: {r.equation.title}</p>
-              <div className="law-scroll"><Tex tex={r.outcome?.readable?.latex_numeric ?? r.equation.latex} display /></div>
-            </div>
-          )}
-          <div className="provenance">
-            <span>Models used:</span>
-            {models.map((m) => (
-              <span key={m} className={`model-tag ${isOpenWeight(m) ? "open" : ""}`} title={m}>{modelName(m)}</span>
-            ))}
-            <span className="model-tag">numerical verification</span>
-          </div>
-          {r.scale_note && <p className="note">{r.scale_note}</p>}
+      <header className="result-hero">
+        <div className="chip-row">
+          <StatusChip status={r.status} label={STATUS_TEXT[r.status]} />
+          {r.outcome && <StatusChip status={outcomeLabel(r.outcome)} />}
         </div>
+        <h1 id="result-title">{r.outcome ? formatUnit(r.outcome.headline) : STATUS_TEXT[r.status]}</h1>
+        {credit && <p className="credit">{credit}</p>}
+      </header>
+      <div className="result-top">
         <div>
         {r.video_kept === false ? (
           <div className="panel"><p className="note">A saved live session: the video was not kept, only the track and
@@ -156,19 +179,34 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           whatIf={whatIfGhost}
           mujoco={r.mujoco?.points}
           ghosts={(r.ghosts ?? []).map((g) => ({ ...g, model_id: prettyModel(g.model_id, titles) }))}
+          heldout={heldoutSpan(r)}
         />}
+        </div>
+        <div className="stack" style={{ gap: 14 }}>
+          {r.outcome ? (
+            <OutcomeCard o={r.outcome} exportHref={(k) => exportUrl(runId, k as ExportKind)} split tie={r.status === "ambiguous"}
+                         extra={<><dt>Models used</dt><dd>{modelTags}</dd></>} />
+          ) : (
+            <dl className="outcome-facts"><dt>Verdict</dt><dd>{r.reason}</dd><dt>Models used</dt><dd>{modelTags}</dd></dl>
+          )}
+          {r.equation && (
+            <div className="top-law">
+              <p className="small">{r.status === "accepted" ? "The verified law" : "The leading law (not yet decided)"}: {r.equation.title}</p>
+              <div className="law-scroll"><Tex tex={r.outcome?.readable?.latex_numeric ?? r.equation.latex} display /></div>
+            </div>
+          )}
+          {r.scale_note && <p className="note">{r.scale_note}</p>}
         </div>
       </div>
 
       <nav className="on-page" aria-label="On this page">
-        <span>On this page:</span>
-        {RESULT_TABS.map((id) => <a key={id} href={`#${id}`}>{SECTION_TITLE[id].split(":")[0]}</a>)}
+        {RESULT_TABS.map((id) => <a key={id} href={`#${id}`}>{TAB_LABEL[id]}</a>)}
       </nav>
         <section id="trail" className="result-section" aria-labelledby="trail-h">
           <h2 id="trail-h">{SECTION_TITLE["trail"]}</h2>
           <div className="stack">
             <div className="result-head">
-              <h3 id="result-title" className={r.status}>{STATUS_TEXT[r.status]}</h3>
+              <h3 className={r.status}>{STATUS_TEXT[r.status]}</h3>
               <p className="reason">{r.reason}</p>
               {r.hypothesis_votes && (
                 <p className="small muted">
@@ -330,7 +368,7 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
                       </div>
                     ))}
                   </td>
-                  <td data-label="ΔBIC" className="num">{f.bic - bestBic < 0.5 ? "best" : `+${(f.bic - bestBic).toFixed(0)}`}</td>
+                  <td data-label="ΔBIC" className="num">{f.bic - bestBic < 0.5 ? <StatusChip status="verified" label="best" /> : `+${(f.bic - bestBic).toFixed(0)}`}</td>
                   <td data-label="Held-out error" className="num">{(f.heldout_nrmse * 100).toFixed(1)}%</td>
                 </tr>
               ))}
@@ -399,32 +437,30 @@ export function ResultView({ runId, result }: { runId: string; result: AnalysisR
           <h2 id="details-h">{SECTION_TITLE["details"]}</h2>
           <div className="stack">
             <div className="panel">
-              <ul>
-        <ul>
-          <li>Object: {r.scene.moving_object}. {r.scene.observations}</li>
-          <li>Scale: {r.calibration.source === "none" ? "no reference in view (nominal scale)"
-            : `${r.calibration.px_per_m.toFixed(1)} px per ${r.units?.length ?? "m"} from ${SCALE_SOURCE[r.calibration.source] ?? r.calibration.source.replaceAll("_", " ")}`}</li>
-          <li>Clip: {r.clip.width} by {r.clip.height} px at {r.clip.fps.toFixed(1)} fps, {r.clip.frames} frames
+              <dl className="facts">
+          <dt>Object</dt><dd>{r.scene.moving_object}. {r.scene.observations}</dd>
+          <dt>Scale</dt><dd>{r.calibration.source === "none" ? "no reference in view (nominal scale)"
+            : `${r.calibration.px_per_m.toFixed(1)} px per ${r.units?.length ?? "m"} from ${SCALE_SOURCE[r.calibration.source] ?? r.calibration.source.replaceAll("_", " ")}`}</dd>
+          <dt>Clip</dt><dd>{r.clip.width} by {r.clip.height} px at {r.clip.fps.toFixed(1)} fps, {r.clip.frames} frames
             {r.clip.slow_motion && r.clip.slow_motion > 1 ? `, slow motion ${r.clip.slow_motion} times (times are real time)` : ""}
             {r.clip.slow_motion && r.clip.slow_motion < 1
-              ? `, time-lapse: one frame is ${(1 / (r.clip.slow_motion * r.clip.fps)).toPrecision(3)} ${r.units?.time ?? "s"}` : ""}</li>
+              ? `, time-lapse: one frame is ${(1 / (r.clip.slow_motion * r.clip.fps)).toPrecision(3)} ${r.units?.time ?? "s"}` : ""}</dd>
           {r.sindy && (
-            <li>
-              Model-free regression (PySINDy), not verified and not used to decide: a sparse fit to noisy derivatives,
+            <><dt>Model-free regression</dt><dd>
+              PySINDy, not verified and not used to decide: a sparse fit to noisy derivatives,
               which often disagrees with the verified equation in its small terms.
               <div className="sindy">{Object.entries(r.sindy).map(([lhs, rhs]) => <code key={lhs}>{lhs} = {rhs}</code>)}</div>
-            </li>
+            </dd></>
           )}
           {r.full_clip_verdict && (
-            <li>Fitted on the stretch the agent marked as free motion. Fitted on the whole clip instead, the verdict is
-              {" "}<strong>{r.full_clip_verdict.status === "accepted" ? "accepted" : r.full_clip_verdict.status === "ambiguous" ? "a tie" : "no clean equation"}</strong>: {r.full_clip_verdict.reason}</li>
+            <><dt>Whole clip</dt><dd>Fitted on the stretch the agent marked as free motion. Fitted on the whole clip instead, the verdict is
+              {" "}<strong>{r.full_clip_verdict.status === "accepted" ? "accepted" : r.full_clip_verdict.status === "ambiguous" ? "a tie" : "no clean equation"}</strong>: {r.full_clip_verdict.reason}</dd></>
           )}
           {!r.sindy && r.sindy_check && !r.sindy_check.shown && r.sindy_check.reason !== "no verified law to compare with" && (
-            <li>Model-free regression (PySINDy) disagreed with the verified model, so it is hidden: {r.sindy_check.reason}.</li>
+            <><dt>Model-free regression</dt><dd>PySINDy disagreed with the verified model, so it is hidden: {r.sindy_check.reason}.</dd></>
           )}
-          <li>Model calls: {r.llm_calls.map((c) => `${c.step}: ${c.model}${c.cached ? " (cached)" : ""}`).join(", ")}; tracking: sam-3.1</li>
-        </ul>
-              </ul>
+          <dt>Model calls</dt><dd>{r.llm_calls.map((c) => `${c.step}: ${c.model}${c.cached ? " (cached)" : ""}`).join(", ")}; tracking: sam-3.1</dd>
+              </dl>
               {r.units && (
                 <p className="small muted">
                   Units for this clip: lengths are in {r.units.length} and times in {r.units.time} (shown where the page says m and s).

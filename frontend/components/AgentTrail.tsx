@@ -9,6 +9,7 @@ import { SetupGuide } from "./SetupGuide";
 import { isGallery } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { Law } from "./Equation";
+import { StatusChip } from "./StatusChip";
 
 // Every library law's equation by id (scripts/build_law_latex.py), fetched once: older results name laws by id only,
 // and every law the agent touches is shown with its equation.
@@ -78,7 +79,9 @@ function actor(step: TrailStep): { name: string; tone: "open" | "meta" | "math" 
   if (step.model === "sam-3.1") return { name: "SAM 3.1", tone: "meta" };
   if (step.model === "muse-image-1.0") return { name: "Muse Image (draws only, never measures)", tone: "meta" };
   // Only reachable in dev: demo and prod refuse to fall back from the open-weight model.
-  return { name: `${step.model} (development fallback)`, tone: "meta" };
+  if (step.model?.startsWith("muse-spark")) return { name: `${step.model} (development fallback)`, tone: "meta" };
+  // Anything else names a numerical method (for example the bootstrap refits behind a tie), not a model.
+  return { name: `${step.model ? step.model.charAt(0).toUpperCase() + step.model.slice(1) : "Numerical method"}, not the language model`, tone: "math" };
 }
 
 // The written instruction of a designed experiment; the picture guide illustrates exactly this.
@@ -96,21 +99,38 @@ export function AgentTrail({ steps, runId, guideStored, latex = {} }:
       {steps.map((s, i) => {
         const who = actor(s);
         const highlight = s.step === "agent" && s.action === "request_experiment";
+        const tie = highlight || !!s.items?.some((it) => it.status === "tied");
         const { label, icon: Icon } = STEP[s.step] ?? STEP.agent;
         const extra = (
           <>
             {s.expectation && <p className="small"><span className="muted">Expects:</span> {s.expectation}</p>}
-            {s.items && (
+            {s.items && s.step === "design" && (
+              <div className="table-wrap">
+                <table className="trail-table">
+                  <thead><tr><th>Experiment</th><th>Would it settle it?</th><th>Why</th></tr></thead>
+                  <tbody>
+                    {s.items.map((it) => (
+                      <tr key={it.model_id}>
+                        <td>{it.title}{texFor(it.model_id, it.latex) && <Law tex={texFor(it.model_id, it.latex)!} />}</td>
+                        <td>{it.status ? <StatusChip status={it.status === "accepted" ? "accepted" : "tied"} label={DESIGN_STATUS[it.status] ?? it.status} />
+                          : <StatusChip status="proposed" />}</td>
+                        <td className="why">{it.why}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {s.items && s.step !== "design" && (
               <ul className="trail-items">
                 {s.items.map((it) => (
                   <li key={it.model_id} className={it.status ?? "proposed"}>
-                    {it.status
-                      ? <span className={`verdict ${it.status}`}>{(s.step === "design" ? DESIGN_STATUS : s.step === "skeptic" ? SKEPTIC_STATUS : ITEM_STATUS)[it.status] ?? it.status}</span>
-                      : <span className="verdict">Proposed</span>}
+                    <StatusChip status={it.status ?? "proposed"}
+                      label={it.status ? (s.step === "skeptic" ? SKEPTIC_STATUS : ITEM_STATUS)[it.status] ?? it.status : "Proposed"} />
                     <span>
                       <span className="item-title">{it.title}</span> <span className="why">{it.why}</span>
-                      {texFor(it.model_id, it.latex) && <Law tex={texFor(it.model_id, it.latex)!} />}
                     </span>
+                    {texFor(it.model_id, it.latex) ? <span className="item-law"><Law tex={texFor(it.model_id, it.latex)!} /></span> : <span />}
                   </li>
                 ))}
               </ul>
@@ -126,7 +146,7 @@ export function AgentTrail({ steps, runId, guideStored, latex = {} }:
           </>
         );
         return (
-          <li key={i} className={`trail-step ${s.step} ${highlight ? "highlight" : ""}`}>
+          <li key={i} className={`trail-step ${s.step}${highlight ? " highlight" : ""}${tie ? " tie" : ""}`}>
             <span className="trail-icon" aria-hidden="true"><Icon size={13} strokeWidth={2.2} /></span>
             <div>
               <div className="trail-head">
