@@ -30,7 +30,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 ## In 30 seconds
 
 - **The problem:** every cheap robot arm is slightly different from its simulator, so policies trained in simulation fail on the real thing (friction, delay, deadband, damping). Measuring real physics takes lab rigs and an expert.
-- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one. [See it](https://physicslens.vercel.app/robot).
+- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and on six owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm needs its own. [See it](https://physicslens.vercel.app/robot).
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
 - **An agent that knows when the data cannot decide:** when two laws tie, it designs the recording that would separate them and asks for it. On the spring glider it asked for a longer recording of the same pull; the public video ran longer, and on 20 s instead of 15 the math settled the tie for dry friction. [The request and the answer](https://physicslens.vercel.app/?run=gallery-spring-longer).
@@ -499,6 +499,13 @@ open-loop in MuJoCo on 15 held-out episodes never used before (`backend/physicsl
   parameters alone, without the offsets, reach 0.73° (barely better than the public 0.75°), and the identified joint
   laws simulated directly reach 0.27°, because MuJoCo's joint friction only approximates a deadband. The full report,
   with every joint's law and a suggested upstream change, is `data/robot/REPORT.md`.
+
+**Every arm needs its own calibration** (`scripts/fetch_robot_fleet.py`, `scripts/robot_fleet.py`). The same
+identification ran on five more SO-100 arms recorded by different owners (public LeRobot datasets, Apache-2.0, 40 to 50
+episodes each). Each arm's servo laws were then replayed on every other arm's held-out episodes, with each arm's
+constant command offset re-centred from its own training episodes so that only the dynamics move between arms. An arm's
+own calibration tracks its joints to 0.43° on average; a calibration borrowed from another arm to 0.78°, worse in 30 of
+30 pairs at 95%. The fitted delays and deadbands differ from unit to unit: one model does not fit every arm.
 
 ### Transit timing: a shrinking orbit and an unseen planet (`/timing`)
 

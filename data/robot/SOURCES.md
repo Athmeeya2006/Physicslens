@@ -56,3 +56,13 @@ Everything here is fetched by `python scripts/fetch_robot.py` into `var/robot/ra
   sha256 `7c7f2674c7af4ac9fde4c0301ad25325ef8c655f0bd455b4b3b8a9ece1965d73` (AV1, 30 fps; cut per episode and
   re-encoded to H.264 at 15 fps for SAM 3.1). Fetched by `python scripts/robot_video_check.py fetch` into
   `var/robot/video/` (gitignored).
+
+## Other owners' arms (cross-arm comparison, scripts/fetch_robot_fleet.py)
+
+Joint tables only (no video), each pinned to the revision fetched:
+
+- `00ri/so100_battery` at revision `f619ae763ab6c4e7488c32a4c51f99246a761f5d`, apache-2.0, 50 episodes
+- `jccj/so100_block_in_cup` at revision `87a2b14997c2fabe117ca2b1fa4e7a8a42356623`, apache-2.0, 50 episodes
+- `julyfun/so100_pick_and_place_v4_50` at revision `0f93d5ec05075a83a55b2a793d205dee6b27b763`, apache-2.0, 50 episodes
+- `sergiov2000/so100_lego_and_ball_40_lego` at revision `7e2bd539571322193a97210278e5d28b8cb31a31`, apache-2.0, 40 episodes
+- `youliangtan/so100_strawberry_grape` at revision `824bec87a1befd17bf4b0985f41cc0a00191b2db`, apache-2.0, 40 episodes
