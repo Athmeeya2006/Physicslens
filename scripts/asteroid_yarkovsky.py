@@ -130,7 +130,7 @@ def fit(obs: A.Observations, bodies, epoch: float, p0: np.ndarray, fit_a2: bool,
                 lam, best = 1.0, None
                 for _ in range(6):  # step halving: accept the first step that lowers chi-square
                     q = p + lam * dp
-                    r1 = list(pool.map(_resid, [q]))[0]
+                    r1 = pool.submit(_resid, q).result()
                     if r1 @ r1 < r0 @ r0:
                         best = q
                         break
@@ -141,7 +141,7 @@ def fit(obs: A.Observations, bodies, epoch: float, p0: np.ndarray, fit_a2: bool,
                 p = best
                 if done:
                     break
-            r = list(pool.map(_resid, [p]))[0]
+            r = pool.submit(_resid, p).result()
         _init(obs, bodies, epoch, fit_a2)
         full = _resid(p)
         k = len(obs.ra)

@@ -46,8 +46,16 @@ def get(url: str, name: str, binary: bool = False):
     p = CACHE / name
     if not p.is_file():
         CACHE.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(url, timeout=180) as r:
-            p.write_bytes(r.read())
+        import time
+        for attempt in range(4):  # IRSA resets connections under load: back off and try again
+            try:
+                with urllib.request.urlopen(url, timeout=180) as r:
+                    p.write_bytes(r.read())
+                break
+            except OSError:
+                if attempt == 3:
+                    raise
+                time.sleep(5 * 2 ** attempt)
     return p.read_bytes() if binary else p.read_text()
 
 
@@ -113,7 +121,7 @@ def measure(path: Path, ra_p: float, dec_p: float) -> dict:
         try:
             s = C.gaussian_centroid(img, x, y, box=11, noise=noise)
             cen.append((s.x, s.y))
-        except Exception:  # an edge or a blend: that source is left out of the fit
+        except Exception:  # noqa: BLE001, S112  an edge or a blend: that source is left out of the fit
             continue
     cen = np.array(cen)
     c0 = wcs0.pixel_to_world(img.shape[1] / 2, img.shape[0] / 2)
@@ -139,10 +147,10 @@ def main() -> None:
     mids = [float(r["obsjd"]) + float(r["exptime"]) / 2 / 86400 for r in rows]
     jpl = horizons(times_jd=mids)
     results, skipped = [], []
-    for r, mid, (_, ra_p, dec_p) in zip(rows, mids, jpl):
+    for r, mid, (_, ra_p, dec_p) in zip(rows, mids, jpl, strict=True):
         try:
             m = measure(cutout(r, ra_p, dec_p), ra_p, dec_p)
-        except Exception as e:  # a frame that cannot be measured is reported, never silently dropped
+        except Exception as e:  # noqa: BLE001  a frame that cannot be measured is reported, never silently dropped
             skipped.append({"frame": r["filefracday"], "reason": str(e)[:160]})
             continue
         dra = ((m["ra"] - ra_p + 180) % 360 - 180) * np.cos(np.radians(dec_p)) * 3600

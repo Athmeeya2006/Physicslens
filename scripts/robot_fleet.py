@@ -52,7 +52,7 @@ def episodes(files: list[Path]) -> tuple[dict[int, np.ndarray], dict[int, np.nda
 def arm_error(law: dict, us, ys, train: list[int], test: list[int], dt: float) -> np.ndarray:
     """Per held-out episode RMS over the five arm joints (deg) of the given laws, offsets re-centred on train."""
     per_joint = []
-    for j, name in zip(ARM, NAMES):
+    for j, name in zip(ARM, NAMES, strict=True):
         lid, p = law[name]
         tr = S.Batch.from_lists([us[e][:, j] for e in train], [ys[e][:, j] for e in train], dt, train)
         te = S.Batch.from_lists([us[e][:, j] for e in test], [ys[e][:, j] for e in test], dt, test)

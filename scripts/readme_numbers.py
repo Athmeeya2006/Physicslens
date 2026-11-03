@@ -154,6 +154,12 @@ class Claim:
     tests: bool = False  # needs the test suite collected
 
 
+def spring_longer_gap() -> float:
+    """How far viscous damping falls behind the winner by BIC on the spring's longer recording."""
+    r = load("gallery/gallery-spring-longer/result.json")
+    return next(f["bic"] for f in r["ranking"] if f["model_id"] == "damped_harmonic") - min(f["bic"] for f in r["ranking"])
+
+
 CLAIMS = [
     # In 30 seconds and the judging guide
     Claim("Apophis: the Sun's GM, % from JPL", r"the Sun's GM within ([\d.]+)% and Jupiter's",
@@ -408,7 +414,7 @@ CLAIMS = [
     Claim("Asteroids vs JPL: observations median", r"of that window sit a median ([\d.]+) arcsec from it", lambda: load("data/astro/asteroids/jpl_check.json")["observations_vs_jpl"]["median_arcsec"]),
     Claim("Spring follow-up: dry friction held-out %", r"Dry friction forecasts the held-out motion\nwithin ([\d.]+)%", lambda: next(f["heldout_nrmse"] for f in load("gallery/gallery-spring-longer/result.json")["ranking"] if f["model_id"] == "oscillator_dry") * 100),
     Claim("Spring follow-up: viscous held-out %", r"viscous damping misses it by ([\d.]+)%", lambda: next(f["heldout_nrmse"] for f in load("gallery/gallery-spring-longer/result.json")["ranking"] if f["model_id"] == "damped_harmonic") * 100),
-    Claim("Spring follow-up: viscous BIC behind", r"and falls (\d+) BIC behind", lambda: (lambda r: next(f["bic"] for f in r["ranking"] if f["model_id"] == "damped_harmonic") - min(f["bic"] for f in r["ranking"]))(load("gallery/gallery-spring-longer/result.json"))),
+    Claim("Spring follow-up: viscous BIC behind", r"and falls (\d+) BIC behind", lambda: spring_longer_gap()),
     Claim("Spring follow-up: omega", r"frequency agrees with the first analysis \(([\d.]+) rad/s\)", lambda: next(p["value"] for p in load("gallery/gallery-spring-longer/result.json")["parameters"] if p["name"] == "omega")),
     Claim("Summary: predictions registered", r"Where the evidence stands:\*\* .*?; (\w+) blind predictions",
           lambda: len(load_index_rows())),
