@@ -130,7 +130,10 @@ def measure(path: Path, ra_p: float, dec_p: float) -> dict:
     # The asteroid is not a star: keep it out of the matching, then find it.
     px, py = wcs0.world_to_pixel(SkyCoord(ra_p, dec_p, unit="deg"))
     far = np.hypot(cen[:, 0] - px, cen[:, 1] - py) > 6
-    sol = P.refine_wcs(cen[far], stars, wcs0, radius_px=6.0)
+    try:
+        sol = P.refine_wcs(cen[far], stars, wcs0, radius_px=6.0)
+    except P.PlateSolveError:  # a header pointing further off: start wider
+        sol = P.refine_wcs(cen[far], stars, wcs0, radius_px=20.0)
     px, py = sol.wcs.world_to_pixel(SkyCoord(ra_p, dec_p, unit="deg"))
     d = np.hypot(cen[:, 0] - px, cen[:, 1] - py)
     i = int(np.argmin(d))
@@ -138,7 +141,7 @@ def measure(path: Path, ra_p: float, dec_p: float) -> dict:
         raise ValueError(f"no source within 8 px of the prediction (nearest {d[i]:.1f} px)")
     s = C.gaussian_centroid(img, cen[i, 0], cen[i, 1], box=11, noise=noise)
     m = sol.wcs.pixel_to_world(s.x, s.y)
-    return {"ra": float(m.ra.deg), "dec": float(m.dec.deg), "wcs_rms_arcsec": sol.rms_arcsec, "stars": sol.n_matched,
+    return {"ra": float(m.ra.deg), "dec": float(m.dec.deg), "wcs_rms_arcsec": sol.rms_arcsec, "stars": sol.matched,
             "snr": float(s.snr), "centroid_sigma_px": float(np.hypot(s.sigma_x, s.sigma_y) / np.sqrt(2))}
 
 
