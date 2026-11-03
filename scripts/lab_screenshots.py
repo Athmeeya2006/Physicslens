@@ -22,12 +22,16 @@ def main() -> None:
         browser = p.chromium.launch(**chrome, headless=True)
         for name, size in (("lab-desktop", (1366, 900)), ("lab-phone", (390, 844))):
             ctx = browser.new_context(viewport={"width": size[0], "height": size[1]}, device_scale_factor=2)
+            ctx.add_init_script("try{localStorage.setItem('physicslens-theme','light')}catch(e){}")
             page = ctx.new_page()
             page.goto(f"{SITE}/sky.html#halley_with_jupiter_saturn", wait_until="networkidle")
             page.wait_for_timeout(1500)
             page.get_by_label("Jupiter", exact=True).first.uncheck()  # the changed run, dashed over the original
             page.wait_for_timeout(9000)  # let the orbits play for a while
-            page.screenshot(path=str(OUT / f"{name}.png"))
+            # The 3D canvas keeps the page busy, so Playwright's own screenshot can wait on fonts forever: ask Chrome directly.
+            import base64
+            shot = ctx.new_cdp_session(page).send("Page.captureScreenshot", {"format": "png"})
+            (OUT / f"{name}.png").write_bytes(base64.b64decode(shot["data"]))
             print(OUT / f"{name}.png")
         browser.close()
 
