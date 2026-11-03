@@ -160,6 +160,12 @@ def spring_longer_gap() -> float:
     return next(f["bic"] for f in r["ranking"] if f["model_id"] == "damped_harmonic") - min(f["bic"] for f in r["ranking"])
 
 
+def glimmer_gap() -> float:
+    """How far viscous damping falls behind the winner by BIC in the Glimmer re-analysis of the spring."""
+    r = load("data/glimmer_check/spring_longer.json")
+    return next(f["bic"] for f in r["ranking"] if f["model_id"] == "damped_harmonic") - min(f["bic"] for f in r["ranking"])
+
+
 CLAIMS = [
     # In 30 seconds and the judging guide
     Claim("Apophis: the Sun's GM, % from JPL", r"the Sun's GM within ([\d.]+)% and Jupiter's",
@@ -420,6 +426,8 @@ CLAIMS = [
     Claim("Fleet: borrowed calibration", r"borrowed from another arm to ([\d.]+)°, worse in", lambda: load("data/robot/fleet.json")["summary"]["borrowed_mean_deg"]),
     Claim("Fleet: pairs worse", r"worse in (\d+) of\s+\d+ pairs at 95%", lambda: load("data/robot/fleet.json")["summary"]["pairs_significantly_worse"]),
     Claim("Fleet: pairs", r"worse in \d+ of\s+(\d+) pairs at 95%", lambda: load("data/robot/fleet.json")["summary"]["pairs"]),
+    Claim("Glimmer check: held-out %", r"dry friction,\nforecasting the held-out motion within ([\d.]+)% \(Muse Spark Open", lambda: next(f["heldout_nrmse"] for f in load("data/glimmer_check/spring_longer.json")["ranking"] if f["model_id"] == "oscillator_dry") * 100),
+    Claim("Glimmer check: viscous BIC behind", r"with viscous damping (\d+) BIC behind\. On the gallery", lambda: glimmer_gap()),
     Claim("Summary: predictions registered", r"Where the evidence stands:\*\* .*?; (\w+) blind predictions",
           lambda: len(load_index_rows())),
     Claim("Robot video: median mm", r"through a camera fitted\s+on two training episodes, to a median ([\d.]+) mm", lambda: load("data/robot/video_check.json")["heldout"]["median_mm"]["mean"]),

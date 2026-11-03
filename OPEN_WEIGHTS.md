@@ -36,6 +36,16 @@ To check a local copy: `sha256sum Muse-Glimmer-30B-KQuant-17GB-Q4_K_M.gguf`.
 - Served under the alias `muse-glimmer-30b` (`-a muse-glimmer-30b`), bound to localhost, with sampling at the model card's defaults (temperature 1.0, top_p 0.95, top_k 64) and `reasoning_strength: "low"`.
 - Hardware: two NVIDIA T4 GPUs (16 GB each).
 - The exact command is in `scripts/gpu_server/serve.py` and in the README under "Serve Muse Glimmer".
+- Also run on a university cluster with two RTX 2080 Ti (11 GB each): the same release `b11936` built from source
+  (CUDA 12.6, `-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=75`, because the prebuilt binary needs glibc 2.38), the same
+  pinned weights, with a 16k context and an 8-bit KV cache (`-c 16384 -ctk q8_0 -ctv q8_0 -fa on`) to fit 22 GB.
+
+### Checked against Muse Spark Open
+
+The spring glider's 20 s recording, analyzed end to end with Glimmer on that cluster (no Baseten call): the same
+verdict as Muse Spark Open, dry friction, held-out forecast 3.6% against 3.4%. On the gallery pendulum Glimmer's box
+for SAM missed the bob; its own track check flagged it and no law was claimed. Both results, with every call's model
+id, are in `data/glimmer_check/`.
 
 ## How to see it in the results
 
