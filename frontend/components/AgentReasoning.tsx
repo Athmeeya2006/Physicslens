@@ -31,12 +31,19 @@ function line(s: TrailStep): { verb: string; text: string; tone?: "reject" | "ti
     const rej = items.filter((i) => i.status === "rejected");
     const tied = items.filter((i) => i.status === "tied");
     const acc = items.filter((i) => i.status === "accepted");
-    if (rej.length) return { verb: "Rejects", tone: "reject",
-      text: rej.slice(0, 3).map((i) => `${i.title} (${i.why})`).join("; ") + (acc.length ? `. Keeps ${acc[0].title}.` : ".") };
-    if (tied.length) return { verb: "Cannot separate", tone: "tie", text: first(s.text) };
+    const rejected = rej.slice(0, 3).map((i) => `${i.title} (${i.why})`).join("; ");
+    // A tie is the point of the step when there is one: say it first, then what was rejected on the way.
+    if (tied.length) return { verb: "Cannot separate", tone: "tie",
+      text: `${tied.map((i) => i.title).join(" and ")} forecast the unseen motion about equally well.` + (rej.length ? ` Rejects ${rejected}.` : "") };
+    if (rej.length) return { verb: "Rejects", tone: "reject", text: rejected + (acc.length ? `. Keeps ${acc[0].title}.` : ".") };
     return { verb: "Verifies", text: first(s.text) };
   }
-  if (s.step === "skeptic") return { verb: "Tries to break it", text: first(s.text) };
+  if (s.step === "skeptic") {
+    // Only the referee's decisive moments: it changed the verdict, or the law survived its challenges.
+    if (/verdict changes/i.test(s.text)) return { verb: "Overturns the verdict", tone: "reject", text: first(s.text) };
+    if (/survived/i.test(s.text)) return { verb: "Tries to break it", text: first(s.text) };
+    return null;
+  }
   if (s.step === "design") return { verb: "Designs the deciding experiment", text: first(s.text.replace(/^Simulated [^.]*\.\s*/, "")) };
   if (s.step === "agent" && s.action === "request_experiment") return { verb: "Asks you for", tone: "ask", text: first(s.text) };
   if (s.step === "agent") return { verb: "Decides", text: first(s.text) };
