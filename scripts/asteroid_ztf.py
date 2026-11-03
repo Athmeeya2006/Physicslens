@@ -59,7 +59,7 @@ def get(url: str, name: str, binary: bool = False):
     return p.read_bytes() if binary else p.read_text()
 
 
-def horizons(times_jd: list[float] | None = None, start: str = START, stop: str = STOP, step: str = "1 h") -> list[tuple[float, float, float]]:
+def horizons(times_jd: list[float] | None = None, start: str = START, stop: str = STOP, step: str = "4 h") -> list[tuple[float, float, float]]:
     """JPL's astrometric RA, Dec (degrees) of Apophis from Palomar (I41): on a grid, or at given UTC Julian days."""
     q = {"format": "json", "COMMAND": f"'{DESIG}'", "OBJ_DATA": "NO", "MAKE_EPHEM": "YES", "EPHEM_TYPE": "OBSERVER",
          "CENTER": "'I41@399'", "QUANTITIES": "'1'", "ANG_FORMAT": "DEG", "EXTRA_PREC": "YES", "TIME_DIGITS": "FRACSEC",
@@ -83,11 +83,12 @@ def horizons(times_jd: list[float] | None = None, start: str = START, stop: str 
 
 
 def frames() -> list[dict]:
-    """ZTF science frames containing Apophis: one search per hour of the ephemeris, within half an hour of it."""
+    """ZTF science frames containing Apophis: one search per 4 hours of the ephemeris, within 2 hours of it (Apophis moves
+    about 10 arcmin in 2 hours, well inside a ZTF field, and each cutout is centred on JPL's position at the frame's own time)."""
     rows, seen = [], set()
     for jd, ra, dec in horizons():
         url = ("https://irsa.ipac.caltech.edu/ibe/search/ztf/products/sci?" + urllib.parse.urlencode(
-            {"POS": f"{ra:.5f},{dec:.5f}", "WHERE": f"obsjd BETWEEN {jd - 1 / 48:.6f} AND {jd + 1 / 48:.6f}", "ct": "csv"}))
+            {"POS": f"{ra:.5f},{dec:.5f}", "WHERE": f"obsjd BETWEEN {jd - 1 / 12:.6f} AND {jd + 1 / 12:.6f}", "ct": "csv"}))
         for r in csv.DictReader(io.StringIO(get(url, f"irsa_{jd:.4f}.csv"))):
             k = (r["filefracday"], r["field"], r["ccdid"], r["qid"])
             if k not in seen and r["imgtypecode"] == "o":
