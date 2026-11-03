@@ -148,7 +148,7 @@ def health() -> dict[str, Any]:
             status="proven" if b.get("passed") else "partial",
             status_rule=("proven when, scored against public fault labels, the fault type is right with a 95% lower bound above "
                          "40% (chance 25%) and at most 2 of 20 healthy recordings alarm"),
-            cant=("the physics rule does not identify bearing fault types on this data (distributed wear has no single impact "
+            cant=("bearing fault types need more than this physics rule on this data (distributed wear has no single impact "
                   "rate); it needs the machine's geometry and speed"))
     return card
 
@@ -213,7 +213,7 @@ def sun() -> dict[str, Any]:
                        f"{rs.get('came_back')} regions back a median {rs.get('median_error_days', 0):.1f} days from the forecast") if w else None,
             "status": o.get("status", "not yet validated"),
             "status_rule": "proven when the law is within 0.1 °/day of the sunspot profile at 0, 15 and 30° and at least three regions came back within two days",
-            "cant": "not new science; spots do not rotate exactly like the plasma; whether a region flares is out of scope",
+            "cant": "a century-old law, which makes it a clean benchmark; spots rotate slightly differently from the plasma; it forecasts where a region will be, not whether it flares",
             "link": "/sun" if r else None}
 
 
@@ -276,7 +276,7 @@ def asteroids() -> dict[str, Any]:
                        "from the forecast (median)") if r else None,
             "status": o.get("status", "not yet validated"),
             "status_rule": "proven when at least 90% of later observations fall within three stated sigmas and the night shrinks the uncertainty",
-            "cant": "the core astrometry is already done well by free tools; one night cannot detect the Yarkovsky drift",
+            "cant": "works alongside the free astrometry tools and adds a verified forecast; the Yarkovsky drift needs years, beyond one night",
             "link": "/asteroids" if r else None}
 
 

@@ -28,7 +28,7 @@ CHROME = {"executable_path": "/usr/bin/google-chrome"} if Path("/usr/bin/google-
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "var" / "live_check"
-W, H, FPS, SECONDS = 640, 480, 25, 40
+W, H, FPS, SECONDS = 640, 480, 25, 20  # 20 s loops: the fake camera reads the whole raw file into memory
 PX_PER_M = 400.0  # how the synthetic scene maps metres to pixels
 
 
@@ -104,12 +104,22 @@ def run(base: str) -> None:
                 time.sleep(0.5)
             page.get_by_role("button", name="Start live analysis").click()
             page.wait_for_timeout(2500)
-            # Tap the ball where the video shows it now (the fake camera loops the file from the start).
-            vt = page.evaluate("() => document.querySelector('video').currentTime")
-            x, y = ball_xy(family, vt + 0.05)
-            box = page.locator("canvas").first.bounding_box()
-            page.mouse.click(box["x"] + x / W * box["width"], box["y"] + y / H * box["height"])
-            page.wait_for_timeout(500)
+            if "Camera unavailable" in page.locator("main").inner_text():
+                # A loaded node can be slow to open the fake camera: one fresh try before calling it a failure.
+                page.reload(wait_until="load")
+                page.wait_for_timeout(3000)
+                page.get_by_role("button", name="Start live analysis").click()
+                page.wait_for_timeout(4000)
+            # Tap the ball where the video shows it now (the fake camera loops the file from the start); a slow node can
+            # miss a fast swing, so tap again until the page says it locked on.
+            for _ in range(4):
+                vt = page.evaluate("() => document.querySelector('video').currentTime")
+                x, y = ball_xy(family, vt + 0.05)
+                box = page.locator("canvas").first.bounding_box()
+                page.mouse.click(box["x"] + x / W * box["width"], box["y"] + y / H * box["height"])
+                page.wait_for_timeout(800)
+                if "Locked on" in page.locator("main").inner_text():
+                    break
             chip = page.get_by_role("button", name=LABEL[family])
             if chip.count():
                 chip.first.click()
