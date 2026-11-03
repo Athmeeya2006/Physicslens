@@ -949,6 +949,10 @@ What it shows, stated plainly:
 
 Reproduce: `python scripts/audit_study.py select|run|baseline|report` (run and baseline call SAM 3.1 and Muse Spark Open; report and replay are free).
 
+### Scale-free checks: tried, held out, not adopted
+
+Four more checks compare free fall with itself, so they need no length scale: one acceleration through a fall, a parabolic path, no energy gained with gravity taken from the flight's own curvature, and each bounce no higher than the fall into it (`check_scale_free` in `backend/physicslens/physics/audit.py`). Before any result was looked at, the clips were split in two by a hash of their id, the practical sizes were tuned on one half (the smallest that flags no real clip, plus a 20% margin), and the rule for using the checks was written down: on the other half they must flag no more real clips than the existing audit and more of the generated clips people rated physically wrong (VideoPhy-2 score below 4). At the physical defaults they flagged 5 real tuning clips, which is why tuning was needed; tuned, the bounce check could never be made safe on real footage. On the held-out half they flagged no real clip (0 of 13 judged) and no additional rated-wrong clip (1 of 19, as before), so the rule was not met and they stay out of the verdict. Everything is in [`data/audit_study/scale_free.json`](data/audit_study/scale_free.json); reproduce with `python scripts/audit_scale_free.py` (free, from the saved measurements).
+
 ## Open dataset
 
 Every verified measurement in the gallery also becomes a row of an open dataset of real-world physical parameters (damping ratios, natural frequencies, drag rates, friction, gravity), on the site's **Dataset** page with JSON and CSV downloads (on phones each row is shown as a card). Laws the agent wrote count too when a parameter has the units of GM (length cubed per time squared): the orbit results add the Sun's and Jupiter's gravitational parameters, labelled as the central body's. A row enters only when its result was accepted, its law forecast held-out motion within 15%, and the value was measured rather than given by the user, assumed, or in arbitrary units (`backend/physicslens/export/dataset.py`). Each row carries its uncertainty, the scale basis, the run it came from and the clip's licence, because a damping ratio or friction coefficient only holds for the conditions it was measured in.
@@ -1307,7 +1311,7 @@ CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (864 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
+The suite (872 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.

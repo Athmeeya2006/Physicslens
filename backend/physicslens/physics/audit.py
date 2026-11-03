@@ -99,11 +99,27 @@ CONTACT_WINDOW = 4  # frames on each side used for the velocities
 OCCLUSION_ASPECT = 1.35
 BOOTSTRAP_REPS = 100
 
+# Scale-free checks (free fall compared with itself). The sizes below are the physical defaults. Sizes tuned on half
+# of the study's clips were scored on the other half (scripts/audit_scale_free.py, data/audit_study/scale_free.json)
+# under a rule fixed before scoring; they flagged no more rated-wrong generated clips there, so the checks stay out
+# of the verdict.
+SF_FAMILIES = ("projectile", "plane", "line")  # strings, springs and hands hold the other families
+SF_MIN_HALF = 6  # samples per half of a stretch: a quadratic needs a few points beyond its three coefficients
+SF_MIN_ACCEL_SNR = 10.0  # the first half's acceleration must be measured to 10%, or there is no free fall to compare with
+SF_DOWN_DEG = 25.0  # and point near straight down: a ramp or a swing tilts it further
+SF_MIN_EXTENT = 10.0  # sideways travel (path) or fall height (bounce) in units of the tracking noise
+SF_MAX_AREA_CHANGE = 1.4  # largest / smallest mask area in a stretch: a fall toward the camera changes it far less
+ACCEL_CHANGE = 0.25  # second half's acceleration departing from the first's by this share (drag on a ball: a few %)
+PATH_RESID = 0.02  # rms distance from the best parabola over the path's extent
+SF_ENERGY_GAIN = 0.15  # as FLIGHT_ENERGY_GAIN, on falls the parabola filter would have dropped
+BOUNCE_GAIN = 1.1  # rebound height over fall height; heights scale as e squared, so this is e of about 1.05
+SCALE_FREE_IN_VERDICT = False
+
 Verdict = Literal["consistent", "violates_physics", "cant_judge"]
 CheckStatus = Literal["pass", "violation", "skipped"]
 REAL_SCALE_EXCLUDED = ("none", "gravity")
 PASSIVE_FAMILIES = ("pendulum", "oscillator", "projectile")
-DYNAMIC_CHECKS = ("gravity", "energy", "period", "law")
+DYNAMIC_CHECKS = ("gravity", "energy", "period", "law", "acceleration", "path")
 SCALE_BASIS = {"user": "the pendulum length you gave", "object_size": "the object size you gave",
                "a4_sheet": "the A4 sheet in view", "us_letter_sheet": "the letter sheet in view"}
 
@@ -283,21 +299,27 @@ def find_flights(traj: Trajectory, sigma: float) -> list[Flight]:
     return out
 
 
-def _fit_flight(traj: Trajectory, start: int, stop: int, lo: int, hi: int, sigma: float) -> Flight | None:
+def _segment_fit(traj: Trajectory, start: int, stop: int, lo: int, hi: int, sigma: float) -> tuple[Flight, np.ndarray]:
+    """Steady-acceleration fit of one stretch, whatever its quality, and the raw residual scale per axis."""
     t, xy = traj.t[start:stop], traj.xy[start:stop]
     t0 = float(t.mean())
     X = np.column_stack([np.ones_like(t), t - t0, (t - t0) ** 2])
     coef, *_ = np.linalg.lstsq(X, xy, rcond=None)
     resid = xy - X @ coef
-    dof = max(len(t) - 3, 1)
-    s = np.sqrt(np.sum(resid**2, axis=0) / dof)
+    s = np.sqrt(np.sum(resid**2, axis=0) / max(len(t) - 3, 1))
+    floor = max(sigma, 1e-6)
+    f = Flight(start, stop, lo, hi, t0, float(t[0]), float(t[-1]), coef[:, 0], coef[:, 1], np.linalg.inv(X.T @ X),
+               float(max(s[0], floor)), float(max(s[1], floor)))
+    return f, s
+
+
+def _fit_flight(traj: Trajectory, start: int, stop: int, lo: int, hi: int, sigma: float) -> Flight | None:
+    f, s = _segment_fit(traj, start, stop, lo, hi, sigma)
     # A flight is free fall only if a parabola explains it to the tracking noise; a light object under heavy drag
     # (a paper bag) fails this and is left out, rather than being judged against a law it isn't following.
     floor = max(sigma, 1e-6)
-    if np.max(s) > 3 * floor or np.ptp(xy[:, 1]) < 10 * floor:
+    if np.max(s) > 3 * floor or np.ptp(traj.xy[start:stop, 1]) < 10 * floor:
         return None
-    f = Flight(start, stop, lo, hi, t0, float(t[0]), float(t[-1]), coef[:, 0], coef[:, 1], np.linalg.inv(X.T @ X),
-                  float(max(s[0], floor)), float(max(s[1], floor)))
     # Tiny hops merged by the impact detector average out to a nearly flat curve; only a flight whose own
     # curvature is measured to a few percent can speak for gravity.
     g, g_std = _g_of(f)
@@ -488,6 +510,209 @@ def check_flight_energy(a: AuditInput, flights: list[Flight]) -> Check | None:
                      f"In flight {i + 1} the object gains {g:.0%} energy with nothing pushing it ({zs[j]:.0f} standard errors).",
                      g, s, 0.0, "", zs[j])
     return Check("energy", title, "pass", f"No flight gains energy beyond the noise (largest change {g:+.0%}).", g, s, 0.0, "", zs[j])
+
+
+# ---------- scale-free checks: each compares the motion with itself, so no length scale is needed ----------
+# The checks above lean on clean parabolas (find_flights drops a stretch that isn't one, so a generated object that
+# speeds up and slows down in mid-air was never judged at all). These start from any stretch between impacts that
+# BEGINS as a clear free fall and ask whether the rest of it keeps behaving like one.
+
+def _areas(a: AuditInput) -> np.ndarray | None:
+    return a.areas_px if a.areas_px is not None and len(a.areas_px) == len(a.traj) else None
+
+
+def _impacts(traj: Trajectory) -> np.ndarray:
+    return np.union1d(detect_impacts(traj), detect_bounces(traj)).astype(int)
+
+
+def steady_size(areas: np.ndarray | None, start: int, stop: int) -> bool:
+    """The mask keeps its size over a stretch. A ball going behind something, or touching another object whose mask
+    merges with it, moves its mask centre with no force at all (real footage of a ball passing behind a box and a
+    ball hitting a toy duck read as impossible free fall before this). Unknown areas count as steady."""
+    if areas is None or stop > len(areas):
+        return True
+    s = np.asarray(areas[start:stop], dtype=float)
+    return bool(np.all(s > 0)) and float(np.max(s) / np.min(s)) <= SF_MAX_AREA_CHANGE
+
+
+def free_fall_stretches(traj: Trajectory, sigma: float, areas: np.ndarray | None = None) -> list[tuple[Flight, Flight, Flight]]:
+    """(whole, first half, second half) fits of each stretch between impacts whose first half is a clear free fall.
+
+    Only the first half has to look like free fall: whether the second half still does is the question asked.
+    """
+    n = len(traj)
+    bounds = [0, *[int(i) for i in _impacts(traj)], n]
+    out = []
+    for lo, hi in pairwise(bounds):
+        start = lo + (EDGE_TRIM if lo > 0 else 0)
+        stop = hi - (EDGE_TRIM if hi < n else 0)
+        if stop - start < 2 * SF_MIN_HALF or not steady_size(areas, start, stop):
+            continue
+        mid = (start + stop) // 2
+        early, _ = _segment_fit(traj, start, mid, lo, hi, sigma)
+        g, g_std = _g_of(early)
+        # Near straight down: a ramp, a swing or a hand tilts the acceleration away from it.
+        if g < SF_MIN_ACCEL_SNR * g_std or abs(_angle_of(early)[0]) > SF_DOWN_DEG:
+            continue
+        out.append((_segment_fit(traj, start, stop, lo, hi, sigma)[0], early, _segment_fit(traj, mid, stop, lo, hi, sigma)[0]))
+    return out
+
+
+def accel_change(early: Flight, late: Flight) -> tuple[float, float, float]:
+    """How far the second half's acceleration departs from the first's, as a share of the first, its standard error,
+    and the growth along the first's direction that was set aside.
+
+    Growth along the same direction is not counted: an object rolling off an edge loses its support and starts to
+    fall harder with no impact. Falling less hard, sideways or upward needs something touching it.
+    """
+    a1, a2 = early.accel, late.accel
+    m1 = float(np.hypot(*a1))
+    u = a1 / m1
+    d = a2 - a1
+    growth = max(0.0, float(d @ u))
+    d = d - growth * u
+    mag = float(np.hypot(*d))
+    e = d / mag if mag > 0 else u
+    return mag / m1, float(np.sqrt(e @ (early.accel_cov + late.accel_cov) @ e)) / m1, growth / m1
+
+
+def check_acceleration(stretches: list[tuple[Flight, Flight, Flight]]) -> Check:
+    title = "Free fall keeps one acceleration"
+    if not stretches:
+        return Check("acceleration", title, "skipped", "Can't judge: no stretch between impacts starts as a clear free fall with the object in full view.")
+    rows = [(i, *accel_change(e, la)) for i, (_, e, la) in enumerate(stretches)]
+    zs = [c / s if s > 0 else 0.0 for _, c, s, _ in rows]
+    j = max(range(len(rows)), key=lambda k: (rows[k][1] > ACCEL_CHANGE and zs[k] >= Z_VIOLATION, rows[k][1]))
+    i, c, s, _ = rows[j]
+    if c > ACCEL_CHANGE and zs[j] >= Z_VIOLATION:
+        return Check("acceleration", title, "violation",
+                     f"In flight {i + 1} the acceleration changes by {c:.0%} of itself between the first and second half "
+                     f"with no impact ({zs[j]:.0f} standard errors): a falling object keeps one acceleration until "
+                     "something touches it.", c, s, 0.0, "", zs[j])
+    return Check("acceleration", title, "pass", f"Every free fall keeps one acceleration (largest change {c:.0%}).",
+                 c, s, 0.0, "", zs[j])
+
+
+def path_misfit(traj: Trajectory, f: Flight, sigma: float) -> tuple[float, float] | None:
+    """The path's distance from its best parabola (height against sideways position, in gravity's own frame), as a
+    share of the path's extent, and as a multiple of the tracking noise. No clock is involved: a wrong frame time
+    can't fake or hide it. None when the path barely moves sideways (a straight drop has no parabola to fit)."""
+    xy = traj.xy[f.start:f.stop]
+    down = f.accel / max(float(np.hypot(*f.accel)), 1e-12)
+    u, w = xy @ np.array([-down[1], down[0]]), xy @ -down
+    if np.ptp(u) < SF_MIN_EXTENT * max(sigma, 1e-12):
+        return None
+    c = np.polyfit(u, w, 2)
+    rms = float(np.sqrt(np.sum((w - np.polyval(c, u)) ** 2) / max(len(u) - 3, 1)))
+    # Noise in the sideways position moves a steep path's height by the slope times that noise.
+    slope = float(np.max(np.abs(2 * c[0] * u + c[1])))
+    return rms / max(float(np.ptp(u)), float(np.ptp(w))), rms / (max(sigma, 1e-12) * float(np.hypot(1.0, slope)))
+
+
+def check_path(a: AuditInput, stretches: list[tuple[Flight, Flight, Flight]], sigma: float) -> Check:
+    title = "Free-flight path is a parabola"
+    rows = [(i, *r) for i, (w, e, la) in enumerate(stretches)
+            if accel_change(e, la)[2] <= ACCEL_CHANGE and (r := path_misfit(a.traj, w, sigma)) is not None]
+    if not rows:
+        return Check("path", title, "skipped", "Can't judge: no free fall here moves sideways enough to trace a parabola"
+                     " (or it may have left a support mid-way).")
+    j = max(range(len(rows)), key=lambda k: (rows[k][1] > PATH_RESID and rows[k][2] >= Z_VIOLATION, rows[k][1]))
+    i, rel, z = rows[j]
+    if rel > PATH_RESID and z >= Z_VIOLATION:
+        return Check("path", title, "violation",
+                     f"In flight {i + 1} the path strays from its best parabola by {rel:.1%} of its size ({z:.0f} times "
+                     "the tracking noise): anything in free fall traces a parabola.", rel, None, 0.0, "", z)
+    return Check("path", title, "pass", f"Every free-flight path is a parabola within the noise (largest misfit {rel:.1%}).",
+                 rel, None, 0.0, "", z)
+
+
+def check_fall_energy(a: AuditInput, stretches: list[tuple[Flight, Flight, Flight]]) -> Check:
+    """Energy over each free fall, with gravity taken from the flight's own curvature (so no scale is needed)."""
+    title = "Falling objects don't gain energy"
+    rng = np.random.default_rng(0)
+    # A flight that left a support mid-way falls harder in its second half; its mean pull would understate gravity
+    # in the first half and show a gain that isn't there.
+    rows = [(i, *r) for i, (w, e, la) in enumerate(stretches)
+            if accel_change(e, la)[2] <= ACCEL_CHANGE and (r := _flight_energy_gain(a.traj, w, rng)) is not None]
+    if not rows:
+        return Check("energy", title, "skipped", "Can't judge: no free fall long enough to follow its energy.")
+    zs = [g / s if s > 0 else 0.0 for _, g, s in rows]
+    j = max(range(len(rows)), key=lambda k: (rows[k][1] > SF_ENERGY_GAIN and zs[k] >= Z_VIOLATION, rows[k][1]))
+    i, g, s = rows[j]
+    if g > SF_ENERGY_GAIN and zs[j] >= Z_VIOLATION:
+        return Check("energy", title, "violation",
+                     f"In flight {i + 1} the object gains {g:.0%} energy with nothing pushing it ({zs[j]:.0f} standard "
+                     "errors), measured with the gravity its own flight shows.", g, s, 0.0, "", zs[j])
+    return Check("energy", title, "pass", f"No free fall gains energy beyond the noise (largest change {g:+.0%}).",
+                 g, s, 0.0, "", zs[j])
+
+
+def bounce_heights(traj: Trajectory, sigma: float, areas: np.ndarray | None = None) -> list[tuple[float, float, float, float]]:
+    """(impact time, fall height, rebound height, standard error of their ratio) for each floor bounce whose fall
+    starts from a highest point seen in the clip. Heights are measured from the impact itself, so the floor's level
+    and the scale drop out of the ratio."""
+    y = traj.xy[:, 1]
+    imps = [int(i) for i in _impacts(traj)]
+    bounds = [0, *imps, len(y)]
+    out = []
+    for k, i in enumerate(imps):
+        before, after = y[bounds[k]:i], y[i + 1:bounds[k + 2]]
+        if len(before) < 3 or len(after) < 2 or i < 2 or i > len(y) - 3 or y[i] > y[i - 2:i + 3].min():
+            continue
+        j = int(np.argmax(before))
+        # The fall's top must be inside the stretch: a top at its edge may be higher than recorded, which would
+        # shrink the fall and overstate the rebound. A rebound cut off by the next impact or the clip's end can only
+        # be understated, a miss, never a false accusation.
+        if j == 0 or j == len(before) - 1:
+            continue
+        # The fall must be a free fall from that top (a ball rolling over a bump, or pushed by another object, is
+        # not), with the object whole on both sides of the impact.
+        lo, hi = bounds[k] + j, i - EDGE_TRIM
+        if hi - lo < SF_MIN_HALF or not steady_size(areas, bounds[k], bounds[k + 2]):
+            continue
+        fall, _ = _segment_fit(traj, lo, hi, lo, i, sigma)
+        g, g_std = _g_of(fall)
+        if g < SF_MIN_ACCEL_SNR * g_std or abs(_angle_of(fall)[0]) > SF_DOWN_DEG:
+            continue
+        h1, h2 = float(before[j] - y[i]), float(after.max() - y[i])
+        if h1 < SF_MIN_EXTENT * sigma or h2 <= 0:
+            continue
+        r = h2 / h1
+        out.append((float(traj.t[i]), h1, h2, float(np.sqrt(2) * sigma / h1 * np.hypot(1.0, r))))
+    return out
+
+
+def check_bounce_heights(a: AuditInput, sigma: float) -> Check:
+    title = "Each bounce no higher than the last"
+    rows = bounce_heights(a.traj, sigma, _areas(a))
+    if not rows:
+        return Check("energy", title, "skipped", "Can't judge: no bounce whose fall from its highest point is seen.")
+    zs = [(h2 / h1 - 1) / s if s > 0 else 0.0 for _, h1, h2, s in rows]
+    j = int(np.argmax([h2 / h1 for _, h1, h2, _ in rows]))
+    t, h1, h2, s = rows[j]
+    r = h2 / h1
+    if r > BOUNCE_GAIN and zs[j] >= Z_VIOLATION:
+        return Check("energy", title, "violation",
+                     f"The bounce at {t:.2f} s rises {r:.2f} times as high as the fall into it ({zs[j]:.0f} standard "
+                     "errors): a passive bounce can only lose height.", r, s, 1.0, "", zs[j])
+    return Check("energy", title, "pass", f"Every one of {len(rows)} bounces rises at most {r:.2f} times the fall into it.",
+                 r, s, 1.0, "", zs[j])
+
+
+def check_scale_free(a: AuditInput, sigma: float) -> list[Check]:
+    """The four scale-free checks, each 'skipped' with a "Can't judge" reason when the clip can't support it."""
+    why = None
+    if a.lookalikes:
+        why = "objects like this one are in view, and the tracker can hop between them at a collision."
+    elif a.family not in SF_FAMILIES:
+        why = f"{a.family} motion is held by a string, spring or hand, so free fall doesn't apply."
+    if why:
+        return [Check(k, t, "skipped", f"Can't judge: {why}") for k, t in (
+            ("acceleration", "Free fall keeps one acceleration"), ("path", "Free-flight path is a parabola"),
+            ("energy", "Falling objects don't gain energy"), ("energy", "Each bounce no higher than the last"))]
+    stretches = free_fall_stretches(a.traj, sigma, _areas(a))
+    return [check_acceleration(stretches), check_path(a, stretches, sigma), check_fall_energy(a, stretches),
+            check_bounce_heights(a, sigma)]
 
 
 # ---------- oscillators ----------
@@ -805,8 +1030,10 @@ def cant_judge(reason: str) -> dict[str, Any]:
             "violations": [], "thresholds": thresholds()}
 
 
-def audit(a: AuditInput) -> dict[str, Any]:
-    """Every applicable check, and the verdict: violations need preconditions met, a large z and a large magnitude."""
+def audit(a: AuditInput, scale_free: bool | None = None) -> dict[str, Any]:
+    """Every applicable check, and the verdict: violations need preconditions met, a large z and a large magnitude.
+
+    scale_free: include the scale-free free-fall checks (None: SCALE_FREE_IN_VERDICT, set by the held-out study)."""
     if len(a.traj) < 3:
         return cant_judge("the object was tracked in too few frames.")
     sigma = noise_sigma(a.traj.xy)
@@ -842,6 +1069,8 @@ def audit(a: AuditInput) -> dict[str, Any]:
             checks.append(check_gravity_scale(a, []))
         checks += check_oscillator(a)
         family_seen = not isinstance(oscillation_windows(a.traj, a.family), str)
+    if SCALE_FREE_IN_VERDICT if scale_free is None else scale_free:
+        checks += check_scale_free(a, sigma)
     law = check_law(a, family_seen)
     if law is not None:
         checks.append(law)
@@ -878,4 +1107,5 @@ def audit(a: AuditInput) -> dict[str, Any]:
 def thresholds() -> dict[str, float]:
     return {"z": Z_VIOLATION, "z_kinematic": Z_KINEMATIC, "g_rel": G_REL_TOL, "flight_g_rel": FLIGHT_G_REL_TOL,
             "max_restitution": MAX_RESTITUTION, "amplitude_growth": AMPLITUDE_GROWTH, "period_drift": PERIOD_DRIFT,
-            "no_law_nrmse": NO_LAW_NRMSE}
+            "no_law_nrmse": NO_LAW_NRMSE, "accel_change": ACCEL_CHANGE, "path_resid": PATH_RESID,
+            "fall_energy_gain": SF_ENERGY_GAIN, "bounce_gain": BOUNCE_GAIN}

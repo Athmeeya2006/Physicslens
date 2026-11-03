@@ -28,4 +28,5 @@ def test_readme_cases_table_matches_the_results():
     spec.loader.exec_module(cases)
     text = cases.README.read_text()
     assert text[text.index(cases.START):text.index(cases.END) + len(cases.END)] == cases.table(cases.cases())
-    assert all(c["status"] in ("proven", "partial", "not yet validated") for c in cases.cases())
+    # Every status is a rung of the written ladder (build_cases.LADDER), never a free-form label.
+    assert all(c["status"] in cases.LADDER for c in cases.cases())

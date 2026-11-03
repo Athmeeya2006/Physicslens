@@ -1,0 +1,840 @@
+{
+ "wording": "The audit flags physically impossible motion when it can judge; a clean audit is not proof a clip is real.",
+ "split": {
+  "rule": "sha256('audit-scale-free-v1:' + clip id), even first byte: tuning; odd: held-out",
+  "tuning": {
+   "real": 41,
+   "generated_wrong": 16,
+   "generated_sound": 15
+  },
+  "heldout": {
+   "real": 42,
+   "generated_wrong": 19,
+   "generated_sound": 13
+  },
+  "no_saved_measurement": {
+   "tuning:real": 6,
+   "heldout:real": 7,
+   "heldout:generated_wrong": 7,
+   "tuning:generated_sound": 7,
+   "tuning:generated_wrong": 5,
+   "heldout:generated_sound": 2
+  }
+ },
+ "labels": {
+  "generated_rated_wrong": "VideoPhy-2 human physical-commonsense score below 4",
+  "generated_rated_sound": "score 4 or 5",
+  "real": "Physics-IQ real footage"
+ },
+ "threshold_rule": "smallest of default x 1 to 50 flagging no real tuning clip, times 1.2",
+ "thresholds": {
+  "ACCEL_CHANGE": {
+   "default": 0.25,
+   "tuned": 2.069442110492939,
+   "title": "Free fall keeps one acceleration",
+   "note": null
+  },
+  "PATH_RESID": {
+   "default": 0.02,
+   "tuned": 0.38418854286502435,
+   "title": "Free-flight path is a parabola",
+   "note": null
+  },
+  "SF_ENERGY_GAIN": {
+   "default": 0.15,
+   "tuned": 0.15,
+   "title": "Falling objects don't gain energy",
+   "note": null
+  },
+  "BOUNCE_GAIN": {
+   "default": 1.1,
+   "tuned": null,
+   "title": "Each bounce no higher than the last",
+   "note": "no grid value left the real tuning clips unflagged: the check never flags"
+  }
+ },
+ "real_tuning_clips_flagged_at_defaults": [
+  {
+   "id": "piq-0007-t1-left",
+   "flags": [
+    "In flight 1 the acceleration changes by 98% of itself between the first and second half with no impact (53 standard errors): a falling object keeps one acceleration until something touches it.",
+    "In flight 1 the path strays from its best parabola by 17.1% of its size (18 times the tracking noise): anything in free fall traces a parabola.",
+    "The bounce at 0.53 s rises 3.40 times as high as the fall into it (23 standard errors): a passive bounce can only lose height."
+   ]
+  },
+  {
+   "id": "piq-0008-t1-center",
+   "flags": [
+    "The bounce at 0.90 s rises 15.23 times as high as the fall into it (51 standard errors): a passive bounce can only lose height."
+   ]
+  },
+  {
+   "id": "piq-0170-t1-center",
+   "flags": [
+    "In flight 1 the acceleration changes by 126% of itself between the first and second half with no impact (13 standard errors): a falling object keeps one acceleration until something touches it.",
+    "In flight 1 the path strays from its best parabola by 31.0% of its size (31 times the tracking noise): anything in free fall traces a parabola."
+   ]
+  },
+  {
+   "id": "piq-0222-t2-right",
+   "flags": [
+    "The bounce at 2.53 s rises 1.25 times as high as the fall into it (22 standard errors): a passive bounce can only lose height."
+   ]
+  },
+  {
+   "id": "piq-0368-t2-center",
+   "flags": [
+    "In flight 1 the acceleration changes by 170% of itself between the first and second half with no impact (20 standard errors): a falling object keeps one acceleration until something touches it.",
+    "In flight 1 the path strays from its best parabola by 4.4% of its size (20 times the tracking noise): anything in free fall traces a parabola."
+   ]
+  }
+ ],
+ "shipped_constants": {
+  "ACCEL_CHANGE": 0.25,
+  "PATH_RESID": 0.02,
+  "SF_ENERGY_GAIN": 0.15,
+  "BOUNCE_GAIN": 1.1
+ },
+ "constants_match": false,
+ "wiring_rule": "in the verdict only if, on the held-out half, no more real clips are flagged than by the existing audit alone, and more generated clips that people rated physically wrong are flagged",
+ "wire_in_verdict": false,
+ "shipped_in_verdict": false,
+ "heldout": {
+  "real": {
+   "clips": 42,
+   "old": {
+    "verdicts": {
+     "consistent": 12,
+     "cant_judge": 30
+    },
+    "judgeable": {
+     "k": 12,
+     "n": 42,
+     "rate": 0.2857142857142857,
+     "lo95": 0.1716685874457567,
+     "hi95": 0.43567496077245566
+    },
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 12,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.2425007574992425
+    },
+    "flagged_among_all": {
+     "k": 0,
+     "n": 42,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.08380161250916197
+    }
+   },
+   "old_plus_new": {
+    "verdicts": {
+     "consistent": 13,
+     "cant_judge": 29
+    },
+    "judgeable": {
+     "k": 13,
+     "n": 42,
+     "rate": 0.30952380952380953,
+     "lo95": 0.1907092651972273,
+     "hi95": 0.46026277766340595
+    },
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 13,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.22810184305529166
+    },
+    "flagged_among_all": {
+     "k": 0,
+     "n": 42,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.08380161250916197
+    }
+   },
+   "new_checks": {
+    "Free fall keeps one acceleration": {
+     "cant_judge": 32
+    },
+    "Free-flight path is a parabola": {
+     "cant_judge": 32
+    },
+    "Falling objects don't gain energy": {
+     "cant_judge": 32
+    },
+    "Each bounce no higher than the last": {
+     "cant_judge": 29,
+     "pass": 3
+    },
+    "(audit preconditions not met)": {
+     "cant_judge": 10
+    }
+   }
+  },
+  "generated": {
+   "clips": 32,
+   "old": {
+    "verdicts": {
+     "cant_judge": 27,
+     "consistent": 4,
+     "violates_physics": 1
+    },
+    "judgeable": {
+     "k": 5,
+     "n": 32,
+     "rate": 0.15625,
+     "lo95": 0.06864319106627216,
+     "hi95": 0.31754492553566527
+    },
+    "flagged_among_judged": {
+     "k": 1,
+     "n": 5,
+     "rate": 0.2,
+     "lo95": 0.03622316096978745,
+     "hi95": 0.6244717358814613
+    },
+    "flagged_among_all": {
+     "k": 1,
+     "n": 32,
+     "rate": 0.03125,
+     "lo95": 0.005537717362550945,
+     "hi95": 0.15744607800372734
+    }
+   },
+   "old_plus_new": {
+    "verdicts": {
+     "cant_judge": 25,
+     "consistent": 6,
+     "violates_physics": 1
+    },
+    "judgeable": {
+     "k": 7,
+     "n": 32,
+     "rate": 0.21875,
+     "lo95": 0.11023696931531854,
+     "hi95": 0.3875533079044484
+    },
+    "flagged_among_judged": {
+     "k": 1,
+     "n": 7,
+     "rate": 0.14285714285714285,
+     "lo95": 0.02567895594897479,
+     "hi95": 0.51313450331903
+    },
+    "flagged_among_all": {
+     "k": 1,
+     "n": 32,
+     "rate": 0.03125,
+     "lo95": 0.005537717362550945,
+     "hi95": 0.15744607800372734
+    }
+   },
+   "new_checks": {
+    "Free fall keeps one acceleration": {
+     "cant_judge": 22,
+     "pass": 3
+    },
+    "Free-flight path is a parabola": {
+     "cant_judge": 23,
+     "pass": 2
+    },
+    "Falling objects don't gain energy": {
+     "cant_judge": 23,
+     "pass": 2
+    },
+    "Each bounce no higher than the last": {
+     "cant_judge": 23,
+     "pass": 2
+    },
+    "(audit preconditions not met)": {
+     "cant_judge": 7
+    }
+   }
+  },
+  "generated_rated_wrong": {
+   "clips": 19,
+   "old": {
+    "verdicts": {
+     "cant_judge": 15,
+     "violates_physics": 1,
+     "consistent": 3
+    },
+    "judgeable": {
+     "k": 4,
+     "n": 19,
+     "rate": 0.21052631578947367,
+     "lo95": 0.08507538491591576,
+     "hi95": 0.43334714240266087
+    },
+    "flagged_among_judged": {
+     "k": 1,
+     "n": 4,
+     "rate": 0.25,
+     "lo95": 0.045586062644636216,
+     "hi95": 0.6993639475573634
+    },
+    "flagged_among_all": {
+     "k": 1,
+     "n": 19,
+     "rate": 0.05263157894736842,
+     "lo95": 0.009351752490529969,
+     "hi95": 0.2463921533654521
+    }
+   },
+   "old_plus_new": {
+    "verdicts": {
+     "cant_judge": 15,
+     "violates_physics": 1,
+     "consistent": 3
+    },
+    "judgeable": {
+     "k": 4,
+     "n": 19,
+     "rate": 0.21052631578947367,
+     "lo95": 0.08507538491591576,
+     "hi95": 0.43334714240266087
+    },
+    "flagged_among_judged": {
+     "k": 1,
+     "n": 4,
+     "rate": 0.25,
+     "lo95": 0.045586062644636216,
+     "hi95": 0.6993639475573634
+    },
+    "flagged_among_all": {
+     "k": 1,
+     "n": 19,
+     "rate": 0.05263157894736842,
+     "lo95": 0.009351752490529969,
+     "hi95": 0.2463921533654521
+    }
+   },
+   "new_checks": {
+    "Free fall keeps one acceleration": {
+     "cant_judge": 12,
+     "pass": 1
+    },
+    "Free-flight path is a parabola": {
+     "cant_judge": 12,
+     "pass": 1
+    },
+    "Falling objects don't gain energy": {
+     "cant_judge": 12,
+     "pass": 1
+    },
+    "Each bounce no higher than the last": {
+     "cant_judge": 12,
+     "pass": 1
+    },
+    "(audit preconditions not met)": {
+     "cant_judge": 6
+    }
+   }
+  },
+  "generated_rated_sound": {
+   "clips": 13,
+   "old": {
+    "verdicts": {
+     "consistent": 1,
+     "cant_judge": 12
+    },
+    "judgeable": {
+     "k": 1,
+     "n": 13,
+     "rate": 0.07692307692307693,
+     "lo95": 0.013710066379696323,
+     "hi95": 0.3331453392824736
+    },
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 1,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.7934567085261071
+    },
+    "flagged_among_all": {
+     "k": 0,
+     "n": 13,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.22810184305529166
+    }
+   },
+   "old_plus_new": {
+    "verdicts": {
+     "consistent": 3,
+     "cant_judge": 10
+    },
+    "judgeable": {
+     "k": 3,
+     "n": 13,
+     "rate": 0.23076923076923078,
+     "lo95": 0.08179379092465713,
+     "hi95": 0.5025687399512693
+    },
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 3,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.5615060804490177
+    },
+    "flagged_among_all": {
+     "k": 0,
+     "n": 13,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.22810184305529166
+    }
+   },
+   "new_checks": {
+    "Free fall keeps one acceleration": {
+     "cant_judge": 10,
+     "pass": 2
+    },
+    "Free-flight path is a parabola": {
+     "cant_judge": 11,
+     "pass": 1
+    },
+    "Falling objects don't gain energy": {
+     "cant_judge": 11,
+     "pass": 1
+    },
+    "Each bounce no higher than the last": {
+     "cant_judge": 11,
+     "pass": 1
+    },
+    "(audit preconditions not met)": {
+     "cant_judge": 1
+    }
+   }
+  }
+ },
+ "tuning": {
+  "real": {
+   "clips": 41,
+   "old": {
+    "verdicts": {
+     "cant_judge": 33,
+     "consistent": 8
+    },
+    "judgeable": {
+     "k": 8,
+     "n": 41,
+     "rate": 0.1951219512195122,
+     "lo95": 0.10234315749205929,
+     "hi95": 0.34013882352556724
+    },
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 8,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.3244156195108769
+    },
+    "flagged_among_all": {
+     "k": 0,
+     "n": 41,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.08567044886890744
+    }
+   },
+   "old_plus_new": {
+    "verdicts": {
+     "consistent": 14,
+     "cant_judge": 27
+    },
+    "judgeable": {
+     "k": 14,
+     "n": 41,
+     "rate": 0.34146341463414637,
+     "lo95": 0.2155861736664346,
+     "hi95": 0.4945044564627312
+    },
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 14,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.21531701192718142
+    },
+    "flagged_among_all": {
+     "k": 0,
+     "n": 41,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.08567044886890744
+    }
+   },
+   "new_checks": {
+    "Free fall keeps one acceleration": {
+     "pass": 3,
+     "cant_judge": 29
+    },
+    "Free-flight path is a parabola": {
+     "pass": 3,
+     "cant_judge": 29
+    },
+    "Falling objects don't gain energy": {
+     "pass": 3,
+     "cant_judge": 29
+    },
+    "Each bounce no higher than the last": {
+     "pass": 5,
+     "cant_judge": 27
+    },
+    "(audit preconditions not met)": {
+     "cant_judge": 9
+    }
+   }
+  },
+  "generated": {
+   "clips": 31,
+   "old": {
+    "verdicts": {
+     "consistent": 8,
+     "cant_judge": 22,
+     "violates_physics": 1
+    },
+    "judgeable": {
+     "k": 9,
+     "n": 31,
+     "rate": 0.2903225806451613,
+     "lo95": 0.1609562071843287,
+     "hi95": 0.4659265995754067
+    },
+    "flagged_among_judged": {
+     "k": 1,
+     "n": 9,
+     "rate": 0.1111111111111111,
+     "lo95": 0.019890371327130535,
+     "hi95": 0.4350062147680601
+    },
+    "flagged_among_all": {
+     "k": 1,
+     "n": 31,
+     "rate": 0.03225806451612903,
+     "lo95": 0.00571707408694444,
+     "hi95": 0.16194457176169622
+    }
+   },
+   "old_plus_new": {
+    "verdicts": {
+     "consistent": 8,
+     "cant_judge": 22,
+     "violates_physics": 1
+    },
+    "judgeable": {
+     "k": 9,
+     "n": 31,
+     "rate": 0.2903225806451613,
+     "lo95": 0.1609562071843287,
+     "hi95": 0.4659265995754067
+    },
+    "flagged_among_judged": {
+     "k": 1,
+     "n": 9,
+     "rate": 0.1111111111111111,
+     "lo95": 0.019890371327130535,
+     "hi95": 0.4350062147680601
+    },
+    "flagged_among_all": {
+     "k": 1,
+     "n": 31,
+     "rate": 0.03225806451612903,
+     "lo95": 0.00571707408694444,
+     "hi95": 0.16194457176169622
+    }
+   },
+   "new_checks": {
+    "Free fall keeps one acceleration": {
+     "cant_judge": 27
+    },
+    "Free-flight path is a parabola": {
+     "cant_judge": 27
+    },
+    "Falling objects don't gain energy": {
+     "cant_judge": 27
+    },
+    "Each bounce no higher than the last": {
+     "cant_judge": 27
+    },
+    "(audit preconditions not met)": {
+     "cant_judge": 4
+    }
+   }
+  },
+  "generated_rated_wrong": {
+   "clips": 16,
+   "old": {
+    "verdicts": {
+     "consistent": 5,
+     "cant_judge": 10,
+     "violates_physics": 1
+    },
+    "judgeable": {
+     "k": 6,
+     "n": 16,
+     "rate": 0.375,
+     "lo95": 0.18480982554752806,
+     "hi95": 0.613593529020652
+    },
+    "flagged_among_judged": {
+     "k": 1,
+     "n": 6,
+     "rate": 0.16666666666666666,
+     "lo95": 0.03005258587173032,
+     "hi95": 0.563509436563646
+    },
+    "flagged_among_all": {
+     "k": 1,
+     "n": 16,
+     "rate": 0.0625,
+     "lo95": 0.01111905730833121,
+     "hi95": 0.2832926836802987
+    }
+   },
+   "old_plus_new": {
+    "verdicts": {
+     "consistent": 5,
+     "cant_judge": 10,
+     "violates_physics": 1
+    },
+    "judgeable": {
+     "k": 6,
+     "n": 16,
+     "rate": 0.375,
+     "lo95": 0.18480982554752806,
+     "hi95": 0.613593529020652
+    },
+    "flagged_among_judged": {
+     "k": 1,
+     "n": 6,
+     "rate": 0.16666666666666666,
+     "lo95": 0.03005258587173032,
+     "hi95": 0.563509436563646
+    },
+    "flagged_among_all": {
+     "k": 1,
+     "n": 16,
+     "rate": 0.0625,
+     "lo95": 0.01111905730833121,
+     "hi95": 0.2832926836802987
+    }
+   },
+   "new_checks": {
+    "Free fall keeps one acceleration": {
+     "cant_judge": 13
+    },
+    "Free-flight path is a parabola": {
+     "cant_judge": 13
+    },
+    "Falling objects don't gain energy": {
+     "cant_judge": 13
+    },
+    "Each bounce no higher than the last": {
+     "cant_judge": 13
+    },
+    "(audit preconditions not met)": {
+     "cant_judge": 3
+    }
+   }
+  },
+  "generated_rated_sound": {
+   "clips": 15,
+   "old": {
+    "verdicts": {
+     "cant_judge": 12,
+     "consistent": 3
+    },
+    "judgeable": {
+     "k": 3,
+     "n": 15,
+     "rate": 0.2,
+     "lo95": 0.07047420643610414,
+     "hi95": 0.4518593533465045
+    },
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 3,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.5615060804490177
+    },
+    "flagged_among_all": {
+     "k": 0,
+     "n": 15,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.20388926630434784
+    }
+   },
+   "old_plus_new": {
+    "verdicts": {
+     "cant_judge": 12,
+     "consistent": 3
+    },
+    "judgeable": {
+     "k": 3,
+     "n": 15,
+     "rate": 0.2,
+     "lo95": 0.07047420643610414,
+     "hi95": 0.4518593533465045
+    },
+    "flagged_among_judged": {
+     "k": 0,
+     "n": 3,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.5615060804490177
+    },
+    "flagged_among_all": {
+     "k": 0,
+     "n": 15,
+     "rate": 0.0,
+     "lo95": 0.0,
+     "hi95": 0.20388926630434784
+    }
+   },
+   "new_checks": {
+    "Free fall keeps one acceleration": {
+     "cant_judge": 14
+    },
+    "Free-flight path is a parabola": {
+     "cant_judge": 14
+    },
+    "Falling objects don't gain energy": {
+     "cant_judge": 14
+    },
+    "Each bounce no higher than the last": {
+     "cant_judge": 14
+    },
+    "(audit preconditions not met)": {
+     "cant_judge": 1
+    }
+   }
+  }
+ },
+ "published_for_comparison": {
+  "note": "all 149 clips, existing audit, as in the README; not a held-out measurement",
+  "real": {
+   "judged": 13,
+   "flagged": 0,
+   "flagged_among_judged": {
+    "k": 0,
+    "n": 13,
+    "rate": 0.0,
+    "lo95": 0.0,
+    "hi95": 0.22810184305529166
+   }
+  },
+  "generated": {
+   "judged": 14,
+   "flagged": 2,
+   "flagged_among_judged": {
+    "k": 2,
+    "n": 14,
+    "rate": 0.14285714285714285,
+    "lo95": 0.040093073737921175,
+    "hi95": 0.39941907763863693
+   }
+  }
+ },
+ "clips_changed_or_flagged_by_new_checks": [
+  {
+   "id": "piq-0003-t1-right",
+   "half": "heldout",
+   "label": "real",
+   "generator": "real",
+   "human_pc": null,
+   "old": "cant_judge",
+   "old_plus_new": "consistent",
+   "new_violations": []
+  },
+  {
+   "id": "piq-0007-t1-left",
+   "half": "tuning",
+   "label": "real",
+   "generator": "real",
+   "human_pc": null,
+   "old": "cant_judge",
+   "old_plus_new": "consistent",
+   "new_violations": []
+  },
+  {
+   "id": "piq-0008-t1-center",
+   "half": "tuning",
+   "label": "real",
+   "generator": "real",
+   "human_pc": null,
+   "old": "cant_judge",
+   "old_plus_new": "consistent",
+   "new_violations": []
+  },
+  {
+   "id": "piq-0016-t1-left",
+   "half": "tuning",
+   "label": "real",
+   "generator": "real",
+   "human_pc": null,
+   "old": "cant_judge",
+   "old_plus_new": "consistent",
+   "new_violations": []
+  },
+  {
+   "id": "piq-0170-t1-center",
+   "half": "tuning",
+   "label": "real",
+   "generator": "real",
+   "human_pc": null,
+   "old": "cant_judge",
+   "old_plus_new": "consistent",
+   "new_violations": []
+  },
+  {
+   "id": "piq-0201-t2-right",
+   "half": "tuning",
+   "label": "real",
+   "generator": "real",
+   "human_pc": null,
+   "old": "cant_judge",
+   "old_plus_new": "consistent",
+   "new_violations": []
+  },
+  {
+   "id": "piq-0368-t2-center",
+   "half": "tuning",
+   "label": "real",
+   "generator": "real",
+   "human_pc": null,
+   "old": "cant_judge",
+   "old_plus_new": "consistent",
+   "new_violations": []
+  },
+  {
+   "id": "vp2-cogvideo-98d0072a",
+   "half": "heldout",
+   "label": "generated_sound",
+   "generator": "cogvideo",
+   "human_pc": 4,
+   "old": "cant_judge",
+   "old_plus_new": "consistent",
+   "new_violations": []
+  },
+  {
+   "id": "vp2-sora-85102812",
+   "half": "heldout",
+   "label": "generated_sound",
+   "generator": "sora",
+   "human_pc": 4,
+   "old": "cant_judge",
+   "old_plus_new": "consistent",
+   "new_violations": []
+  }
+ ]
+}
