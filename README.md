@@ -21,7 +21,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 
 ## How to read this README
 
-- **Judging (5 minutes):** [In 30 seconds](#in-30-seconds), then the [Judging guide](#judging-guide-5-minutes): six links, each a real result with its decision trail.
+- **Judging (5 minutes):** [In 30 seconds](#in-30-seconds), then the [Judging guide](#judging-guide-5-minutes): twelve links, each a real result with the agent's reasoning on top.
 - **Using it (15 minutes):** [What it does](#what-it-does), [Systems it identifies](#systems-it-identifies), [How an equation is accepted](#how-an-equation-is-accepted), [Applications](#applications) and [Limitations](#limitations); then film something, using the bubble level and the tips under the upload button.
 - **Building on it (everything):** Parts IV to VII: the acceptance rules, the agent, the pipeline in detail, the API, configuration, structure and tests. Every number in this file is recomputed from its source by `make numbers`.
 
@@ -45,24 +45,26 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 
 ## Judging guide (5 minutes)
 
-| Step | Open | What you will see |
-|---|---|---|
-| 0 | [Home page](https://physicslens.vercel.app) | the discovery playing: Apophis around the Sun with the law it wrote, typeset, and the numbers it measured |
-| 0b | [Robot arm, corrected](https://physicslens.vercel.app/robot) | the SO-100's public simulator against the real arm on held-out motion, and the corrected MuJoCo model about twice as close; one episode shows the public model drifting while the corrected one tracks |
-| 1 | [Asteroid Apophis](https://physicslens.vercel.app/?run=gallery-apophis) | a dot moving around the Sun becomes the inverse-square law; the force arrow points at the Sun in every frame |
-| 1b | [Halley's comet](https://physicslens.vercel.app/?run=gallery-halley) | the 1986 hairpin around the Sun: inverse-square gravity, the exponent left free fits 1.9998 |
-| 2 | [Weighing Jupiter](https://physicslens.vercel.app/?run=gallery-jupiter) | Jupiter's GM from Io's orbit, within 0.018% of JPL |
-| 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | damping fits better but forecasts worse, so it is not confirmed; both laws give the same g, and the agent designs the swing that would decide |
-| 3a | [Pendulum: the agent's request, answered](https://physicslens.vercel.app/?run=gallery-pendulum-longer) | the same swing filmed longer settles whether damping is real (the simple pendulum 121 BIC behind); the next tie is linear or air drag |
-| 3b | [Spring: the agent's request, answered](https://physicslens.vercel.app/?run=gallery-spring) | two laws tie, the agent designs and asks for a longer recording; the green note opens the 20 s recording that settles it for dry friction |
-| 4 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | free fall rejected; a drag law accepted on held-out motion |
-| 4b | [Physics audit at scale](https://physicslens.vercel.app/audit) | 149 clips: real motion has a forecasting law 44% of the time, AI-generated 14%; no real clip falsely accused |
-| 4c | [Real-world cases](https://physicslens.vercel.app/cases) | 11 cases, each ending in something to act on (a search map, a transit calendar, a return date, a report), with its scope |
-| 5 | [Open dataset](https://physicslens.vercel.app/dataset) | every verified parameter, with its uncertainty, clip and licence |
-| 5b | [Solar System Lab](https://physicslens.vercel.app/sky) | a 3D solar system from JPL data: make Jupiter ten times heavier, switch Neptune off, push any planet, click any body for its orbit and equation, turn relativity on, and watch the target's orbit and its perturbation equations change; with the analysis server online, "Find the law" runs discovery on the simulated track |
-| 6 | Your own clip, live mode, a study | open to everyone, no code (the header shows the analysis server's status) |
+Every link opens a complete, real analysis; nothing needs an account or a code.
 
-In every result, read the decision trail beside the video: each step is tagged with the model (provider and id) or the numerical method behind it, and "What the model thought" shows the reasoning.
+| # | Open | What to look for |
+|---|---|---|
+| 1 | [Robot arm, corrected](https://physicslens.vercel.app/robot) | **The impact.** The SO-100's public MuJoCo model against the real arm on held-out motion: the error chart shows the public model straying by up to about 3° while the corrected one stays within about 1°. Below it, six owners' arms: a borrowed calibration does worse in every pair |
+| 2 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | **The agent thinks.** "How the agent reasoned" at the top: it proposes three laws, the math cannot separate damping from none, it designs the deciding recording and asks for it. Each line names Muse Spark Open or the math |
+| 3 | [Pendulum, the request answered](https://physicslens.vercel.app/?run=gallery-pendulum-longer) | **The loop closes.** The same swing filmed for longer: the simple pendulum falls 121 BIC behind, damping is confirmed, and the agent asks the next, finer question |
+| 4 | [Spring glider, answered](https://physicslens.vercel.app/?run=gallery-spring-longer) | The same loop on a second system: on 20 s instead of 15 the tie is settled for dry friction. The same verdict from Muse Glimmer 30B self-hosted (see "Meta models used") |
+| 5 | [Asteroid Apophis](https://physicslens.vercel.app/?run=gallery-apophis) | **Discovers, not recalls.** A dot around the Sun becomes the inverse-square law, written by the agent; the Sun's GM within 0.023% of NASA/JPL; the force arrow points at the Sun in every frame |
+| 6 | [Halley's comet](https://physicslens.vercel.app/?run=gallery-halley) and [Jupiter](https://physicslens.vercel.app/?run=gallery-jupiter) | A free exponent fits 1.9998 on Halley's hairpin; Jupiter's GM from Io's orbit, within 0.018% of JPL |
+| 7 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | Free fall rejected; a drag law accepted on the flight it never saw |
+| 8 | [Real-world cases](https://physicslens.vercel.app/cases) | 11 cases, each checked against an independent answer: ISS reboosts, Umbriel's radius, the Sun's rotation, a meteorite fall, exoplanet timing |
+| 9 | [Physics audit](https://physicslens.vercel.app/audit) | 149 clips: real motion has a forecasting law 44% of the time, AI-generated 14%; no real clip falsely accused, measured against seven video generators |
+| 10 | [Predictions](https://physicslens.vercel.app/predictions) | 9 forecasts registered and hashed before the answer exists, for outside checking from 15 November |
+| 11 | [Solar System Lab](https://physicslens.vercel.app/sky) | A 3D solar system from JPL data: change it (Jupiter ten times heavier, Neptune off) and see which law the agent finds |
+| 12 | [Your own clip](https://physicslens.vercel.app/#analyze-title) or the [live camera](https://physicslens.vercel.app/live) | The whole pipeline on your own footage, open to everyone (the header shows the analysis server's status) |
+
+| The impact: one arm, then six | The agent: request, then answer |
+|---|---|
+| ![Error against the real joint on a held-out SO-100 episode: public model dashed, corrected model blue](frontend/public/readme/robot-before-after.png) | ![How the agent reasoned on the pendulum: proposes, cannot separate, designs and asks for the deciding recording](frontend/public/readme/agent-reasoning.png) |
 
 ## Contents
 
@@ -1474,6 +1476,11 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Lab measurement on labelled real footage (Delfys75 pendulums): the real coverage of the 95% intervals is reported (0 of 12), and the bias is traced to the stated lengths and the time scale, not the fit
 - [x] Machine faults on public data scored against labels: the bearing rule fails its own test and says so; a motor's coast-down friction matches the published values
 - [x] The real-world cases run through the agent (Muse Spark Open proposing, verification deciding) beside the hand-chosen laws, and 9 blind predictions registered before their answers exist
+- [x] Every SO-100 needs its own calibration: the same identification on six owners' arms from public LeRobot datasets, each arm's laws replayed on every other arm's held-out episodes (a borrowed calibration worse in 30 of 30 pairs), with a test of the comparison itself
+- [x] "How the agent reasoned" at the top of every result: the decisive moments of the decision trail, each tagged with the model or the math
+- [x] Experiment requests answered on public footage: the pendulum's (damping confirmed) and the spring glider's (dry friction confirmed), each from a longer stretch of the same video, linked both ways from the request
+- [x] Muse Glimmer 30B self-hosted on a university GPU cluster (llama.cpp built from source for RTX 2080 Ti), reaching Muse Spark Open's verdict on the spring
+- [x] Asteroid astrometry checked against JPL: a stand-in night's residuals, a short-arc forecast against JPL's orbit, and Apophis measured on real ZTF frames from Palomar
 
 ## Roadmap
 
