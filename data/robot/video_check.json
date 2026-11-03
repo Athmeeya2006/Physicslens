@@ -1,0 +1,813 @@
+{
+ "generated": "scripts/robot_video_check.py",
+ "data": {
+  "dataset": "lerobot/svla_so100_pickplace",
+  "camera": "observation.images.top, 640x480",
+  "video": "AV1 at 30 fps, cut per episode, every second frame kept (15 fps), re-encoded H.264",
+  "camera_fit_episodes": [
+   33,
+   34
+  ],
+  "heldout_episodes": [
+   35,
+   36,
+   37,
+   38,
+   39
+  ],
+  "joint_angles": "observation.state (the arm's measured joints)",
+  "tracked_point": "gripper: MuJoCo body Fixed_Jaw plus a fitted offset; SAM mask centroid in the image"
+ },
+ "tracking": {
+  "model": "sam-3.1",
+  "prompt": "one box on frame 0 (build_object_prompt), propagated forward",
+  "box_frame0_px": {
+   "33": [
+    264,
+    88,
+    362,
+    168
+   ],
+   "34": [
+    270,
+    95,
+    370,
+    168
+   ],
+   "35": [
+    272,
+    92,
+    372,
+    168
+   ],
+   "36": [
+    260,
+    90,
+    358,
+    165
+   ],
+   "37": [
+    268,
+    92,
+    368,
+    168
+   ],
+   "38": [
+    272,
+    92,
+    372,
+    168
+   ],
+   "39": [
+    258,
+    92,
+    358,
+    165
+   ]
+  },
+  "frames_sent": 1381,
+  "ledger": {
+   "video_frames": 1381,
+   "calls": 7
+  }
+ },
+ "projection": {
+  "kind": "pinhole: square pixels, no skew, no distortion, principal point at the image centre",
+  "fitted": "camera rotation (3), translation (3), focal length (1), tracked point's offset in the gripper body frame (3): 10 numbers, soft-L1 loss with a 5 px scale",
+  "fitted_on": [
+   33,
+   34
+  ],
+  "frames": 401,
+  "rvec": [
+   -3.219999895538979,
+   -0.13620408813013432,
+   0.17509542389088698
+  ],
+  "tvec_m": [
+   0.014328085435506198,
+   -0.2097124206714134,
+   0.5031458512887848
+  ],
+  "focal_px": 585.4858845122017,
+  "principal_point_px": [
+   320.0,
+   240.0
+  ],
+  "camera_position_m": [
+   0.05863930664530823,
+   -0.25029749199377593,
+   0.48088765663407346
+  ],
+  "optical_axis_world": [
+   -0.11166733378877099,
+   0.0811601056401923,
+   -0.990425890118479
+  ],
+  "offset_in_body_m": [
+   -0.04981673399524175,
+   0.009851346046172597,
+   0.012783158304990699
+  ],
+  "camera_episodes_px": {
+   "n": 401,
+   "median": 5.697367086695531,
+   "mean": 6.979864803953693,
+   "rms": 8.346016216663367,
+   "p90": 12.578634388969801,
+   "max": 28.99614831523409
+  },
+  "focal_bounds_px": [
+   300.0,
+   1000.0
+  ],
+  "focal_note": "bounded to a webcam's field of view (35 to 94 degrees horizontal); see focal_profile",
+  "focal_profile": [
+   {
+    "focal_px": 300.0,
+    "fitted_focal_px": 300.0000002999997,
+    "camera_distance_from_base_m": 0.4068258146514632,
+    "camera_episodes_median_px": 6.325747450514101,
+    "heldout_median_px": 9.068208866063564,
+    "heldout_median_mm": 4.829021715261076,
+    "heldout_rms_mm": 8.758372076301747,
+    "mm_per_px_median": 0.5456758595827196
+   },
+   {
+    "focal_px": 400.0,
+    "fitted_focal_px": 400.0000003999996,
+    "camera_distance_from_base_m": 0.4539477231050416,
+    "camera_episodes_median_px": 5.468298251044771,
+    "heldout_median_px": 8.238098377509882,
+    "heldout_median_mm": 4.3654920950591505,
+    "heldout_rms_mm": 7.2353708100042216,
+    "mm_per_px_median": 0.5498636430624262
+   },
+   {
+    "focal_px": 500.0,
+    "fitted_focal_px": 500.00000049999943,
+    "camera_distance_from_base_m": 0.50261344943517,
+    "camera_episodes_median_px": 5.364775372334439,
+    "heldout_median_px": 7.767185267632382,
+    "heldout_median_mm": 4.056132287165671,
+    "heldout_rms_mm": 6.533194931158195,
+    "mm_per_px_median": 0.5537790986669686
+   },
+   {
+    "focal_px": 600.0,
+    "fitted_focal_px": 600.0000000000005,
+    "camera_distance_from_base_m": 0.5526207048056886,
+    "camera_episodes_median_px": 5.756633465711818,
+    "heldout_median_px": 7.657709463446581,
+    "heldout_median_mm": 4.104828850549431,
+    "heldout_rms_mm": 6.2013691335453185,
+    "mm_per_px_median": 0.5564839054194426
+   },
+   {
+    "focal_px": 800.0,
+    "fitted_focal_px": 800.0000000000006,
+    "camera_distance_from_base_m": 0.6557259205898097,
+    "camera_episodes_median_px": 6.047957488784317,
+    "heldout_median_px": 8.070258529534744,
+    "heldout_median_mm": 4.389186399680225,
+    "heldout_rms_mm": 5.994098071350329,
+    "mm_per_px_median": 0.5595381617439564
+   },
+   {
+    "focal_px": 1000.0,
+    "fitted_focal_px": 1000.0000000000007,
+    "camera_distance_from_base_m": 0.7617030729056828,
+    "camera_episodes_median_px": 5.968888936437274,
+    "heldout_median_px": 8.165639766540718,
+    "heldout_median_mm": 4.484404412030473,
+    "heldout_rms_mm": 6.006177005277753,
+    "mm_per_px_median": 0.560877429954603
+   },
+   {
+    "focal_px": 2000.0,
+    "fitted_focal_px": 2000.0000000000016,
+    "camera_distance_from_base_m": 1.3103525965203937,
+    "camera_episodes_median_px": 5.950168281775675,
+    "heldout_median_px": 8.51389998484051,
+    "heldout_median_mm": 4.745163555670089,
+    "heldout_rms_mm": 6.396645301494701,
+    "mm_per_px_median": 0.5643033975787621
+   },
+   {
+    "focal_px": 5000.0,
+    "fitted_focal_px": 5000.000000000013,
+    "camera_distance_from_base_m": 2.999537566051376,
+    "camera_episodes_median_px": 5.764119306221271,
+    "heldout_median_px": 8.531161565372312,
+    "heldout_median_mm": 4.801517734682548,
+    "heldout_rms_mm": 6.885078259613739,
+    "mm_per_px_median": 0.5665996154877501
+   },
+   {
+    "focal_px": "free",
+    "fitted_focal_px": 585.479140627473,
+    "camera_distance_from_base_m": 0.545285817105272,
+    "camera_episodes_median_px": 5.697317070788255,
+    "heldout_median_px": 7.679923452645074,
+    "heldout_median_mm": 4.078575951453503,
+    "heldout_rms_mm": 6.235360859548327,
+    "mm_per_px_median": 0.556086827284373
+   }
+  ],
+  "camera_distance_from_base_m": 0.5452892270027232,
+  "time_shift_frames_30fps": -2.0,
+  "time_shift_note": "joint reading taken this many 30 fps frames after each video frame; chosen on the camera episodes by median pixel error",
+  "time_shift_scan": [
+   {
+    "shift": -6.0,
+    "median_px": 7.695377404680197,
+    "rms_px": 17.541546528315294
+   },
+   {
+    "shift": -5.0,
+    "median_px": 6.884937076234456,
+    "rms_px": 14.569369166836374
+   },
+   {
+    "shift": -4.0,
+    "median_px": 6.0813303060264285,
+    "rms_px": 11.820424170869194
+   },
+   {
+    "shift": -3.0,
+    "median_px": 5.7174961886425475,
+    "rms_px": 9.49119920804159
+   },
+   {
+    "shift": -2.0,
+    "median_px": 5.697367086695531,
+    "rms_px": 8.346016216663367
+   },
+   {
+    "shift": -1.0,
+    "median_px": 5.714355836656515,
+    "rms_px": 8.829331829273587
+   },
+   {
+    "shift": 0.0,
+    "median_px": 6.249535042542581,
+    "rms_px": 10.572253323082538
+   },
+   {
+    "shift": 1.0,
+    "median_px": 7.141063755246286,
+    "rms_px": 12.975432128717133
+   },
+   {
+    "shift": 2.0,
+    "median_px": 7.746367945122555,
+    "rms_px": 15.743417170484847
+   },
+   {
+    "shift": 3.0,
+    "median_px": 8.200625077471935,
+    "rms_px": 18.62253568618255
+   },
+   {
+    "shift": 4.0,
+    "median_px": 8.838512763786856,
+    "rms_px": 21.566500999921463
+   },
+   {
+    "shift": 5.0,
+    "median_px": 9.43830009694473,
+    "rms_px": 24.427425216015596
+   },
+   {
+    "shift": 6.0,
+    "median_px": 10.45884655294634,
+    "rms_px": 27.06066479094959
+   }
+  ]
+ },
+ "heldout": {
+  "per_episode": [
+   {
+    "episode": 35,
+    "frames_sent": 197,
+    "frames_tracked": 197,
+    "px": {
+     "n": 197,
+     "median": 5.883029661237597,
+     "mean": 6.667331974903303,
+     "rms": 8.406168922265483,
+     "p90": 12.547677566545708,
+     "max": 26.163455323193627
+    },
+    "mm": {
+     "n": 197,
+     "median": 3.13531634939675,
+     "mean": 3.5743885878495347,
+     "rms": 4.442764100881167,
+     "p90": 6.7559296636894866,
+     "max": 13.595372362857038
+    },
+    "mean_offset_px": [
+     -2.3546571905549416,
+     -1.7243575446327772
+    ],
+    "depth_m": [
+     0.2894368176632177,
+     0.3439977147663812
+    ]
+   },
+   {
+    "episode": 36,
+    "frames_sent": 220,
+    "frames_tracked": 220,
+    "px": {
+     "n": 220,
+     "median": 12.888910260557251,
+     "mean": 15.616112896769412,
+     "rms": 18.950557980961847,
+     "p90": 28.577171492508704,
+     "max": 44.23845553454068
+    },
+    "mm": {
+     "n": 220,
+     "median": 6.941124464868659,
+     "mean": 8.181320524930864,
+     "rms": 9.80649045420171,
+     "p90": 14.722953435413224,
+     "max": 21.742011538977692
+    },
+    "mean_offset_px": [
+     -9.561951960319965,
+     2.7264759775568366
+    ],
+    "depth_m": [
+     0.2714730942606197,
+     0.3437324283491389
+    ]
+   },
+   {
+    "episode": 37,
+    "frames_sent": 191,
+    "frames_tracked": 191,
+    "px": {
+     "n": 191,
+     "median": 6.023587030475828,
+     "mean": 7.125642520688014,
+     "rms": 9.113242432930436,
+     "p90": 13.735918384676843,
+     "max": 27.16763153064689
+    },
+    "mm": {
+     "n": 191,
+     "median": 3.161996675864192,
+     "mean": 3.844807666065598,
+     "rms": 4.873219231206233,
+     "p90": 7.404696915185221,
+     "max": 14.342000710607394
+    },
+    "mean_offset_px": [
+     -1.5152052836250485,
+     -4.542801412706926
+    ],
+    "depth_m": [
+     0.28437339412874485,
+     0.34416312255719533
+    ]
+   },
+   {
+    "episode": 38,
+    "frames_sent": 201,
+    "frames_tracked": 201,
+    "px": {
+     "n": 201,
+     "median": 7.325890262888979,
+     "mean": 7.571036156468761,
+     "rms": 9.019758756330901,
+     "p90": 13.821709460106154,
+     "max": 28.206986532410653
+    },
+    "mm": {
+     "n": 201,
+     "median": 4.0181106883146605,
+     "mean": 4.136375865914358,
+     "rms": 4.865605856819796,
+     "p90": 7.605856412711316,
+     "max": 14.564585633921116
+    },
+    "mean_offset_px": [
+     -2.4275308619030627,
+     0.6730792885135873
+    ],
+    "depth_m": [
+     0.2935768546872567,
+     0.3446420075002947
+    ]
+   },
+   {
+    "episode": 39,
+    "frames_sent": 171,
+    "frames_tracked": 171,
+    "px": {
+     "n": 171,
+     "median": 5.797267777306342,
+     "mean": 7.07177208177727,
+     "rms": 8.766104411044344,
+     "p90": 13.736555407649487,
+     "max": 26.56550312344405
+    },
+    "mm": {
+     "n": 171,
+     "median": 3.1894095994583314,
+     "mean": 3.833983287845672,
+     "rms": 4.690593438246594,
+     "p90": 7.246904224699655,
+     "max": 13.556904127391707
+    },
+    "mean_offset_px": [
+     -2.4554509751680276,
+     -0.8569877262948663
+    ],
+    "depth_m": [
+     0.28973506690881856,
+     0.3444665036808067
+    ]
+   }
+  ],
+  "median_px": {
+   "mean": 7.583736998493199,
+   "lo": 3.8212034308501295,
+   "hi": 11.346270566136269,
+   "n": 5
+  },
+  "rms_px": {
+   "mean": 10.851166500706602,
+   "lo": 5.219016591994071,
+   "hi": 16.483316409419132,
+   "n": 5
+  },
+  "median_mm": {
+   "mean": 4.089191555580518,
+   "lo": 2.056713350694943,
+   "hi": 6.121669760466093,
+   "n": 5
+  },
+  "rms_mm": {
+   "mean": 5.7357346162711,
+   "lo": 2.9018420564595298,
+   "hi": 8.569627176082669,
+   "n": 5
+  },
+  "p90_mm": {
+   "mean": 8.74726813033978,
+   "lo": 4.581182238388583,
+   "hi": 12.913354022290978,
+   "n": 5
+  },
+  "interval_note": "mean over the 5 held-out episodes of each episode's statistic, Student-t 95% interval (4 degrees of freedom); episodes, not frames, are the independent units",
+  "pooled_px": {
+   "n": 980,
+   "median": 7.679930787686354,
+   "mean": 9.021488011459965,
+   "rms": 11.878797500945293,
+   "p90": 18.15081883380062,
+   "max": 44.23845553454068
+  },
+  "pooled_mm": {
+   "n": 980,
+   "median": 4.0785489905666505,
+   "mean": 4.8218632885510955,
+   "rms": 6.2353431551578815,
+   "p90": 9.63481277833075,
+   "max": 21.742011538977692
+  },
+  "mm_note": "pixel error times the point's depth over the focal length: the distance across the line of sight; the metric scale comes from the simulator's link lengths through the fitted camera"
+ },
+ "where_it_disagrees": {
+  "gripper_opening_deg": {
+   "spearman_with_px_error": 0.4199926440533473,
+   "bins": [
+    {
+     "from": 0.13812154531478882,
+     "to": 0.20718231797218323,
+     "frames": 23,
+     "median_err": 10.89671561372378,
+     "p90_err": 25.9118604188319
+    },
+    {
+     "from": 0.20718231797218323,
+     "to": 3.867403507232666,
+     "frames": 467,
+     "median_err": 2.892299795078674,
+     "p90_err": 15.601167300252374
+    },
+    {
+     "from": 3.867403507232666,
+     "to": 15.19336986541748,
+     "frames": 230,
+     "median_err": 10.032443816054306,
+     "p90_err": 19.043034500988835
+    },
+    {
+     "from": 15.19336986541748,
+     "to": 31.97513771057129,
+     "frames": 260,
+     "median_err": 10.16489266661446,
+     "p90_err": 20.19739936932806
+    }
+   ]
+  },
+  "mask_area_vs_episode_median": {
+   "spearman_with_px_error": 0.09868535134057589,
+   "bins": [
+    {
+     "from": 0.0,
+     "to": 0.6,
+     "frames": 94,
+     "median_err": 11.667822258156548,
+     "p90_err": 25.819538319779987
+    },
+    {
+     "from": 0.6,
+     "to": 0.85,
+     "frames": 30,
+     "median_err": 10.887746129578064,
+     "p90_err": 12.789279902376961
+    },
+    {
+     "from": 0.85,
+     "to": 1.15,
+     "frames": 734,
+     "median_err": 5.695119383465505,
+     "p90_err": 16.43524948756403
+    },
+    {
+     "from": 1.15,
+     "to": 1.5,
+     "frames": 116,
+     "median_err": 10.065128690440789,
+     "p90_err": 28.835583637064786
+    },
+    {
+     "from": 1.5,
+     "to": 1.6511286474582492,
+     "frames": 6,
+     "median_err": 18.738271121418595,
+     "p90_err": 19.363575712482465
+    }
+   ]
+  },
+  "gripper_speed_m_per_s": {
+   "spearman_with_px_error": 0.44085292680715943,
+   "bins": [
+    {
+     "from": 0.0,
+     "to": 0.03276540836278099,
+     "frames": 490,
+     "median_err": 3.463263847130655,
+     "p90_err": 14.455067331906758
+    },
+    {
+     "from": 0.03276540836278099,
+     "to": 0.07720934604836328,
+     "frames": 245,
+     "median_err": 9.962523095944258,
+     "p90_err": 19.16030396023765
+    },
+    {
+     "from": 0.07720934604836328,
+     "to": 0.12740102260298689,
+     "frames": 147,
+     "median_err": 9.988895130501831,
+     "p90_err": 19.086884344476363
+    },
+    {
+     "from": 0.12740102260298689,
+     "to": 0.22782363277639195,
+     "frames": 98,
+     "median_err": 9.832414321686844,
+     "p90_err": 19.009782149286035
+    }
+   ]
+  },
+  "gripper_height_m": {
+   "spearman_with_px_error": 0.6553903099996121,
+   "bins": [
+    {
+     "from": 0.10953353216580568,
+     "to": 0.11063995747902763,
+     "frames": 220,
+     "median_err": 1.693637287529902,
+     "p90_err": 3.9674702631034364
+    },
+    {
+     "from": 0.11063995747902763,
+     "to": 0.13831553109697575,
+     "frames": 270,
+     "median_err": 6.119885915137352,
+     "p90_err": 15.747482347382768
+    },
+    {
+     "from": 0.13831553109697575,
+     "to": 0.1566544109091236,
+     "frames": 245,
+     "median_err": 10.184104453338136,
+     "p90_err": 18.200947205474552
+    },
+    {
+     "from": 0.1566544109091236,
+     "to": 0.18424184796911244,
+     "frames": 245,
+     "median_err": 11.46183581043518,
+     "p90_err": 26.57475772100238
+    }
+   ]
+  },
+  "sam_confidence": {
+   "spearman_with_px_error": -0.36033072223839474,
+   "bins": [
+    {
+     "from": 0.7333647608757019,
+     "to": 0.8469564855098725,
+     "frames": 98,
+     "median_err": 9.20750421671059,
+     "p90_err": 13.386049536165736
+    },
+    {
+     "from": 0.8469564855098725,
+     "to": 0.9176684617996216,
+     "frames": 392,
+     "median_err": 9.938508889640351,
+     "p90_err": 22.705717511172793
+    },
+    {
+     "from": 0.9176684617996216,
+     "to": 0.9686723947525024,
+     "frames": 490,
+     "median_err": 3.0703402928115793,
+     "p90_err": 15.098453090877998
+    }
+   ]
+  },
+  "mask_box_at_image_edge": {
+   "spearman_with_px_error": 0.27756059345712614,
+   "bins": [
+    {
+     "from": 0.0,
+     "to": 0.5,
+     "frames": 816,
+     "median_err": 6.323320595912316,
+     "p90_err": 16.993021547636047
+    },
+    {
+     "from": 0.5,
+     "to": 1.0,
+     "frames": 164,
+     "median_err": 11.424941213596606,
+     "p90_err": 24.541442962042485
+    }
+   ]
+  },
+  "wrist_flex_deg": {
+   "spearman_with_px_error": -0.1627911583928827,
+   "bins": [
+    {
+     "from": 30.5859375,
+     "to": 56.05224609375,
+     "frames": 245,
+     "median_err": 9.904251531668375,
+     "p90_err": 15.692836196217458
+    },
+    {
+     "from": 56.05224609375,
+     "to": 71.89453125,
+     "frames": 232,
+     "median_err": 10.790490722028498,
+     "p90_err": 28.075562934145534
+    },
+    {
+     "from": 71.89453125,
+     "to": 73.30078125,
+     "frames": 243,
+     "median_err": 2.486194541488731,
+     "p90_err": 4.801253538882902
+    },
+    {
+     "from": 73.30078125,
+     "to": 92.021484375,
+     "frames": 260,
+     "median_err": 9.079523325819643,
+     "p90_err": 18.550190111252572
+    }
+   ]
+  }
+ },
+ "joint_map": {
+  "used": "pan_and_roll_flipped",
+  "flipped_from_robot_case": [
+   "shoulder_pan",
+   "wrist_roll"
+  ],
+  "why": "chosen on the camera episodes only: with the robot case's map (sign +1 on every joint) the camera that fits best sits below the table looking up, which is a mirror image; flipping the pan and wrist roll signs (or reading the image left-right reversed, which fits identically) puts it above the table looking down, with a webcam focal length, and no worse error. The video cannot tell those two apart",
+  "variants_free_focal": {
+   "as_assumed": {
+    "flipped_joints": [],
+    "image_mirrored": false,
+    "camera_episodes_median_px": 5.7120549957742,
+    "heldout_median_px": 8.519560902372424,
+    "heldout_rms_px": 12.87082120543049,
+    "focal_px": 35388824.77008051,
+    "camera_height_m": -19631.949212864307,
+    "camera_looks_down": false
+   },
+   "image_mirrored": {
+    "flipped_joints": [],
+    "image_mirrored": true,
+    "camera_episodes_median_px": 5.700929091038805,
+    "heldout_median_px": 7.670979452829666,
+    "heldout_rms_px": 11.880867707968498,
+    "focal_px": 583.9275442031382,
+    "camera_height_m": 0.4799869494506165,
+    "camera_looks_down": true
+   },
+   "pan_sign_flipped": {
+    "flipped_joints": [
+     "shoulder_pan"
+    ],
+    "image_mirrored": false,
+    "camera_episodes_median_px": 8.031367546994012,
+    "heldout_median_px": 12.192996635780865,
+    "heldout_rms_px": 16.722436920959197,
+    "focal_px": 806.2065136102831,
+    "camera_height_m": 0.5345693481465861,
+    "camera_looks_down": true
+   },
+   "pan_and_roll_flipped": {
+    "flipped_joints": [
+     "shoulder_pan",
+     "wrist_roll"
+    ],
+    "image_mirrored": false,
+    "camera_episodes_median_px": 5.697317070788255,
+    "heldout_median_px": 7.679923452645074,
+    "heldout_rms_px": 11.878850418022047,
+    "focal_px": 585.479140627473,
+    "camera_height_m": 0.48088401003045744,
+    "camera_looks_down": true
+   },
+   "wrist_flex_sign_flipped": {
+    "flipped_joints": [
+     "wrist_flex"
+    ],
+    "image_mirrored": false,
+    "camera_episodes_median_px": 8.40461134769598,
+    "heldout_median_px": 11.274957552890807,
+    "heldout_rms_px": 19.779283971202968,
+    "focal_px": 2173786.4490605528,
+    "camera_height_m": -1101.7811363628969,
+    "camera_looks_down": false
+   },
+   "wrist_roll_sign_flipped": {
+    "flipped_joints": [
+     "wrist_roll"
+    ],
+    "image_mirrored": false,
+    "camera_episodes_median_px": 7.703078531074299,
+    "heldout_median_px": 13.517481574910386,
+    "heldout_rms_px": 17.914922532887125,
+    "focal_px": 17098992.402303368,
+    "camera_height_m": -9258.815815249265,
+    "camera_looks_down": false
+   },
+   "lift_elbow_flex_flipped": {
+    "flipped_joints": [
+     "shoulder_lift",
+     "elbow_flex",
+     "wrist_flex"
+    ],
+    "image_mirrored": false,
+    "camera_episodes_median_px": 8.722899362719922,
+    "heldout_median_px": 18.301684804556785,
+    "heldout_rms_px": 29.566881494033872,
+    "focal_px": 5432383.086381489,
+    "camera_height_m": -2088.8705066795987,
+    "camera_looks_down": false
+   },
+   "all_arm_signs_flipped": {
+    "flipped_joints": [
+     "shoulder_pan",
+     "shoulder_lift",
+     "elbow_flex",
+     "wrist_flex",
+     "wrist_roll"
+    ],
+    "image_mirrored": false,
+    "camera_episodes_median_px": 8.943507064812353,
+    "heldout_median_px": 18.51471731950376,
+    "heldout_rms_px": 33.46644420018259,
+    "focal_px": 702.4702701357539,
+    "camera_height_m": 0.37002327599248025,
+    "camera_looks_down": true
+   }
+  }
+ }
+}

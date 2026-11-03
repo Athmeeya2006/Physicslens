@@ -482,7 +482,12 @@ open-loop in MuJoCo on 15 held-out episodes never used before (`backend/physicsl
   *improves a public tool*. The model and its diff are ready to offer upstream; nothing has been submitted.
 - Limits: only the motions in these pick-and-place episodes; payloads, wear, temperature and other units of the
   arm are not covered; the gripper closes on objects the simulated scene lacks, so it is reported but not counted.
-  The case uses the logged joint angles, not the videos, so no Meta model takes part.
+  The identification uses the logged joint angles; the video check below uses the camera.
+- **Checked against the video** (`scripts/robot_video_check.py`): SAM 3.1 tracked the gripper in the top camera on 5
+  held-out episodes, and the tracked path agrees with where the logged joint angles put it, through a camera fitted
+  on two training episodes, to a median 4.1 mm (95% over episodes 2.1 to 6.1 mm). The fit also showed that the
+  shoulder pan and wrist roll angles must be read with the opposite sign for the camera to sit above the table; the
+  replay's gravity hardly depends on it, and `data/robot/REPORT.md` states it.
 - Plainly, where the gain comes from: the public model already gets the timing roughly right; most of the gain is
   each joint's deadband and the small command offsets between the leader and follower arms. The identified MJCF
   parameters alone, without the offsets, reach 0.73° (barely better than the public 0.75°), and the identified joint

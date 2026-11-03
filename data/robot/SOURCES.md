@@ -49,3 +49,10 @@ Everything here is fetched by `python scripts/fetch_robot.py` into `var/robot/ra
 - `result.json`, `so_arm100_identified.xml` and `so_arm100_identified.diff` are written by
   `python scripts/robot_demo.py` from these files alone. The identified MJCF is a modified copy of the Apache-2.0
   Menagerie file (the change is stated in its header comment and in the diff).
+
+## Top camera video (for the video check)
+
+- `videos/observation.images.top/chunk-000/file-000.mp4` from the same dataset and pinned revision, 320,383,994 bytes,
+  sha256 `7c7f2674c7af4ac9fde4c0301ad25325ef8c655f0bd455b4b3b8a9ece1965d73` (AV1, 30 fps; cut per episode and
+  re-encoded to H.264 at 15 fps for SAM 3.1). Fetched by `python scripts/robot_video_check.py fetch` into
+  `var/robot/video/` (gitignored).

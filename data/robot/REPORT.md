@@ -45,9 +45,21 @@ Plainly: the defaults already get timing roughly right; most of the gain is the 
 
 Only the motions in these 50 episodes (one task, one arm unit); payloads, wear, temperature and other units are not covered. The delay includes bus and logging latency (what a replay of logged commands needs). Gripper not identified.
 
-## Video check (not run)
+## Video check (SAM 3.1 on the top camera; `scripts/robot_video_check.py`, numbers in `video_check.json`)
 
-Would need SAM 3.1 on the top camera (640x480, 30 fps, AV1 to re-encode as H.264), tracking the wrist on held-out episodes: about 390 frames each, about 5,900 frames for all 15 or about 2,000 for five. Skipped (paid calls).
+The gripper was tracked with SAM 3.1 in the top camera video (one box prompt per clip, 1,381 frames at 15 per second)
+and compared with where the logged joint angles put it, through a pinhole camera fitted on two training episodes
+(episodes 33 and 34: rotation, position, focal length and the tracked point on the gripper). On the 5 held-out
+episodes 35 to 39 the tracked gripper and the logged joint path agree to a median 4.1 mm (95% over episodes 2.1 to
+6.1 mm; 7.6 px), RMS 5.7 mm. They disagree most when the arm is high and moving (a timing jitter, joint calibration or
+cable flex, which the data cannot separate), when the gripper is open (the moving jaw is inside the mask), when the
+cube merges into the mask during a grasp, and where the gripper leaves the frame.
+
+One finding about the joint map: the video only fits a physical camera if the shoulder pan and wrist roll angles are
+read with the opposite sign from the map the replay assumes (sign +1 on every joint); with the map as assumed, the
+best camera is a mirror image below the table. The video alone cannot tell "pan and roll reversed" from "the image is
+mirrored". Pan turns about the vertical axis, so this hardly moves where gravity acts in the MuJoCo replay, but the
+assumption is stated here rather than hidden.
 
 ## Suggested upstream change (MuJoCo Menagerie `trs_so_arm100`; not submitted)
 

@@ -22,8 +22,8 @@ from pathlib import Path
 import numpy as np
 
 # The installed Chrome where there is one (it decodes H.264 for the gallery videos); Playwright's own Chromium elsewhere
-# (a cluster node without Chrome).
-CHROME = {"executable_path": "/usr/bin/google-chrome"} if Path("/usr/bin/google-chrome").exists() else {}
+# (a cluster node without Chrome), the full build: the stripped headless shell has no fake camera from a file.
+CHROME = {"executable_path": "/usr/bin/google-chrome"} if Path("/usr/bin/google-chrome").exists() else {"channel": "chromium"}
 
 
 ROOT = Path(__file__).resolve().parents[1]
