@@ -503,16 +503,16 @@ open-loop in MuJoCo on 15 held-out episodes never used before (`backend/physicsl
   laws simulated directly reach 0.27°, because MuJoCo's joint friction only approximates a deadband. The full report,
   with every joint's law and a suggested upstream change, is `data/robot/REPORT.md`.
 
-**Every arm needs its own calibration** (`scripts/fetch_robot_fleet.py`, `scripts/robot_fleet.py`). The same
-identification ran on five more SO-100 arms recorded by different owners (public LeRobot datasets, Apache-2.0, 40 to 50
-episodes each). Each arm's servo laws were then replayed on every other arm's held-out episodes, with each arm's
-constant command offset re-centred from its own training episodes so that only the dynamics move between arms. An arm's
-own calibration tracks its joints to 0.43° on average; a calibration borrowed from another arm to 0.78°, worse in 30 of
-30 pairs at 95%. The fitted delays and deadbands differ from unit to unit: one model does not fit every arm or setup. (These errors
-come from replaying the servo laws themselves, where the original arm's own calibration reaches 0.27°; the 0.38° above
-is the full MuJoCo replay of the same arm, a different and stricter evaluator.)
-The owners recorded different tasks (a battery, a block in a cup, strawberries, lego), so part of the gap can come
-from different speeds and loads rather than the hardware alone; no public dataset has several arms on one task.
+**Each arm and setup needs its own calibration** (`scripts/fetch_robot_fleet.py`, `scripts/robot_fleet.py`). The
+same identification ran on five more SO-100 arms recorded by different owners (public LeRobot datasets, Apache-2.0, 40
+to 50 episodes each). Each arm's servo laws were then replayed on every other arm's held-out episodes, with each arm's
+constant command offset re-centred from its own training episodes so that only the dynamics move between arms. An
+arm's own calibration tracks its joints to 0.43° on average; a calibration borrowed from another arm to 0.78°, worse in
+30 of 30 pairs at 95%. The fitted delays and deadbands differ from unit to unit: one model does not fit every arm or
+setup. These errors come from replaying the servo laws themselves, where the original arm's own calibration reaches
+0.27°; the 0.38° above is the full MuJoCo replay of the same arm, a different and stricter evaluator. The owners
+recorded different tasks (a battery, a block in a cup, strawberries, lego), so part of the gap can come from different
+speeds and loads rather than the hardware alone; no public dataset has several arms on one task.
 
 ### Transit timing: a shrinking orbit and an unseen planet (`/timing`)
 
