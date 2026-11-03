@@ -124,7 +124,9 @@ def fit(obs: A.Observations, bodies, epoch: float, p0: np.ndarray, fit_a2: bool,
                 rs = list(pool.map(_resid, pts))
                 r0 = rs[0]
                 J = np.column_stack([(rs[i + 1] - r0) / STEPS[i] for i in range(n_par)])
-                dp = np.linalg.lstsq(J, -r0, rcond=None)[0]
+                # Solve in units of each parameter's step: position (AU), velocity (AU/day) and A2 differ by about
+                # 1e8 in scale, and unscaled the solve and the covariance would cut the A2 direction off.
+                dp = np.linalg.lstsq(J * STEPS[:n_par], -r0, rcond=None)[0] * STEPS[:n_par]
                 lam, best = 1.0, None
                 for _ in range(6):  # step halving: accept the first step that lowers chi-square
                     q = p + lam * dp
@@ -150,7 +152,8 @@ def fit(obs: A.Observations, bodies, epoch: float, p0: np.ndarray, fit_a2: bool,
         used = new
     dof = max(len(r) - n_par, 1)
     chi2 = float(r @ r) / dof
-    cov = np.linalg.pinv(J.T @ J) * max(1.0, chi2)
+    Js = J * STEPS[:n_par]
+    cov = np.linalg.pinv(Js.T @ Js) * np.outer(STEPS[:n_par], STEPS[:n_par]) * max(1.0, chi2)
     return {"p": p, "cov": cov, "used": used, "chi2_per_dof": chi2, "n_used": int(used.sum()), "chi2_total": float(r @ r)}
 
 

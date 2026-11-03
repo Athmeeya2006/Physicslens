@@ -1,0 +1,65 @@
+{
+ "generated": "scripts/asteroid_yarkovsky.py",
+ "object": "99942 Apophis",
+ "observations": {
+  "n": 2162,
+  "first": "2004-03-15",
+  "last": "2021-05-20",
+  "before_split": 995,
+  "after_split": 1167,
+  "split": "2017-01-01",
+  "thinning": "at most 2 per observatory per night",
+  "source": "MPC get-obs API, ADES",
+  "with_stated_uncertainty": 356,
+  "observatories_weighted": 60
+ },
+ "model": "Sun, planets and the Moon (DE-based, astropy), the Sun's relativistic term, light-time; A2 (1 AU/r)^2 transverse",
+ "held_out": {
+  "without_a2": {
+   "chi2_per_dof": 0.7189041530452231,
+   "n_used": 991,
+   "forecast": {
+    "n": 1166,
+    "rms_arcsec": 0.4484836242902863,
+    "chi2_per_obs": 1.263914587127314,
+    "median_miss_arcsec": 0.3153344287270685
+   }
+  },
+  "with_a2": {
+   "chi2_per_dof": 0.7262623426722797,
+   "n_used": 992,
+   "forecast": {
+    "n": 1084,
+    "rms_arcsec": 1.8681215713715535,
+    "chi2_per_obs": 19.052227442748922,
+    "median_miss_arcsec": 2.550602620414791
+   },
+   "a2": -6.848743839368598e-14,
+   "a2_sigma": 4.103520943948619e-14
+  }
+ },
+ "full_arc": {
+  "a2": 3.0540327226534338e-15,
+  "a2_sigma": 1.152495952655335e-15,
+  "chi2_per_dof": 0.6658525694856293,
+  "n_used": 2138,
+  "chi2_per_dof_without": 0.6634281027292092,
+  "delta_bic": -19.37424995803167
+ },
+ "jpl": {
+  "a2": -2.902e-14,
+  "sigma": 1.859e-16,
+  "orbit_id": "220",
+  "soln_date": "2024-06-25 10:48:08",
+  "n_obs_used": 7370,
+  "n_del_obs_used": 20,
+  "n_dop_obs_used": 30
+ },
+ "agreement_sigma": 27.47492985661613,
+ "found": false,
+ "limits": [
+  "optical astrometry only (JPL also uses radar delays and Dopplers)",
+  "no asteroid perturbers (JPL includes the 16 most massive)"
+ ],
+ "seconds": 536
+}

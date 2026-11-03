@@ -622,6 +622,12 @@ states, which is what a sound setup looks like. The orbit from those three night
 orbit, fitted to every observation made since, at the 56 positions measured three weeks later; the real observations
 of that window sit a median 0.09 arcsec from it.
 
+The Yarkovsky push needs years, not one night, so it was tried on Apophis's 2004 to 2022 optical arc
+(`scripts/asteroid_yarkovsky.py`, 2,162 MPC observations, the Sun's relativistic term included): fitted on 2004 to
+2016 and forecasting 2017 to 2022, the transverse term does not improve the forecast, and on the whole arc it loses
+by 19 BIC, so it is not claimed. JPL's value (A2 = -2.90e-14 AU/day²) also rests on radar ranging, star-catalogue
+debiasing and the pull of the largest asteroids, none of which this optical-only fit has.
+
 ### Satellites: is it where its catalogue says, and did it move? (`/satellites`)
 
 `scripts/satellite_demo.py` tests on the International Space Station: NASA's published trajectory (OEM) against its
