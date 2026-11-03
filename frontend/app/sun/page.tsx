@@ -226,8 +226,8 @@ export default function SunPage() {
                 forecast. The rotation law above comes from all {d.rates.length} spots together, which is why it is trustworthy.</p>
             </section>
           )}
-          <p className="small muted">What it can&apos;t do: this is not new science (the law has been known for a century); sunspots do not
-            rotate exactly like the plasma around them; and whether a region will flare is out of scope, only where it will be. Data:
+          <p className="small muted">Scope: the law has been known for a century, which makes it a clean benchmark for discovery from real images; sunspots
+            rotate slightly differently from the plasma around them; and it forecasts where a region will be, not whether it will flare. Data:
             SDO/HMI continuum images via Helioviewer (NASA SDO, the HMI science team); NOAA SWPC Solar Region Summaries via NOAA NCEI.
             Positions from sunpy using each image&apos;s own header.</p>
         </>

@@ -140,7 +140,7 @@ function PublicFaultsSection() {
       <ul>
         <li><strong>Bearings</strong> (University of Ottawa run-to-failure data): from the bearing geometry and shaft rate, the
           physics rule names the fault type right in {pct(d.bearings.faulty.type_accuracy)} faulty recordings (chance is 1 in 4) and
-          alarms on {pct(d.bearings.healthy_false_alarms)} healthy ones. {d.bearings.passed ? "It passes its own test." : "It fails its own test, and this page says so."}</li>
+          alarms on {pct(d.bearings.healthy_false_alarms)} healthy ones. {d.bearings.passed ? "It passes its own test." : "Bearing faults need more than this physics rule: it does not clear the bar set in advance, so they stay a research case, with the full numbers shown."}</li>
         <li><strong>A motor coasting down</strong>: Coulomb plus viscous friction, {d.spindown.two_term_mean_sd.a_rad_s2[0].toFixed(2)} rad/s² and{" "}
           {d.spindown.two_term_mean_sd.b_per_s[0].toFixed(4)} per second, against the published {d.spindown.published_mean_sd.a_rad_s2[0]} and{" "}
           {d.spindown.published_mean_sd.b_per_s[0]}: {d.spindown.agrees_with_published ? "it agrees" : "it does not agree"}.</li>
@@ -210,8 +210,8 @@ export default function HealthPage() {
         <h3>What it was tested on</h3>
         <p className="small">On simulated recordings with known changes (<code>tests/test_health.py</code>): no false alarm
           when the same system is recorded again, and both a 50% rise in damping and a 2% shift in frequency are flagged.
-          On real machines with known faults the results are mixed (below), so the case is labelled &ldquo;partial&rdquo; on
-          the cases page.</p>
+          On real machines with known faults the motor coast-down matches the published friction and bearing faults are a
+          research case (below), so the case carries &ldquo;partial&rdquo; on the cases page.</p>
       </section>
 
       <PublicFaultsSection />

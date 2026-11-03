@@ -95,7 +95,7 @@ export default function CasesPage() {
                         {c.ladder && c.ladder.length > 1 && (
                           <ul className="small">{c.ladder.map((r) => <li key={r.rung}><strong>{label(r.rung)}:</strong> {r.evidence}</li>)}</ul>
                         )}</dd>
-                      <dt>What it can&apos;t do</dt><dd>{c.cant}</dd>
+                      <dt>Scope</dt><dd>{c.cant}</dd>
                     </dl>
                     {c.link && <a className="button" href={c.link}>See the result</a>}
                   </div>

@@ -69,7 +69,7 @@ export default function PredictionsPage() {
           </ul>
           {d.integrity_problems.length > 0 && <p className="error" role="alert">Changed after registration: {d.integrity_problems.join("; ")}</p>}
           <section className="stack" style={{ gap: 12 }}>
-            <h2>How a prediction is kept honest</h2>
+            <h2>How each prediction is locked in</h2>
             <ol>
               <li><strong>Written before the answer exists.</strong> Each prediction is a file with its inputs and their
                 sources, the forecast with 68% and 95% intervals, the rule that will score it, the date after which it can

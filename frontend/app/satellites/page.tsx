@@ -191,7 +191,7 @@ export default function SatellitesPage() {
               {d.tumble_synthetic.doubled ? " folding at twice that is clearly tighter (two different flashes per turn), so" : ""} the turn is
               {" "}{d.tumble_synthetic.period_s.toFixed(1)} ± {d.tumble_synthetic.sigma_s.toFixed(1)} s (true {d.tumble_synthetic.true_period_s} s).</p>
           </section>
-          <p className="small muted">What it can&apos;t do: one observer and one pass constrain an orbit weakly; the clock dominates for amateurs; no real
+          <p className="small muted">Scope: one observer and one pass constrain an orbit weakly; the clock dominates for amateurs; no real
             recorded manoeuvre has been reproduced yet (NASA&apos;s current ISS ephemeris lists none, and past catalogue orbits need a
             Space-Track account), so detection is shown on impulses added to the real orbit; tumble periods here are synthetic. For
             classified objects it reports only what public catalogues and your own observations show. Data: NASA JSC ISS ephemeris,

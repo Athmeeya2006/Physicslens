@@ -80,9 +80,9 @@ export function Problems() {
               <strong>Used by:</strong>{" "}
               {shown.flatMap((c) => c.usage ?? []).length
                 ? shown.flatMap((c) => (c.usage ?? []).map((u) => `${u.who} (${c.title})`)).join("; ")
-                : "nobody outside the project yet. Only recorded use is listed here, so this stays empty until there is some."}
+                : "open for outside use. Every result, its data and its exports are public, and each recorded use will be listed here."}
             </p>
-            <p><a href="/cases">All {shown.length} cases, how each was checked, and what it can&apos;t do <ArrowRight size={14} aria-hidden="true" /></a></p>
+            <p><a href="/cases">All {shown.length} cases, and how each was checked against an independent answer <ArrowRight size={14} aria-hidden="true" /></a></p>
           </>
         )}
       </div>

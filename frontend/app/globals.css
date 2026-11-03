@@ -7,16 +7,16 @@
   /* Light ("lab bench") is the default; [data-theme="dark"] below is the whole dark theme. Every colour on the site is
      one of these tokens. Video, orbit, 3D and canvas panels sit on --stage, dark in both themes. */
   color-scheme: light;
-  --ground: #eef1ee;
-  --surface: #ffffff;
-  --surface-2: #ffffff;
-  --sunk: #e3e8e3;
-  --ink: #14202b;
-  --ink-2: #3e4c5a;
-  --ink-3: #4a5866;
-  --line: #cbd2cc;
-  --line-soft: #dce1dc;
-  --stage: #0e1621;
+  --ground: #f6f3ec;
+  --surface: #fffdf8;
+  --surface-2: #fffdf8;
+  --sunk: #ece7dc;
+  --ink: #1a1a1a;
+  --ink-2: #3d3a35;
+  --ink-3: #57524a;
+  --line: #d9d2c3;
+  --line-soft: #e7e1d5;
+  --stage: #161410;
   --stage-ink: #e9eef5;
   --stage-mute: #9aa8b8;
 
@@ -52,7 +52,7 @@
   --accent: var(--mujoco);
   --link: var(--model);
   --link-hover: #154aa6;
-  --scroll: #bcc5bd;
+  --scroll: #cfc7b6;
   --btn-hover: #24384a;
   --btn2-hover: var(--sunk);
   --note-ink: var(--tie);
@@ -67,15 +67,16 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ground: #0c1424;
-  --surface: #142036;
-  --surface-2: #142036;
-  --sunk: #1b2940;
-  --ink: #e9eef7;
-  --ink-2: #c3cdda;
-  --ink-3: #9aa8b8;
-  --line: #24324a;
-  --line-soft: #1c2a40;
+  --ground: #12110f;
+  --surface: #1a1815;
+  --surface-2: #1a1815;
+  --sunk: #25221d;
+  --ink: #f2ede3;
+  --ink-2: #d2cbbe;
+  --ink-3: #aaa293;
+  --line: #36322b;
+  --line-soft: #27241f;
+  --stage: #0b0a09;
 
   --model: #7fb0ff;
   --model-soft: rgba(127, 176, 255, 0.14);
@@ -93,13 +94,13 @@
   --bad-soft: #3a1a1a;
   --pred: #a9c6ff;
   --pred-soft: #1a2b4d;
-  --tool: #0c1424;
+  --tool: #12110f;
   --tool-soft: #42d38b;
 
   --link-hover: #b5d0ff;
   --scroll: #2f3e58;
   --btn-hover: #d7dfeb;
-  --on-strong: #0c1424;
+  --on-strong: #12110f;
 }
 
 * { box-sizing: border-box; }
@@ -185,7 +186,7 @@ button.secondary, .button.secondary { background: transparent; color: var(--ink)
 /* The one blue action per view ("See how it decided"). */
 button.blue, .button.blue { background: var(--model); border-color: var(--model); color: #ffffff; }
 button.blue:hover:not(:disabled), .button.blue:hover { background: var(--link-hover); }
-:root[data-theme="dark"] .button.blue { color: #0c1424; }
+:root[data-theme="dark"] .button.blue { color: #12110f; }
 button.secondary:hover:not(:disabled), .button.secondary:hover { background: var(--btn2-hover); }
 button.listening, button.listening:hover:not(:disabled) { background: var(--whatif); color: var(--on-strong); }
 
@@ -992,3 +993,30 @@ button svg, .button svg { flex: none; }
 .dropzone { background: var(--surface); box-shadow: none; border: 1.5px dashed var(--line); border-radius: var(--radius-panel); }
 .dropzone:hover, .dropzone.has-file { box-shadow: none; border: 1.5px solid var(--model); }
 .stat-strip.count-strip .stat-number { font-size: clamp(1.5rem, 2.4vw, 2rem); }
+
+/* Older verdict and badge marks share the status chip's shape, so every page reads one system: pill, soft fill,
+   colour only for status. Tables get one hairline per row. */
+.verdict { border-radius: 999px; padding: 2px 11px; min-height: 26px; font-weight: 600; font-size: 0.82rem; line-height: 1.2; }
+.badge { border-radius: 999px; padding: 3px 12px; font-weight: 600; font-size: 0.86rem; line-height: 1.35; }
+.case-badge { min-height: 26px; display: inline-flex; align-items: center; padding: 2px 11px; }
+td { border-top: 1px solid var(--line-soft); }
+tbody tr:last-child td { border-bottom: 1px solid var(--line-soft); }
+/* The one orchestrated motion on the site: the hero's law fades in just after its video starts. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-law { animation: law-in 0.7s ease-out 0.9s both; }
+  @keyframes law-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+
+/* Editorial in both themes: serif headlines, the UI and figures in Geologica. Light is ink on warm paper; dark is
+   the same page inverted, cream on warm black. */
+:is(h1, h2, h3) { font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-weight: 500; letter-spacing: -0.012em; }
+:is(.hero h1, .page-head-split h1, .result-hero h1) { font-weight: 500; letter-spacing: -0.02em; }
+.band h2 { font-weight: 500; }
+
+/* Dark is dark throughout: no large light fills, so buttons are dark with a hairline and light text. */
+:root[data-theme="dark"] :is(button, .button):not(.secondary):not(.blue):not(.chip):not(.back-link):not(.theme-toggle):not(.menu-toggle):not(.nav-group-btn):not(.term):not(.listening):not(.gallery-item):not(.tab) {
+  background: var(--sunk); color: var(--ink); border-color: var(--line); }
+:root[data-theme="dark"] :is(button, .button):not(.secondary):not(.blue):not(.chip):not(.back-link):not(.theme-toggle):not(.menu-toggle):not(.nav-group-btn):not(.term):not(.listening):not(.gallery-item):not(.tab):hover:not(:disabled) {
+  background: #2f2b25; }
+:root[data-theme="dark"] .button.primary-dark { background: var(--sunk); color: var(--ink); border-color: var(--line); }

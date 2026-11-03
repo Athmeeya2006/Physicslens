@@ -62,7 +62,7 @@ const ACTION_LABEL: Record<string, string> = {
 const ITEM_STATUS: Record<string, string> = { accepted: "Accepted", tied: "Tied", rejected: "Rejected", approximation: "Same law" };
 // The referee's challengers: "rejected" means the challenge failed and the accepted law stands.
 const SKEPTIC_STATUS: Record<string, string> = {
-  accepted: "Won", tied: "As good", rejected: "Failed", approximation: "Same law", untestable: "Not testable",
+  accepted: "Won", tied: "As good", rejected: "Refuted", approximation: "Same law", untestable: "Not testable",
 };
 // Candidate experiments are not models: say whether each would settle the question.
 const DESIGN_STATUS: Record<string, string> = { accepted: "Decisive", tied: "Too close", rejected: "Too close" };

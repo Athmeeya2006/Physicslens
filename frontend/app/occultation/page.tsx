@@ -107,7 +107,7 @@ export default function OccultationPage() {
           <section className="panel stack" aria-labelledby="occ-edge">
             <h2 id="occ-edge">Timing an edge inside a frame</h2>
             <p className="small">A camera frame integrates light over its exposure, so the star can vanish partway through a frame. The fit models that, and its
-              errors are honest: on synthetic light curves with known edges, the measured time lands within one stated sigma about two thirds of the time.</p>
+              errors are calibrated: on synthetic light curves with known edges, the measured time lands within one stated sigma about two thirds of the time.</p>
             <div className="table-wrap">
               <table className="cards">
                 <thead><tr><th>Exposure</th><th>Typical timing error</th><th>Within one <Term k="sigma">sigma</Term></th></tr></thead>
@@ -117,7 +117,7 @@ export default function OccultationPage() {
               </table>
             </div>
           </section>
-          <p className="small muted">What it can&apos;t do: the chords here are the published timings (no raw videos were reprocessed); diffraction at the
+          <p className="small muted">Scope: the chords here are the published timings (no raw videos were reprocessed); diffraction at the
             edges is not modelled (it matters only for very fast cameras or very distant bodies); and a few chords can fit many
             shapes, which is why misses near the edge are kept as constraints rather than thrown away.</p>
         </>

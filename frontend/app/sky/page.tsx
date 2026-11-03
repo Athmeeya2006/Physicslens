@@ -155,8 +155,8 @@ function Chosen({ d }: { d: Discovery }) {
         </table>
       </div>
       <p className="small muted">A law is accepted only if it forecasts the held-out quarter (and from four later starting
-        points) and beats every rival by 10 BIC; within 10 rivals tie and the honest answer is that the data cannot tell
-        them apart. A law that only adds terms to a simpler one is set aside when those terms don&apos;t improve it. In the lab the candidates come from a fixed list of gravity laws; on a filmed clip the reasoning model
+        points) and beats every rival by 10 BIC; within 10 rivals tie, and both are shown as equally supported by
+        the data rather than one being picked. A law that only adds terms to a simpler one is set aside when those terms don&apos;t improve it. In the lab the candidates come from a fixed list of gravity laws; on a filmed clip the reasoning model
         proposes them and the same rules decide.</p>
     </details>
   );
