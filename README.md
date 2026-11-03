@@ -468,7 +468,7 @@ Every case at a glance (each row is generated from its result file; the same cas
 
 ### Open-source robot arm: its simulator corrected from public recordings (`/robot`)
 
-![One held-out episode of the SO-100: the public MuJoCo model drifts from the real joint, the corrected model tracks it](frontend/public/readme/robot-before-after.png)
+![One held-out SO-100 episode, error against the real shoulder joint: the public MuJoCo model (dashed) strays by up to about 3 degrees, the corrected model (blue) stays within about 1](frontend/public/readme/robot-before-after.png)
 
 The SO-100 is a widely used low-cost arm, and its public MuJoCo model (MuJoCo Menagerie `trs_so_arm100`) has
 guessed joint dynamics. `scripts/robot_demo.py` takes 50 public teleoperation episodes of the real arm
