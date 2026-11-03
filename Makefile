@@ -6,7 +6,7 @@ VENV ?= .venv
 BIN := $(VENV)/bin
 export PYTHONPATH := backend
 
-.PHONY: help setup test test-fast smoke report kill unkill dev-backend dev-frontend lint audit numbers
+.PHONY: help setup test test-fast smoke report kill unkill dev-backend dev-frontend lint audit numbers site-data
 
 help:
 	@echo "setup         create venv and install backend deps"
@@ -58,6 +58,14 @@ lint:
 
 numbers:
 	$(BIN)/python scripts/readme_numbers.py
+
+# Everything the static site reads that is generated rather than committed (gallery bundle, sky scenarios, case and
+# astronomy data). SKY_FLAGS=--no-discover skips the slow precomputed discoveries.
+site-data:
+	$(BIN)/python scripts/build_static_gallery.py
+	$(BIN)/python scripts/build_astro_static.py
+	$(BIN)/python scripts/build_cases.py
+	$(BIN)/python scripts/build_sky_static.py $(SKY_FLAGS)
 
 # Known vulnerabilities in the pinned dependencies (queries the public advisory databases; no keys, no spend).
 audit:
