@@ -56,9 +56,14 @@ def arm_error(law: dict, us, ys, train: list[int], test: list[int], dt: float) -
         lid, p = law[name]
         tr = S.Batch.from_lists([us[e][:, j] for e in train], [ys[e][:, j] for e in train], dt, train)
         te = S.Batch.from_lists([us[e][:, j] for e in test], [ys[e][:, j] for e in test], dt, test)
-        sim_tr = S.simulate(lid, p, tr)
-        shift = float(np.sum((tr.y - sim_tr) * tr.mask) / np.sum(tr.mask))
-        per_joint.append(S.rms_per_episode(S.simulate(lid, p, te) + shift, te))
+        # Re-centre the law's own command offset b on the target arm's training episodes (the servo's steady gain is 1,
+        # so an offset in b moves the output by the same amount); shifting the output instead would leave a start-up
+        # transient, since every simulation starts from the measured first angle.
+        p = dict(p)
+        for _ in range(2):
+            sim_tr = S.simulate(lid, p, tr)
+            p["b"] = p.get("b", 0.0) + float(np.sum((tr.y - sim_tr) * tr.mask) / np.sum(tr.mask))
+        per_joint.append(S.rms_per_episode(S.simulate(lid, p, te), te))
     return np.sqrt(np.mean(np.square(per_joint), axis=0))
 
 
