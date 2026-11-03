@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { OnThisPage } from "@/components/OnThisPage";
 import { ProofNav } from "@/components/ProofNav";
+import { RobotFleet } from "@/components/RobotFleet";
 import { RobotTrace, type Trace } from "@/components/RobotTrace";
 
 // The SO-100 arm case (scripts/robot_demo.py, data/robot/result.json): per-joint servo laws identified from public
@@ -98,6 +99,7 @@ export default function RobotPage() {
               <RobotTrace t={d.trace} />
             </section>
           )}
+          <RobotFleet />
           <section className="panel stack" aria-labelledby="rb-cmp">
             <h2 id="rb-cmp">Against the public model and fair baselines (held-out RMS, degrees)</h2>
             <div className="table-wrap">
