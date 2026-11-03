@@ -53,6 +53,8 @@ id, are in `data/glimmer_check/`.
 - `llm_calls` also keeps each step's reasoning text as the model returned it, plus any provider switch (`fallbacks`).
 - The real-world cases run through the same agent keep the same record: `data/cases_agent/*.json` (transit timings and the Winchcombe fireball, `scripts/cases_agent.py`, run with `APP_ENV=demo`, so only the open-weight model could answer) and `data/astro/sun/agent.json` (single sunspots) list `meta-models/muse-spark-open-1026` in every `llm_calls` entry.
 - The app shows the same labels on screen: every step of the decision trail names "Muse Spark Open (open weights, served by Baseten)", "Muse Glimmer 30B (open weights)" or the numerical method, with the model's reasoning one click away.
+- The quickest place to look: "How the agent reasoned" at the top of every result lists the decisive steps, each tagged
+  "Muse Spark Open", "Muse Glimmer 30B" or "the math". The header's "Models used" lists every model id in that result.
 
 ## What is not open weights, and why
 
