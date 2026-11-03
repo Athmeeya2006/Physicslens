@@ -506,6 +506,8 @@ episodes each). Each arm's servo laws were then replayed on every other arm's he
 constant command offset re-centred from its own training episodes so that only the dynamics move between arms. An arm's
 own calibration tracks its joints to 0.43° on average; a calibration borrowed from another arm to 0.78°, worse in 30 of
 30 pairs at 95%. The fitted delays and deadbands differ from unit to unit: one model does not fit every arm.
+The owners recorded different tasks (a battery, a block in a cup, strawberries, lego), so part of the gap can come
+from different speeds and loads rather than the hardware alone; no public dataset has several arms on one task.
 
 ### Transit timing: a shrinking orbit and an unseen planet (`/timing`)
 
