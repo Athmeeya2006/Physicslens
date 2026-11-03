@@ -47,6 +47,7 @@ export function RobotTrace({ t }: { t: Trace }) {
             {n.replace("_", " ")}</button>
         ))}
       </div>
+      <div className="robot-trace-scroll">
       <svg viewBox={`0 0 ${W} ${H}`} role="img"
            aria-label={`${joint.replace("_", " ")} in held-out episode ${t.episode}: each model's error against the real arm`}>
         {yTicks.map((k) => (
@@ -60,6 +61,7 @@ export function RobotTrace({ t }: { t: Trace }) {
         <path d={path(errPub)} className="rt-public" />
         <path d={path(errId)} className="rt-ident" />
       </svg>
+      </div>
       <figcaption className="forecast-caption">
         <span>
           <span className="key"><span className="swatch line" style={{ background: "var(--ink)" }} />the real arm (zero error)</span>{" "}

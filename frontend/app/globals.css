@@ -1056,3 +1056,12 @@ tbody tr:last-child td { border-bottom: 1px solid var(--line-soft); }
 /* An experiment request that a later recording answered: the loop closed, shown where the request is. */
 .followup-note { border-left: 3px solid var(--ok); padding: 8px 12px; background: var(--ok-soft); color: var(--ink); border-radius: 0 8px 8px 0; max-width: 70ch; }
 .followup-note strong { color: var(--ok); }
+/* On a phone the error chart keeps a readable size and scrolls inside its own box, like a wide table. */
+.robot-trace-scroll { overflow-x: auto; }
+.robot-trace-scroll svg { min-width: 600px; }
+/* Side-by-side number strips (count-strip) stay side by side on phones: hairlines between, not above. */
+@media (max-width: 900px) {
+  .stat-strip.count-strip { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 14px 0; }
+  .stat-strip.count-strip li { border-top: 0; padding: 0 12px; border-left: 1px solid var(--line); }
+  .stat-strip.count-strip li:first-child { border-left: 0; padding-left: 0; }
+}
