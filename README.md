@@ -633,6 +633,11 @@ states, which is what a sound setup looks like. The orbit from those three night
 orbit, fitted to every observation made since, at the 56 positions measured three weeks later; the real observations
 of that window sit a median 0.09 arcsec from it.
 
+From pixels, on real telescope frames (`scripts/asteroid_ztf.py`): Apophis on public ZTF images from Palomar (2021,
+IRSA), each frame's WCS refined against Gaia DR3 stars and the asteroid centroided, lands 0.06 arcsec (rms) from JPL's
+position for that site and instant, at the accuracy of the frames' own plate solutions (median 0.09 arcsec). 3 of
+the 16 frames found solved; the rest had too few matched stars in the cutout or the image service failed.
+
 The Yarkovsky push needs years, not one night, so it was tried on Apophis's 2004 to 2022 optical arc
 (`scripts/asteroid_yarkovsky.py`, 2,162 MPC observations, the Sun's relativistic term included): fitted on 2004 to
 2016 and forecasting 2017 to 2022, the transverse term does not improve the forecast, and on the whole arc it loses

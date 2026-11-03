@@ -1,0 +1,115 @@
+{
+ "generated": "scripts/asteroid_ztf.py",
+ "object": "99942 Apophis",
+ "telescope": "ZTF, Palomar 48-inch (MPC code I41)",
+ "window": [
+  "2021-02-10",
+  "2021-03-20"
+ ],
+ "frames_found": 16,
+ "frames_measured": 3,
+ "skipped": [
+  {
+   "frame": "20210217314896",
+   "reason": "only 4 stars matched the catalogue (need 6): the starting pointing or scale is too far off for refinement; solve blind first"
+  },
+  {
+   "frame": "20210218313056",
+   "reason": "only 4 stars matched the catalogue (need 6): the starting pointing or scale is too far off for refinement; solve blind first"
+  },
+  {
+   "frame": "20210221316551",
+   "reason": "only 3 stars matched the catalogue (need 6): the starting pointing or scale is too far off for refinement; solve blind first"
+  },
+  {
+   "frame": "20210223335590",
+   "reason": "only 4 stars matched the catalogue (need 6): the starting pointing or scale is too far off for refinement; solve blind first"
+  },
+  {
+   "frame": "20210225325208",
+   "reason": "only 0 stars matched the catalogue (need 6): the starting pointing or scale is too far off for refinement; solve blind first"
+  },
+  {
+   "frame": "20210301241481",
+   "reason": "HTTP Error 503: Service Temporarily Unavailable"
+  },
+  {
+   "frame": "20210303252766",
+   "reason": "HTTP Error 503: Service Temporarily Unavailable"
+  },
+  {
+   "frame": "20210303315475",
+   "reason": "only 0 stars matched the catalogue (need 6): the starting pointing or scale is too far off for refinement; solve blind first"
+  },
+  {
+   "frame": "20210305231748",
+   "reason": "no source within 8 px of the prediction (nearest 33.4 px)"
+  },
+  {
+   "frame": "20210305275833",
+   "reason": "only 2 stars matched the catalogue (need 6): the starting pointing or scale is too far off for refinement; solve blind first"
+  },
+  {
+   "frame": "20210307331725",
+   "reason": "only 4 stars matched the catalogue (need 6): the starting pointing or scale is too far off for refinement; solve blind first"
+  },
+  {
+   "frame": "20210308317894",
+   "reason": "only 5 stars matched the catalogue (need 6): the starting pointing or scale is too far off for refinement; solve blind first"
+  },
+  {
+   "frame": "20210308321169",
+   "reason": "only 3 stars matched the catalogue (need 6): the starting pointing or scale is too far off for refinement; solve blind first"
+  }
+ ],
+ "residual_rms_arcsec": 0.06227032167563227,
+ "median_miss_arcsec": 0.09390626119274631,
+ "mean_offset_arcsec": {
+  "ra": -0.03505555864693486,
+  "dec": 0.040446422012685446
+ },
+ "median_wcs_rms_arcsec": 0.09455025042726711,
+ "reference": "JPL Horizons astrometric RA/Dec from I41 at mid-exposure (UT)",
+ "data": "ZTF public data via IRSA (Bellm et al. 2019; Masci et al. 2019); Gaia DR3 (ESA)",
+ "frames": [
+  {
+   "frame": "20210217314433",
+   "filter": "zg",
+   "utc": "2021-02-17T07:33:02.003",
+   "dra_arcsec": 0.05945270664560855,
+   "ddec_arcsec": 0.015829787554366703,
+   "ra": 160.4646863988614,
+   "dec": -17.55007076383679,
+   "wcs_rms_arcsec": 0.13400498104433267,
+   "stars": 144,
+   "snr": 379.8097204631041,
+   "centroid_sigma_px": 0.004422333750432983
+  },
+  {
+   "frame": "20210318219734",
+   "filter": "zr",
+   "utc": "2021-03-18T05:16:41.003",
+   "dra_arcsec": -0.09310439310810745,
+   "ddec_arcsec": 0.04464904658316726,
+   "ra": 130.31080019486242,
+   "dec": 2.06501458251294,
+   "wcs_rms_arcsec": 0.09455025042726711,
+   "stars": 226,
+   "snr": 859.4724354271019,
+   "centroid_sigma_px": 0.0013000344774534282
+  },
+  {
+   "frame": "20210318258079",
+   "filter": "zi",
+   "utc": "2021-03-18T06:11:53.000",
+   "dra_arcsec": -0.07151498947830567,
+   "ddec_arcsec": 0.06086043190052237,
+   "ra": 130.2788587924533,
+   "dec": 2.093817311675528,
+   "wcs_rms_arcsec": 0.08528760117471687,
+   "stars": 211,
+   "snr": 523.0360332753048,
+   "centroid_sigma_px": 0.0023381048974678758
+  }
+ ]
+}
