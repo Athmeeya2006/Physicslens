@@ -26,7 +26,7 @@ const TRY = [
 
 export function TryIt() {
   return (
-    <section className="band" aria-labelledby="try-title">
+    <section className="band band-surface" aria-labelledby="try-title">
       <div className="band-inner stack" style={{ gap: 20 }}>
         <h2 id="try-title">Try it. Everything is open, no code needed.</h2>
         <ul className="try-tiles">
@@ -52,7 +52,7 @@ export function Problems() {
   }, []);
   const shown = cases.filter((c) => c.number).sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9));
   return (
-    <section className="band band-surface" aria-labelledby="problems-title">
+    <section className="band" aria-labelledby="problems-title">
       <div className="band-inner stack" style={{ gap: 16 }}>
         <h2 id="problems-title">Problems it solves, each checked against an independent answer.</h2>
         {shown.length > 0 && (

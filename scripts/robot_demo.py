@@ -277,6 +277,16 @@ def main() -> None:
         sims = run_replays(pool, jobs)
     print(f"MuJoCo replays done ({time.time() - t0:.0f} s)", flush=True)
 
+    # One held-out episode as time series, for the before/after picture: the episode whose improvement over the public
+    # model is the median one, so the picture is typical, not the best case.
+    gain = arm_total(episode_rms(sims["default"], TEST_EPS)) - arm_total(episode_rms(sims["identified"], TEST_EPS))
+    e_show = TEST_EPS[int(np.argsort(gain)[len(gain) // 2])]
+    k = 2  # every second frame: 15 per second is ample for a plot
+    trace = {"episode": e_show, "dt_s": DT * k, "joints": {
+        LOG_JOINTS[j]: {"measured": YS[e_show][::k, j].round(3).tolist(), "command": US[e_show][::k, j].round(3).tolist(),
+                        "public_model": sims["default"][e_show][::k, j].round(3).tolist(),
+                        "identified": sims["identified"][e_show][::k, j].round(3).tolist()} for j in ARM}}
+
     servo_test = np.array([[refit[j]["test_rms"][i] for j in range(6)] for i in range(len(TEST_EPS))])
     rows = {k: episode_rms(v, TEST_EPS) for k, v in sims.items()}
     rows["identified_servo_laws"] = servo_test
@@ -354,6 +364,7 @@ def main() -> None:
                                "stronger_baseline_minus_identified": beats_base2,
                                "gravity_effect_on_default": paired(rows["default"], rows["default_no_gravity"])},
         "limits": LIMITS,
+        "trace": trace,
         "runtime_s": round(time.time() - t0, 1),
     }
     OUT.mkdir(parents=True, exist_ok=True)

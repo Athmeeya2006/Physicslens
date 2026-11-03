@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { OnThisPage } from "@/components/OnThisPage";
 import { ProofNav } from "@/components/ProofNav";
+import { RobotTrace, type Trace } from "@/components/RobotTrace";
 
 // The SO-100 arm case (scripts/robot_demo.py, data/robot/result.json): per-joint servo laws identified from public
 // LeRobot recordings, the corrected MuJoCo model, and the held-out comparison with the public model and fair baselines.
@@ -20,6 +21,7 @@ interface Robot {
   heldout: Record<string, { joints: Record<string, Rms>; arm_total: Rms }>;
   heldout_comparison: Record<string, { improvement_deg: number; ci95: [number, number]; ratio: number }>;
   fair_baseline: { what: string; delay_s: number }; stronger_baseline: { what: string };
+  trace?: Trace;
 }
 
 const PARAM: Record<string, string> = { tau: "time constant (s)", d: "delay (s)", b: "command offset (deg)", db: "deadband (deg)",
@@ -57,7 +59,7 @@ export default function RobotPage() {
       {error && <p className="error">{error}</p>}
       {d && (
         <>
-          <OnThisPage items={[{ id: "rb-out", label: "Result" }, { id: "rb-joints", label: "Each joint's law" },
+          <OnThisPage items={[{ id: "rb-out", label: "Result" }, { id: "rb-trace", label: "Before and after" }, { id: "rb-joints", label: "Each joint's law" },
             { id: "rb-cmp", label: "Against the public model" }, { id: "rb-data", label: "Data and limits" }]} />
           <section className="panel stack" aria-labelledby="rb-out">
             <h2 id="rb-out">Result</h2>
@@ -90,6 +92,12 @@ export default function RobotPage() {
               </table>
             </div>
           </section>
+          {d.trace && (
+            <section className="panel stack" aria-labelledby="rb-trace">
+              <h2 id="rb-trace">The public simulator drifts; the corrected one tracks the real arm</h2>
+              <RobotTrace t={d.trace} />
+            </section>
+          )}
           <section className="panel stack" aria-labelledby="rb-cmp">
             <h2 id="rb-cmp">Against the public model and fair baselines (held-out RMS, degrees)</h2>
             <div className="table-wrap">

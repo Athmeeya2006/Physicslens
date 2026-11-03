@@ -36,7 +36,7 @@ function HeldOutSketch() {
 
 export function HowItDecides({ note }: { note?: ReactNode }) {
   return (
-    <section className="band band-surface" aria-labelledby="how-title">
+    <section className="band" aria-labelledby="how-title">
       <div className="band-inner stack" style={{ gap: 28 }}>
         <h2 id="how-title">The model proposes. The math decides.</h2>
         <ol className="steps">

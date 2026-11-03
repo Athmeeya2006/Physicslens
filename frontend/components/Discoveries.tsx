@@ -76,7 +76,7 @@ const TIPS = [
 export function Discoveries({ items = [], offline = false }: { items?: GalleryItem[]; offline?: boolean }) {
   const byId = new Map(items.map((g) => [g.id, g]));
   return (
-    <section id="results" className="band" aria-labelledby="discoveries-title">
+    <section id="results" className="band band-surface" aria-labelledby="discoveries-title">
       <div className="band-inner stack" style={{ gap: 28 }}>
         <h2 id="discoveries-title">Found from video alone, then tested on motion the model never saw.</h2>
         <ul className="story-grid">

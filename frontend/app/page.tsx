@@ -10,6 +10,7 @@ import { VoiceNotes } from "@/components/VoiceNotes";
 import { Problems, TryIt } from "@/components/Problems";
 import { Discoveries, STORY_RUNS } from "@/components/Discoveries";
 import { HowItDecides } from "@/components/HowItDecides";
+import { RobotImpact } from "@/components/RobotImpact";
 import { Hero } from "@/components/Hero";
 import { ResultView } from "@/components/ResultView";
 import type { Budget, GalleryItem, Health, LensCalibration, RunView } from "@/lib/api";
@@ -171,6 +172,7 @@ export default function Home() {
         ) : (
           <>
             <Hero apophis={gallery.find((g) => g.id === "gallery-apophis")} />
+            <RobotImpact />
             <HowItDecides note={sessionNote} />
             <Discoveries items={gallery} offline={offline} />
             <Problems />

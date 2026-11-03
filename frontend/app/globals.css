@@ -1019,3 +1019,15 @@ tbody tr:last-child td { border-bottom: 1px solid var(--line-soft); }
 :root[data-theme="dark"] :is(button, .button):not(.secondary):not(.blue):not(.chip):not(.back-link):not(.theme-toggle):not(.menu-toggle):not(.nav-group-btn):not(.term):not(.listening):not(.gallery-item):not(.tab):hover:not(:disabled) {
   background: #2f2b25; }
 :root[data-theme="dark"] .button.primary-dark { background: var(--sunk); color: var(--ink); border-color: var(--line); }
+/* The robot arm's before/after trace (components/RobotTrace.tsx): real arm ink, public model dashed, corrected blue. */
+.robot-trace { margin: 0; display: grid; gap: 10px; }
+.robot-trace svg { width: 100%; height: auto; display: block; }
+.robot-trace .axis { stroke: var(--line); }
+.robot-trace .tick { fill: var(--ink-3); font-size: 11px; font-family: var(--font); }
+.rt-real { fill: none; stroke: var(--ink); stroke-width: 2; }
+.rt-public { fill: none; stroke: var(--ink-3); stroke-width: 1.6; stroke-dasharray: 5 4; }
+.rt-ident { fill: none; stroke: var(--model); stroke-width: 2; }
+.swatch.line.rt-dash { background: repeating-linear-gradient(90deg, var(--ink-3) 0 5px, transparent 5px 8px); }
+.robot-impact { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px; align-items: start; }
+.robot-impact > .stack > p { color: var(--ink-2); max-width: 60ch; }
+@media (max-width: 900px) { .robot-impact { grid-template-columns: minmax(0, 1fr); } }
