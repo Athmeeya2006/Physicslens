@@ -38,7 +38,7 @@ CACHE = ROOT / "var" / "astro" / "ztf"
 OUT = ROOT / "data" / "astro" / "asteroids" / "ztf.json"
 DESIG = "99942"
 START, STOP = "2021-02-10", "2021-03-20"  # Apophis near magnitude 15.5 to 16.4, well inside ZTF's reach
-SIZE_ARCSEC = 360
+SIZE_ARCSEC = 900  # 15 arcmin: Apophis is far from the Milky Way, and a 6 arcmin cutout holds too few Gaia stars
 MAX_FRAMES = 40
 
 
@@ -102,8 +102,8 @@ def cutout(r: dict, ra: float, dec: float) -> Path:
     name = f"ztf_{f}_{int(r['field']):06d}_{r['filtercode']}_c{int(r['ccdid']):02d}_o_q{r['qid']}_sciimg.fits"
     url = (f"https://irsa.ipac.caltech.edu/ibe/data/ztf/products/sci/{f[:4]}/{f[4:8]}/{f[8:]}/{name}?"
            + urllib.parse.urlencode({"center": f"{ra:.5f},{dec:.5f}", "size": f"{SIZE_ARCSEC}arcsec", "gzip": "false"}))
-    get(url, name, binary=True)
-    return CACHE / name
+    get(url, f"{SIZE_ARCSEC}_{name}", binary=True)
+    return CACHE / f"{SIZE_ARCSEC}_{name}"
 
 
 def measure(path: Path, ra_p: float, dec_p: float) -> dict:
@@ -112,7 +112,7 @@ def measure(path: Path, ra_p: float, dec_p: float) -> dict:
         img, hdr = np.asarray(hdu.data, float), hdu.header
     img = np.nan_to_num(img, nan=float(np.nanmedian(img)))
     wcs0 = WCS(hdr)
-    xy = np.array(C.detect(img, fwhm=2.5, threshold_sigma=5.0, max_sources=400))
+    xy = np.array(C.detect(img, fwhm=2.5, threshold_sigma=5.0, max_sources=800))
     if len(xy) < 8:
         raise ValueError(f"only {len(xy)} sources detected")
     # Centroid every detection, so the WCS rests on the same centroids as the asteroid.
