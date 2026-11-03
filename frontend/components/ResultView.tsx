@@ -4,6 +4,7 @@ import { Boxes, Clock, Download, FileCode2, FileJson, FileText, Film, Sparkles }
 import { useEffect, useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
 import { clipUrl, type ExportKind, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
+import { answering, FOLLOWUPS } from "@/lib/followups";
 import { AgentReasoning } from "./AgentReasoning";
 import { AgentTrail, useLaws } from "./AgentTrail";
 import { AudioPanel } from "./AudioPanel";
@@ -162,6 +163,14 @@ export function ResultView({ runId, result, credit }: { runId: string; result: A
         </div>
         <h1 id="result-title">{r.outcome ? formatUnit(r.outcome.headline) : STATUS_TEXT[r.status]}</h1>
         {credit && <p className="credit">{credit}</p>}
+        {FOLLOWUPS[runId] && (
+          <p className="followup-note"><strong>The experiment the agent asked for was run.</strong> {FOLLOWUPS[runId].settled}{" "}
+            <a href={`/?run=${FOLLOWUPS[runId].answer}`}>See that result</a></p>
+        )}
+        {answering(runId) && (
+          <p className="followup-note"><strong>This recording answers the agent&apos;s request</strong> from an earlier analysis of the same
+            setup.{" "}<a href={`/?run=${answering(runId)!.question}`}>See the request</a></p>
+        )}
       </header>
       <div className="result-top">
         <div>

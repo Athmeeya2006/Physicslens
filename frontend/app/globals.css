@@ -1053,3 +1053,6 @@ tbody tr:last-child td { border-bottom: 1px solid var(--line-soft); }
 .robot-trace .swatch.line { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
 .robot-trace .swatch.line.model { background: var(--model); }
 .robot-trace .key { margin-right: 14px; }
+/* An experiment request that a later recording answered: the loop closed, shown where the request is. */
+.followup-note { border-left: 3px solid var(--ok); padding: 8px 12px; background: var(--ok-soft); color: var(--ink); border-radius: 0 8px 8px 0; max-width: 70ch; }
+.followup-note strong { color: var(--ok); }

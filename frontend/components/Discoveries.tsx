@@ -5,6 +5,7 @@ import type { GalleryItem } from "@/lib/api";
 import { Law } from "./Equation";
 import { LoopVideo } from "./LoopVideo";
 import { StatusChip } from "./StatusChip";
+import { FOLLOWUPS } from "@/lib/followups";
 
 // The home page's showcase: what PhysicsLens found, two tiles to a row, each with its own clean video (ghost,
 // trail and force arrows; scripts/build_stories.py), the law typeset large and the numbers it measured. Every
@@ -105,6 +106,10 @@ export function Discoveries({ items = [], offline = false }: { items?: GalleryIt
                     {s.note && <p>{s.note}</p>}
                     {g?.description && <p>{g.description}</p>}
                   </details>
+                )}
+                {FOLLOWUPS[s.run] && (
+                  <p className="followup-note"><strong>Then the experiment it asked for was run.</strong> {FOLLOWUPS[s.run].settled}{" "}
+                    <a href={`/?run=${FOLLOWUPS[s.run].answer}`}>See it</a></p>
                 )}
                 <a className="story-link" href={`/?run=${s.run}`}>See the decision trail <ArrowRight size={15} aria-hidden="true" /></a>
               </li>

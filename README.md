@@ -10,6 +10,8 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 
 > Built for the **Meta Global AI Developer Hackathon** (Indie track, *Push the Frontier*), Oct 27 to Nov 4, 2026.
 
+![The PhysicsLens home page: Apophis around the Sun with the inverse-square law the agent wrote, and the numbers it measured](frontend/public/readme/home.png)
+
 | | |
 |---|---|
 | 🎥 **Demo video (3 min)** | _link coming_ |
@@ -464,6 +466,8 @@ Every case at a glance (each row is generated from its result file; the same cas
 
 ### Open-source robot arm: its simulator corrected from public recordings (`/robot`)
 
+![One held-out episode of the SO-100: the public MuJoCo model drifts from the real joint, the corrected model tracks it](frontend/public/readme/robot-before-after.png)
+
 The SO-100 is a widely used low-cost arm, and its public MuJoCo model (MuJoCo Menagerie `trs_so_arm100`) has
 guessed joint dynamics. `scripts/robot_demo.py` takes 50 public teleoperation episodes of the real arm
 (`lerobot/svla_so100_pickplace`, Apache-2.0: the command sent and the angle reached, every frame at 30 per second),
@@ -744,6 +748,8 @@ Only code decides, never the language model:
 
 ## The agent: samples, tools and a referee
 
+![How the agent reasoned on the pendulum: it proposes three laws, the math cannot separate two of them, it designs the deciding experiment and asks for it](frontend/public/readme/agent-reasoning.png)
+
 - **Plain Python loop, no agent framework.** Every model call goes through `costguard.client`, with a JSON schema per step (`agent/schemas.py`) and Pydantic validation. Agent loops are capped at 4 turns.
 - **It looks twice.** The four-frame scene call names the object; a second call on one frame alone boxes it tightly for SAM (`pipeline.locate_precisely`). On a real pendulum clip the four-frame box sat on the stopwatch beside the bob; the single-frame box sat on the bob. If the object is not in view yet (a throw), later frames are tried and SAM starts there.
 - **Independent proposals.** The hypotheses step samples the model three times in parallel; the union of the majority family's candidates is fitted, and the result says how many samples proposed the law that won (`agent/reasoning.propose_hypotheses_sampled`).
@@ -756,6 +762,13 @@ Only code decides, never the language model:
 - **Refusal to fake.** If the reasoning server is unavailable in demo or production, the app says it is busy. It never substitutes another model or a canned answer.
 
 ## Studies: asking for the experiment that settles it
+
+**The loop, closed on public footage.** The spring glider's first analysis tied dry friction and viscous damping and
+the agent asked for a longer recording of the same pull. The public video runs longer than the first analysis used,
+so the requested recording exists: on 20 s instead of 15 the tie is settled. Dry friction forecasts the held-out motion
+within 3.4%; viscous damping misses it by 18.7% and falls 12 BIC behind (it was 4 on the shorter clip), and the natural
+frequency agrees with the first analysis (2.7385 rad/s). [The request](https://physicslens.vercel.app/?run=gallery-spring),
+[the answer](https://physicslens.vercel.app/?run=gallery-spring-longer).
 
 A study turns a goal into a measurement campaign (`studies.py`, `physics/combine.py`, `app/study` in the frontend):
 

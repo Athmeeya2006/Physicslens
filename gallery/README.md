@@ -28,3 +28,5 @@ The code in this repository is MIT licensed. The video clips are not covered by 
   [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Oscillatory_motion_acceleration.ogv), under the
   Wikimedia "Attribution" license (free use with credit). Changes: trimmed to 3.0 to 18.0 s and re-encoded;
   `share.mp4` adds an overlay.
+- `gallery-spring-longer`: the same video, trimmed to 3.0 to 23.0 s and re-encoded (the experiment the agent asked for
+  in `gallery-spring`); same licence and credit. `share.mp4` adds an overlay.
