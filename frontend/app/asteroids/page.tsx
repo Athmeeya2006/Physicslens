@@ -38,10 +38,19 @@ function Ellipses({ d }: { d: Ast }) {
   );
 }
 
+// Residuals against JPL (scripts/asteroid_jpl_check.py): JPL Horizons' position from each site at each time.
+interface Jpl {
+  your_night: { station: string; date: string; n: number; residual_rms_arcsec: number; stated_sigma_arcsec: number };
+  forecast_vs_jpl: { n: number; median_arcsec: number; max_arcsec: number; window: [string, string] };
+  observations_vs_jpl: { median_arcsec: number };
+}
+
 export default function AsteroidsPage() {
   const [d, setD] = useState<Ast | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [jpl, setJpl] = useState<Jpl | null>(null);
   useEffect(() => {
+    fetch("/astro/asteroids_jpl.json").then((r) => (r.ok ? r.json() : null)).then(setJpl).catch(() => setJpl(null));
     fetch("/astro/asteroids.json").then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then(setD).catch((e) => setError(`The asteroid results could not be loaded (${(e as Error).message}).`));
   }, []);
@@ -86,6 +95,24 @@ export default function AsteroidsPage() {
               uncertainty, outliers beyond 3 sigma set aside. JPL&apos;s orbit is used only as the starting guess; started 30,000 km away the fit lands on the
               same orbit.</p>
           </section>
+          {jpl && (
+            <section className="panel stack" aria-labelledby="ast-jpl">
+              <h2 id="ast-jpl">Against JPL</h2>
+              <dl className="facts">
+                <dt>Your setup</dt>
+                <dd>The {jpl.your_night.n} positions of {jpl.your_night.date} (station {jpl.your_night.station}) sit{" "}
+                  <strong className="num">{jpl.your_night.residual_rms_arcsec.toFixed(2)}″</strong> (rms) from JPL&apos;s position for that site and
+                  time, inside the {jpl.your_night.stated_sigma_arcsec.toFixed(2)}″ the observatory states. Residuals near the stated
+                  uncertainty mean a sound setup and clock; a large mean offset points at the timing.</dd>
+                <dt>The forecast</dt>
+                <dd>Over {jpl.forecast_vs_jpl.window[0]} to {jpl.forecast_vs_jpl.window[1]}, the orbit from three nights lands a median{" "}
+                  <strong className="num">{jpl.forecast_vs_jpl.median_arcsec.toFixed(2)}″</strong> (at most {jpl.forecast_vs_jpl.max_arcsec.toFixed(2)}″) from
+                  JPL&apos;s orbit, which uses every observation made since, at {jpl.forecast_vs_jpl.n} later positions.</dd>
+                <dt>The noise floor</dt>
+                <dd>The real observations of that window sit a median {jpl.observations_vs_jpl.median_arcsec.toFixed(2)}″ from JPL&apos;s orbit.</dd>
+              </dl>
+            </section>
+          )}
           <section className="panel stack" aria-labelledby="ast-ades">
             <h2 id="ast-ades">The report</h2>
             <p className="small">Observations in ADES (the Minor Planet Center&apos;s format, version 2022), ready for your own MPC observatory code. PhysicsLens
@@ -94,7 +121,7 @@ export default function AsteroidsPage() {
           </section>
           <p className="small muted">Scope: it works alongside the free astrometry tools (Find_Orb, the MPC&apos;s own services) and adds a verified forecast with its
             uncertainty; the Yarkovsky drift needs years of observations, beyond one night; and this page starts from published positions (the
-            frame-to-position steps are in the real sky data pipeline). Data: Minor Planet Center observations (public API), JPL Horizons (starting guess).</p>
+            frame-to-position steps are in the real sky data pipeline). Data: Minor Planet Center observations (public API), JPL Horizons (starting guess and the comparison above).</p>
         </>
       )}
     </main>

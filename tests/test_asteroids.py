@@ -63,3 +63,18 @@ def test_orbit_fit_recovers_a_known_orbit_and_more_nights_help():
     chi2 = float(err @ np.linalg.inv(b.cov[:3, :3]) @ err)
     assert np.linalg.norm(err) < 0.5 * np.linalg.norm(start[:3] - truth[:3]) and chi2 < 3 ** 2 * 3
     assert b.rms_arcsec == pytest.approx(0.3, rel=0.4)
+
+
+def test_jpl_offsets_wrap_ra_and_scale_by_cos_dec():
+    import importlib.util
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("asteroid_jpl_check", root / "scripts" / "asteroid_jpl_check.py")
+    import sys
+    sys.path.insert(0, str(root / "scripts"))
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    # 1 arcsec east across RA = 0 at dec 60 is 2 arcsec of RA, and the sign survives the wrap.
+    a, b = m.sky_offset([2 / 3600], [60.0], [0.0], [60.0])
+    assert a[0] == pytest.approx(1.0) and b[0] == 0
+    a, _ = m.sky_offset([359.9999], [0.0], [0.0001], [0.0])
+    assert a[0] == pytest.approx(-0.72, abs=1e-6)

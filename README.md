@@ -610,6 +610,12 @@ observatory's next night (4 positions from ATLAS Chile). The 1-sigma uncertainty
 of the stated sigmas. Started 30,000 km away, the fit lands on the same orbit. The night is also written as an ADES
 report (version 2022) for the observer to submit with their own MPC code.
 
+Against JPL (`scripts/asteroid_jpl_check.py`, JPL Horizons' astrometric position from each observatory at each
+observation time): the ATLAS night's positions sit 0.13 arcsec (rms) from JPL's, inside the 0.17 arcsec the observatory
+states, which is what a sound setup looks like. The orbit from those three nights lands a median 0.64 arcsec from JPL's
+orbit, fitted to every observation made since, at the 56 positions measured three weeks later; the real observations
+of that window sit a median 0.09 arcsec from it.
+
 ### Satellites: is it where its catalogue says, and did it move? (`/satellites`)
 
 `scripts/satellite_demo.py` tests on the International Space Station: NASA's published trajectory (OEM) against its
@@ -1395,7 +1401,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Fireballs on real data: alpha-beta triage, the orbit before entry, dark flight with Mach-dependent drag and the night's winds, and a strewn field checked against every recovered Winchcombe stone, on a map
 - [x] The Sun's rotation law from real SDO images (sunspots placed with sunpy from each image's own header), checked against the published sunspot profile, with active-region return dates checked against NOAA's records
 - [x] Stellar occultations: edge times from integrated frames with calibrated errors, and an outline from every observer's chord with misses as constraints, checked on Umbriel's 2020 occultation
-- [x] Asteroid follow-up: an orbit from Minor Planet Center observations (Sun, planets, Moon, light-time), how much one more night shrinks the uncertainty, and ADES reports, checked on 2024 YR4's later observations
+- [x] Asteroid follow-up: an orbit from Minor Planet Center observations (Sun, planets, Moon, light-time), how much one more night shrinks the uncertainty, residuals against JPL as a setup check, and ADES reports, checked on 2024 YR4's later observations
 - [x] Satellites: catalogue checks against NASA's ISS trajectory, identification, the clock's effect, manoeuvre detection with a negative control, tumble periods and IOD reports
 - [x] A cases page and a README table of real-world cases, each row generated from its result file; ties report what the tied laws agree on, and a written law with wrong units is set aside instead of sinking the proposal
 - [x] What-ifs for the object itself (heavier, lighter, bigger, smaller), free and instant; laws that tie still report what they agree on; an extra term that makes the forecast worse is not accepted

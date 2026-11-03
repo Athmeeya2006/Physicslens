@@ -21,6 +21,7 @@ FILES = {
     "wasp12b_windows.ics": ROOT / "data" / "astro" / "timing" / "wasp12b_windows.ics",
     "asteroids.json": ROOT / "data" / "astro" / "asteroids" / "results.json",
     "example_ades.psv": ROOT / "data" / "astro" / "asteroids" / "example_ades.psv",
+    "asteroids_jpl.json": ROOT / "data" / "astro" / "asteroids" / "jpl_check.json",
     "occultation.json": ROOT / "data" / "astro" / "occultation" / "results.json",
     "satellites.json": ROOT / "data" / "astro" / "satellites" / "results.json",
     "satellites_history.json": ROOT / "data" / "astro" / "satellites" / "history.json",

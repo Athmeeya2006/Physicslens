@@ -1,0 +1,40 @@
+{
+ "generated": "scripts/asteroid_jpl_check.py",
+ "object": "2024 YR4",
+ "reference": "JPL Horizons astrometric RA/Dec from each MPC site at each observation time (JPL's orbit from all observations)",
+ "your_night": {
+  "station": "W68",
+  "date": "2024-12-27",
+  "n": 4,
+  "residual_rms_arcsec": 0.12679562227978503,
+  "mean_ra_arcsec": -0.12548077090053975,
+  "mean_dec_arcsec": 0.11157120000005183,
+  "stated_sigma_arcsec": 0.16515863586261545,
+  "ra": [
+   -0.10807080004851743,
+   -0.17404023826486661,
+   -0.14774010782756403,
+   -0.07207193746121092
+  ],
+  "dec": [
+   0.0664956000000716,
+   0.15939000000013692,
+   0.16269479999999614,
+   0.057704400000002654
+  ]
+ },
+ "forecast_vs_jpl": {
+  "window": [
+   "2025-01-17",
+   "2025-01-24"
+  ],
+  "n": 56,
+  "from": "orbit fitted to 2024-12-25, 2024-12-26 and 2024-12-27 (W68)",
+  "median_arcsec": 0.6374444817186967,
+  "max_arcsec": 0.6752020427303134
+ },
+ "observations_vs_jpl": {
+  "median_arcsec": 0.09424427634679047,
+  "max_arcsec": 0.5450275790387625
+ }
+}
