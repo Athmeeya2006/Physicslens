@@ -45,6 +45,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | Step | Open | What you will see |
 |---|---|---|
 | 0 | [Home page](https://physicslens.vercel.app) | the discovery playing: Apophis around the Sun with the law it wrote, typeset, and the numbers it measured |
+| 0b | [Robot arm, corrected](https://physicslens.vercel.app/robot) | the SO-100's public simulator against the real arm on held-out motion, and the corrected MuJoCo model about twice as close; one episode shows the public model drifting while the corrected one tracks |
 | 1 | [Asteroid Apophis](https://physicslens.vercel.app/?run=gallery-apophis) | a dot moving around the Sun becomes the inverse-square law; the force arrow points at the Sun in every frame |
 | 1b | [Halley's comet](https://physicslens.vercel.app/?run=gallery-halley) | the 1986 hairpin around the Sun: inverse-square gravity, the exponent left free fits 1.9998 |
 | 2 | [Weighing Jupiter](https://physicslens.vercel.app/?run=gallery-jupiter) | Jupiter's GM from Io's orbit, within 0.018% of JPL |
