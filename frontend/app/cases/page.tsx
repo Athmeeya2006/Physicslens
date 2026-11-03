@@ -73,7 +73,6 @@ export default function CasesPage() {
                       <dt>Who</dt><dd>{c.who}</dd>
                       <dt>What they get</dt><dd>{c.gives}</dd>
                       {c.models && <><dt>Meta models</dt><dd>{c.models}</dd></>}
-                      <dt>Scope</dt><dd>{c.cant}</dd>
                     </dl>
                     {c.link && <a className="button" href={c.link}>See the result</a>}
                   </div>

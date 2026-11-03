@@ -228,9 +228,7 @@ export function AuditStudy() {
         </table>
       </div>
       <p className="small muted">
-        Limits, stated plainly: clips run on the lighter profile (one hypothesis sample, no referee) to fit the study&apos;s
-        budget; Ray2&apos;s links in the benchmark no longer serve video; many clips are short or leave the frame, so
-        &ldquo;can&apos;t judge&rdquo; is common by design. Every clip, its source, licence and verdict:{" "}
+        Every clip, its source, licence and verdict:{" "}
         <a href="https://github.com/Athmeeya2006/Physicslens/tree/main/data/audit_study">data/audit_study</a>.
       </p>
       {/* Numbers from data/audit_study/scale_free.json, checked in the README by scripts/readme_numbers.py. */}

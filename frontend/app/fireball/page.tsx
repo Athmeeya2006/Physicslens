@@ -275,11 +275,7 @@ export default function FireballPage() {
             </div>
           </section>
 
-          <p className="small muted">Scope: it starts from a triangulated trajectory (several cameras and their
-            calibration), not from one video; masses from deceleration carry a factor-of-two uncertainty from shape and density;
-            the winds come from the nearest radiosonde (about 120 km away), not a weather model of the night; and stones that
-            separate in a late fragmentation or get a sideways kick (as Winchcombe&apos;s did) land beyond what a single release point
-            predicts, which is why both release scenarios are shown. Sources: data/astro/fireball/SOURCES.md.</p>
+          <p className="small muted">Sources: data/astro/fireball/SOURCES.md.</p>
         </>
       )}
     </main>

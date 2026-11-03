@@ -60,7 +60,7 @@ export default function RobotPage() {
       {d && (
         <>
           <OnThisPage items={[{ id: "rb-out", label: "Result" }, { id: "rb-trace", label: "Before and after" }, { id: "rb-joints", label: "Each joint's law" },
-            { id: "rb-cmp", label: "Against the public model" }, { id: "rb-data", label: "Data and limits" }]} />
+            { id: "rb-cmp", label: "Against the public model" }, { id: "rb-data", label: "Data" }]} />
           <section className="panel stack" aria-labelledby="rb-out">
             <h2 id="rb-out">Result</h2>
             <p className="case-number">On {d.data.test_episodes.length} held-out episodes the corrected model tracks the real arm to{" "}
@@ -119,11 +119,10 @@ export default function RobotPage() {
               {d.stronger_baseline.what}. The gripper closes on objects the simulator scene does not contain, so it is shown but not in the arm total.</p>
           </section>
           <section className="panel stack" aria-labelledby="rb-data">
-            <h2 id="rb-data">Data and limits</h2>
+            <h2 id="rb-data">Data</h2>
             <p className="small">Recordings: {d.data.dataset} ({d.data.licence}), {d.data.episodes} episodes, {d.data.frames.toLocaleString()} frames
               at {d.data.fps} per second: {d.data.fit_episodes.length} episodes fit each law, {d.data.select_episodes.length} choose between laws, and{" "}
               {d.data.test_episodes.length} are held out for the comparison below, never used before it. Model: {d.model.source} ({d.model.licence}).</p>
-            <ul className="small">{d.limits.map((l) => <li key={l}>{l}</li>)}</ul>
           </section>
         </>
       )}

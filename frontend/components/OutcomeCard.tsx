@@ -47,7 +47,6 @@ export function OutcomeCard({ o, exportHref, split = false, tie = false, extra }
             {o.checked_against.within_interval ? "inside" : "outside"} the 95% interval)
           </dd></>
         )}
-        {o.limits && o.limits.length > 0 && <><dt>Not reproduced</dt><dd>{o.limits.join("; ")}</dd></>}
         {extra}
         {o.artifacts.length > 0 && exportHref && (
           <><dt>Files</dt><dd className="outcome-files">

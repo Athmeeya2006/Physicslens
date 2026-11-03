@@ -264,9 +264,6 @@ export default function TimingPage() {
             )}
             <p className="small muted">{d.rot.source}. Uncertainty = √(σ_T0² + (N σ_P)²) from the published ephemeris, N orbits ahead.</p>
           </section>
-          <p className="small muted">Scope: timing inversions are degenerate (mass against eccentricity, and a single
-            periodic signal cannot tell a companion from a turning orbit without more data), so PhysicsLens shows every family of
-            solutions that fits, with its range, rather than one falsely precise answer.</p>
         </>
       )}
     </main>

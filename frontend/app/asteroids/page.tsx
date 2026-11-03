@@ -119,9 +119,7 @@ export default function AsteroidsPage() {
               never submits anything: you do.</p>
             <p><a className="button secondary" href="/astro/example_ades.psv" download><Download size={16} aria-hidden="true" /> Example ADES report (PSV)</a></p>
           </section>
-          <p className="small muted">Scope: it works alongside the free astrometry tools (Find_Orb, the MPC&apos;s own services) and adds a verified forecast with its
-            uncertainty; the Yarkovsky drift needs years of observations, beyond one night; and this page starts from published positions (the
-            frame-to-position steps are in the real sky data pipeline). Data: Minor Planet Center observations (public API), JPL Horizons (starting guess and the comparison above).</p>
+          <p className="small muted">Data: Minor Planet Center observations (public API), JPL Horizons (starting guess and the comparison above).</p>
         </>
       )}
     </main>

@@ -117,9 +117,6 @@ export default function OccultationPage() {
               </table>
             </div>
           </section>
-          <p className="small muted">Scope: the chords here are the published timings (no raw videos were reprocessed); diffraction at the
-            edges is not modelled (it matters only for very fast cameras or very distant bodies); and a few chords can fit many
-            shapes, which is why misses near the edge are kept as constraints rather than thrown away.</p>
         </>
       )}
     </main>
