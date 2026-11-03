@@ -3,7 +3,6 @@
 import { type ReactNode, useId, useState } from "react";
 import { formatUnit, type Outcome, type Readable } from "@/lib/api";
 import { Tex } from "./Equation";
-import { StatusChip } from "./StatusChip";
 
 const STATUS: Record<Outcome["status"], [string, string]> = {
   proven: ["Proven", "checked against an independent measurement"],
@@ -26,12 +25,10 @@ export function OutcomeCard({ o, exportHref, split = false, tie = false, extra }
   o: Outcome; exportHref?: (kind: string) => string; split?: boolean; tie?: boolean; extra?: ReactNode;
 }) {
   const titleId = useId();
-  const gloss = outcomeGloss(o);
   return (
     <section className={`outcome${split ? " outcome-split" : ""}`} aria-labelledby={titleId}>
       {!split && (
         <div className="outcome-head">
-          <p className="outcome-status"><StatusChip status={STATUS[o.status][0]} /> <span className="small">{gloss}</span></p>
           <p className="outcome-headline">{formatUnit(o.headline)}</p>
         </div>
       )}
@@ -40,7 +37,6 @@ export function OutcomeCard({ o, exportHref, split = false, tie = false, extra }
         <p>{o.action}</p>
       </div>
       <dl className="outcome-facts">
-        {split && <><dt>Status</dt><dd>{STATUS[o.status][0]}: {gloss}</dd></>}
         {o.confidence && <><dt>Confidence</dt><dd>{formatUnit(o.confidence)}</dd></>}
         {o.checked_against?.text && <><dt>Checked against</dt><dd>{o.checked_against.source}: {o.checked_against.text}</dd></>}
         {o.checked_against && !o.checked_against.text && (

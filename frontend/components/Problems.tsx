@@ -2,7 +2,6 @@
 
 import { ArrowRight, Camera, ChevronRight, Orbit, ScanSearch, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
-import { StatusChip } from "./StatusChip";
 
 // The home page's cases ledger: one row per case, its status and its number against an independent answer, then the
 // four ways to try it yourself. Read from the same
@@ -52,7 +51,6 @@ export function Problems() {
     fetch("/cases.json").then((r) => (r.ok ? r.json() : null)).then((d) => d && setCases(d.cases)).catch(() => setCases([]));
   }, []);
   const shown = cases.filter((c) => c.number).sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9));
-  const proven = shown.filter((c) => ORDER[c.status] <= ORDER.proven).length;
   return (
     <section className="band band-surface" aria-labelledby="problems-title">
       <div className="band-inner stack" style={{ gap: 16 }}>
@@ -60,14 +58,13 @@ export function Problems() {
         {shown.length > 0 && (
           <>
             <p>
-              {proven} of {shown.length} cases proven or higher (highest status reached: {shown[0].status}). Nothing is
-              trained: each case is fitted from scratch.
+              {shown.length} real-world problems, each answered from real data and checked against an independent
+              answer. Nothing is trained: each case is fitted from scratch.
             </p>
             <ul className="ledger">
               {shown.slice(0, STRIP).map((c) => {
                 const row = (
                   <>
-                    <StatusChip status={c.status} />
                     <strong className="ledger-title">{c.title}</strong>
                     <span className="ledger-number">{c.number}</span>
                     {c.link ? <ChevronRight size={18} className="ledger-chev" aria-hidden="true" /> : <span />}

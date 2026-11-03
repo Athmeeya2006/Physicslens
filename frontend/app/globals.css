@@ -854,7 +854,7 @@ main > .band:has(+ .band) { margin-bottom: -32px; }
 /* The cases ledger (components/Problems.tsx): one row per case, hairlines between. */
 .ledger { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
 .ledger > li { border-bottom: 1px solid var(--line); }
-.ledger-row { display: grid; grid-template-columns: 11.5rem minmax(0, 16rem) minmax(0, 1fr) 20px; gap: 16px; align-items: center;
+.ledger-row { display: grid; grid-template-columns: minmax(0, 18rem) minmax(0, 1fr) 20px; gap: 16px; align-items: center;
   min-height: 56px; padding: 10px 4px; color: var(--ink); text-decoration: none; }
 a.ledger-row:hover { background: var(--sunk); }
 a.ledger-row:hover .ledger-title { text-decoration: underline; }
@@ -862,9 +862,8 @@ a.ledger-row:hover .ledger-title { text-decoration: underline; }
 .ledger-chev { color: var(--ink-3); }
 @media (max-width: 760px) {
   .ledger-row { grid-template-columns: minmax(0, 1fr) 20px; gap: 6px 10px; }
-  .ledger-row > .status-chip { grid-column: 1; justify-self: start; }
   .ledger-row > .ledger-title, .ledger-row > .ledger-number { grid-column: 1; }
-  .ledger-row > :last-child { grid-column: 2; grid-row: 1 / span 3; }
+  .ledger-row > :last-child { grid-column: 2; grid-row: 1 / span 2; }
 }
 
 /* "Try it" tiles. */
@@ -956,7 +955,7 @@ button svg, .button svg { flex: none; }
 .count-strip { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); margin-bottom: 24px; }
 .case-rows { list-style: none; margin: 16px 0 40px; padding: 0; border-top: 1px solid var(--line); }
 .case-rows > li { border-bottom: 1px solid var(--line); }
-.case-row summary { display: grid; grid-template-columns: 12rem minmax(0, 1fr) 24px; gap: 8px 24px; align-items: start; padding: 18px 4px;
+.case-row summary { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 24px; gap: 8px 24px; align-items: start; padding: 18px 4px;
   cursor: pointer; list-style: none; }
 .case-row summary::-webkit-details-marker { display: none; }
 .case-row summary:hover { background: var(--sunk); }
@@ -967,7 +966,7 @@ button svg, .button svg { flex: none; }
 .case-row-number { font-weight: 600; font-variant-numeric: tabular-nums; }
 .case-row-chev { color: var(--ink-3); transition: transform 0.15s ease-out; margin-top: 2px; }
 .case-row[open] .case-row-chev { transform: rotate(180deg); }
-.case-row-body { display: grid; gap: 16px; justify-items: start; padding: 0 4px 22px calc(12rem + 28px); }
+.case-row-body { display: grid; gap: 16px; justify-items: start; padding: 0 4px 22px calc(9rem + 28px); }
 .case-row-body .facts { width: 100%; }
 @media (max-width: 760px) {
   .case-row summary { grid-template-columns: minmax(0, 1fr) 24px; }

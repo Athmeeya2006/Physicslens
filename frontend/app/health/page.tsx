@@ -211,7 +211,7 @@ export default function HealthPage() {
         <p className="small">On simulated recordings with known changes (<code>tests/test_health.py</code>): no false alarm
           when the same system is recorded again, and both a 50% rise in damping and a 2% shift in frequency are flagged.
           On real machines with known faults the motor coast-down matches the published friction and bearing faults are a
-          research case (below), so the case carries &ldquo;partial&rdquo; on the cases page.</p>
+          research case (below).</p>
       </section>
 
       <PublicFaultsSection />

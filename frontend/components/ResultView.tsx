@@ -10,7 +10,7 @@ import { ControlPanel } from "./ControlPanel";
 import { DepthPanel } from "./DepthPanel";
 import { Law, Tex } from "./Equation";
 import { ForecastChart } from "./ForecastChart";
-import { OutcomeCard, outcomeLabel, ReadableLaw } from "./OutcomeCard";
+import { OutcomeCard, ReadableLaw } from "./OutcomeCard";
 import { StatusChip } from "./StatusChip";
 import { type Prediction, PredictionChart } from "./PredictionChart";
 import { GhostPlayer } from "./GhostPlayer";
@@ -158,7 +158,6 @@ export function ResultView({ runId, result, credit }: { runId: string; result: A
       <header className="result-hero">
         <div className="chip-row">
           <StatusChip status={r.status} label={STATUS_TEXT[r.status]} />
-          {r.outcome && <StatusChip status={outcomeLabel(r.outcome)} />}
         </div>
         <h1 id="result-title">{r.outcome ? formatUnit(r.outcome.headline) : STATUS_TEXT[r.status]}</h1>
         {credit && <p className="credit">{credit}</p>}
