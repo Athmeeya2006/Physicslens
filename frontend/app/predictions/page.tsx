@@ -55,7 +55,8 @@ export default function PredictionsPage() {
         <h1>Predictions made before the answer</h1>
         <p className="tagline">
           A forecast made after the answer is known can always be bent to fit it. Each one here was written to a file, hashed
-          and committed before reality could answer; later it is scored, hit or miss, and misses stay on this page.
+          and committed before reality could answer, for anyone to check: the first can be scored from 15 November, hit or miss,
+          and misses stay on this page.
         </p>
       </header>
       {error && <p className="error">{error}</p>}
