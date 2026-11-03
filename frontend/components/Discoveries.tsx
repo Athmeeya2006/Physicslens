@@ -111,10 +111,9 @@ export function Discoveries({ items = [], offline = false }: { items?: GalleryIt
                   </details>
                 )}
                 {FOLLOWUPS[s.run] && (
-                  <p className="followup-note"><strong>Then the experiment it asked for was run.</strong> {FOLLOWUPS[s.run].settled}{" "}
-                    <a href={`/?run=${FOLLOWUPS[s.run].answer}`}>See it</a></p>
+                  <a className="story-link" href={`/?run=${FOLLOWUPS[s.run].answer}`}>The recording that answered it <ArrowRight size={15} aria-hidden="true" /></a>
                 )}
-                <a className="story-link" href={`/?run=${s.run}`}>See the decision trail <ArrowRight size={15} aria-hidden="true" /></a>
+                <a className="story-link" href={`/?run=${s.run}`}>{FOLLOWUPS[s.run] ? "The request: its decision trail" : "See the decision trail"} <ArrowRight size={15} aria-hidden="true" /></a>
               </li>
             );
           })}
