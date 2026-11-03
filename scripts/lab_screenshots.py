@@ -17,7 +17,9 @@ OUT = Path(__file__).resolve().parents[1] / "frontend" / "public" / "readme"
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as p:
-        browser = p.chromium.launch(executable_path="/usr/bin/google-chrome", headless=True)
+        # The installed Chrome where there is one; Playwright's full Chromium on a cluster node without it.
+        chrome = {"executable_path": "/usr/bin/google-chrome"} if Path("/usr/bin/google-chrome").exists() else {"channel": "chromium"}
+        browser = p.chromium.launch(**chrome, headless=True)
         for name, size in (("lab-desktop", (1366, 900)), ("lab-phone", (390, 844))):
             ctx = browser.new_context(viewport={"width": size[0], "height": size[1]}, device_scale_factor=2)
             page = ctx.new_page()
