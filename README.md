@@ -900,7 +900,7 @@ Scored against labels, with every rule fixed before scoring (`data/health_public
 - **Bearings** (University of Ottawa run-to-failure recordings with labelled outer-race, inner-race, ball and cage
   faults): from the bearing geometry and the measured shaft rate, the expected defect rates are computed with the
   standard formulas and looked for in the envelope spectrum. On the faulty stage the fault type is right in 5 of 20
-  (chance is 1 in 4), and 15 of 20 healthy recordings raise an alarm. The rule fails its own test, and the report
+  (chance is 1 in 4), and 15 of 20 healthy recordings raise an alarm. The rule falls short of the bar set in advance, and the report
   says so. A second rule written after the first failed (compare each bearing with its own healthy recording) removes
   the false alarms but finds the type even less often, so it is reported beside the first and not used. One possible
   reason, not tested: run-to-failure damage is distributed wear, which has no single impact rate.
@@ -1474,7 +1474,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] An open-source robot arm's simulator corrected from public recordings: per-joint servo laws for the SO-100 identified from 50 LeRobot episodes and put into its MuJoCo model, which then tracks held-out episodes about twice as closely as the public model (the case reaches "improves a public tool")
 - [x] Real ISS reboosts found in five years of archived NASA trajectories by a rule fixed in advance, scored against NASA's own records 
 - [x] Lab measurement on labelled real footage (Delfys75 pendulums): the real coverage of the 95% intervals is reported (0 of 12), and the bias is traced to the stated lengths and the time scale, not the fit
-- [x] Machine faults on public data scored against labels: the bearing rule fails its own test and says so; a motor's coast-down friction matches the published values
+- [x] Machine faults on public data scored against labels: the bearing rule is scored against the labels and falls short of its pre-set bar; a motor's coast-down friction matches the published values
 - [x] The real-world cases run through the agent (Muse Spark Open proposing, verification deciding) beside the hand-chosen laws, and 9 blind predictions registered before their answers exist
 - [x] Every SO-100 needs its own calibration: the same identification on six owners' arms from public LeRobot datasets, each arm's laws replayed on every other arm's held-out episodes (a borrowed calibration worse in 30 of 30 pairs), with a test of the comparison itself
 - [x] "How the agent reasoned" at the top of every result: the decisive moments of the decision trail, each tagged with the model or the math
