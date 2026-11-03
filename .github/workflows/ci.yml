@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.12"]  # numpy 2.5, scipy 1.18, photutils 3.1 and sunpy 8 need Python 3.12
     env:
       MOCK_MODELS: "1"
       APP_ENV: dev

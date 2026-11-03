@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import os
 import pickle
 import sys
 import time
@@ -32,15 +33,31 @@ from physicslens.robot import arm_sim as A
 from physicslens.robot import servo as S
 
 RAW = ROOT / "var" / "robot" / "raw"
-DATA_FILE = RAW / "lerobot" / "data" / "chunk-000" / "file-000.parquet"
 XML = RAW / "menagerie" / "so_arm100.xml"
-OUT = ROOT / "data" / "robot"
-CACHE = ROOT / "var" / "robot" / "identification.pkl"
+# Another owner's arm (scripts/robot_fleet.py): PL_ROBOT_FLEET names a folder written by scripts/fetch_robot_fleet.py;
+# the same rules run on it and write data/robot/fleet/<folder>/. Unset: the original case, exactly as published.
+FLEET = os.environ.get("PL_ROBOT_FLEET")
+if FLEET:
+    SRC = ROOT / "var" / "robot" / "fleet" / FLEET
+    DATA_FILE = SRC / "meta" / "info.json"
+    INFO_FILE = SRC / "meta" / "info.json"
+    OUT = ROOT / "data" / "robot" / "fleet" / FLEET
+    CACHE = ROOT / "var" / "robot" / f"identification_{FLEET}.pkl"
+    SOURCE = json.loads((SRC / "source.json").read_text()) if (SRC / "source.json").exists() else {}
+else:
+    SRC = RAW / "lerobot"
+    DATA_FILE = RAW / "lerobot" / "data" / "chunk-000" / "file-000.parquet"
+    INFO_FILE = RAW / "lerobot" / "meta" / "info.json"
+    OUT = ROOT / "data" / "robot"
+    CACHE = ROOT / "var" / "robot" / "identification.pkl"
+    SOURCE = {"dataset": "lerobot/svla_so100_pickplace", "revision": "728583b5eaf9e739a7f119e2def466fa1d552402",
+              "licence": "Apache-2.0"}
 
-FIT_EPS = list(range(25))
-SELECT_EPS = list(range(25, 35))
-TRAIN_EPS = list(range(35))
-TEST_EPS = list(range(35, 50))
+
+def splits(n: int) -> tuple[list[int], list[int], list[int], list[int]]:
+    """By time, never shuffled: the first half fits, the next fifth chooses, the last 30% is held out (25/10/15 of 50)."""
+    a, b = round(n * 0.5), round(n * 0.7)
+    return list(range(a)), list(range(a, b)), list(range(b)), list(range(b, n))
 LOG_JOINTS = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
 MJ_JOINTS = ("Rotation", "Pitch", "Elbow", "Wrist_Pitch", "Wrist_Roll", "Jaw")
 ARM = [0, 1, 2, 3, 4]  # the gripper closes on objects the simulator does not contain, so it is reported apart
@@ -60,8 +77,11 @@ LIMITS = [
 
 
 def load_episodes() -> tuple[dict[int, np.ndarray], dict[int, np.ndarray], float]:
-    d = pd.read_parquet(DATA_FILE)
-    info = json.loads((RAW / "lerobot" / "meta" / "info.json").read_text())
+    info = json.loads(INFO_FILE.read_text())
+    if FLEET:  # LeRobot v2.1: one parquet per episode
+        d = pd.concat([pd.read_parquet(p) for p in sorted((SRC / "data").rglob("episode_*.parquet"))], ignore_index=True)
+    else:
+        d = pd.read_parquet(DATA_FILE)
     dt = 1.0 / float(info["fps"])
     us, ys = {}, {}
     for e, g in d.groupby("episode_index"):
@@ -76,6 +96,7 @@ def load_episodes() -> tuple[dict[int, np.ndarray], dict[int, np.ndarray], float
 
 
 US, YS, DT = load_episodes() if DATA_FILE.exists() else ({}, {}, 1 / 30)
+FIT_EPS, SELECT_EPS, TRAIN_EPS, TEST_EPS = splits(len(US)) if US else splits(50)
 
 
 def batch(j: int, eps: list[int]) -> S.Batch:
@@ -206,7 +227,7 @@ def identify(pool: ProcessPoolExecutor, t0: float) -> tuple:
 
 def main() -> None:
     if not DATA_FILE.exists():
-        raise SystemExit("var/robot/raw/ is missing: run python scripts/fetch_robot.py first")
+        raise SystemExit("the joint table is missing: run python scripts/fetch_robot.py (and fetch_robot_fleet.py) first")
     t0 = time.time()
     n_frames = {e: len(US[e]) for e in US}
     with ProcessPoolExecutor(WORKERS) as pool:
@@ -232,7 +253,7 @@ def main() -> None:
         # best law sits at its parameter bounds, a sign that it describes the contact rather than the servo.
         gains = {MJ_JOINTS[j]: A.servo_gains(winners[j], refit[j]["params"], float(inertia[j])) for j in ARM}
         note = ("Servo gains, delays and joint friction of the five arm joints identified from "
-                "lerobot/svla_so100_pickplace (episodes 0 to 34) by PhysicsLens scripts/robot_demo.py; see "
+                f"{SOURCE.get('dataset')} (episodes 0 to {TRAIN_EPS[-1]}) by PhysicsLens scripts/robot_demo.py; see "
                 "data/robot/REPORT.md. Commands also need the per-joint offsets in data/robot/result.json "
                 "(calibration between the leader and follower arms). The gripper keeps the original values.")
         ident_xml = A.write_identified(XML.read_text(), gains, note)
@@ -308,8 +329,8 @@ def main() -> None:
         "status": status,
         "status_rule": ("proven only if the identified model's held-out arm error is lower than both the default "
                         "model's and the fair baseline's with the 95% interval of each paired improvement above zero"),
-        "data": {"dataset": "lerobot/svla_so100_pickplace", "revision": "728583b5eaf9e739a7f119e2def466fa1d552402",
-                 "licence": "Apache-2.0", "fps": 1 / DT, "episodes": len(US), "frames": int(sum(n_frames.values())),
+        "data": {"dataset": SOURCE.get("dataset"), "revision": SOURCE.get("revision"),
+                 "licence": SOURCE.get("licence"), "fps": 1 / DT, "episodes": len(US), "frames": int(sum(n_frames.values())),
                  "fit_episodes": FIT_EPS, "select_episodes": SELECT_EPS, "train_episodes": TRAIN_EPS,
                  "test_episodes": TEST_EPS, "units": "degrees as logged (LeRobot SO-100 calibration)"},
         "model": {"source": "MuJoCo Menagerie trs_so_arm100", "commit": "b0655057a9df2abe39ea7fc989914ba6f248301c",

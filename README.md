@@ -1,6 +1,6 @@
 # PhysicsLens
 
-[![ci](https://github.com/Athmeeya2006/Physicslens/actions/workflows/ci.yml/badge.svg)](https://github.com/Athmeeya2006/Physicslens/actions/workflows/ci.yml) [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE) ![Python 3.11 and 3.12](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg) ![Node 20](https://img.shields.io/badge/node-20-blue.svg)
+[![ci](https://github.com/Athmeeya2006/Physicslens/actions/workflows/ci.yml/badge.svg)](https://github.com/Athmeeya2006/Physicslens/actions/workflows/ci.yml) [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE) ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg) ![Node 20](https://img.shields.io/badge/node-20-blue.svg)
 
 **Point a phone at anything moving. Get the equations that govern it, verified.**
 
@@ -1125,7 +1125,7 @@ Code: `backend/physicslens/pipeline.py` orchestrates; every step below is a sepa
 
 ### Prerequisites
 
-- Python 3.11+, Node.js 20.17+ (or 22.9+), ffmpeg (`sudo apt install ffmpeg`)
+- Python 3.12+, Node.js 20.17+ (or 22.9+), ffmpeg (`sudo apt install ffmpeg`)
 - A Meta Model API key ([dev.meta.ai](https://dev.meta.ai)) for SAM 3.1 and Muse Voice Transcribe
 - For open-weight reasoning: a Baseten API key (Muse Spark Open), or a GPU machine with about 20 GB of GPU memory (two 16 GB T4s work) running llama.cpp `llama-server` (b10353 or newer) with `meta-models/Muse-Glimmer-30B-GGUF`
 
@@ -1308,7 +1308,7 @@ make audit                    # pip-audit and npm audit over the pinned dependen
 make numbers                  # every README number recomputed from the file it comes from (also in CI)
 ```
 
-CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.11 and 3.12, and the frontend typecheck, build and static build, on every push; it needs no secrets and makes no paid calls. Optional local hooks run the same checks before a commit: `pip install pre-commit && pre-commit install` (`.pre-commit-config.yaml`). Dependabot proposes grouped weekly updates for the pinned dependencies. Each test process keeps its own ledger, cache and runs (`PHYSICSLENS_VAR_DIR`), and the agent's laws registered by one test are removed after it, so tests are independent in any order.
+CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.12, and the frontend typecheck, build and static build, on every push; it needs no secrets and makes no paid calls. Optional local hooks run the same checks before a commit: `pip install pre-commit && pre-commit install` (`.pre-commit-config.yaml`). Dependabot proposes grouped weekly updates for the pinned dependencies. Each test process keeps its own ledger, cache and runs (`PHYSICSLENS_VAR_DIR`), and the agent's laws registered by one test are removed after it, so tests are independent in any order.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
@@ -1336,7 +1336,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Time-dependent and driven laws: the time t and known input signals (a second tracked object, an uploaded CSV, a simulation) in the law language, each input's source recorded
 - [x] Dimensional analysis of every written law before fitting, with actionable messages
 - [x] Rolling-origin forecasts and BIC with the effective sample size; laws seeded from their fitted special cases so none loses to them; noise-like motion refused in about a second; identifiability with filming advice fed to studies
-- [x] CI (lint, tests on Python 3.11 and 3.12, frontend build), parallel tests, Dependabot, optional pre-commit hooks
+- [x] CI (lint, tests on Python 3.12, frontend build), parallel tests, Dependabot, optional pre-commit hooks
 - [x] Scale from a known object size, slow-motion clips in real time, and a hint for what to track
 - [x] Goal-driven studies: agent-planned recordings, combined by weighted means with an agreement test, a wear verdict and maintenance note, a study report and a combined MuJoCo model
 - [x] Tracking that checks itself: the reasoning model inspects SAM's box and re-prompts SAM by name when it is off target

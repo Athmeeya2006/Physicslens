@@ -44,10 +44,15 @@ def acceleration(r: np.ndarray, jd: float, gm_sun: float, bodies: list[Body]) ->
 
 
 def propagate(state0: np.ndarray, jd0: float, jd1: float, gm_sun: float, bodies: list[Body],
-              rtol: float = 1e-12, atol: float = 1e-15):
-    """Integrate [x, y, z, vx, vy, vz] from jd0 to jd1; returns a function of Julian date giving the state there."""
+              rtol: float = 1e-12, atol: float = 1e-15, extra=None):
+    """Integrate [x, y, z, vx, vy, vz] from jd0 to jd1; returns a function of Julian date giving the state there.
+
+    extra(pos, vel, jd), when given, adds an acceleration that depends on the velocity too (relativity, a thermal push)."""
     def rhs(t: float, s: np.ndarray) -> np.ndarray:
-        return np.concatenate([s[3:], acceleration(s[:3], jd0 + t, gm_sun, bodies)])
+        a = acceleration(s[:3], jd0 + t, gm_sun, bodies)
+        if extra is not None:
+            a = a + extra(s[:3], s[3:], jd0 + t)
+        return np.concatenate([s[3:], a])
 
     sol = solve_ivp(rhs, (0.0, jd1 - jd0), np.asarray(state0, float), method="DOP853", rtol=rtol, atol=atol,
                     dense_output=True)

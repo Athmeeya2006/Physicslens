@@ -124,12 +124,35 @@ def tdb(t_utc_jd: np.ndarray) -> np.ndarray:
     return Time(t_utc_jd, format="jd", scale="utc").tdb.jd
 
 
-def predict(state0: np.ndarray, epoch_tdb: float, obs: Observations, bodies: list[Body]) -> tuple[np.ndarray, np.ndarray]:
+def nongrav(a2: float = 0.0, relativity: bool = False):
+    """Forces beyond Newtonian point masses, for arcs of years: the Sun's relativistic term (one-body PPN, as orbit
+    computers include it) and a transverse thermal push A2 (1 AU / r)^2 along the motion (the Yarkovsky effect, in
+    JPL's convention: A2 in AU/day^2, g(r) = r^-2). None when neither is asked for."""
+    if not a2 and not relativity:
+        return None
+    c2 = C_AU_PER_DAY ** 2
+
+    def extra(r: np.ndarray, v: np.ndarray, jd: float) -> np.ndarray:
+        rn = float(np.linalg.norm(r))
+        out = np.zeros(3)
+        if relativity:
+            out += GM_SUN / (c2 * rn ** 3) * ((4 * GM_SUN / rn - v @ v) * r + 4 * (r @ v) * v)
+        if a2:
+            h = np.cross(r, v)
+            t_hat = np.cross(h, r)
+            out += a2 / rn ** 2 * t_hat / np.linalg.norm(t_hat)
+        return out
+    return extra
+
+
+def predict(state0: np.ndarray, epoch_tdb: float, obs: Observations, bodies: list[Body], a2: float = 0.0,
+            relativity: bool = False) -> tuple[np.ndarray, np.ndarray]:
     """Astrometric RA and Dec (degrees) for every observation: the light-time iterated twice."""
     t = tdb(obs.t_utc_jd)
     lo, hi = min(epoch_tdb, t.min() - 0.1), max(epoch_tdb, t.max())
-    back = propagate(state0, epoch_tdb, lo, GM_SUN, bodies) if lo < epoch_tdb else None
-    fwd = propagate(state0, epoch_tdb, hi, GM_SUN, bodies) if hi > epoch_tdb else None
+    extra = nongrav(a2, relativity)
+    back = propagate(state0, epoch_tdb, lo, GM_SUN, bodies, extra=extra) if lo < epoch_tdb else None
+    fwd = propagate(state0, epoch_tdb, hi, GM_SUN, bodies, extra=extra) if hi > epoch_tdb else None
 
     def at(tt):
         out = np.empty((len(tt), 6))
