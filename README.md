@@ -53,6 +53,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | 1b | [Halley's comet](https://physicslens.vercel.app/?run=gallery-halley) | the 1986 hairpin around the Sun: inverse-square gravity, the exponent left free fits 1.9998 |
 | 2 | [Weighing Jupiter](https://physicslens.vercel.app/?run=gallery-jupiter) | Jupiter's GM from Io's orbit, within 0.018% of JPL |
 | 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | damping fits better but forecasts worse, so it is not confirmed; both laws give the same g, and the agent designs the swing that would decide |
+| 3b | [Spring: the agent's request, answered](https://physicslens.vercel.app/?run=gallery-spring) | two laws tie, the agent designs and asks for a longer recording; the green note opens the 20 s recording that settles it for dry friction |
 | 4 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | free fall rejected; a drag law accepted on held-out motion |
 | 4b | [Physics audit at scale](https://physicslens.vercel.app/audit) | 149 clips: real motion has a forecasting law 44% of the time, AI-generated 14%; no real clip falsely accused |
 | 4c | [Real-world cases](https://physicslens.vercel.app/cases) | 11 cases, each ending in something to act on (a search map, a transit calendar, a return date, a report), with its scope |
