@@ -40,7 +40,7 @@ export function RobotImpact() {
           {fleet && (
             <p>And it is per unit: on {fleet.summary.arms} owners&apos; arms, a calibration borrowed from another arm tracks worse than
               the arm&apos;s own in {fleet.summary.pairs_significantly_worse} of {fleet.summary.pairs} pairs
-              ({fleet.summary.borrowed_mean_deg.toFixed(2)}° against {fleet.summary.own_mean_deg.toFixed(2)}°). Every arm needs its own.</p>
+              ({fleet.summary.borrowed_mean_deg.toFixed(2)}° against {fleet.summary.own_mean_deg.toFixed(2)}°). Each arm and setup needs its own.</p>
           )}
           <ul className="stat-strip count-strip">
             <li><span className="stat-number">{pub.rms_deg.toFixed(2)}°</span><span className="stat-label">public MuJoCo model, held-out error</span></li>

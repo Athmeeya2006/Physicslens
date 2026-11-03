@@ -30,13 +30,13 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 ## In 30 seconds
 
 - **The problem:** every cheap robot arm is slightly different from its simulator, so policies trained in simulation fail on the real thing (friction, delay, deadband, damping). Measuring real physics takes lab rigs and an expert.
-- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and on six owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm needs its own. [See it](https://physicslens.vercel.app/robot).
+- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and on six owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm and setup needs its own. [See it](https://physicslens.vercel.app/robot).
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
-- **An agent that knows when the data cannot decide:** when two laws tie, it designs the recording that would separate them and asks for it. On the spring glider it asked for a longer recording of the same pull; the public video ran longer, and on 20 s instead of 15 the math settled the tie for dry friction. [The request and the answer](https://physicslens.vercel.app/?run=gallery-spring-longer).
+- **An agent that knows when the data cannot decide:** when two laws tie, it designs the recording that would separate them and asks for it. On the spring glider and on the pendulum it asked for a longer recording; both public videos ran longer, and the longer recordings settled the questions it asked (dry friction for the glider; damping is real for the pendulum). [Spring](https://physicslens.vercel.app/?run=gallery-spring-longer), [pendulum](https://physicslens.vercel.app/?run=gallery-pendulum-longer).
 - **Proof it discovers rather than recalls:** from rendered videos of asteroid Apophis and of Jupiter's four large moons it found the inverse-square law, the Sun's GM within 0.023% and Jupiter's within 0.012% of NASA/JPL, and Kepler's third law (exponent 1.4991, 95% interval 1.4929 to 1.5053) from the tracks alone; on Halley's comet a force law with the exponent left free fitted 1.9998.
-- **On real footage:** a pendulum given as 0.5 m long gives g = 9.91 m/s² (95% interval 9.82 to 9.99), 0.98% above the local 9.811 at the filming site in Aachen; a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
-- **Where the evidence stands:** the robot arm's corrected simulator beats the public one on held-out data; 9 blind predictions are registered and waiting to be scored; every result, its data and its exports are open for outside use.
+- **On real footage:** a pendulum given as 0.5 m long gives g = 9.91 m/s² (95% interval 9.82 to 9.99), 0.98% above the local 9.811 at the filming site in Aachen, just outside its interval (see Limitations), and a longer stretch of the same swing gives 9.828; a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
+- **Where the evidence stands:** the robot arm's corrected simulator beats the public one on held-out data; 9 blind predictions are registered for outside checking, scored from 15 November, after judging; every result, its data and its exports are open for outside use.
 - **Real-world cases, each checked against an independent answer:** an open-source robot arm's simulator corrected from public recordings (on held-out motion about twice as close to the real arm as the public model), all 17 recorded ISS reboosts that five years of archived NASA trajectories cover found by a rule fixed in advance (1 false alarm in 572 quiet days), the Winchcombe meteorite fall from its published trajectory (its orbit within 0.4 sigma of the published one, every recovered stone within 563 m of the simulated fall line, but only 1 of 9 inside its blind 95% landing region, so partial), WASP-12b's shrinking orbit (28.6 ms per year, 95% interval 24.5 to 32.7, against the published 29 ± 2 at one standard deviation), the Sun's rotation from real SDO images, Uranus's moon Umbriel sized from a star's disappearance, and how much one more night helped track asteroid 2024 YR4. Each is a page that also says what it cannot do.
 - **Meta models doing real work:** Muse Spark Open (open weights, on Baseten) reasons, SAM 3.1 tracks, Muse Voice Transcribe listens, Muse Image draws setup guides, Muse Wonder writes controllers that only simulation can accept, and Muse Glimmer 30B is the fully offline open-weight path.
 
@@ -53,6 +53,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | 1b | [Halley's comet](https://physicslens.vercel.app/?run=gallery-halley) | the 1986 hairpin around the Sun: inverse-square gravity, the exponent left free fits 1.9998 |
 | 2 | [Weighing Jupiter](https://physicslens.vercel.app/?run=gallery-jupiter) | Jupiter's GM from Io's orbit, within 0.018% of JPL |
 | 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | damping fits better but forecasts worse, so it is not confirmed; both laws give the same g, and the agent designs the swing that would decide |
+| 3a | [Pendulum: the agent's request, answered](https://physicslens.vercel.app/?run=gallery-pendulum-longer) | the same swing filmed longer settles whether damping is real (the simple pendulum 121 BIC behind); the next tie is linear or air drag |
 | 3b | [Spring: the agent's request, answered](https://physicslens.vercel.app/?run=gallery-spring) | two laws tie, the agent designs and asks for a longer recording; the green note opens the 20 s recording that settles it for dry friction |
 | 4 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | free fall rejected; a drag law accepted on held-out motion |
 | 4b | [Physics audit at scale](https://physicslens.vercel.app/audit) | 149 clips: real motion has a forecasting law 44% of the time, AI-generated 14%; no real clip falsely accused |
@@ -451,7 +452,7 @@ Every case at a glance (each row is generated from its result file; the same cas
 | Case | Who has the problem | What PhysicsLens gives them | Against an independent truth | Meta models | Scope |
 |---|---|---|---|---|---|
 | [Robotics: sim-to-real](https://physicslens.vercel.app/?run=gallery-paperbag) | robotics engineers | a calibrated model with intervals, exported to MuJoCo, URDF and SDF, checked by replaying it in MuJoCo | on flight it never saw, the calibrated model of a thrown paper bag lands 11.5 times closer to the real track than the textbook (drag-free) one, and 2.0 times closer than the standard air-drag law (quadratic, its coefficient fitted to the same flight) | SAM 3.1 tracked the bag; Muse Spark Open (open weights) proposed the laws; verification, the fits and the MuJoCo replay are math | one rigid body at a time, filmed side-on; the control comparison runs in simulation only |
-| [Open-source robot arm: simulator corrected from public recordings](https://physicslens.vercel.app/robot) | anyone who simulates the SO-100 arm (MuJoCo Menagerie, LeRobot users) | measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model | SO-100 arm, 50 public recordings: on held-out episodes the corrected MuJoCo model tracks the real joints to 0.38° RMS against 0.75° for the MuJoCo Menagerie model (2.0 times closer; 1.7 times closer than the default with a fitted delay); per unit: on 6 owners' arms a borrowed calibration tracks worse than the arm's own in 30 of 30 pairs (0.78° against 0.43°) | local math on public joint recordings (no video, so no SAM): the servo laws are fitted and verified by held-out MuJoCo replay; no Meta model in this case | only the motions in these pick-and-place recordings; payloads, wear and other units of the arm are not covered |
+| [Open-source robot arm: simulator corrected from public recordings](https://physicslens.vercel.app/robot) | anyone who simulates the SO-100 arm (MuJoCo Menagerie, LeRobot users) | measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model | SO-100 arm, 50 public recordings: on held-out episodes the corrected MuJoCo model tracks the real joints to 0.38° RMS against 0.75° for the MuJoCo Menagerie model (2.0 times closer; 1.7 times closer than the default with a fitted delay); per unit: on 6 owners' arms a borrowed calibration tracks worse than the arm's own in 30 of 30 pairs (0.78° against 0.43°) | SAM 3.1 checked the logged joints against the arm's camera video (the gripper tracked on 5 held-out episodes, a median 4.1 mm from the logged path); the servo laws themselves are fitted and verified by local math (held-out MuJoCo replay) | the motions in these recordings; payloads, wear and temperature are not covered, and the six arms compared recorded different tasks |
 | [Lab measurement](https://physicslens.vercel.app/?run=gallery-pendulum) | test engineers, labs, anyone checking an experiment | the constant with a 95% interval, the law it follows, and the recording that would settle what is still open | 12 real clips with measured lengths: the local g inside the 95% interval in 0 of 12 (coverage 0% to 24% at 95%); median error 6.2% | SAM 3.1 tracked the bob; Muse Spark Open proposed the laws and designed the deciding experiment; verification is math | it needs a known length (or another scale) in the picture; the arc alone cannot fix the length when the pivot is out of view |
 | [Exoplanet transit timing](https://physicslens.vercel.app/timing) | observatories, amateur transit-timing networks, exoplanet researchers | refreshed transit windows (calendar and CSV), a list of stale ephemerides, and the law behind the timings | WASP-12b's orbit shrinks by 28.6 ms/yr against the published 29 ± 2; Kepler-88's unseen planet: partial | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | timing inversions are degenerate (mass against eccentricity); the Kepler-88 fit forecasts to 15 min, not the 3 min its data allow |
 | [Fireballs and meteorite falls](https://physicslens.vercel.app/fireball) | fireball networks, meteorite hunters | whether anything survived, the orbit it came from, and a strewn-field map (GeoJSON, KML) | Winchcombe, from the published trajectory: blind, 1 of 9 recovered stones inside their 95% landing regions; after review, all within 563 m of the fall line | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | it starts from a triangulated trajectory, not one video; masses carry a factor-of-two uncertainty from shape and density |
@@ -484,10 +485,10 @@ open-loop in MuJoCo on 15 held-out episodes never used before (`backend/physicsl
   corrected model is 1.71 times closer than that, and 1.44 times closer than the published model with per-joint
   offsets added as well.
 - Every improvement is paired per episode with a 95% interval above zero, which is the case's acceptance rule;
-  because the corrected model beats the current public one on held-out data, the case reaches the ladder's
-  *improves a public tool*. The model and its diff are ready to offer upstream; nothing has been submitted.
+  because the corrected model beats the current public one on held-out data, it improves on a public tool. The model and its diff are ready to offer upstream; nothing has been submitted.
 - Limits: only the motions in these pick-and-place episodes; payloads, wear, temperature and other units of the
-  arm are not covered; the gripper closes on objects the simulated scene lacks, so it is reported but not counted.
+  arm are not covered by this one arm's fit (the six-arm comparison below covers other units); the gripper closes on
+  objects the simulated scene lacks, so it is reported but not counted.
   The identification uses the logged joint angles; the video check below uses the camera.
 - **Checked against the video** (`scripts/robot_video_check.py`): SAM 3.1 tracked the gripper in the top camera on 5
   held-out episodes, and the tracked path agrees with where the logged joint angles put it, through a camera fitted
@@ -505,7 +506,9 @@ identification ran on five more SO-100 arms recorded by different owners (public
 episodes each). Each arm's servo laws were then replayed on every other arm's held-out episodes, with each arm's
 constant command offset re-centred from its own training episodes so that only the dynamics move between arms. An arm's
 own calibration tracks its joints to 0.43° on average; a calibration borrowed from another arm to 0.78°, worse in 30 of
-30 pairs at 95%. The fitted delays and deadbands differ from unit to unit: one model does not fit every arm.
+30 pairs at 95%. The fitted delays and deadbands differ from unit to unit: one model does not fit every arm or setup. (These errors
+come from replaying the servo laws themselves, where the original arm's own calibration reaches 0.27°; the 0.38° above
+is the full MuJoCo replay of the same arm, a different and stricter evaluator.)
 The owners recorded different tasks (a battery, a block in a cup, strawberries, lego), so part of the gap can come
 from different speeds and loads rather than the hardware alone; no public dataset has several arms on one task.
 
@@ -791,6 +794,13 @@ so the requested recording exists: on 20 s instead of 15 the tie is settled. Dry
 within 3.4%; viscous damping misses it by 18.7% and falls 12 BIC behind (it was 4 on the shorter clip), and the natural
 frequency agrees with the first analysis (2.7385 rad/s). [The request](https://physicslens.vercel.app/?run=gallery-spring),
 [the answer](https://physicslens.vercel.app/?run=gallery-spring-longer).
+
+The pendulum's request was answered the same way. On the 6.5 s gallery clip damping fit better but forecast worse, so
+the agent could not say whether damping is real. The public video shows the same swing for longer, and on 12.6 s the
+simple pendulum falls 121 BIC behind while damping forecasts the held-out motion within 1.9% (without it: 4.4%).
+Damping is real; whether it is linear or air drag now ties, and the agent designs the recording that would separate
+them (release from about 20 degrees, film 13 s). [The request](https://physicslens.vercel.app/?run=gallery-pendulum),
+[the answer](https://physicslens.vercel.app/?run=gallery-pendulum-longer).
 
 A study turns a goal into a measurement campaign (`studies.py`, `physics/combine.py`, `app/study` in the frontend):
 
@@ -1463,7 +1473,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Real ISS reboosts found in five years of archived NASA trajectories by a rule fixed in advance, scored against NASA's own records 
 - [x] Lab measurement on labelled real footage (Delfys75 pendulums): the real coverage of the 95% intervals is reported (0 of 12), and the bias is traced to the stated lengths and the time scale, not the fit
 - [x] Machine faults on public data scored against labels: the bearing rule fails its own test and says so; a motor's coast-down friction matches the published values
-- [x] The real-world cases run through the agent (Muse Spark Open proposing, verification deciding) beside the hand-chosen laws, and six blind predictions registered before their answers exist
+- [x] The real-world cases run through the agent (Muse Spark Open proposing, verification deciding) beside the hand-chosen laws, and 9 blind predictions registered before their answers exist
 
 ## Roadmap
 

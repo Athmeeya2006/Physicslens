@@ -42,11 +42,11 @@ const STORIES: Story[] = [
   },
   {
     run: "gallery-pendulum", source: "Real footage: a pendulum on a phone", status: "ambiguous",
-    title: "Damping fits better, so why isn't it accepted?",
-    text: "Damping fits the whole swing slightly better, but forecasts the part it never saw worse than the simple pendulum, so verification will not confirm it: the two laws tie. They agree on g, so that is measured either way, and the agent designs the recording that would settle the rest: release from about 35 degrees and film 7 seconds.",
-    law: "\\ddot\\theta = -\\frac{g}{L}\\sin\\theta \\quad\\text{or}\\quad -\\frac{g}{L}\\sin\\theta - \\gamma\\,\\dot\\theta\\,?",
-    stats: [{ value: "9.91", label: "g in m/s² from a 0.5 m string (95%: 9.82 to 9.99), 0.98% above Aachen's local 9.811" },
-            { value: "8.5×", label: "how far the two forecasts separate in the requested swing, against tracking noise" }],
+    title: "Is damping real? It asked for a longer recording, and that settled it.",
+    text: "On a 6.5 s clip, damping fits the whole swing slightly better but forecasts the part it never saw worse than the simple pendulum, so the two laws tie and the agent designs the recording that would decide. The public video shows the same swing for longer: on 12.6 s the simple pendulum falls 121 BIC behind and damping forecasts the unseen motion within 1.9%. Damping is real; whether it is linear or air drag is the next experiment it asks for.",
+    law: "\\ddot\\theta = -\\frac{g}{L}\\sin\\theta - \\gamma\\,\\dot\\theta \\quad\\text{or}\\quad - c\\,\\dot\\theta\\,|\\dot\\theta|\\,?",
+    stats: [{ value: "9.828", label: "g in m/s² from the 12.6 s recording (95%: 9.824 to 9.831), 0.17% above Aachen's local 9.811: just outside the interval, as on the short clip (the stated 0.5 m length is the likely cause)" },
+            { value: "1.9%", label: "damping's error forecasting the unseen motion (without damping: 4.4%)" }],
   },
   {
     run: "gallery-paperbag", source: "Real footage: a thrown paper bag at 200 fps", status: "accepted",
@@ -57,10 +57,11 @@ const STORIES: Story[] = [
   },
   {
     run: "gallery-spring", source: "Real footage: a glider between two springs", status: "ambiguous",
-    title: "Friction or damping? Fifteen seconds would tell.",
-    text: "The swing shrinks by about the same amount every cycle, the signature of sliding friction, and dry friction forecasts the unseen motion best. But on this clip viscous damping is only 4 BIC behind, so neither is confirmed: both agree on the frequency, and the agent asks for a 15-second recording that would separate them. No ruler needed.",
-    law: "\\ddot s = -\\omega^2 (s - s_0) - f\\,\\operatorname{sgn}(\\dot s) \\quad\\text{or}\\quad - 2\\zeta\\omega\\,\\dot s\\,?",
-    stats: [{ value: "2.74", label: "natural frequency, rad/s, from both laws (95%: 2.737 to 2.746)" }, { value: "8.8%", label: "forecast error (viscous damping: 10.9%)" }],
+    title: "Friction or damping? It asked for a longer recording, and that settled it.",
+    text: "The swing shrinks by about the same amount every cycle, the signature of sliding friction, but on the first stretch viscous damping was only 4 BIC behind, so neither law was confirmed. The agent designed the recording that would separate them, a longer film of the same pull, and asked for it. The public video runs longer: on 20 s instead of 15, dry friction forecasts the unseen motion within 3.4% and viscous damping falls 12 BIC behind. No ruler needed.",
+    law: "\\ddot s = -\\omega^2 (s - s_0) - f\\,\\operatorname{sgn}(\\dot s)",
+    stats: [{ value: "3.4%", label: "dry friction's error forecasting the unseen motion of the 20 s recording (viscous damping: 18.7%)" },
+            { value: "2.74", label: "natural frequency, rad/s, the same on both recordings" }],
   },
 ];
 
@@ -89,7 +90,9 @@ export function Discoveries({ items = [], offline = false }: { items?: GalleryIt
                 <figure className="story-media">
                   <LoopVideo src={`/stories/${s.run}.mp4`} poster={`/stories/${s.run}.jpg`}
                     label={`${s.source}: the measured track, the law's ghost and its force arrow`} />
-                  <span className="story-chip"><StatusChip status={status} label={VERDICT[status]} /></span>
+                  <span className="story-chip">{FOLLOWUPS[s.run]
+                    ? <StatusChip status="verified" label={FOLLOWUPS[s.run].chip} />
+                    : <StatusChip status={status} label={VERDICT[status]} />}</span>
                 </figure>
                 <p className="story-source">{s.source}{g?.credit && <><br /><span className="story-credit">{g.credit}</span></>}</p>
                 <h3>{s.title}</h3>

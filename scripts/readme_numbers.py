@@ -166,6 +166,12 @@ def glimmer_gap() -> float:
     return next(f["bic"] for f in r["ranking"] if f["model_id"] == "damped_harmonic") - min(f["bic"] for f in r["ranking"])
 
 
+def pendulum_longer_gap() -> float:
+    """How far the simple pendulum falls behind by BIC on the pendulum's longer recording."""
+    r = load("gallery/gallery-pendulum-longer/result.json")
+    return next(f["bic"] for f in r["ranking"] if f["model_id"] == "pendulum") - min(f["bic"] for f in r["ranking"])
+
+
 CLAIMS = [
     # In 30 seconds and the judging guide
     Claim("Apophis: the Sun's GM, % from JPL", r"the Sun's GM within ([\d.]+)% and Jupiter's",
@@ -432,6 +438,11 @@ CLAIMS = [
     Claim("ZTF: WCS rms", r"own plate solutions \(median ([\d.]+) arcsec\)", lambda: load("data/astro/asteroids/ztf.json")["median_wcs_rms_arcsec"]),
     Claim("ZTF: frames measured", r"(\d+) of\s+the \d+ frames found solved", lambda: load("data/astro/asteroids/ztf.json")["frames_measured"]),
     Claim("ZTF: frames found", r"\d+ of\s+the (\d+) frames found solved", lambda: load("data/astro/asteroids/ztf.json")["frames_found"]),
+    Claim("Fleet: original arm own, servo replay", r"where the original arm's own calibration reaches ([\d.]+)°", lambda: load("data/robot/fleet.json")["matrix"]["lerobot__svla_so100_pickplace"]["lerobot__svla_so100_pickplace"]["rms_deg"]),
+    Claim("Pendulum longer: g", r"a longer stretch of the same swing gives ([\d.]+);", lambda: next(p["value"] for p in load("gallery/gallery-pendulum-longer/result.json")["agreed_parameters"] if p["name"] == "g")),
+    Claim("Pendulum longer: simple pendulum BIC behind", r"simple pendulum falls (\d+) BIC behind while damping", lambda: pendulum_longer_gap()),
+    Claim("Pendulum longer: damping held-out %", r"while damping forecasts the held-out motion within ([\d.]+)%", lambda: next(f["heldout_nrmse"] for f in load("gallery/gallery-pendulum-longer/result.json")["ranking"] if f["model_id"] == "pendulum_linear_damping") * 100),
+    Claim("Pendulum longer: simple held-out %", r"\(without it: ([\d.]+)%\)", lambda: next(f["heldout_nrmse"] for f in load("gallery/gallery-pendulum-longer/result.json")["ranking"] if f["model_id"] == "pendulum") * 100),
     Claim("Summary: predictions registered", r"Where the evidence stands:\*\* .*?; (\w+) blind predictions",
           lambda: len(load_index_rows())),
     Claim("Robot video: median mm", r"through a camera fitted\s+on two training episodes, to a median ([\d.]+) mm", lambda: load("data/robot/video_check.json")["heldout"]["median_mm"]["mean"]),

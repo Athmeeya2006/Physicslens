@@ -1,0 +1,6 @@
+{
+  "title": "Pendulum, the experiment the agent asked for: damping confirmed",
+  "description": "The same 0.5 m pendulum and release, filmed for 12.6 s instead of 6.5 (the same public video, which shows the swing for longer than the first analysis used). The question the agent asked is settled: the simple pendulum falls 121 BIC behind, and damping forecasts the held-out motion within 1.9% (without damping: 4.4%). A finer question remains: linear damping and air drag tie, and the agent designs the recording that would separate them (release from about 20 degrees, film 13 s). Both give g = 9.828 m/s\u00b2 (95%: 9.824 to 9.831).",
+  "credit": "Video: Rhetos / Mathe-AC Lernwerkstatt, Wikimedia Commons, CC BY-SA 4.0 (15.2 to 27.8 s, downscaled)",
+  "order": 4
+}

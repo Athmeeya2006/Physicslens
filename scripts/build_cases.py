@@ -120,7 +120,7 @@ def robot_arm() -> dict[str, Any]:
             "gives": "measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model",
             "number": number, "status": (r or {}).get("status", "not yet validated"),
             "status_rule": (r or {}).get("status_rule", "proven when the identified model forecasts held-out episodes better than the default and a fair baseline beyond their intervals"),
-            "cant": "only the motions in these pick-and-place recordings; payloads, wear and other units of the arm are not covered",
+            "cant": "the motions in these recordings; payloads, wear and temperature are not covered, and the six arms compared recorded different tasks",
             "link": "/robot" if r else None,
             # The corrected model is a contribution to a public tool when it beats the public model on held-out data with
             # the paired improvement's 95% interval above zero (derived from the result file, never set by hand).
@@ -292,7 +292,7 @@ MODELS_USED = {
     "lab": "SAM 3.1 tracked the bob; Muse Spark Open proposed the laws and designed the deciding experiment; verification is math",
     "audit": "SAM 3.1 tracked every clip; Muse Spark Open read each scene and proposed laws; the physics checks are math",
     "sun": "Muse Spark Open proposed laws for single spots' tracks (verification rejected them: noise); the rotation law itself is math on all spots",
-    "robot-arm": "local math on public joint recordings (no video, so no SAM): the servo laws are fitted and verified by held-out MuJoCo replay; no Meta model in this case",
+    "robot-arm": "SAM 3.1 checked the logged joints against the arm's camera video (the gripper tracked on 5 held-out episodes, a median %.1f mm from the logged path); the servo laws themselves are fitted and verified by local math (held-out MuJoCo replay)" % json.loads((ROOT / "data/robot/video_check.json").read_text())["heldout"]["median_mm"]["mean"],
     "health": "SAM 3.1 tracks and Muse Spark Open reasons on each recording; the drift test between recordings is math",
 }
 NO_MODEL = "local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos)"

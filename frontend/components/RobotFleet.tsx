@@ -47,7 +47,9 @@ export function RobotFleet() {
           </tbody>
         </table>
       </div>
-      <p className="small muted">Held-out RMS over the five arm joints; bold is each arm&apos;s own calibration. Data: {ids.map((t) => `${f.arms[t].dataset} (${f.arms[t].licence})`).join("; ")}.</p>
+      <p className="small muted">Held-out RMS over the five arm joints, from replaying the servo laws themselves (a stricter full
+        MuJoCo replay of the first arm gives 0.38° above); bold is each arm&apos;s own calibration. Each owner recorded a different
+        task with their own setup, so a borrowed calibration carries both the arm and the setup. Data: {ids.map((t) => `${f.arms[t].dataset} (${f.arms[t].licence})`).join("; ")}.</p>
     </section>
   );
 }
