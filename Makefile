@@ -60,12 +60,13 @@ numbers:
 	$(BIN)/python scripts/readme_numbers.py
 
 # Everything the static site reads that is generated rather than committed (gallery bundle, sky scenarios, case and
-# astronomy data). SKY_FLAGS=--no-discover skips the slow precomputed discoveries.
+# astronomy data). SKY_FLAGS=--no-discover skips the slow precomputed discoveries; SITE_PY=python uses the active one.
+SITE_PY ?= $(BIN)/python
 site-data:
-	$(BIN)/python scripts/build_static_gallery.py
-	$(BIN)/python scripts/build_astro_static.py
-	$(BIN)/python scripts/build_cases.py
-	$(BIN)/python scripts/build_sky_static.py $(SKY_FLAGS)
+	$(SITE_PY) scripts/build_static_gallery.py
+	$(SITE_PY) scripts/build_astro_static.py
+	$(SITE_PY) scripts/build_cases.py
+	$(SITE_PY) scripts/build_sky_static.py $(SKY_FLAGS)
 
 # Known vulnerabilities in the pinned dependencies (queries the public advisory databases; no keys, no spend).
 audit:

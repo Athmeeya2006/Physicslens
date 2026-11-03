@@ -15,6 +15,10 @@ _spec.loader.exec_module(ca)
 
 @pytest.mark.parametrize("case", sorted(ca.CASES))
 def test_each_case_gives_one_value_per_time_and_its_hand_chosen_laws(case):
+    # The coast-down reads the public bench recording downloaded into var/ (scripts/fetch_health_public.py fetches it); a
+    # clean checkout, such as CI's, does not have it.
+    if case == "coastdown" and not (ROOT / "var" / "health_public" / "spindown" / "bench_spindown_lifted.csv").is_file():
+        pytest.skip("the public coast-down recording is not downloaded (var/health_public)")
     d = ca.CASES[case]()
     t, y = np.asarray(d["t"]), np.asarray(d["y"])
     assert len(t) == len(y) >= 30 and t[0] == 0
