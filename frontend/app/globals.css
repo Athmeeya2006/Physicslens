@@ -1050,3 +1050,6 @@ tbody tr:last-child td { border-bottom: 1px solid var(--line-soft); }
   .agent-reasoning li { grid-template-columns: minmax(0, 1fr) auto; }
   .ar-text { grid-column: 1 / -1; }
 }
+.robot-trace .swatch.line { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.robot-trace .swatch.line.model { background: var(--model); }
+.robot-trace .key { margin-right: 14px; }

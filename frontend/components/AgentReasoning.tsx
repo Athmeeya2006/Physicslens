@@ -33,7 +33,7 @@ function line(s: TrailStep): { verb: string; text: string; tone?: "reject" | "ti
     const acc = items.filter((i) => i.status === "accepted");
     if (rej.length) return { verb: "Rejects", tone: "reject",
       text: rej.slice(0, 3).map((i) => `${i.title} (${i.why})`).join("; ") + (acc.length ? `. Keeps ${acc[0].title}.` : ".") };
-    if (tied.length) return { verb: "Cannot separate", tone: "tie", text: `${tied.map((i) => i.title).join(" and ")}: ${first(s.text)}` };
+    if (tied.length) return { verb: "Cannot separate", tone: "tie", text: first(s.text) };
     return { verb: "Verifies", text: first(s.text) };
   }
   if (s.step === "skeptic") return { verb: "Tries to break it", text: first(s.text) };

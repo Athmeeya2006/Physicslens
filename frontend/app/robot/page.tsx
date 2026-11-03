@@ -94,7 +94,7 @@ export default function RobotPage() {
           </section>
           {d.trace && (
             <section className="panel stack" aria-labelledby="rb-trace">
-              <h2 id="rb-trace">The public simulator drifts; the corrected one tracks the real arm</h2>
+              <h2 id="rb-trace">The corrected simulator stays closer to the real arm</h2>
               <RobotTrace t={d.trace} />
             </section>
           )}
