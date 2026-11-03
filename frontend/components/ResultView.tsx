@@ -4,6 +4,7 @@ import { Boxes, Clock, Download, FileCode2, FileJson, FileText, Film, Sparkles }
 import { useEffect, useState } from "react";
 import type { AnalysisResult, TrackPoint } from "@/lib/api";
 import { clipUrl, type ExportKind, exportUrl, isGallery, isOpenWeight, makeShareVideo, useBackend, formatUnit } from "@/lib/api";
+import { AgentReasoning } from "./AgentReasoning";
 import { AgentTrail, useLaws } from "./AgentTrail";
 import { AudioPanel } from "./AudioPanel";
 import { ControlPanel } from "./ControlPanel";
@@ -197,6 +198,8 @@ export function ResultView({ runId, result, credit }: { runId: string; result: A
           {r.scale_note && <p className="note">{r.scale_note}</p>}
         </div>
       </div>
+
+      <AgentReasoning steps={r.trail ?? []} />
 
       <nav className="on-page" aria-label="On this page">
         {RESULT_TABS.map((id) => <a key={id} href={`#${id}`}>{TAB_LABEL[id]}</a>)}

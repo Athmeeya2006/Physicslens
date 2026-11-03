@@ -52,7 +52,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | damping fits better but forecasts worse, so it is not confirmed; both laws give the same g, and the agent designs the swing that would decide |
 | 4 | [Paper bag](https://physicslens.vercel.app/?run=gallery-paperbag) | free fall rejected; a drag law accepted on held-out motion |
 | 4b | [Physics audit at scale](https://physicslens.vercel.app/audit) | 149 clips: real motion has a forecasting law 44% of the time, AI-generated 14%; no real clip falsely accused |
-| 4c | [Real-world cases](https://physicslens.vercel.app/cases) | ten cases, each ending in something to act on (a search map, a transit calendar, a return date, a report), with its scope |
+| 4c | [Real-world cases](https://physicslens.vercel.app/cases) | 11 cases, each ending in something to act on (a search map, a transit calendar, a return date, a report), with its scope |
 | 5 | [Open dataset](https://physicslens.vercel.app/dataset) | every verified parameter, with its uncertainty, clip and licence |
 | 5b | [Solar System Lab](https://physicslens.vercel.app/sky) | a 3D solar system from JPL data: make Jupiter ten times heavier, switch Neptune off, push any planet, click any body for its orbit and equation, turn relativity on, and watch the target's orbit and its perturbation equations change; with the analysis server online, "Find the law" runs discovery on the simulated track |
 | 6 | Your own clip, live mode, a study | open to everyone, no code (the header shows the analysis server's status) |

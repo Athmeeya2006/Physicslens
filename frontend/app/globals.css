@@ -1031,3 +1031,22 @@ tbody tr:last-child td { border-bottom: 1px solid var(--line-soft); }
 .robot-impact { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px; align-items: start; }
 .robot-impact > .stack > p { color: var(--ink-2); max-width: 60ch; }
 @media (max-width: 900px) { .robot-impact { grid-template-columns: minmax(0, 1fr); } }
+/* How the agent reasoned (components/AgentReasoning.tsx): the decisive moments of the trail, one per row. */
+.agent-reasoning { display: grid; gap: 12px; padding: 20px 0 4px; border-top: 1px solid var(--line); }
+.agent-reasoning h2 { font-size: clamp(1.4rem, 2.4vw, 1.8rem); }
+.agent-reasoning ol { list-style: none; margin: 0; padding: 0; display: grid; }
+.agent-reasoning li { display: grid; grid-template-columns: 11rem minmax(0, 1fr) auto; gap: 6px 18px; align-items: baseline;
+  padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.ar-verb { font-weight: 700; color: var(--ink); }
+.agent-reasoning li.reject .ar-verb { color: var(--bad); }
+.agent-reasoning li.tie .ar-verb, .agent-reasoning li.ask .ar-verb { color: var(--tie); }
+.agent-reasoning li.ask .ar-text { font-weight: 600; color: var(--ink); }
+.ar-text { color: var(--ink-2); overflow-wrap: anywhere; }
+.ar-quote { display: block; margin-top: 4px; font-style: italic; color: var(--ink-3); font-size: 0.92rem; }
+.ar-quote::before { content: "\201C"; } .ar-quote::after { content: "\201D"; }
+.ar-who { font-size: 0.8rem; font-weight: 600; color: var(--model); white-space: nowrap; }
+.ar-who.math { color: var(--ink-3); }
+@media (max-width: 720px) {
+  .agent-reasoning li { grid-template-columns: minmax(0, 1fr) auto; }
+  .ar-text { grid-column: 1 / -1; }
+}
