@@ -220,8 +220,8 @@ export default function HealthPage() {
         <section className="panel">
           <h2>Comparing your own recordings</h2>
           <p className="muted">
-            Comparing recordings needs the analysis server, which is between sessions right now and restarts on its own
-            within minutes. Comparing costs nothing: both recordings are already analyzed.
+            Comparing recordings runs on the analysis server, which is between sessions right now. Comparing costs
+            nothing: both recordings are already analyzed, and the public-data results below open in full.
           </p>
         </section>
       )}

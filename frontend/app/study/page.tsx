@@ -161,7 +161,7 @@ export default function StudyPage() {
           <h2>Start a study</h2>
           {online === false ? (
             <p className="muted">
-              The analysis server is between sessions right now (it restarts on its own within minutes), so a new
+              The analysis server is between sessions right now, so a new
               study can&apos;t start at the moment.
             </p>
           ) : judgesOnly ? (

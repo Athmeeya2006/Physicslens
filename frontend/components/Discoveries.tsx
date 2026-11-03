@@ -73,7 +73,7 @@ const TIPS = [
   "Frequency, damping and friction are exact even without a scale reference.",
 ];
 
-export function Discoveries({ items = [] }: { items?: GalleryItem[] }) {
+export function Discoveries({ items = [], offline = false }: { items?: GalleryItem[]; offline?: boolean }) {
   const byId = new Map(items.map((g) => [g.id, g]));
   return (
     <section id="results" className="band" aria-labelledby="discoveries-title">
@@ -113,7 +113,12 @@ export function Discoveries({ items = [] }: { items?: GalleryItem[] }) {
           <li className="story-tile story-next">
             <h3>Your recording next</h3>
             <p>Film anything that moves, 2 to 20 seconds, and it goes through the same steps and the same held-out test.</p>
-            <a className="button" href="#analyze-title"><Upload size={16} aria-hidden="true" />Analyze your own clip</a>
+            {offline ? (
+              <>
+                <a className="button" href="/?run=gallery-pendulum">Open a complete analysis</a>
+                <p className="small">Uploads open when the analysis server is online; the header shows it.</p>
+              </>
+            ) : <a className="button" href="#analyze-title"><Upload size={16} aria-hidden="true" />Analyze your own clip</a>}
             <ul className="tips">{TIPS.map((t) => <li key={t}>{t}</li>)}</ul>
           </li>
         </ul>

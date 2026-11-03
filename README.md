@@ -13,7 +13,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | | |
 |---|---|
 | 🎥 **Demo video (3 min)** | _link coming_ |
-| 🌐 **Try it** | [physicslens.vercel.app](https://physicslens.vercel.app): real analyses with the ghost overlay, decision trail and exports. Everything is open, no code needed: analyze your own clip, live camera, voice, studies and the physics audit, whenever the analysis server is online (the home page says so) |
+| 🌐 **Try it** | [physicslens.vercel.app](https://physicslens.vercel.app): analyze your own clip, the live camera, voice, studies and the physics audit, open to everyone with no code, on an analysis server kept online through judging (the header shows its status); every gallery result, with its ghost overlay, decision trail and exports, opens at any time |
 | 🪐 **Solar System Lab** | [physicslens.vercel.app/sky](https://physicslens.vercel.app/sky): a 3D solar system to change and rediscover, free and in the browser |
 | 🤖 **For AI assistants** | [`llms.txt`](llms.txt) is a compact map of this repository |
 
@@ -31,7 +31,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
 - **Proof it discovers rather than recalls:** from rendered videos of asteroid Apophis and of Jupiter's four large moons it found the inverse-square law, the Sun's GM within 0.023% and Jupiter's within 0.012% of NASA/JPL, and Kepler's third law (exponent 1.4991, 95% interval 1.4929 to 1.5053) from the tracks alone; on Halley's comet a force law with the exponent left free fitted 1.9998.
-- **On real footage:** a pendulum given as 0.5 m long gives g = 9.91 m/s² (95% interval 9.82 to 9.99), 0.98% above the local 9.811 at the filming site in Aachen, which the interval misses: the clock checks out and the stated length is the likely cause (a 4.9 mm shorter length would explain it all, see below); a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
+- **On real footage:** a pendulum given as 0.5 m long gives g = 9.91 m/s² (95% interval 9.82 to 9.99), 0.98% above the local 9.811 at the filming site in Aachen; a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
 - **Where the evidence stands:** the robot arm's corrected simulator beats the public one on held-out data; 9 blind predictions are registered and waiting to be scored; every result, its data and its exports are open for outside use.
 - **Real-world cases, each checked against an independent answer:** an open-source robot arm's simulator corrected from public recordings (on held-out motion about twice as close to the real arm as the public model), all 17 recorded ISS reboosts that five years of archived NASA trajectories cover found by a rule fixed in advance (1 false alarm in 572 quiet days), the Winchcombe meteorite fall from its published trajectory (its orbit within 0.4 sigma of the published one, every recovered stone within 563 m of the simulated fall line, but only 1 of 9 inside its blind 95% landing region, so partial), WASP-12b's shrinking orbit (28.6 ms per year, 95% interval 24.5 to 32.7, against the published 29 ± 2 at one standard deviation), the Sun's rotation from real SDO images, Uranus's moon Umbriel sized from a star's disappearance, and how much one more night helped track asteroid 2024 YR4. Each is a page that also says what it cannot do.
 - **Meta models doing real work:** Muse Spark Open (open weights, on Baseten) reasons, SAM 3.1 tracks, Muse Voice Transcribe listens, Muse Image draws setup guides, Muse Wonder writes controllers that only simulation can accept, and Muse Glimmer 30B is the fully offline open-weight path.
@@ -53,7 +53,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 | 4c | [Real-world cases](https://physicslens.vercel.app/cases) | ten cases, each ending in something to act on (a search map, a transit calendar, a return date, a report), with its scope |
 | 5 | [Open dataset](https://physicslens.vercel.app/dataset) | every verified parameter, with its uncertainty, clip and licence |
 | 5b | [Solar System Lab](https://physicslens.vercel.app/sky) | a 3D solar system from JPL data: make Jupiter ten times heavier, switch Neptune off, push any planet, click any body for its orbit and equation, turn relativity on, and watch the target's orbit and its perturbation equations change; with the analysis server online, "Find the law" runs discovery on the simulated track |
-| 6 | Your own clip, live mode, a study | open to everyone, no code; [the home page](https://physicslens.vercel.app) shows whether the analysis server is online |
+| 6 | Your own clip, live mode, a study | open to everyone, no code (the header shows the analysis server's status) |
 
 In every result, read the decision trail beside the video: each step is tagged with the model (provider and id) or the numerical method behind it, and "What the model thought" shows the reasoning.
 
@@ -1030,6 +1030,9 @@ The model alone writes a sensible textbook law every time (inverse-square gravit
 ## Limitations
 
 - 2D motion in the camera plane; best results with the camera side-on and held still.
+- Uploads, the live camera, voice and studies run on the analysis server (the open-weight model on a free GPU, kept online through judging); if it is ever restarting, the header says so and every gallery result still opens in full.
+- The real pendulum's interval misses the local g: the clock checks out and the stated 0.5 m length is the likely cause (a 4.9 mm shorter length would explain it all, see below).
+- Outside use: every result, its data and its exports are public, and no outside use is recorded yet; the 9 registered predictions are scored from 15 November.
 - The 3D mode works only for balls, needs a focal length (entered, or from a lens calibration), assumes the principal point at the image centre, takes gravity as straight down the image unless the phone's tilt was saved with the clip, and scales every length and g with the diameter you enter. It has been checked on synthetic throws only.
 - Lens distortion is removed from the tracked points only when this phone has been calibrated (a printed board filmed once), and only for clips of the same shape as the calibration. Uncalibrated, a phone's barrel distortion can bias g by a few percent for motion near the edge of the frame (3.1% in the synthetic test, 0.15% after correction) and by much less through the centre.
 - Phone sensors read rows one after another (rolling shutter), so a fast object is slightly skewed; the result warns when the predicted skew passes 1 px, but does not correct it.

@@ -152,7 +152,7 @@ export default function Home() {
           {" "}({new Date(NEXT_SESSION_UTC).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} your time).</p>
       )}
       <p className="muted small">
-        The analysis server is between sessions right now; it restarts on its own within minutes.
+        The analysis server runs in sessions on a free GPU and is between sessions right now.
         Every recording on this page is a complete, real analysis; a <a href="/study">study</a> shows the agent
         planning several recordings toward one goal.
       </p>
@@ -172,7 +172,7 @@ export default function Home() {
           <>
             <Hero apophis={gallery.find((g) => g.id === "gallery-apophis")} />
             <HowItDecides note={sessionNote} />
-            <Discoveries items={gallery} />
+            <Discoveries items={gallery} offline={offline} />
             <Problems />
             <TryIt />
           </>
@@ -192,7 +192,13 @@ export default function Home() {
               <p className="muted"><Loader2 size={14} className="spin" aria-hidden="true" /> Looking for the analysis server...</p>
             ) : offline ? (
               <div className="stack" style={{ gap: 14 }}>
-                <p className="small">Uploading needs the analysis server. How an analysis works is <a href="#how-title">described above</a>.</p>
+                <p>Every result on this page is a complete analysis: the ghost on the video, the decision trail and the exports.
+                  Open one now; uploads open when the analysis server is back.</p>
+                <div className="row">
+                  <a className="button blue" href="/?run=gallery-apophis">Apophis: Newton&apos;s law found</a>
+                  <a className="button secondary" href="/?run=gallery-pendulum">Pendulum: the agent asks for an experiment</a>
+                  <a className="button secondary" href="/?run=gallery-paperbag">Paper bag: free fall rejected</a>
+                </div>
                 {sessionNote}
               </div>
             ) : health && !health.can_upload ? (

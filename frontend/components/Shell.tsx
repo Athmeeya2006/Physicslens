@@ -77,6 +77,14 @@ function ServerStatus() {
   );
 }
 
+// Between server sessions the main button opens a complete analysis instead of an upload form that cannot run.
+function PrimaryAction({ className, onClick }: { className: string; onClick?: () => void }) {
+  const online = useBackend();
+  return online === false
+    ? <a className={className} href="/?run=gallery-apophis" onClick={onClick}>See a full analysis</a>
+    : <a className={className} href="/#analyze-title" onClick={onClick}>Analyze a clip</a>;
+}
+
 function DropMenu({ id, label, items, current, open, setOpen }: {
   id: string; label: string; items: Item[]; current: boolean; open: string | null; setOpen: (v: string | null) => void;
 }) {
@@ -142,7 +150,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="shell-spacer" />
           <ServerStatus />
           <ThemeToggle />
-          <a className="button primary-dark shell-cta" href="/#analyze-title">Analyze a clip</a>
+          <PrimaryAction className="button primary-dark shell-cta" />
           <button type="button" className="menu-toggle" aria-expanded={sheet} aria-controls="shell-sheet"
                   aria-label={sheet ? "Close the menu" : "Open the menu"} onClick={() => setSheet((o) => !o)}>
             {sheet ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
@@ -160,7 +168,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             ))}
           </div>
         ))}
-        <a className="button primary-dark" href="/#analyze-title" onClick={() => setSheet(false)}>Analyze a clip</a>
+        <PrimaryAction className="button primary-dark" onClick={() => setSheet(false)} />
       </nav>
       {children}
       <footer className="shell-foot">
