@@ -169,7 +169,7 @@ export function ResultView({ runId, result, credit }: { runId: string; result: A
         )}
         {answering(runId) && (
           <p className="followup-note"><strong>This recording answers the agent&apos;s request</strong> from an earlier analysis of the same
-            setup.{" "}<a href={`/?run=${answering(runId)!.question}`}>See the request</a></p>
+            setup. {answering(runId)!.settled}{" "}<a href={`/?run=${answering(runId)!.question}`}>See the request</a></p>
         )}
       </header>
       <div className="result-top">
