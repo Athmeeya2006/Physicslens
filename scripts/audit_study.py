@@ -46,6 +46,8 @@ WORK = ROOT / "var" / "study"
 MANIFEST = DATA / "manifest.json"
 RESULTS = WORK / "results.jsonl"
 BASELINE = WORK / "baseline.jsonl"
+# The same question to Meta's closed Muse Spark 1.3 (baseline --meta): does a second model alone do any better?
+BASELINE_META = WORK / "baseline_meta.jsonl"
 
 VIDEOPHY2_CSV = "https://huggingface.co/datasets/videophysics/videophy2_test/resolve/main/videophy2_test.csv"
 PIQ_LIST = "https://storage.googleapis.com/storage/v1/b/physics-iq-benchmark/o?prefix={prefix}&maxResults=1000"
@@ -140,6 +142,35 @@ def select(n_generated: int, n_real: int, seed: int) -> None:
     DATA.mkdir(parents=True, exist_ok=True)
     MANIFEST.write_text(json.dumps({"seed": seed, "clips": clips}, indent=1) + "\n")
     print(f"{len(clips)} clips: {Counter(c['generator'] for c in clips)}")
+
+
+def extend_real(n: int) -> None:
+    """Add up to n real clips from Physics-IQ's other scenes (set real_wide), round-robin by scene, leaving the
+    study's 500 clips as they are: a wider control for false accusations, reported apart from the main comparison."""
+    m = json.loads(MANIFEST.read_text())
+    have = {c["url"] for c in m["clips"]}
+    names: list[str] = []
+    for take in ("take-1", "take-2"):
+        listing = json.loads(fetch(PIQ_LIST.format(prefix=f"full-videos/{take}/30FPS/")))
+        names += [o["name"] for o in listing.get("items", [])]
+    by_scene: dict[str, list[str]] = defaultdict(list)
+    for nm in sorted(names):
+        scene = re.sub(r"^.*trimmed-", "", nm).rsplit(".", 1)[0]
+        if scene not in PIQ_SCENES and PIQ_FILE.format(name=nm) not in have:
+            by_scene[scene].append(nm)
+    added: list[str] = []
+    while len(added) < n and any(by_scene.values()):
+        for s in sorted(by_scene):
+            if by_scene[s] and len(added) < n:
+                added.append(by_scene[s].pop(0))
+    for nm in added:
+        m["clips"].append({"id": "piqw-" + Path(nm).stem.split("_")[0] + "-" + ("t1" if "take-1" in nm else "t2") + "-"
+                           + re.search(r"perspective-([a-z]+)", nm).group(1), "set": "real_wide", "source": "Physics-IQ",
+                           "license": "CC BY 4.0 (Google DeepMind)", "generator": "real_wide", "url": PIQ_FILE.format(name=nm),
+                           "caption": re.sub(r"^.*trimmed-", "", nm).rsplit(".", 1)[0].replace("-", " "),
+                           "human_pc": None, "human_sa": None, "is_hard": False})
+    MANIFEST.write_text(json.dumps(m, indent=1) + "\n")
+    print(f"added {len(added)} real clips from {len({re.sub(r'^.*trimmed-', '', x) for x in added})} other scenes")
 
 
 def prepare(clip: dict[str, Any]) -> Path:
@@ -267,7 +298,7 @@ def run(limit: int, workers: int, max_usd: float, only: str | None, profile: str
         if c["set"] == "generated":
             by_gen[c["generator"]].append(c)
     gen = [c for group in zip_longest(*by_gen.values()) for c in group if c is not None]
-    real = [c for c in todo if c["set"] == "real"]
+    real = [c for c in todo if c["set"] in ("real", "real_wide")]
     # Alternate generated and real; the longer list's tail follows.
     order = [c for pair in zip(gen, real, strict=False) for c in pair] + gen[len(real):] + real[len(gen):]
     order = order[:limit]
@@ -306,7 +337,7 @@ physics (gravity, momentum, energy, no teleporting or morphing)? Answer "violate
 violation, "consistent" if the motion looks physically right, "cant_judge" if the frames don't show enough."""
 
 
-def baseline(max_usd: float) -> None:
+def baseline(max_usd: float, path: Path = BASELINE) -> None:
     """The model alone, from the same keyframes: the comparison that shows what measuring adds."""
     sys.path.insert(0, str(ROOT / "backend"))
     from typing import Literal
@@ -324,10 +355,10 @@ def baseline(max_usd: float) -> None:
 
     client = CostGuardClient(load_settings())
     cfg = client.limits.get("media") or {}
-    done = done_ids(BASELINE)
+    done = done_ids(path)
     ran = done_ids(RESULTS)
     start = spent()
-    with BASELINE.open("a") as out:
+    with path.open("a") as out:
         for c in json.loads(MANIFEST.read_text())["clips"]:
             if c["id"] in done or c["id"] not in ran:
                 continue
@@ -421,6 +452,7 @@ def final_rows() -> list[dict[str, Any]]:
     from physicslens.physics.audit import audit, load_input
 
     base = {r["id"]: r for r in rows_of(BASELINE)} if BASELINE.exists() else {}
+    base_meta = {r["id"]: r for r in rows_of(BASELINE_META)} if BASELINE_META.exists() else {}
     out = []
     for r in rows_of(RESULTS):
         row = dict(r)
@@ -437,6 +469,7 @@ def final_rows() -> list[dict[str, Any]]:
                 # Today's rule: a law whose fitted value sits at a limit of its range is not a verified law.
                 row["status"] = "no_fit"
         row["model_alone"] = (base.get(r["id"]) or {}).get("verdict")
+        row["model_alone_meta"] = (base_meta.get(r["id"]) or {}).get("verdict")
         out.append(row)
     return out
 
@@ -474,6 +507,7 @@ def analysis() -> dict[str, Any]:
             "heldout_errors": nrmse,
             "seconds_per_clip_median": sorted(secs)[len(secs) // 2] if secs else None,
             "model_alone": dict(Counter(r["model_alone"] for r in rows if r["model_alone"])),
+            "model_alone_meta": dict(Counter(r["model_alone_meta"] for r in rows if r.get("model_alone_meta"))),
         }
     for r in per.get("generated", []):
         g = out["generators"].setdefault(r["generator"], Counter())
@@ -498,6 +532,13 @@ def analysis() -> dict[str, Any]:
         n = real["judged"]["k"]
         out["false_accusation"] = {"accused": real["verdicts"].get("violates_physics", 0), "judged_real": n,
                                    "upper_95": wilson(real["verdicts"].get("violates_physics", 0), n)[1] if n else None}
+        # Every real clip, the study's 18 scenes and the wider control from Physics-IQ's other scenes together.
+        wide = out["sets"].get("real_wide")
+        if wide:
+            k = real["verdicts"].get("violates_physics", 0) + wide["verdicts"].get("violates_physics", 0)
+            n_all = n + wide["judged"]["k"]
+            out["false_accusation_all_real"] = {"accused": k, "judged_real": n_all, "upper_95": wilson(k, n_all)[1] if n_all else None,
+                                                "clips": real["clips"] + wide["clips"]}
     (DATA / "analysis.json").write_text(json.dumps(out, indent=1, default=float) + "\n")
     return out
 
@@ -551,7 +592,7 @@ def report() -> None:
     print(f"wrote {DATA / 'summary.json'} and the site's copy")
 
 
-GENERATOR_NAMES = {"real": "Real footage (Physics-IQ)", "cogvideo": "CogVideoX", "cosmos": "Cosmos", "hunyuan": "HunyuanVideo",
+GENERATOR_NAMES = {"real": "Real footage (Physics-IQ)", "real_wide": "Real footage, Physics-IQ's other scenes", "cogvideo": "CogVideoX", "cosmos": "Cosmos", "hunyuan": "HunyuanVideo",
                    "ray2": "Ray2", "sora": "Sora", "videocrafter": "VideoCrafter", "wan": "Wan"}
 
 
@@ -606,16 +647,19 @@ def main() -> None:
     s.add_argument("--generated", type=int, default=150)
     s.add_argument("--real", type=int, default=50)
     s.add_argument("--seed", type=int, default=7)
+    x = sub.add_parser("extend-real", help="add real clips from Physics-IQ's other scenes (free)")
+    x.add_argument("--n", type=int, required=True)
     r = sub.add_parser("run")
     r.add_argument("--limit", type=int, required=True)
     r.add_argument("--workers", type=int, default=2, help="clips at once; 2 keeps a 16 GB laptop responsive")
     r.add_argument("--max-usd", type=float, required=True)
-    r.add_argument("--only", choices=("generated", "real"))
+    r.add_argument("--only", choices=("generated", "real", "real_wide"))
     r.add_argument("--profile", choices=tuple(PROFILES), default="full")
     r.add_argument("--retry-errors", action="store_true", help="run clips that failed before once more")
     r.add_argument("--generator", help="only this generator's clips (e.g. sora), or real")
     b = sub.add_parser("baseline")
     b.add_argument("--max-usd", type=float, required=True)
+    b.add_argument("--meta", action="store_true", help="ask Meta's Muse Spark 1.3 instead (dev only, never the app's reasoning)")
     o = sub.add_parser("one", help="internal: one clip, row written to a file (used by run)")
     o.add_argument("clip")
     o.add_argument("profile")
@@ -633,12 +677,20 @@ def main() -> None:
     os.nice(10)
     if a.cmd == "select":
         select(a.generated, a.real, a.seed)
+    elif a.cmd == "extend-real":
+        extend_real(a.n)
     elif a.cmd == "one":
         Path(a.out).write_text(json.dumps(run_one(json.loads(a.clip), a.profile)))
     elif a.cmd == "run":
         run(a.limit, a.workers, a.max_usd, a.only, a.profile, a.retry_errors, a.generator)
     elif a.cmd == "baseline":
-        baseline(a.max_usd)
+        if a.meta:
+            # Meta's model is reached only as the dev fallback, with no open-weight provider set: an evaluation of the
+            # closed model on its own, never the reasoning of the app or of any result.
+            os.environ["APP_ENV"] = "dev"
+            os.environ["REASONING_PROVIDER"] = ""
+            os.environ["USE_CONTRIBUTOR_MODEL"] = "0"
+        baseline(a.max_usd, BASELINE_META if a.meta else BASELINE)
     elif a.cmd == "replay":
         replay()
     elif a.cmd == "analysis":

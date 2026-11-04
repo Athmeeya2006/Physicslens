@@ -87,6 +87,7 @@ Every link opens a complete, real analysis; nothing needs an account or a code.
 - [Real sky data: telescope frames, sky videos and light curves](#real-sky-data-telescope-frames-sky-videos-and-light-curves)
 - [Real-world cases on public data](#real-world-cases-on-public-data)
 - [Open-source robot arm: its simulator corrected](#open-source-robot-arm-its-simulator-corrected-from-public-recordings-robot)
+- [A real quadrotor: thrust and drag from its flight logs](#a-real-quadrotor-thrust-and-drag-from-its-flight-logs-scriptsdrone_demopy)
 - [Lab measurement on labelled real footage](#lab-measurement-on-labelled-real-footage-scriptslab_footagepy)
 - [The agent on the real-world cases](#the-agent-on-the-real-world-cases-scriptscases_agentpy)
 - [Predictions made before the answer](#predictions-made-before-the-answer-predictions)
@@ -455,6 +456,7 @@ Every case at a glance (each row is generated from its result file; the same cas
 |---|---|---|---|---|---|
 | [Robotics: sim-to-real](https://physicslens.vercel.app/?run=gallery-paperbag) | robotics engineers | a calibrated model with intervals, exported to MuJoCo, URDF and SDF, checked by replaying it in MuJoCo | on flight it never saw, the calibrated model of a thrown paper bag lands 11.5 times closer to the real track than the textbook (drag-free) one, and 2.0 times closer than the standard air-drag law (quadratic, its coefficient fitted to the same flight) | SAM 3.1 tracked the bag; Muse Spark Open (open weights) proposed the laws; verification, the fits and the MuJoCo replay are math | one rigid body at a time, filmed side-on; the control comparison runs in simulation only |
 | [Open-source robot arm: simulator corrected from public recordings](https://physicslens.vercel.app/robot) | anyone who simulates the SO-100 arm (MuJoCo Menagerie, LeRobot users) | measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model | SO-100 arm, 50 public recordings: on held-out episodes the corrected MuJoCo model tracks the real joints to 0.38° RMS against 0.75° for the MuJoCo Menagerie model (2.0 times closer; 1.7 times closer than the default with a fitted delay); per unit: on 7 owners' arms a borrowed calibration tracks worse than the arm's own in 42 of 42 pairs (0.99° against 0.48°); at the gripper the hand is 3.2 mm from the real one against 7.5 mm for the public model | SAM 3.1 checked the logged joints against the arm's camera video (the gripper tracked on 5 held-out episodes, a median 4.1 mm from the logged path); the servo laws themselves are fitted and verified by local math (held-out MuJoCo replay) | the motions in these recordings; payloads, wear and temperature are not covered, and the seven arms compared recorded different tasks |
+| Quadrotor: thrust and drag from flight logs | drone builders and flight-controller engineers | the vehicle's own thrust and rotor-drag laws with their coefficients, from logs it already records | 247 real NeuroBEM flights: on the authors' held-out test flights a four-parameter law halves the textbook force error (0.75 N against 1.46 N), against 0.39 N for their blade-element neural hybrid | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | one vehicle in a motion-capture arena; the neural hybrid remains closer |
 | [Lab measurement](https://physicslens.vercel.app/?run=gallery-pendulum) | test engineers, labs, anyone checking an experiment | the constant with a 95% interval, the law it follows, and the recording that would settle what is still open | 12 real clips with measured lengths: the local g inside the 95% interval in 0 of 12 (coverage 0% to 24% at 95%); median error 6.2% | SAM 3.1 tracked the bob; Muse Spark Open proposed the laws and designed the deciding experiment; verification is math | it needs a known length (or another scale) in the picture; the arc alone cannot fix the length when the pivot is out of view |
 | [Exoplanet transit timing](https://physicslens.vercel.app/timing) | observatories, amateur transit-timing networks, exoplanet researchers | refreshed transit windows (calendar and CSV), a list of stale ephemerides, and the law behind the timings | WASP-12b's orbit shrinks by 28.6 ms/yr against the published 29 ± 2; Kepler-88's unseen planet: partial | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | timing inversions are degenerate (mass against eccentricity); the Kepler-88 fit forecasts to 15 min, not the 3 min its data allow |
 | [Fireballs and meteorite falls](https://physicslens.vercel.app/fireball) | fireball networks, meteorite hunters | whether anything survived, the orbit it came from, and a strewn-field map (GeoJSON, KML) | Winchcombe, from the published trajectory: blind, 1 of 9 recovered stones inside their 95% landing regions; after review, all within 563 m of the fall line | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | it starts from a triangulated trajectory, not one video; masses carry a factor-of-two uncertainty from shape and density |
@@ -554,6 +556,29 @@ interval (`result.json`) and the identified MuJoCo model (`so_arm100_identified.
 one). Free local math, no model calls. The seventh arm above (pranavsaroha/so100_medicine_0605, 40 episodes) was
 calibrated this way in about half an hour on 16 cores; its own laws track its 12 held-out episodes to 0.75° (95% 0.68
 to 0.83).
+
+### A real quadrotor: thrust and drag from its flight logs (`scripts/drone_demo.py`)
+
+Drone simulators use the textbook thrust law (thrust proportional to the sum of the squared rotor speeds, along the
+body axis, nothing sideways), so a controller tuned in simulation meets forces on the real vehicle that its model
+never had. `scripts/drone_demo.py` identifies a real quadrotor's own laws from NeuroBEM (Bauersfeld et al., RSS 2021,
+University of Zurich): 247 flight segments of a 0.772 kg racing quadrotor at up to 65 km/h, with its four motor speeds,
+body velocity and the specific force from motion capture. Candidate laws, simplest first: thrust k·Σω², then a loss
+with climb speed, a forward-speed inflow term and the motors' spin-up; sideways nothing, then rotor drag proportional
+to rotor speed times velocity, then quadratic drag. The earlier training flights fit, the later ones choose (an extra
+term must improve them by more than 2%), and the authors' own test flights are scored once.
+
+| Held-out force error (RMS, N) | Sideways x | Sideways y | Thrust | All |
+|---|---|---|---|---|
+| Textbook law (what simulators use) | 1.33 | 1.38 | 1.64 | 1.46 |
+| **PhysicsLens: thrust with climb loss, rotor drag (4 numbers)** | **0.42** | **0.37** | **1.17** | **0.75** |
+| NeuroBEM: blade-element theory plus a neural network | 0.19 | 0.19 | 0.61 | 0.39 |
+
+Four readable numbers halve the textbook simulator's force error and close two thirds of the gap to a research
+neural hybrid; the sideways forces, which the textbook law leaves out entirely, drop about threefold. The thrust
+coefficient comes out at 1.58e-06 N per (rad/s)². The forward-inflow and spin-up terms were tried and
+improved the choosing flights by less than 2%, so the simpler law stands. The dataset states no licence, so none of
+its data is redistributed here; download it from https://download.ifi.uzh.ch/rpg/NeuroBEM/ to reproduce.
 
 ### Transit timing: a shrinking orbit and an unseen planet (`/timing`)
 

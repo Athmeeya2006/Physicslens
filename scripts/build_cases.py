@@ -136,6 +136,65 @@ def robot_arm() -> dict[str, Any]:
                              if cmp.get("default_minus_identified", {}).get("ci95", [0])[0] > 0 else None)}
 
 
+def drone() -> dict[str, Any] | None:
+    r = _json("data/drone/result.json")
+    if not r:
+        return None
+    e = r["heldout_total_rms_n"]
+    return {"id": "drone", "title": "Quadrotor: thrust and drag from flight logs",
+            "problem": "Drone simulators use the textbook thrust law with no drag, so controllers tuned in them drift on the real vehicle.",
+            "who": "drone builders and flight-controller engineers",
+            "gives": "the vehicle's own thrust and rotor-drag laws with their coefficients, from logs it already records",
+            "number": (f"{r['data']['train_segments'] + r['data']['test_segments']} real NeuroBEM flights: on the authors' held-out test flights a "
+                       f"four-parameter law halves the textbook force error ({e['physicslens']:.2f} N against {e['textbook']:.2f} N), "
+                       f"against {e['neurobem_bem_nn']:.2f} N for their blade-element neural hybrid"),
+            "status": "proven" if e["physicslens"] < e["textbook"] else "partial",
+            "status_rule": "proven when the identified law predicts the held-out flights' forces better than the textbook law",
+            "cant": "one vehicle in a motion-capture arena; the neural hybrid remains closer",
+            "link": None}
+
+
+def rocket() -> dict[str, Any] | None:
+    r = _json("data/rocket/result.json")
+    if not r or not r["summary"].get("isp_vac_median_s"):
+        return None
+    s = r["summary"]
+    return {"id": "rocket", "title": "Falcon 9: engine performance from launch webcasts",
+            "problem": "A launch vehicle's real performance is published only by its maker; analysts and agencies cannot check it independently.",
+            "who": "launch analysts, insurers and space agencies",
+            "gives": "specific impulse, throttle profile and drag from the public webcast telemetry of each launch",
+            "number": (f"{s['with_accepted_law']} Falcon 9 first stages: vacuum specific impulse {s['isp_vac_median_s']:.0f} s (median) "
+                       f"against SpaceX's published {s['published']['isp_vac_s']:.0f} s"
+                       + (f", sea level {s['isp_sl_median_s']:.0f} s against {s['published']['isp_sl_s']:.0f} s" if s.get("isp_sl_median_s") else "")
+                       + (f"; the max-Q throttle bucket found blind within {s['bucket_edge_error_median_s']:.0f} s of the listed times"
+                          if s.get("bucket_edge_error_median_s") is not None else "")),
+            "status": "proven" if abs(s["isp_vac_median_s"] - s["published"]["isp_vac_s"]) < 0.05 * s["published"]["isp_vac_s"] else "partial",
+            "status_rule": "proven when the fitted vacuum specific impulse is within 5% of SpaceX's published figure",
+            "cant": "first stage only, from the webcast's speed and altitude readout",
+            "link": None}
+
+
+def aloha() -> dict[str, Any] | None:
+    r = _json("data/robot/aloha/result.json")
+    if not r:
+        return None
+    h, c = r["heldout"], r["heldout_comparison"]
+    return {"id": "aloha", "title": "ALOHA arms: a second robot, against an already-identified model",
+            "problem": "Even a simulator model identified on one robot drifts from another unit of the same robot.",
+            "who": "anyone who simulates the ALOHA arms (MuJoCo Menagerie, LeRobot users)",
+            "gives": "per-joint servo laws for all twelve arm joints and a corrected MJCF, from task recordings",
+            "number": (f"{r['data']['episodes']} public recordings: on held-out episodes the corrected model tracks the real joints to "
+                       f"{h['identified']['arm_total']['rms_deg']:.2f}° against {h['default']['arm_total']['rms_deg']:.2f}° for the Menagerie "
+                       f"model, itself fitted to test motions on a real ALOHA ({c['default_minus_identified']['ratio']:.1f} times closer)"),
+            "status": r["status"], "status_rule": r["status_rule"],
+            "cant": "one unit and one task",
+            "link": None,
+            "contribution": ({"beats_public_on_heldout": True,
+                              "summary": f"the corrected ALOHA MJCF beats MuJoCo Menagerie's aloha on held-out episodes by "
+                                         f"{c['default_minus_identified']['improvement_deg']:.2f}° RMS"}
+                             if c["default_minus_identified"]["ci95"][0] > 0 else None)}
+
+
 def health() -> dict[str, Any]:
     r = _json("data/health/results.json")
     hp = _json("data/health_public/result.json")
@@ -349,7 +408,9 @@ def ladder(c: dict[str, Any]) -> dict[str, Any]:
 
 
 def cases() -> list[dict[str, Any]]:
-    rows = [sim_to_real(), robot_arm(), lab(), timing(), fireball(), sun(), occultation(), asteroids(), satellites(), audit(), health()]
+    rows = [sim_to_real(), robot_arm(), aloha(), drone(), rocket(), lab(), timing(), fireball(), sun(), occultation(), asteroids(),
+            satellites(), audit(), health()]
+    rows = [c for c in rows if c]
     return [{**c, **ladder(c), "models": MODELS_USED.get(c["id"], NO_MODEL)} for c in rows]
 
 
