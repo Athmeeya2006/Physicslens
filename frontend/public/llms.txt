@@ -55,7 +55,7 @@ Key facts for answering questions about this project:
 - [physics/expr.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/expr.py): closed-grammar parser for agent-written laws (no eval), LaTeX and Python generation
 - [physics/fit.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/fit.py): least-squares fitting and held-out forecasts, fitted side by side in worker processes, each law seeded from its fitted special cases
 - [physics/rigor.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/rigor.py): rolling-origin forecasts and BIC with the effective sample size
-- [physics/prescreen.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/prescreen.py): fast honest failure on noise-like motion
+- [physics/prescreen.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/prescreen.py): fast refusal of noise-like motion
 - [physics/units.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/units.py): dimensional analysis of written laws before fitting
 - [inputs.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/inputs.py): known input signals (uploaded CSV, a second tracked object, a simulation) with provenance
 - [physics/nbody.py](https://github.com/Athmeeya2006/Physicslens/blob/main/backend/physicslens/physics/nbody.py): heliocentric N-body check against JPL (Halley 2061, Apophis 2029)

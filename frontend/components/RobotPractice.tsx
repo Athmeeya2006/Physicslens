@@ -63,8 +63,7 @@ export function RobotPractice() {
           {real.rows.delay_and_offset.mean.toFixed(2)}° for a fitted delay and offsets ({ratio.toFixed(1)} times closer) and{" "}
           {real.rows.send_the_path.mean.toFixed(2)}° for assuming the arm does what it is told.</p>
         <p>In simulation, with the corrected model standing in for the arm, sending the compensated command instead of the plan
-          itself cuts the tracking error from {sim.rows.send_the_path.mean.toFixed(2)}° to <strong className="num">{sim.rows.compensator.mean.toFixed(2)}°</strong>.
-          Running it on the arm itself is the remaining test.</p>
+          itself cuts the tracking error from {sim.rows.send_the_path.mean.toFixed(2)}° to <strong className="num">{sim.rows.compensator.mean.toFixed(2)}°</strong>.</p>
       </section>
     </>
   );

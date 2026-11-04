@@ -158,7 +158,7 @@ def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
 
 
 # The built-in font has no glyph for these; drawn as-is they show as empty boxes.
-PLAIN = str.maketrans({"×": "x", "−": "-", "≈": "~", "–": "-", "—": ",", "σ": "sigma", "θ": "theta"})
+PLAIN = str.maketrans({"×": "x", "−": "-", "≈": "~", "\u2013": "-", "\u2014": ",", "σ": "sigma", "θ": "theta"})
 
 
 def _wrap(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, width: int) -> list[str]:

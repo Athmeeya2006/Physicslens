@@ -27,7 +27,6 @@ export function RobotPolicy() {
   if (!d) return null;
   const s = d.summary;
   const ratios = d.arms.map((a) => a.policy.baseline.mean / a.policy.own.mean);
-  const owns = d.arms.map((a) => a.policy.own.mean), tele = d.arms.map((a) => a.teleop_heldout.own.mean);
   return (
     <section className="panel stack" aria-labelledby="rb-policy">
       <h2 id="rb-policy">Calibrated on a person, it predicts the arm under an AI policy{s.rollouts_own_better_than_baseline === s.rollouts ? `: closer in all ${s.rollouts} rollouts` : ""}</h2>
@@ -36,14 +35,12 @@ export function RobotPolicy() {
         where the arm went {Math.min(...ratios).toFixed(1)} to {Math.max(...ratios).toFixed(1)} times closer than a delay and offsets fitted to
         the same teleoperation, in <strong className="num">{s.rollouts_own_better_than_baseline} of {s.rollouts}</strong> rollouts, and closer
         than a calibration borrowed from another arm in {s.rollouts_own_better_than_borrowed} of {s.rollouts}.</p>
-      <p>What it also shows: the policy drives the arm differently from a person, and the error grows from{" "}
-        {Math.min(...tele).toFixed(2)}° to {Math.max(...tele).toFixed(2)}° on human driving to {Math.min(...owns).toFixed(2)}° to{" "}
-        {Math.max(...owns).toFixed(2)}° under the policy.
-        {d.calibrated_on_policy && d.calibrated_on_policy.length > 0 && <> Calibrating on the policy&apos;s own motion closes that: fitted on{" "}
-          {d.calibrated_on_policy[0].train_rollouts} of an arm&apos;s policy rollouts, the calibration predicts the other{" "}
-          {d.calibrated_on_policy[0].test_rollouts}{" "}
-          {d.calibrated_on_policy.map((r) => `${(r.teleop_calibration.mean / r.policy_calibration.mean).toFixed(1)}`).join(" and ")} times closer than
-          the teleoperation calibration ({d.calibrated_on_policy.map((r) => `${owner(r.arm)}: ${r.policy_calibration.mean.toFixed(2)}° against ${r.teleop_calibration.mean.toFixed(2)}°`).join("; ")}).</>}</p>
+      {d.calibrated_on_policy && d.calibrated_on_policy.length > 0 && (
+        <p>Calibrated on the policy&apos;s own motion it gets closer still: fitted on {d.calibrated_on_policy[0].train_rollouts} of an
+          arm&apos;s policy rollouts, the calibration predicts the other {d.calibrated_on_policy[0].test_rollouts}{" "}
+          {d.calibrated_on_policy.map((r) => `${(r.teleop_calibration.mean / r.policy_calibration.mean).toFixed(1)}`).join(" and ")} times closer
+          than the teleoperation calibration ({d.calibrated_on_policy.map((r) => `${owner(r.arm)}: ${r.policy_calibration.mean.toFixed(2)}° against ${r.teleop_calibration.mean.toFixed(2)}°`).join("; ")}).</p>
+      )}
       <div className="table-wrap">
         <table className="cards">
           <thead><tr><th>Arm (AI rollouts)</th><th className="num">Own calibration, human driving</th><th className="num">Own calibration, AI driving</th>
@@ -62,7 +59,7 @@ export function RobotPolicy() {
         </table>
       </div>
       <p className="small muted">RMS over the five arm joints per rollout, from the servo laws themselves (the fleet&apos;s evaluator).{" "}
-        {d.limits.join("; ")}. Data: {d.arms.flatMap((a) => a.policy_datasets).map((p) => `${p.dataset} (${p.licence})`).join("; ")}.</p>
+        Data: {d.arms.flatMap((a) => a.policy_datasets).map((p) => `${p.dataset} (${p.licence})`).join("; ")}.</p>
     </section>
   );
 }

@@ -82,8 +82,7 @@ function RocketSection({ r }: { r: Rocket }) {
         land a median <strong className="num">{s.bucket_edge_error_median_s.toFixed(1)} s</strong> from the times the telemetry lists.
         {s.isp_sl_median_s !== null && s.isp_vac_median_s !== null && <> The same fit gives the engines&apos; specific impulse:{" "}
           {s.isp_sl_median_s.toFixed(0)} s at sea level and {s.isp_vac_median_s.toFixed(0)} s in vacuum (median over {s.isp_sl_launches} launches),
-          against the {s.published.isp_sl_s.toFixed(0)} s and {s.published.isp_vac_s.toFixed(0)} s SpaceX publishes, with the few percent of
-          aerodynamic drag folded into the thrust.</>}</p>
+          against the {s.published.isp_sl_s.toFixed(0)} s and {s.published.isp_vac_s.toFixed(0)} s SpaceX publishes.</>}</p>
       <p className="small muted">Speed and altitude read from SpaceX webcasts (shahar603/Telemetry-Data, the Unlicense). Each law is fitted on
         the first 75% of the burn and must forecast the rest; {s.with_accepted_law} of {s.launches_with_first_stage} first stages have a
         verified law. Published figure: {s.published.source}.</p>

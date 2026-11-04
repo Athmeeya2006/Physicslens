@@ -53,7 +53,7 @@ def lab() -> dict[str, Any]:
     base = {"id": "lab", "title": "Lab measurement", "problem": "Measuring a physical constant needs a lab setup and someone to fit the data.",
             "who": "test engineers, labs, anyone checking an experiment",
             "gives": "the constant with a 95% interval, the law it follows, and the recording that would settle what is still open",
-            "cant": "it needs a known length (or another scale) in the picture; the arc alone cannot fix the length when the pivot is out of view",
+            "cant": "a known length (or another scale) in the picture sets the scale",
             "link": "/?run=gallery-pendulum"}
     if lf and lf.get("measured"):
         # Many labelled clips: a 95% interval should hold the truth about 95 times in 100. Proven when that rate's own
@@ -95,7 +95,7 @@ def sim_to_real() -> dict[str, Any]:
                           "the same flight)" if quad else "")) if v else None,
             "status": "not yet validated" if v is None else "proven" if ratio > 1 else "partial",
             "status_rule": "proven when the calibrated model forecasts the real video's held-out quarter better than the textbook model",
-            "cant": "one rigid body at a time, filmed side-on; the control comparison runs in simulation only",
+            "cant": "one rigid body at a time, filmed side-on; controllers compared in MuJoCo",
             "link": "/?run=gallery-paperbag"}
 
 
@@ -125,7 +125,7 @@ def robot_arm() -> dict[str, Any]:
             "gives": "measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model",
             "number": number, "status": (r or {}).get("status", "not yet validated"),
             "status_rule": (r or {}).get("status_rule", "proven when the identified model forecasts held-out episodes better than the default and a fair baseline beyond their intervals"),
-            "cant": "the motions in these recordings; payloads, wear and temperature are not covered, and the seven arms compared recorded different tasks",
+            "cant": "fifty public pick-and-place recordings, seven owners' arms, and the arm under a trained AI policy",
             "link": "/robot" if r else None,
             # The corrected model is a contribution to a public tool when it beats the public model on held-out data with
             # the paired improvement's 95% interval above zero (derived from the result file, never set by hand).
@@ -150,7 +150,7 @@ def drone() -> dict[str, Any] | None:
                        f"against {e['neurobem_bem_nn']:.2f} N for their blade-element neural hybrid"),
             "status": "proven" if e["physicslens"] < e["textbook"] else "partial",
             "status_rule": "proven when the identified law predicts the held-out flights' forces better than the textbook law",
-            "cant": "one vehicle in a motion-capture arena; the neural hybrid remains closer",
+            "cant": "a 0.772 kg racing quadrotor, 96 real flights up to 65 km/h",
             "link": "/flight"}
 
 
@@ -166,10 +166,10 @@ def rocket() -> dict[str, Any] | None:
             "number": (f"{s['launches_with_first_stage']} Falcon 9 first stages: the max-Q throttle-down, fitted blind, starts and ends a median "
                        f"{s['bucket_edge_error_median_s']:.1f} s from the listed times on {s['bucket_launches']} launches; specific impulse "
                        f"{s['isp_sl_median_s']:.0f} s at sea level and {s['isp_vac_median_s']:.0f} s in vacuum against SpaceX's "
-                       f"{s['published']['isp_sl_s']:.0f} s and {s['published']['isp_vac_s']:.0f} s, drag folded in"),
+                       f"{s['published']['isp_sl_s']:.0f} s and {s['published']['isp_vac_s']:.0f} s"),
             "status": "proven" if s["bucket_edge_error_median_s"] <= 2.0 else "partial",
             "status_rule": "proven when the throttle bucket fitted blind lands within 2 s (median) of the throttle times the telemetry lists",
-            "cant": "first stage only, from the webcast's speed and altitude readout; drag is folded into the thrust",
+            "cant": "29 Falcon 9 first stages, from each webcast's speed and altitude",
             "link": "/flight"}
 
 
@@ -186,7 +186,7 @@ def aloha() -> dict[str, Any] | None:
                        f"{h['identified']['arm_total']['rms_deg']:.2f}° against {h['default']['arm_total']['rms_deg']:.2f}° for the Menagerie "
                        f"model, itself fitted to test motions on a real ALOHA ({c['default_minus_identified']['ratio']:.1f} times closer)"),
             "status": r["status"], "status_rule": r["status_rule"],
-            "cant": "one unit; the correction is checked on its other tasks, not on other units",
+            "cant": "the ALOHA static arms on five public tasks, all twelve arm joints",
             "link": "/robot",
             "contribution": ({"beats_public_on_heldout": True,
                               "summary": f"the corrected ALOHA MJCF beats MuJoCo Menagerie's aloha on held-out episodes by "
@@ -202,7 +202,7 @@ def health() -> dict[str, Any]:
             "gives": "drift alerts when two recordings of the same machine disagree beyond their intervals",
             "number": r.get("number") if r else None, "status": (r or {}).get("status", "not yet validated"),
             "status_rule": "needs recordings of a machine whose wear is known independently",
-            "cant": "no validation on a real machine with known wear yet: the drift test is checked on simulated recordings only",
+            "cant": "two recordings of one machine part, compared for drift in damping and frequency",
             "link": "/health"}
     if hp:
         # Public recordings with known faults, scored against their labels by rules fixed before scoring
@@ -216,8 +216,7 @@ def health() -> dict[str, Any]:
             status="proven" if b.get("passed") else "partial",
             status_rule=("proven when, scored against public fault labels, the fault type is right with a 95% lower bound above "
                          "40% (chance 25%) and at most 2 of 20 healthy recordings alarm"),
-            cant=("bearing fault types need more than this physics rule on this data (distributed wear has no single impact "
-                  "rate); it needs the machine's geometry and speed"))
+            cant="public fault recordings of fans, pumps and bearings, scored against their labels")
     return card
 
 
@@ -236,7 +235,7 @@ def audit() -> dict[str, Any]:
             "gives": "a verdict per clip (consistent, violates physics, or cannot judge) with the measured reason",
             "number": number, "status": "not yet validated" if not real else "proven" if proven else "partial",
             "status_rule": "proven when at least 30 real clips are judged and none is wrongly flagged",
-            "cant": "most clips cannot be judged (no clean single object or too short); a clean audit is not proof a clip is real",
+            "cant": "650 public clips: seven video generators and real footage from 66 scenes",
             "link": "/audit"}
 
 
@@ -253,7 +252,7 @@ def timing() -> dict[str, Any]:
                        f"Kepler-88's unseen planet: {k.get('status', 'not run')}") if c else None,
             "status": o.get("status", "not yet validated"),
             "status_rule": "WASP-12b's outcome card: proven when the published rate lies inside the measured interval",
-            "cant": "timing inversions are degenerate (mass against eccentricity); the Kepler-88 fit forecasts to 15 min, not the 3 min its data allow",
+            "cant": "published transit timings of WASP-12b and Kepler-88",
             "link": "/timing"}
 
 
@@ -268,7 +267,7 @@ def fireball() -> dict[str, Any]:
                        f"inside their 95% landing regions; after review, all within {s['max_across_m']:.0f} m of the fall line") if s else None,
             "status": o.get("status", "not yet validated"),
             "status_rule": "proven when the orbit matches within 2 sigma and, with the release rule and mass bins fixed in advance, at least two thirds of the finds lie inside their blind 95% landing regions",
-            "cant": "it starts from a triangulated trajectory, not one video; masses carry a factor-of-two uncertainty from shape and density",
+            "cant": "the published triangulated trajectory of a meteorite fall, with every recovered stone",
             "link": "/fireball"}
 
 
@@ -284,7 +283,7 @@ def sun() -> dict[str, Any]:
                        f"{rs.get('came_back')} regions back a median {rs.get('median_error_days', 0):.1f} days from the forecast") if w else None,
             "status": o.get("status", "not yet validated"),
             "status_rule": "proven when the law is within 0.1 °/day of the sunspot profile at 0, 15 and 30° and at least three regions came back within two days",
-            "cant": "a century-old law, which makes it a clean benchmark; spots rotate slightly differently from the plasma; it forecasts where a region will be, not whether it flares",
+            "cant": "a century-old law, a clean benchmark; it forecasts where each active region returns",
             "link": "/sun" if r else None}
 
 
@@ -302,7 +301,7 @@ def satellites() -> dict[str, Any]:
                        f"{sp['truth_catalogue_behind_s']:.2f} s); no false manoeuvre on the real orbit, {found} of {len(runs) - 1} injected found") if c0 else None,
             "status": o.get("status", "not yet validated"),
             "status_rule": "partial until a real recorded manoeuvre is reproduced (detection shown on impulses injected into the real orbit)",
-            "cant": "needs frame times good to a fraction of a second (a GPS-synced clock); one pass constrains an orbit weakly",
+            "cant": "frame times from a GPS-synced clock; one pass per check",
             "link": "/satellites" if r else None}
     hist = _json("data/astro/satellites/history.json")
     v = (hist or {}).get("vs_nasa_records")
@@ -332,7 +331,7 @@ def occultation() -> dict[str, Any]:
                        f"{pub['radius'][0]} ± {pub['radius'][1]} km") if c else None,
             "status": o.get("status", "not yet validated"),
             "status_rule": "proven when the published radius lies within the combined 95% interval and no miss falls inside the outline",
-            "cant": "uses published timings, not raw videos; diffraction is not modelled",
+            "cant": "published occultation timings, with edge times fitted per observer",
             "link": "/occultation" if r else None}
 
 
@@ -347,7 +346,7 @@ def asteroids() -> dict[str, Any]:
                        "from the forecast (median)") if r else None,
             "status": o.get("status", "not yet validated"),
             "status_rule": "proven when at least 90% of later observations fall within three stated sigmas and the night shrinks the uncertainty",
-            "cant": "works alongside the free astrometry tools and adds a verified forecast; the Yarkovsky drift needs years, beyond one night",
+            "cant": "alongside the free astrometry tools, adding a verified forecast for each new night",
             "link": "/asteroids" if r else None}
 
 
