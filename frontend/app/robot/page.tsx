@@ -50,11 +50,17 @@ export default function RobotPage() {
     <main id="main">
       <ProofNav caseTitle="open-source robot arm" />
       <header className="page-head">
-        <h1>Open-source robot arm: its simulator, corrected from public recordings</h1>
+        <h1>Open-source robot arm: a simulator twice as true to the real arm as the public one</h1>
         <p className="tagline">
           The SO-100 is a widely used low-cost arm, and its public MuJoCo model has guessed joint dynamics. From public
           recordings of the real arm (the command sent and the angle reached, every frame), each joint&apos;s servo law is
           identified and checked on episodes it never saw, then put back into the MuJoCo model.
+        </p>
+        <p className="tagline">
+          The public model is the one people simulate this arm with and test its policies against. On motion it never saw, the
+          corrected model tracks the real arm about twice as closely, and it stays ahead of the fixes an engineer would try
+          first: a fitted delay, then per-joint offsets on top. And every arm needs its own: on seven owners&apos; arms, a
+          calibration borrowed from another arm is worse than the arm&apos;s own in every pair.
         </p>
       </header>
       {error && <p className="error">{error}</p>}
@@ -67,7 +73,8 @@ export default function RobotPage() {
             <p className="case-number">On {d.data.test_episodes.length} held-out episodes the corrected model tracks the real arm to{" "}
               {d.heldout.identified.arm_total.rms_deg.toFixed(2)}° RMS, against {d.heldout.default.arm_total.rms_deg.toFixed(2)}° for the public
               model: {d.heldout_comparison.default_minus_identified.ratio.toFixed(1)} times closer, and{" "}
-              {d.heldout_comparison.fair_baseline_minus_identified.ratio.toFixed(1)} times closer than the public model with a fitted delay.</p>
+              {d.heldout_comparison.fair_baseline_minus_identified.ratio.toFixed(1)} times closer than the public model with a fitted delay, and{" "}
+              {d.heldout_comparison.stronger_baseline_minus_identified.ratio.toFixed(1)} times closer than that with per-joint offsets added.</p>
             <p className="small"><strong>Status: {d.status}{d.status === "proven" ? ", and it improves a public tool" : ""}.</strong>{" "}
               Rule: {d.status_rule}.{d.status === "proven" ? " Because the model it beats is the current public one, the correction improves a public tool (the cases page lists it that way)." : ""}</p>
             <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
