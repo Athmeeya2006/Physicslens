@@ -31,6 +31,8 @@ FILES = {
     # The same cases run through the agent (scripts/cases_agent.py): its own laws beside the hand-chosen ones.
     "robot.json": ROOT / "data" / "robot" / "result.json",
     "robot_fleet.json": ROOT / "data" / "robot" / "fleet.json",
+    "robot_impact.json": ROOT / "data" / "robot" / "impact.json",
+    "robot_drift.json": ROOT / "data" / "robot" / "drift.json",
     "health_public.json": ROOT / "data" / "health_public" / "result.json",
     "so_arm100_identified.xml": ROOT / "data" / "robot" / "so_arm100_identified.xml",
     "so_arm100_identified.diff": ROOT / "data" / "robot" / "so_arm100_identified.diff",

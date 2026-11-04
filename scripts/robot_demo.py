@@ -37,12 +37,14 @@ XML = RAW / "menagerie" / "so_arm100.xml"
 # Another owner's arm (scripts/robot_fleet.py): PL_ROBOT_FLEET names a folder written by scripts/fetch_robot_fleet.py;
 # the same rules run on it and write data/robot/fleet/<folder>/. Unset: the original case, exactly as published.
 FLEET = os.environ.get("PL_ROBOT_FLEET")
+# PL_ROBOT_GROUP=drift keeps one owner's recordings from different dates (scripts/robot_drift.py) apart from the fleet.
+GROUP = os.environ.get("PL_ROBOT_GROUP", "fleet")
 if FLEET:
-    SRC = ROOT / "var" / "robot" / "fleet" / FLEET
+    SRC = ROOT / "var" / "robot" / GROUP / FLEET
     DATA_FILE = SRC / "meta" / "info.json"
     INFO_FILE = SRC / "meta" / "info.json"
-    OUT = ROOT / "data" / "robot" / "fleet" / FLEET
-    CACHE = ROOT / "var" / "robot" / f"identification_{FLEET}.pkl"
+    OUT = ROOT / "data" / "robot" / GROUP / FLEET
+    CACHE = ROOT / "var" / "robot" / (f"identification_{FLEET}.pkl" if GROUP == "fleet" else f"identification_{GROUP}_{FLEET}.pkl")
     SOURCE = json.loads((SRC / "source.json").read_text()) if (SRC / "source.json").exists() else {}
 else:
     SRC = RAW / "lerobot"
@@ -276,6 +278,9 @@ def main() -> None:
                      ("identified", e, ident_xml, 0.0, None, True, (laws, recentre))]
         sims = run_replays(pool, jobs)
     print(f"MuJoCo replays done ({time.time() - t0:.0f} s)", flush=True)
+    # The held-out replays themselves, for scripts/robot_impact.py (where the gripper ends up, in millimetres).
+    np.savez_compressed(CACHE.with_name(CACHE.stem.replace("identification", "replays") + ".npz"),
+                        **{f"{k}__{e}": v for k, d in sims.items() for e, v in d.items()})
 
     # One held-out episode as time series, for the before/after picture: the episode whose improvement over the public
     # model is the median one, so the picture is typical, not the best case.
