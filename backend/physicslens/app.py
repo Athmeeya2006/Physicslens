@@ -190,6 +190,8 @@ def health(x_access_code: Annotated[str | None, Header()] = None) -> dict[str, o
             "reasoning": {"provider": provider, "model": OPEN_WEIGHT_MODELS[provider]} if provider else None,
             "can_upload": audience != "public" or public_try_enabled(), "can_go_live": audience != "public",
             "open_access": open_access(),
+            # Whether each provider accepted its key at startup ("accepted", "rejected", "missing"); never the key.
+            "keys": json.loads(os.environ.get("KEY_CHECK") or "{}"),
             # The OS wall around generated controller code: "bubblewrap", "unshare" (network only) or "none".
             "sandbox_isolation": sandbox_isolation(),
             "turnstile_site_key": os.environ.get("TURNSTILE_SITE_KEY", "") if audience == "public" else ""}

@@ -1460,7 +1460,7 @@ All routes are in `backend/physicslens/app.py`. Routes that start paid work are 
 
 | Method and path | Purpose |
 |---|---|
-| `GET /api/health` | status, environment, mock mode, and what this visitor may do |
+| `GET /api/health` | status, environment, mock mode, whether each provider accepted its key at startup, and what this visitor may do |
 | `GET /api/gallery` | the curated results |
 | `GET /api/budget` | spent and remaining per provider (development UI) |
 | `POST /api/runs` | upload a clip with optional settings (length, object size, hint, slow-motion factor, blade count for sound, a `known_mover` to track as an input, an `inputs_csv` of known signals, `gravity_up` from the phone's accelerometer, a `lens` calibration); the file is read with ffprobe first and a clip under 2 s or too few frames is refused with its length, before anything is spent; returns a run id |
