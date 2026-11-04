@@ -1,0 +1,37 @@
+{
+ "generated": "scripts/occultation_pyote_compare.py",
+ "tools": {
+  "physicslens": "astro/occultation.edge_times (exposure-integrated edge model, grid scan)",
+  "pyote": "PyOTE (bob-anderson-ok/py-ote, MIT): event search and sub-frame adjustment, run headless"
+ },
+ "curves": "synthetic, known edges, noise 0.08 of the drop, 40 per exposure",
+ "rows": [
+  {
+   "exposure_s": 0.13,
+   "trials": 40,
+   "pyote_found": 40,
+   "physicslens_rms_s": 0.012562914035985782,
+   "pyote_rms_s": 0.01983605201803649,
+   "physicslens_rms_frames": 0.0966378002768137,
+   "pyote_rms_frames": 0.1525850155233576
+  },
+  {
+   "exposure_s": 0.5,
+   "trials": 40,
+   "pyote_found": 40,
+   "physicslens_rms_s": 0.05543608022043925,
+   "pyote_rms_s": 0.061783412683312625,
+   "physicslens_rms_frames": 0.1108721604408785,
+   "pyote_rms_frames": 0.12356682536662525
+  },
+  {
+   "exposure_s": 1.0,
+   "trials": 40,
+   "pyote_found": 40,
+   "physicslens_rms_s": 0.09752114478730733,
+   "pyote_rms_s": 0.10338757971835541,
+   "physicslens_rms_frames": 0.09752114478730733,
+   "pyote_rms_frames": 0.10338757971835541
+  }
+ ]
+}

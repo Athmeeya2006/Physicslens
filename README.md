@@ -617,6 +617,10 @@ from JPL Horizons, a weighted circle and ellipse fitted to the 19 chords, and th
 constraints. Radius 582.1 ± 0.9 km against the published 582.4 ± 0.8; the limb roughness that makes chi-square per
 degree of freedom 1 comes out at 4.2 km, as in the paper. Edge times from light curves model each frame's
 integration; on synthetic curves the stated one-sigma error holds 66 to 70% of the time (68% expected).
+Against PyOTE, the community's timing tool (`scripts/occultation_pyote_compare.py`, PyOTE's event search and sub-frame
+adjustment run headless on the same 120 synthetic curves with known edges): edge errors of 0.097 frames rms against
+PyOTE's 0.15 at 0.13 s exposures, and 0.098 against 0.103 at 1 s. The curves follow PhysicsLens's own integration model,
+which favours it; on real light curves the two should be close.
 
 A blind outline of a newer occultation was looked for and not made: the recent observer timings found are either
 already reduced by their teams (Lucky Star, NASA PDS), behind accounts with all rights reserved (SODIS), or published
