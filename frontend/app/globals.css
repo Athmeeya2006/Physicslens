@@ -21,6 +21,7 @@
   --stage-mute: #9aa8b8;
 
   --model: #1d5fd1;
+  --mark-gold: #d9a21b;
   --model-stage: #7fb0ff;
   --model-soft: rgba(29, 95, 209, 0.1);
   --whatif: #b02c76;
@@ -79,6 +80,7 @@
   --stage: #0b0a09;
 
   --model: #7fb0ff;
+  --mark-gold: #f5c451;
   --model-soft: rgba(127, 176, 255, 0.14);
   --whatif: #f06aa8;
   --mujoco: #42d38b;

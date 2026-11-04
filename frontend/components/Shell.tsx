@@ -8,14 +8,12 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { accessCode, useBackend } from "@/lib/api";
 
-// The mark: a lens with a swing arc and a bob, drawn once in the shell's stroke weight.
+// The mark, the same one the film closes on: a dashed lens ring with a gold bob just off centre.
 function Mark() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 4.5 L8.2 15.6" strokeLinecap="round" />
-      <path d="M5.6 13.4 A 9 9 0 0 0 18.4 13.4" strokeDasharray="1.6 2.2" strokeLinecap="round" />
-      <circle cx="8.2" cy="15.6" r="2" fill="currentColor" stroke="none" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.4" stroke="currentColor" strokeWidth="2" strokeDasharray="2.7 1.85" />
+      <circle cx="14.6" cy="10.3" r="3.3" fill="var(--mark-gold)" />
     </svg>
   );
 }
