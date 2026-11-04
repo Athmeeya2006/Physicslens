@@ -27,6 +27,7 @@ import json
 import os
 import random
 import re
+import signal
 import sqlite3
 import subprocess
 import sys
@@ -169,6 +170,9 @@ def spent(run_id: str | None = None) -> float:
         return float(conn.execute(q + (" AND run_id = ?" if run_id else ""), (run_id,) if run_id else ()).fetchone()[0])
 
 
+CLIP_TIMEOUT_S = int(os.environ.get("PL_CLIP_TIMEOUT_S", "1200"))
+
+
 def run_one(clip: dict[str, Any], profile: str = "full") -> dict[str, Any]:
     sys.path.insert(0, str(ROOT / "backend"))
     from physicslens.costguard import CostGuardClient
@@ -178,6 +182,12 @@ def run_one(clip: dict[str, Any], profile: str = "full") -> dict[str, Any]:
     t0 = time.time()
     row: dict[str, Any] = {"id": clip["id"], "set": clip["set"], "generator": clip["generator"],
                            "human_pc": clip["human_pc"], "profile": profile}
+    def _overrun(*_: Any) -> None:
+        raise TimeoutError(f"clip took longer than {CLIP_TIMEOUT_S} s")
+
+    # Each clip runs in its own worker process, so an alarm here stops a hung clip without holding up the pool.
+    signal.signal(signal.SIGALRM, _overrun)
+    signal.alarm(CLIP_TIMEOUT_S)
     try:
         video = prepare(clip)
         client = CostGuardClient(load_settings())
@@ -199,6 +209,8 @@ def run_one(clip: dict[str, Any], profile: str = "full") -> dict[str, Any]:
         })
     except Exception as e:  # noqa: BLE001  one clip failing must not stop the study; the failure is a row of its own
         row.update({"status": "error", "audit": "error", "error": f"{type(e).__name__}: {e}"[:400]})
+    finally:
+        signal.alarm(0)
     row["seconds"] = round(time.time() - t0, 1)
     return row
 
@@ -219,7 +231,7 @@ def done_ids(path: Path, retry_errors: bool = False) -> set[str]:
     def retry(err: str) -> bool:  # refused for budget, or the network was down: not a result, run it again
         err = err.lower()
         return any(k in err for k in ("busy", "budget", "urlopen error", "name or service", "timed out", "connection",
-                                      "open-weight model failed"))
+                                      "open-weight model failed", "no file found", "outputtruncated", "took longer than"))
     # Study rows keep a failure in "error"; baseline rows in "reason" (with verdict "error").
     return {r["id"] for r in rows_of(path)
             if not (retry(r.get("error") or (r.get("reason") if r.get("verdict") == "error" else "") or "")
