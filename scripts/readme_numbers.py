@@ -235,6 +235,8 @@ CLAIMS = [
     Claim("Audit table: generated judged", r"\*\*0 of \d+\*\* \| \*\*0 of \d+\*\* \| \d+ of (\d+)", lambda: load("data/audit_study/analysis.json")["sets"]["generated"]["judged"]["k"]),
     Claim("Audit table: model alone, real", r"alone, from 4 frames, says \"violates physics\" \| (\d+) of", lambda: load("data/audit_study/analysis.json")["sets"]["real"]["model_alone"]["violates_physics"]),
     Claim("Audit table: Muse Spark 1.3 alone, real", r"\(closed\) alone, the same question \| (\d+) of", lambda: load("data/audit_study/analysis.json")["sets"]["real"]["model_alone_meta"]["violates_physics"]),
+    Claim("Audit table: model alone, wider real", r"says \"violates physics\" \| \d+ of \d+ \| (\d+) of", lambda: load("data/audit_study/analysis.json")["sets"]["real_wide"]["model_alone"]["violates_physics"]),
+    Claim("Audit table: Muse Spark 1.3 alone, wider real", r"the same question \| \d+ of \d+ \| (\d+) of", lambda: load("data/audit_study/analysis.json")["sets"]["real_wide"]["model_alone_meta"]["violates_physics"]),
     Claim("Audit table: model alone, generated", r"says \"violates physics\" \| \d+ of \d+ \|[^|]*\| (\d+) of", lambda: load("data/audit_study/analysis.json")["sets"]["generated"]["model_alone"]["violates_physics"]),
     Claim("Audit: AUC", r"\(AUC ([\d.]+); 0\.5 would mean", lambda: load("data/audit_study/analysis.json")["forecast_error_auc_generated_vs_real"]),
     Claim("Scale-free: real tuning clips flagged at defaults", r"At the physical defaults they flagged (\d+) real tuning clips",

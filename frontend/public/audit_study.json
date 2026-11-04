@@ -240,9 +240,9 @@
   }
  ],
  "model_alone": {
-  "violates_physics": 143,
-  "consistent": 284,
-  "cant_judge": 5
+  "violates_physics": 158,
+  "consistent": 415,
+  "cant_judge": 6
  },
  "licences": {
   "generated": "VideoPhy-2 test set, MIT",
@@ -503,9 +503,8 @@
      "cant_judge": 2
     },
     "model_alone_meta": {
-     "violates_physics": 103,
-     "consistent": 150,
-     "error": 2,
+     "violates_physics": 104,
+     "consistent": 151,
      "cant_judge": 2
     }
    },
@@ -763,8 +762,16 @@
      12.078140607482524
     ],
     "seconds_per_clip_median": 285.4,
-    "model_alone": {},
-    "model_alone_meta": {}
+    "model_alone": {
+     "consistent": 131,
+     "violates_physics": 15,
+     "cant_judge": 1
+    },
+    "model_alone_meta": {
+     "consistent": 131,
+     "violates_physics": 13,
+     "error": 3
+    }
    }
   },
   "generators": {

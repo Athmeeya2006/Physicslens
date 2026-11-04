@@ -1121,14 +1121,14 @@ Each violation also needs at least 5 standard errors (8 for the frame-to-frame c
 | Median forecast error of the best law (share of the motion's spread) | **0.22** | 0.42 | **0.55** |
 | Judged by the audit (not "can't judge") | 20 | 33 | 59 |
 | Accused of breaking physics | **0 of 20** | **0 of 33** | 7 of 59 |
-| Muse Spark Open alone, from 4 frames, says "violates physics" | 7 of 100 | | 136 of 332 |
-| Muse Spark 1.3 (closed) alone, the same question | 4 of 39 | | 103 of 255 |
+| Muse Spark Open alone, from 4 frames, says "violates physics" | 7 of 100 | 15 of 147 | 136 of 332 |
+| Muse Spark 1.3 (closed) alone, the same question | 4 of 39 | 13 of 144 | 104 of 257 |
 
 What it shows:
 
 - **Real motion has laws; generated motion mostly does not.** A law fitted to the first part of a real clip forecasts the rest about two and a half times as often, with well under half the error. Picking one real and one generated clip at random, the generated one is the harder to forecast 59% of the time (AUC 0.59; 0.5 would mean no difference).
 - **No false accusations on real footage.** The audit flagged none of the 53 real clips it could judge, 20 in the study's scenes and 33 in the wider control: at most 6.8% of judged real clips at 95% confidence. Its seven catches, each with the measurement behind it: CogVideoX three times (a mask that grows 6.6 times in one moment, one that shrinks 10.3 times, an object that jumps its own size in one frame), Wan twice (a mask that grows 13.1 times; a flight that gains 40% energy with nothing pushing it), Cosmos once (an oscillation whose frequency drifts 32% with no change of setup) and VideoCrafter once (a jump of 16.6 object sizes in one frame).
-- **The trade-off against the model alone.** Asked directly, Muse Spark Open calls far more generated clips fake, but it also accused 7 real clips, and it gives no measurement to check; Meta's closed Muse Spark 1.3 does the same (40% of generated and 10% of real clips called fake), so a bigger or closed model alone does not close the gap. The audit accuses only what it can measure and says "can't judge" otherwise, which is most clips: many are short, leave the frame, or show contact-rich motion with no single law.
+- **The trade-off against the model alone.** Asked directly, Muse Spark Open calls far more generated clips fake, but it also accused 22 real clips (7 of 100 in the study's scenes, 15 of 147 in the wider control), and it gives no measurement to check; Meta's closed Muse Spark 1.3 does the same (40% of generated and 9% of real clips called fake, 17 of 183), so a bigger or closed model alone does not close the gap. The audit accuses only what it can measure and says "can't judge" otherwise, which is most clips: many are short, leave the frame, or show contact-rich motion with no single law.
 
 Reproduce: `python scripts/audit_study.py select|run|baseline|report` (run and baseline call SAM 3.1 and Muse Spark Open; report and replay are free).
 
