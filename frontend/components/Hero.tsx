@@ -28,8 +28,9 @@ export function Hero({ apophis }: { apophis?: GalleryItem }) {
             inverse-square law itself, and numerical verification kept it only because it forecast motion it never saw.
           </p>
           <p className="hero-lead">
-            Film anything moving and it does the same: the equation that governs it, its uncertainty, and a simulation a
-            robot can run.
+            Film anything moving, or hand it the logs a machine already writes, and it does the same: the equation that
+            governs it, its uncertainty, and a simulation a robot can run. It has corrected the simulators of{" "}
+            <a href="/robot">two robot arms</a> and calibrated <a href="/flight">a quadrotor and Falcon 9</a>.
           </p>
           <div className="hero-actions">
             <a className="button blue" href="/?run=gallery-apophis"><Route size={16} aria-hidden="true" />See how it decided</a>
