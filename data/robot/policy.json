@@ -1,0 +1,485 @@
+{
+ "generated": "scripts/robot_policy.py",
+ "arms": [
+  {
+   "arm": "00ri__so100_battery",
+   "calibration_dataset": "00ri/so100_battery",
+   "calibration_revision": "f619ae763ab6c4e7488c32a4c51f99246a761f5d",
+   "policy_datasets": [
+    {
+     "dataset": "00ri/eval_act_so100_battery_bin_center",
+     "revision": "41ba7225ac6d33571d5012a3ada83cceaea91e39",
+     "licence": "apache-2.0",
+     "episodes": 10
+    }
+   ],
+   "rollouts": 10,
+   "baseline_delay_s": 0.1,
+   "teleop_heldout": {
+    "own": {
+     "mean": 0.314,
+     "ci95": [
+      0.2935,
+      0.3325
+     ]
+    },
+    "baseline": {
+     "mean": 0.647,
+     "ci95": [
+      0.6251,
+      0.6675
+     ]
+    }
+   },
+   "policy": {
+    "own": {
+     "mean": 1.5348,
+     "ci95": [
+      0.6636,
+      2.4477
+     ]
+    },
+    "baseline": {
+     "mean": 12.9501,
+     "ci95": [
+      2.2797,
+      27.7218
+     ]
+    },
+    "borrowed_median": {
+     "mean": 1.6245,
+     "ci95": [
+      0.7301,
+      2.5572
+     ]
+    },
+    "own_minus_baseline": {
+     "mean": -11.4153,
+     "ci95": [
+      -26.784,
+      -0.7046
+     ]
+    }
+   }
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "calibration_dataset": "julyfun/so100_pick_and_place_v4_50",
+   "calibration_revision": "0f93d5ec05075a83a55b2a793d205dee6b27b763",
+   "policy_datasets": [
+    {
+     "dataset": "julyfun/eval_act_so100_test3",
+     "revision": "505eb8476f16c62f2a2d00a79fa2dbcee2adae77",
+     "licence": "apache-2.0",
+     "episodes": 10
+    }
+   ],
+   "rollouts": 10,
+   "baseline_delay_s": 0.1333,
+   "teleop_heldout": {
+    "own": {
+     "mean": 0.3146,
+     "ci95": [
+      0.2749,
+      0.358
+     ]
+    },
+    "baseline": {
+     "mean": 0.9131,
+     "ci95": [
+      0.8272,
+      1.0098
+     ]
+    }
+   },
+   "policy": {
+    "own": {
+     "mean": 2.6415,
+     "ci95": [
+      1.9535,
+      3.1998
+     ]
+    },
+    "baseline": {
+     "mean": 4.7842,
+     "ci95": [
+      3.6126,
+      5.703
+     ]
+    },
+    "borrowed_median": {
+     "mean": 3.2679,
+     "ci95": [
+      2.4505,
+      3.9329
+     ]
+    },
+    "own_minus_baseline": {
+     "mean": -2.1427,
+     "ci95": [
+      -2.5117,
+      -1.6514
+     ]
+    }
+   }
+  },
+  {
+   "arm": "sergiov2000__so100_lego_and_ball_40_lego",
+   "calibration_dataset": "sergiov2000/so100_lego_and_ball_40_lego",
+   "calibration_revision": "7e2bd539571322193a97210278e5d28b8cb31a31",
+   "policy_datasets": [
+    {
+     "dataset": "sergiov2000/eval_act_so100_wm_lb_ball_horiz_2",
+     "revision": "84a690747543416e782089eb08464b43921eed6d",
+     "licence": "apache-2.0",
+     "episodes": 2
+    },
+    {
+     "dataset": "sergiov2000/eval_act_so100_wm_lb_ball_vert_2",
+     "revision": "c3499206ec6c8f3d7f3f30bfefa607aa50e69b97",
+     "licence": "apache-2.0",
+     "episodes": 2
+    },
+    {
+     "dataset": "sergiov2000/eval_act_so100_wm_lb_lego_horiz_2",
+     "revision": "62e06e9809e1005db5e0ecedb57a4ba1d4541b64",
+     "licence": "apache-2.0",
+     "episodes": 2
+    },
+    {
+     "dataset": "sergiov2000/eval_act_so100_wm_lb_lego_vert_2",
+     "revision": "5ad5d988c4b949c59e0e9eb5d455068d52137b7f",
+     "licence": "apache-2.0",
+     "episodes": 2
+    }
+   ],
+   "rollouts": 8,
+   "baseline_delay_s": 0.1333,
+   "teleop_heldout": {
+    "own": {
+     "mean": 0.3301,
+     "ci95": [
+      0.3195,
+      0.3411
+     ]
+    },
+    "baseline": {
+     "mean": 0.9893,
+     "ci95": [
+      0.9571,
+      1.0235
+     ]
+    }
+   },
+   "policy": {
+    "own": {
+     "mean": 0.5156,
+     "ci95": [
+      0.4735,
+      0.5628
+     ]
+    },
+    "baseline": {
+     "mean": 0.8442,
+     "ci95": [
+      0.8126,
+      0.8779
+     ]
+    },
+    "borrowed_median": {
+     "mean": 0.7474,
+     "ci95": [
+      0.7146,
+      0.7794
+     ]
+    },
+    "own_minus_baseline": {
+     "mean": -0.3286,
+     "ci95": [
+      -0.3673,
+      -0.2954
+     ]
+    }
+   }
+  }
+ ],
+ "rollouts": [
+  {
+   "arm": "00ri__so100_battery",
+   "dataset": "00ri/eval_act_so100_battery_bin_center",
+   "episode": 0,
+   "frames": 508,
+   "own_deg": 0.4373,
+   "baseline_deg": 0.7627,
+   "borrowed_median_deg": 0.5835
+  },
+  {
+   "arm": "00ri__so100_battery",
+   "dataset": "00ri/eval_act_so100_battery_bin_center",
+   "episode": 1,
+   "frames": 400,
+   "own_deg": 0.6129,
+   "baseline_deg": 0.7139,
+   "borrowed_median_deg": 0.6675
+  },
+  {
+   "arm": "00ri__so100_battery",
+   "dataset": "00ri/eval_act_so100_battery_bin_center",
+   "episode": 2,
+   "frames": 716,
+   "own_deg": 0.6024,
+   "baseline_deg": 0.7201,
+   "borrowed_median_deg": 0.661
+  },
+  {
+   "arm": "00ri__so100_battery",
+   "dataset": "00ri/eval_act_so100_battery_bin_center",
+   "episode": 3,
+   "frames": 889,
+   "own_deg": 0.6653,
+   "baseline_deg": 0.7799,
+   "borrowed_median_deg": 0.7516
+  },
+  {
+   "arm": "00ri__so100_battery",
+   "dataset": "00ri/eval_act_so100_battery_bin_center",
+   "episode": 4,
+   "frames": 888,
+   "own_deg": 4.0874,
+   "baseline_deg": 5.7562,
+   "borrowed_median_deg": 4.1899
+  },
+  {
+   "arm": "00ri__so100_battery",
+   "dataset": "00ri/eval_act_so100_battery_bin_center",
+   "episode": 5,
+   "frames": 889,
+   "own_deg": 3.0648,
+   "baseline_deg": 4.7229,
+   "borrowed_median_deg": 3.2664
+  },
+  {
+   "arm": "00ri__so100_battery",
+   "dataset": "00ri/eval_act_so100_battery_bin_center",
+   "episode": 6,
+   "frames": 888,
+   "own_deg": 3.39,
+   "baseline_deg": 4.8459,
+   "borrowed_median_deg": 3.4768
+  },
+  {
+   "arm": "00ri__so100_battery",
+   "dataset": "00ri/eval_act_so100_battery_bin_center",
+   "episode": 7,
+   "frames": 1,
+   "own_deg": 0.0,
+   "baseline_deg": 48.2852,
+   "borrowed_median_deg": 0.0
+  },
+  {
+   "arm": "00ri__so100_battery",
+   "dataset": "00ri/eval_act_so100_battery_bin_center",
+   "episode": 8,
+   "frames": 889,
+   "own_deg": 2.4879,
+   "baseline_deg": 3.9096,
+   "borrowed_median_deg": 2.6483
+  },
+  {
+   "arm": "00ri__so100_battery",
+   "dataset": "00ri/eval_act_so100_battery_bin_center",
+   "episode": 9,
+   "frames": 1,
+   "own_deg": 0.0,
+   "baseline_deg": 59.0045,
+   "borrowed_median_deg": 0.0
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "dataset": "julyfun/eval_act_so100_test3",
+   "episode": 0,
+   "frames": 442,
+   "own_deg": 0.3011,
+   "baseline_deg": 0.6464,
+   "borrowed_median_deg": 0.4816
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "dataset": "julyfun/eval_act_so100_test3",
+   "episode": 1,
+   "frames": 448,
+   "own_deg": 3.0659,
+   "baseline_deg": 5.2238,
+   "borrowed_median_deg": 3.7354
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "dataset": "julyfun/eval_act_so100_test3",
+   "episode": 2,
+   "frames": 449,
+   "own_deg": 3.4642,
+   "baseline_deg": 6.214,
+   "borrowed_median_deg": 4.4098
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "dataset": "julyfun/eval_act_so100_test3",
+   "episode": 3,
+   "frames": 449,
+   "own_deg": 2.0439,
+   "baseline_deg": 3.7937,
+   "borrowed_median_deg": 2.4929
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "dataset": "julyfun/eval_act_so100_test3",
+   "episode": 4,
+   "frames": 308,
+   "own_deg": 3.3048,
+   "baseline_deg": 5.7877,
+   "borrowed_median_deg": 3.9605
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "dataset": "julyfun/eval_act_so100_test3",
+   "episode": 5,
+   "frames": 449,
+   "own_deg": 1.9954,
+   "baseline_deg": 4.0902,
+   "borrowed_median_deg": 2.55
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "dataset": "julyfun/eval_act_so100_test3",
+   "episode": 6,
+   "frames": 244,
+   "own_deg": 3.665,
+   "baseline_deg": 6.4664,
+   "borrowed_median_deg": 4.5007
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "dataset": "julyfun/eval_act_so100_test3",
+   "episode": 7,
+   "frames": 275,
+   "own_deg": 3.8129,
+   "baseline_deg": 6.6894,
+   "borrowed_median_deg": 4.5702
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "dataset": "julyfun/eval_act_so100_test3",
+   "episode": 8,
+   "frames": 449,
+   "own_deg": 2.305,
+   "baseline_deg": 4.2029,
+   "borrowed_median_deg": 2.8089
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "dataset": "julyfun/eval_act_so100_test3",
+   "episode": 9,
+   "frames": 448,
+   "own_deg": 2.4569,
+   "baseline_deg": 4.7274,
+   "borrowed_median_deg": 3.1693
+  },
+  {
+   "arm": "sergiov2000__so100_lego_and_ball_40_lego",
+   "dataset": "sergiov2000/eval_act_so100_wm_lb_ball_horiz_2",
+   "episode": 0,
+   "frames": 761,
+   "own_deg": 0.637,
+   "baseline_deg": 0.9251,
+   "borrowed_median_deg": 0.8002
+  },
+  {
+   "arm": "sergiov2000__so100_lego_and_ball_40_lego",
+   "dataset": "sergiov2000/eval_act_so100_wm_lb_ball_horiz_2",
+   "episode": 1,
+   "frames": 785,
+   "own_deg": 0.4849,
+   "baseline_deg": 0.8051,
+   "borrowed_median_deg": 0.661
+  },
+  {
+   "arm": "sergiov2000__so100_lego_and_ball_40_lego",
+   "dataset": "sergiov2000/eval_act_so100_wm_lb_ball_vert_2",
+   "episode": 0,
+   "frames": 837,
+   "own_deg": 0.446,
+   "baseline_deg": 0.7768,
+   "borrowed_median_deg": 0.6979
+  },
+  {
+   "arm": "sergiov2000__so100_lego_and_ball_40_lego",
+   "dataset": "sergiov2000/eval_act_so100_wm_lb_ball_vert_2",
+   "episode": 1,
+   "frames": 882,
+   "own_deg": 0.5993,
+   "baseline_deg": 0.8608,
+   "borrowed_median_deg": 0.7547
+  },
+  {
+   "arm": "sergiov2000__so100_lego_and_ball_40_lego",
+   "dataset": "sergiov2000/eval_act_so100_wm_lb_lego_horiz_2",
+   "episode": 0,
+   "frames": 852,
+   "own_deg": 0.4546,
+   "baseline_deg": 0.8195,
+   "borrowed_median_deg": 0.7247
+  },
+  {
+   "arm": "sergiov2000__so100_lego_and_ball_40_lego",
+   "dataset": "sergiov2000/eval_act_so100_wm_lb_lego_horiz_2",
+   "episode": 1,
+   "frames": 881,
+   "own_deg": 0.5269,
+   "baseline_deg": 0.8125,
+   "borrowed_median_deg": 0.7694
+  },
+  {
+   "arm": "sergiov2000__so100_lego_and_ball_40_lego",
+   "dataset": "sergiov2000/eval_act_so100_wm_lb_lego_vert_2",
+   "episode": 0,
+   "frames": 858,
+   "own_deg": 0.5235,
+   "baseline_deg": 0.8559,
+   "borrowed_median_deg": 0.816
+  },
+  {
+   "arm": "sergiov2000__so100_lego_and_ball_40_lego",
+   "dataset": "sergiov2000/eval_act_so100_wm_lb_lego_vert_2",
+   "episode": 1,
+   "frames": 881,
+   "own_deg": 0.4524,
+   "baseline_deg": 0.8982,
+   "borrowed_median_deg": 0.7555
+  }
+ ],
+ "summary": {
+  "arms": 3,
+  "rollouts": 28,
+  "own_mean_deg": 1.6388,
+  "baseline_mean_deg": 6.5749,
+  "borrowed_mean_deg": 1.9608,
+  "baseline_over_own": 4.012,
+  "baseline_minus_own_deg": 4.936,
+  "baseline_minus_own_ci95": [
+   1.0234,
+   10.6619
+  ],
+  "borrowed_minus_own_deg": 0.322,
+  "borrowed_minus_own_ci95": [
+   0.2276,
+   0.4251
+  ],
+  "rollouts_own_better_than_baseline": 28,
+  "rollouts_own_better_than_borrowed": 26
+ },
+ "method": "each arm's servo laws from its own teleoperation (scripts/robot_demo.py, never refitted) run open loop on its owner's AI-policy rollouts from the policy's commands; the fair baseline (one delay and per-joint offsets) fitted on the same teleoperation training episodes; a borrowed calibration is every other fleet arm's laws (median over them); RMS over the five arm joints per rollout; intervals by bootstrap over rollouts",
+ "limits": [
+  "3 arms and 28 rollouts; the policies were recorded 1 to 15 days after the teleoperation, on the same or a related task",
+  "this tests the model's prediction of the arm under a policy's commands, not a policy trained in simulation"
+ ]
+}

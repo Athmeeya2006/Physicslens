@@ -526,6 +526,15 @@ setup. These errors come from replaying the servo laws themselves, where the ori
 recorded different tasks (a battery, a block in a cup, strawberries, lego, medicine boxes), so part of the gap can come from different
 speeds and loads rather than the hardware alone; no public dataset has several arms on one task.
 
+**Calibrated on a person, it predicts the arm under an AI policy** (`scripts/robot_policy.py`, `data/robot/policy.json`).
+Every calibration above was fitted on teleoperation. Three of the owners also published their arm driven by a trained
+ACT policy (28 rollouts, LeRobot eval_act datasets, Apache-2.0). From the policy's commands alone, each arm's own
+calibration, never refitted, predicts where the arm went closer than a delay and per-joint offsets fitted to the same
+teleoperation in 28 of 28 rollouts (1.6 to 8.4 times closer per arm), and closer than a borrowed calibration in 26 of
+28. The policy drives the arm differently from a person: the error grows from 0.31° to 0.33° on held-out human
+driving to 0.52° to 2.64° under the policy, so a calibration meant for policy work is best also fitted on
+policy-like motion. These errors come from the servo laws themselves, the fleet's evaluator.
+
 **Same arm, days and months apart** (`scripts/robot_drift.py`, `data/robot/drift.json`). One owner's public
 recordings (pranavsaroha, Apache-2.0) give the same arm twice a few days apart in December 2024 and twice in June
 2025, each calibrated on its own and replayed on the others' held-out episodes. Three days apart in June, on similar

@@ -33,6 +33,7 @@ FILES = {
     "robot_fleet.json": ROOT / "data" / "robot" / "fleet.json",
     "robot_impact.json": ROOT / "data" / "robot" / "impact.json",
     "robot_drift.json": ROOT / "data" / "robot" / "drift.json",
+    "robot_policy.json": ROOT / "data" / "robot" / "policy.json",
     "health_public.json": ROOT / "data" / "health_public" / "result.json",
     "so_arm100_identified.xml": ROOT / "data" / "robot" / "so_arm100_identified.xml",
     "so_arm100_identified.diff": ROOT / "data" / "robot" / "so_arm100_identified.diff",
