@@ -540,8 +540,10 @@ ACT policy (28 rollouts, LeRobot eval_act datasets, Apache-2.0). From the policy
 calibration, never refitted, predicts where the arm went closer than a delay and per-joint offsets fitted to the same
 teleoperation in 28 of 28 rollouts (1.6 to 8.4 times closer per arm), and closer than a borrowed calibration in 26 of
 28. The policy drives the arm differently from a person: the error grows from 0.31° to 0.33° on held-out human
-driving to 0.52° to 2.64° under the policy, so a calibration meant for policy work is best also fitted on
-policy-like motion. These errors come from the servo laws themselves, the fleet's evaluator.
+driving to 0.52° to 2.64° under the policy. Calibrating on the policy's own motion closes that: fitted on 7 of each
+arm's policy rollouts by the same command, the calibration predicts the other 3 at 0.27° and 1.11°, against
+0.82° and 2.84° for the teleoperation calibration (3.0 and 2.6 times closer; 00ri and julyfun). These
+errors come from the servo laws themselves, the fleet's evaluator.
 
 **Same arm, days and months apart** (`scripts/robot_drift.py`, `data/robot/drift.json`). One owner's public
 recordings (pranavsaroha, Apache-2.0) give the same arm twice a few days apart in December 2024 and twice in June
@@ -1223,9 +1225,10 @@ tie) needs only a record of motion and the inputs that drove it. Each next step 
 this repository:
 
 - **Robot fleets, calibrated as they work.** Every arm needs its own calibration (42 of 42 pairs), one arm repeats
-  within 0.09° across days, and the laws inverted already recover the commands really sent within 0.54°. Next: run
-  the compensator on a physical arm, calibrate on policy-driven motion as well as teleoperation, and offer the
-  corrected models upstream (the MuJoCo Menagerie issue is drafted).
+  within 0.09° across days, the laws inverted already recover the commands really sent within 0.54°, and calibrating on
+  an AI policy's own rollouts predicts the next ones 2.6 to 3 times closer. Next: run the compensator on a physical
+  arm, calibrate a policy in the loop as it is trained, and offer the corrected models upstream (issues for the SO-100
+  and the ALOHA are drafted).
 - **Predictive maintenance from logs a machine already writes.** The drift check detects a change of about a tenth
   of a degree on a stable arm, and the machine-health cases find damping and frequency changes on public fault
   recordings. Next: a scheduled check that flags a joint whose deadband or delay grows beyond its repeat error.

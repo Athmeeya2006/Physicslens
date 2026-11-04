@@ -1,0 +1,2358 @@
+{
+ "generated": "scripts/robot_demo.py",
+ "status": "partial",
+ "status_rule": "proven only if the identified model's held-out arm error is lower than both the default model's and the fair baseline's with the 95% interval of each paired improvement above zero",
+ "data": {
+  "dataset": "00ri/eval_act_so100_battery_bin_center",
+  "revision": "41ba7225ac6d33571d5012a3ada83cceaea91e39",
+  "licence": "apache-2.0",
+  "fps": 30.0,
+  "episodes": 10,
+  "frames": 6069,
+  "fit_episodes": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "select_episodes": [
+   5,
+   6
+  ],
+  "train_episodes": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6
+  ],
+  "test_episodes": [
+   7,
+   8,
+   9
+  ],
+  "units": "degrees as logged (LeRobot SO-100 calibration)"
+ },
+ "model": {
+  "source": "MuJoCo Menagerie trs_so_arm100",
+  "commit": "b0655057a9df2abe39ea7fc989914ba6f248301c",
+  "licence": "Apache-2.0",
+  "default": {
+   "kp": 50.0,
+   "kv": [
+    5.1281,
+    4.961,
+    4.6299,
+    4.4934,
+    4.4731,
+    4.4727
+   ],
+   "forcerange": [
+    -3.5,
+    3.5
+   ],
+   "armature": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "frictionloss": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "damping": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "delay": 0.0,
+   "timestep": 0.002
+  },
+  "joint_map": {
+   "log_rest_deg": [
+    -0.126,
+    189.166,
+    170.822,
+    74.054,
+    -5.864,
+    0.495
+   ],
+   "model_rest_rad": [
+    0.0,
+    -3.32,
+    3.11,
+    1.18,
+    0.0,
+    -0.174
+   ],
+   "sign": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "assumption": "Sign +1 and the rest pose shared: every episode starts with the arm folded at rest, which the Menagerie file"
+  }
+ },
+ "joints": {
+  "shoulder_pan": {
+   "mjcf_joint": "Rotation",
+   "law": "so2_deadband_sag",
+   "title": "second-order servo with delay, deadband, angle-dependent offset",
+   "params": {
+    "wn": {
+     "value": 14.71825,
+     "ci95": [
+      12.90509,
+      21.17462
+     ],
+     "at_bound": false,
+     "per_episode_median": 19.94845,
+     "per_episode_iqr": [
+      16.21318,
+      24.53889
+     ]
+    },
+    "zeta": {
+     "value": 0.65897,
+     "ci95": [
+      0.63101,
+      0.71892
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.62958,
+     "per_episode_iqr": [
+      0.57234,
+      0.70542
+     ]
+    },
+    "d": {
+     "value": 0.02473,
+     "ci95": [
+      0.01505,
+      0.05152
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.04625,
+     "per_episode_iqr": [
+      0.02822,
+      0.05581
+     ]
+    },
+    "b": {
+     "value": -0.1619,
+     "ci95": [
+      -0.74455,
+      0.26599
+     ],
+     "at_bound": false,
+     "per_episode_median": -0.45778,
+     "per_episode_iqr": [
+      -2.15365,
+      0.32521
+     ]
+    },
+    "db": {
+     "value": 0.20784,
+     "ci95": [
+      0.18101,
+      0.23282
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.20288,
+     "per_episode_iqr": [
+      0.18624,
+      0.26455
+     ]
+    },
+    "sc": {
+     "value": 0.11144,
+     "ci95": [
+      -0.33374,
+      0.72779
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.37829,
+     "per_episode_iqr": [
+      -0.33665,
+      2.05507
+     ]
+    },
+    "ss": {
+     "value": -0.30294,
+     "ci95": [
+      -0.45248,
+      -0.22769
+     ],
+     "at_bound": false,
+     "per_episode_median": -0.268,
+     "per_episode_iqr": [
+      -0.73377,
+      -0.13995
+     ]
+    }
+   },
+   "selection": [
+    {
+     "from": "lag1",
+     "to": "lag1_rate",
+     "heldout_gain_deg": 0.026,
+     "ci95": [
+      -0.0006,
+      0.0526
+     ],
+     "delta_bic": -581.0,
+     "accepted": false
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_deadband",
+     "heldout_gain_deg": 0.015,
+     "ci95": [
+      0.0108,
+      0.0193
+     ],
+     "delta_bic": -292.9,
+     "accepted": true
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_sag",
+     "heldout_gain_deg": 0.0054,
+     "ci95": [
+      -0.0006,
+      0.0114
+     ],
+     "delta_bic": -38.6,
+     "accepted": false
+    },
+    {
+     "from": "lag1",
+     "to": "so2",
+     "heldout_gain_deg": 0.0156,
+     "ci95": [
+      0.0115,
+      0.0198
+     ],
+     "delta_bic": -439.1,
+     "accepted": true
+    },
+    {
+     "from": "so2",
+     "to": "so2_rate",
+     "heldout_gain_deg": 0.0116,
+     "ci95": [
+      -0.0108,
+      0.034
+     ],
+     "delta_bic": -152.3,
+     "accepted": false
+    },
+    {
+     "from": "so2",
+     "to": "so2_coulomb",
+     "heldout_gain_deg": 0.0192,
+     "ci95": [
+      0.0131,
+      0.0253
+     ],
+     "delta_bic": -291.9,
+     "accepted": true
+    },
+    {
+     "from": "so2",
+     "to": "so2_deadband",
+     "heldout_gain_deg": 0.0236,
+     "ci95": [
+      0.0181,
+      0.0291
+     ],
+     "delta_bic": -504.6,
+     "accepted": true
+    },
+    {
+     "from": "so2",
+     "to": "so2_sag",
+     "heldout_gain_deg": 0.0073,
+     "ci95": [
+      -0.0003,
+      0.015
+     ],
+     "delta_bic": -73.8,
+     "accepted": false
+    },
+    {
+     "from": "so2_deadband",
+     "to": "so2_deadband_sag",
+     "heldout_gain_deg": 0.0076,
+     "ci95": [
+      0.0016,
+      0.0137
+     ],
+     "delta_bic": -85.7,
+     "accepted": true
+    }
+   ],
+   "candidates": {
+    "lag1": {
+     "params": {
+      "tau": 0.06605,
+      "d": 0.06524,
+      "b": -0.11645
+     },
+     "bic_fit_episodes": -6478.2,
+     "rms_fit_episodes_deg": 0.3844,
+     "rms_select_episodes_deg": 0.4086
+    },
+    "lag1_rate": {
+     "params": {
+      "tau": 0.0469,
+      "d": 0.07856,
+      "b": -0.12749,
+      "wmax": 48.54746
+     },
+     "bic_fit_episodes": -7059.2,
+     "rms_fit_episodes_deg": 0.3525,
+     "rms_select_episodes_deg": 0.3826
+    },
+    "lag1_deadband": {
+     "params": {
+      "tau": 0.05791,
+      "d": 0.06409,
+      "b": -0.0837,
+      "db": 0.15618
+     },
+     "bic_fit_episodes": -6771.0,
+     "rms_fit_episodes_deg": 0.3678,
+     "rms_select_episodes_deg": 0.3936
+    },
+    "lag1_sag": {
+     "params": {
+      "tau": 0.06471,
+      "d": 0.06667,
+      "b": -0.2302,
+      "sc": 0.11909,
+      "ss": -0.22855
+     },
+     "bic_fit_episodes": -6516.7,
+     "rms_fit_episodes_deg": 0.3813,
+     "rms_select_episodes_deg": 0.4032
+    },
+    "lag1_deadband_sag": {
+     "params": {
+      "tau": 0.05688,
+      "d": 0.06526,
+      "b": -0.11184,
+      "db": 0.15493,
+      "sc": 0.03126,
+      "ss": -0.22179
+     },
+     "bic_fit_episodes": -6808.4,
+     "rms_fit_episodes_deg": 0.3649,
+     "rms_select_episodes_deg": 0.3886
+    },
+    "so2": {
+     "params": {
+      "wn": 14.74943,
+      "zeta": 0.74015,
+      "d": 0.02667,
+      "b": -0.11855
+     },
+     "bic_fit_episodes": -6917.2,
+     "rms_fit_episodes_deg": 0.36,
+     "rms_select_episodes_deg": 0.393
+    },
+    "so2_rate": {
+     "params": {
+      "wn": 36.06333,
+      "zeta": 1.03871,
+      "d": 0.06778,
+      "b": -0.12666,
+      "wmax": 48.38135
+     },
+     "bic_fit_episodes": -7069.6,
+     "rms_fit_episodes_deg": 0.3516,
+     "rms_select_episodes_deg": 0.3814
+    },
+    "so2_coulomb": {
+     "params": {
+      "wn": 13.4525,
+      "zeta": 0.63658,
+      "d": 0.01729,
+      "b": -0.09456,
+      "fc": 42.52344
+     },
+     "bic_fit_episodes": -7209.1,
+     "rms_fit_episodes_deg": 0.3444,
+     "rms_select_episodes_deg": 0.3737
+    },
+    "so2_deadband": {
+     "params": {
+      "wn": 14.15338,
+      "zeta": 0.67472,
+      "d": 0.01878,
+      "b": -0.07482,
+      "db": 0.20188
+     },
+     "bic_fit_episodes": -7421.9,
+     "rms_fit_episodes_deg": 0.3338,
+     "rms_select_episodes_deg": 0.3694
+    },
+    "so2_sag": {
+     "params": {
+      "wn": 14.37077,
+      "zeta": 0.72032,
+      "d": 0.02678,
+      "b": -0.28752,
+      "sc": 0.17603,
+      "ss": -0.27399
+     },
+     "bic_fit_episodes": -6991.1,
+     "rms_fit_episodes_deg": 0.3552,
+     "rms_select_episodes_deg": 0.3856
+    },
+    "so2_deadband_sag": {
+     "params": {
+      "wn": 13.84207,
+      "zeta": 0.66095,
+      "d": 0.01879,
+      "b": -0.13021,
+      "db": 0.20046,
+      "sc": 0.05962,
+      "ss": -0.27784
+     },
+     "bic_fit_episodes": -7507.5,
+     "rms_fit_episodes_deg": 0.3289,
+     "rms_select_episodes_deg": 0.3617
+    }
+   },
+   "mjcf": {
+    "kp": 22.43646,
+    "kv": 2.00907,
+    "delay": 0.02473,
+    "frictionloss": 0.08139,
+    "inertia_kg_m2": 0.103572,
+    "command_recentre_deg": 0.0016
+   }
+  },
+  "shoulder_lift": {
+   "mjcf_joint": "Pitch",
+   "law": "lag1_rate",
+   "title": "first-order lag with delay, speed limit",
+   "params": {
+    "tau": {
+     "value": 0.04335,
+     "ci95": [
+      0.01973,
+      0.05551
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.04749,
+     "per_episode_iqr": [
+      0.04246,
+      0.05234
+     ]
+    },
+    "d": {
+     "value": 0.0678,
+     "ci95": [
+      0.05465,
+      0.09381
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.06194,
+     "per_episode_iqr": [
+      0.05756,
+      0.06707
+     ]
+    },
+    "b": {
+     "value": -0.89615,
+     "ci95": [
+      -1.12925,
+      -0.71907
+     ],
+     "at_bound": false,
+     "per_episode_median": -0.90577,
+     "per_episode_iqr": [
+      -1.00211,
+      -0.69909
+     ]
+    },
+    "wmax": {
+     "value": 207.48618,
+     "ci95": [
+      192.79479,
+      216.81421
+     ],
+     "at_bound": false,
+     "per_episode_median": 207.48618,
+     "per_episode_iqr": [
+      200.02457,
+      209.30382
+     ]
+    }
+   },
+   "selection": [
+    {
+     "from": "lag1",
+     "to": "lag1_rate",
+     "heldout_gain_deg": 2.2156,
+     "ci95": [
+      2.1455,
+      2.2856
+     ],
+     "delta_bic": -6387.9,
+     "accepted": true
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_deadband",
+     "heldout_gain_deg": 0.0,
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "delta_bic": 8.1,
+     "accepted": false
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_sag",
+     "heldout_gain_deg": 0.0528,
+     "ci95": [
+      0.0524,
+      0.0533
+     ],
+     "delta_bic": -152.2,
+     "accepted": true
+    },
+    {
+     "from": "lag1",
+     "to": "so2",
+     "heldout_gain_deg": 0.6308,
+     "ci95": [
+      0.4995,
+      0.7622
+     ],
+     "delta_bic": -316.9,
+     "accepted": true
+    }
+   ],
+   "candidates": {
+    "lag1": {
+     "params": {
+      "tau": 0.14717,
+      "d": 0.0,
+      "b": -0.72691
+     },
+     "bic_fit_episodes": 7334.2,
+     "rms_fit_episodes_deg": 2.929,
+     "rms_select_episodes_deg": 3.8311
+    },
+    "lag1_rate": {
+     "params": {
+      "tau": 0.05491,
+      "d": 0.05555,
+      "b": -0.79383,
+      "wmax": 211.22872
+     },
+     "bic_fit_episodes": 946.3,
+     "rms_fit_episodes_deg": 1.1438,
+     "rms_select_episodes_deg": 1.6155
+    },
+    "lag1_deadband": {
+     "params": {
+      "tau": 0.14717,
+      "d": 0.0,
+      "b": -0.72691,
+      "db": 0.0
+     },
+     "bic_fit_episodes": 7342.3,
+     "rms_fit_episodes_deg": 2.929,
+     "rms_select_episodes_deg": 3.8311
+    },
+    "lag1_sag": {
+     "params": {
+      "tau": 0.14645,
+      "d": 0.0,
+      "b": -0.54533,
+      "sc": -0.75424,
+      "ss": -0.7286
+     },
+     "bic_fit_episodes": 7182.0,
+     "rms_fit_episodes_deg": 2.8573,
+     "rms_select_episodes_deg": 3.7783
+    },
+    "lag1_deadband_sag": {
+     "params": {
+      "tau": 0.14645,
+      "d": 0.0,
+      "b": -0.54535,
+      "db": 0.0,
+      "sc": -0.75426,
+      "ss": -0.72858
+     },
+     "bic_fit_episodes": 7190.1,
+     "rms_fit_episodes_deg": 2.8573,
+     "rms_select_episodes_deg": 3.7783
+    },
+    "so2": {
+     "params": {
+      "wn": 8.46621,
+      "zeta": 0.62928,
+      "d": 0.0,
+      "b": -0.71016
+     },
+     "bic_fit_episodes": 7017.3,
+     "rms_fit_episodes_deg": 2.7923,
+     "rms_select_episodes_deg": 3.2003
+    },
+    "so2_rate": {
+     "params": {
+      "wn": 26.42662,
+      "zeta": 0.97006,
+      "d": 0.03667,
+      "b": -0.79627,
+      "wmax": 211.06026
+     },
+     "bic_fit_episodes": 933.4,
+     "rms_fit_episodes_deg": 1.1403,
+     "rms_select_episodes_deg": 1.6019
+    },
+    "so2_coulomb": {
+     "params": {
+      "wn": 8.46606,
+      "zeta": 0.62926,
+      "d": 0.0,
+      "b": -0.71016,
+      "fc": 0.0
+     },
+     "bic_fit_episodes": 7025.4,
+     "rms_fit_episodes_deg": 2.7923,
+     "rms_select_episodes_deg": 3.2003
+    },
+    "so2_deadband": {
+     "params": {
+      "wn": 8.46599,
+      "zeta": 0.62926,
+      "d": 0.0,
+      "b": -0.71016,
+      "db": 0.0
+     },
+     "bic_fit_episodes": 7025.4,
+     "rms_fit_episodes_deg": 2.7923,
+     "rms_select_episodes_deg": 3.2002
+    },
+    "so2_sag": {
+     "params": {
+      "wn": 8.63622,
+      "zeta": 0.64012,
+      "d": 0.0,
+      "b": 0.49248,
+      "sc": 0.60246,
+      "ss": -1.47328
+     },
+     "bic_fit_episodes": 6951.6,
+     "rms_fit_episodes_deg": 2.7589,
+     "rms_select_episodes_deg": 3.1924
+    },
+    "so2_deadband_sag": {
+     "params": {
+      "wn": 8.63622,
+      "zeta": 0.64012,
+      "d": 0.0,
+      "b": 0.49249,
+      "db": 0.0,
+      "sc": 0.60247,
+      "ss": -1.47329
+     },
+     "bic_fit_episodes": 6959.7,
+     "rms_fit_episodes_deg": 2.7589,
+     "rms_select_episodes_deg": 3.1924
+    }
+   },
+   "mjcf": {
+    "kp": 457.06848,
+    "kv": 22.28978,
+    "delay": 0.0678,
+    "frictionloss": 0.0,
+    "inertia_kg_m2": 0.107358,
+    "command_recentre_deg": 69.6653
+   }
+  },
+  "elbow_flex": {
+   "mjcf_joint": "Elbow",
+   "law": "lag1_rate",
+   "title": "first-order lag with delay, speed limit",
+   "params": {
+    "tau": {
+     "value": 0.03946,
+     "ci95": [
+      0.01533,
+      0.06396
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.06061,
+     "per_episode_iqr": [
+      0.05569,
+      0.06634
+     ]
+    },
+    "d": {
+     "value": 0.07808,
+     "ci95": [
+      0.05131,
+      0.10388
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.05425,
+     "per_episode_iqr": [
+      0.05061,
+      0.05869
+     ]
+    },
+    "b": {
+     "value": 1.2217,
+     "ci95": [
+      1.17721,
+      1.27493
+     ],
+     "at_bound": false,
+     "per_episode_median": 1.21944,
+     "per_episode_iqr": [
+      1.17952,
+      1.26568
+     ]
+    },
+    "wmax": {
+     "value": 193.99558,
+     "ci95": [
+      176.5476,
+      205.73246
+     ],
+     "at_bound": false,
+     "per_episode_median": 193.99558,
+     "per_episode_iqr": [
+      184.3616,
+      193.99558
+     ]
+    }
+   },
+   "selection": [
+    {
+     "from": "lag1",
+     "to": "lag1_rate",
+     "heldout_gain_deg": 1.606,
+     "ci95": [
+      1.5981,
+      1.614
+     ],
+     "delta_bic": -5879.3,
+     "accepted": true
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_deadband",
+     "heldout_gain_deg": 0.0,
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "delta_bic": 8.1,
+     "accepted": false
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_sag",
+     "heldout_gain_deg": -0.0051,
+     "ci95": [
+      -0.0078,
+      -0.0025
+     ],
+     "delta_bic": -15.8,
+     "accepted": false
+    },
+    {
+     "from": "lag1",
+     "to": "so2",
+     "heldout_gain_deg": 0.5936,
+     "ci95": [
+      0.4319,
+      0.7553
+     ],
+     "delta_bic": -453.8,
+     "accepted": true
+    }
+   ],
+   "candidates": {
+    "lag1": {
+     "params": {
+      "tau": 0.1472,
+      "d": 0.0,
+      "b": 1.26552
+     },
+     "bic_fit_episodes": 5010.0,
+     "rms_fit_episodes_deg": 2.0812,
+     "rms_select_episodes_deg": 2.9909
+    },
+    "lag1_rate": {
+     "params": {
+      "tau": 0.0611,
+      "d": 0.05481,
+      "b": 1.22582,
+      "wmax": 192.15732
+     },
+     "bic_fit_episodes": -869.3,
+     "rms_fit_episodes_deg": 0.8758,
+     "rms_select_episodes_deg": 1.3849
+    },
+    "lag1_deadband": {
+     "params": {
+      "tau": 0.1472,
+      "d": 0.0,
+      "b": 1.26552,
+      "db": 0.0
+     },
+     "bic_fit_episodes": 5018.1,
+     "rms_fit_episodes_deg": 2.0812,
+     "rms_select_episodes_deg": 2.9909
+    },
+    "lag1_sag": {
+     "params": {
+      "tau": 0.14746,
+      "d": 0.0,
+      "b": 1.73662,
+      "sc": 0.60776,
+      "ss": -0.2474
+     },
+     "bic_fit_episodes": 4994.2,
+     "rms_fit_episodes_deg": 2.0714,
+     "rms_select_episodes_deg": 2.9961
+    },
+    "lag1_deadband_sag": {
+     "params": {
+      "tau": 0.14746,
+      "d": 0.0,
+      "b": 1.73662,
+      "db": 0.0,
+      "sc": 0.60776,
+      "ss": -0.2474
+     },
+     "bic_fit_episodes": 5002.3,
+     "rms_fit_episodes_deg": 2.0714,
+     "rms_select_episodes_deg": 2.9961
+    },
+    "so2": {
+     "params": {
+      "wn": 9.42018,
+      "zeta": 0.68966,
+      "d": 0.0,
+      "b": 1.27577
+     },
+     "bic_fit_episodes": 4556.2,
+     "rms_fit_episodes_deg": 1.9446,
+     "rms_select_episodes_deg": 2.3973
+    },
+    "so2_rate": {
+     "params": {
+      "wn": 60.41407,
+      "zeta": 1.97931,
+      "d": 0.05034,
+      "b": 1.22562,
+      "wmax": 192.20078
+     },
+     "bic_fit_episodes": -862.1,
+     "rms_fit_episodes_deg": 0.8757,
+     "rms_select_episodes_deg": 1.3854
+    },
+    "so2_coulomb": {
+     "params": {
+      "wn": 9.4204,
+      "zeta": 0.68967,
+      "d": 0.0,
+      "b": 1.27577,
+      "fc": 0.0
+     },
+     "bic_fit_episodes": 4564.3,
+     "rms_fit_episodes_deg": 1.9446,
+     "rms_select_episodes_deg": 2.3973
+    },
+    "so2_deadband": {
+     "params": {
+      "wn": 9.42022,
+      "zeta": 0.68966,
+      "d": 0.0,
+      "b": 1.27577,
+      "db": 0.0
+     },
+     "bic_fit_episodes": 4564.3,
+     "rms_fit_episodes_deg": 1.9446,
+     "rms_select_episodes_deg": 2.3973
+    },
+    "so2_sag": {
+     "params": {
+      "wn": 8.74384,
+      "zeta": 0.64212,
+      "d": 0.0,
+      "b": 2.54532,
+      "sc": 1.54343,
+      "ss": -0.73086
+     },
+     "bic_fit_episodes": 4362.4,
+     "rms_fit_episodes_deg": 1.8854,
+     "rms_select_episodes_deg": 2.3311
+    },
+    "so2_deadband_sag": {
+     "params": {
+      "wn": 8.74388,
+      "zeta": 0.64212,
+      "d": 0.0,
+      "b": 2.54534,
+      "db": 0.0,
+      "sc": 1.54344,
+      "ss": -0.73088
+     },
+     "bic_fit_episodes": 4370.5,
+     "rms_fit_episodes_deg": 1.8854,
+     "rms_select_episodes_deg": 2.3311
+    }
+   },
+   "mjcf": {
+    "kp": 552.51513,
+    "kv": 24.52803,
+    "delay": 0.07808,
+    "frictionloss": 0.0,
+    "inertia_kg_m2": 0.107544,
+    "command_recentre_deg": -0.267
+   }
+  },
+  "wrist_flex": {
+   "mjcf_joint": "Wrist_Pitch",
+   "law": "lag1_rate",
+   "title": "first-order lag with delay, speed limit",
+   "params": {
+    "tau": {
+     "value": 0.07205,
+     "ci95": [
+      0.06083,
+      0.07879
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.06871,
+     "per_episode_iqr": [
+      0.0626,
+      0.07326
+     ]
+    },
+    "d": {
+     "value": 0.05111,
+     "ci95": [
+      0.04509,
+      0.06206
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.0555,
+     "per_episode_iqr": [
+      0.04989,
+      0.05861
+     ]
+    },
+    "b": {
+     "value": 0.18138,
+     "ci95": [
+      0.16383,
+      0.19278
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.19184,
+     "per_episode_iqr": [
+      0.16943,
+      0.19744
+     ]
+    },
+    "wmax": {
+     "value": 83.0767,
+     "ci95": [
+      59.87267,
+      91.81548
+     ],
+     "at_bound": false,
+     "per_episode_median": 83.0767,
+     "per_episode_iqr": [
+      78.89919,
+      83.0767
+     ]
+    }
+   },
+   "selection": [
+    {
+     "from": "lag1",
+     "to": "lag1_rate",
+     "heldout_gain_deg": 0.3231,
+     "ci95": [
+      0.1365,
+      0.5097
+     ],
+     "delta_bic": -3509.4,
+     "accepted": true
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_deadband",
+     "heldout_gain_deg": -0.0,
+     "ci95": [
+      -0.0,
+      -0.0
+     ],
+     "delta_bic": 8.1,
+     "accepted": false
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_sag",
+     "heldout_gain_deg": -0.0011,
+     "ci95": [
+      -0.0023,
+      0.0001
+     ],
+     "delta_bic": -6.5,
+     "accepted": false
+    },
+    {
+     "from": "lag1",
+     "to": "so2",
+     "heldout_gain_deg": 0.2144,
+     "ci95": [
+      0.1794,
+      0.2494
+     ],
+     "delta_bic": -1484.9,
+     "accepted": true
+    }
+   ],
+   "candidates": {
+    "lag1": {
+     "params": {
+      "tau": 0.13492,
+      "d": 0.0,
+      "b": 0.1848
+     },
+     "bic_fit_episodes": -4608.2,
+     "rms_fit_episodes_deg": 0.5061,
+     "rms_select_episodes_deg": 0.8909
+    },
+    "lag1_rate": {
+     "params": {
+      "tau": 0.0636,
+      "d": 0.05859,
+      "b": 0.17659,
+      "wmax": 74.7653
+     },
+     "bic_fit_episodes": -8117.5,
+     "rms_fit_episodes_deg": 0.3017,
+     "rms_select_episodes_deg": 0.5677
+    },
+    "lag1_deadband": {
+     "params": {
+      "tau": 0.13492,
+      "d": 0.0,
+      "b": 0.1848,
+      "db": 0.0
+     },
+     "bic_fit_episodes": -4600.0,
+     "rms_fit_episodes_deg": 0.5061,
+     "rms_select_episodes_deg": 0.8909
+    },
+    "lag1_sag": {
+     "params": {
+      "tau": 0.13489,
+      "d": 0.0,
+      "b": -1.21469,
+      "sc": 0.87122,
+      "ss": 1.13907
+     },
+     "bic_fit_episodes": -4614.6,
+     "rms_fit_episodes_deg": 0.5044,
+     "rms_select_episodes_deg": 0.892
+    },
+    "lag1_deadband_sag": {
+     "params": {
+      "tau": 0.13489,
+      "d": 0.0,
+      "b": -1.21453,
+      "db": 0.0,
+      "sc": 0.87113,
+      "ss": 1.13893
+     },
+     "bic_fit_episodes": -4606.5,
+     "rms_fit_episodes_deg": 0.5044,
+     "rms_select_episodes_deg": 0.892
+    },
+    "so2": {
+     "params": {
+      "wn": 10.66463,
+      "zeta": 0.69933,
+      "d": 0.0,
+      "b": 0.18758
+     },
+     "bic_fit_episodes": -6093.0,
+     "rms_fit_episodes_deg": 0.4063,
+     "rms_select_episodes_deg": 0.6764
+    },
+    "so2_rate": {
+     "params": {
+      "wn": 15.43932,
+      "zeta": 0.85264,
+      "d": 0.01054,
+      "b": 0.17841,
+      "wmax": 77.35243
+     },
+     "bic_fit_episodes": -8201.7,
+     "rms_fit_episodes_deg": 0.2977,
+     "rms_select_episodes_deg": 0.5311
+    },
+    "so2_coulomb": {
+     "params": {
+      "wn": 10.6646,
+      "zeta": 0.69932,
+      "d": 0.0,
+      "b": 0.18758,
+      "fc": 0.0
+     },
+     "bic_fit_episodes": -6084.9,
+     "rms_fit_episodes_deg": 0.4063,
+     "rms_select_episodes_deg": 0.6764
+    },
+    "so2_deadband": {
+     "params": {
+      "wn": 10.6646,
+      "zeta": 0.69932,
+      "d": 0.0,
+      "b": 0.18758,
+      "db": 0.0
+     },
+     "bic_fit_episodes": -6084.9,
+     "rms_fit_episodes_deg": 0.4063,
+     "rms_select_episodes_deg": 0.6764
+    },
+    "so2_sag": {
+     "params": {
+      "wn": 10.30065,
+      "zeta": 0.67556,
+      "d": 0.0,
+      "b": -0.0896,
+      "sc": 0.62001,
+      "ss": -0.05301
+     },
+     "bic_fit_episodes": -6320.1,
+     "rms_fit_episodes_deg": 0.3921,
+     "rms_select_episodes_deg": 0.6663
+    },
+    "so2_deadband_sag": {
+     "params": {
+      "wn": 10.30064,
+      "zeta": 0.67556,
+      "d": 0.0,
+      "b": -0.08962,
+      "db": 0.0,
+      "sc": 0.62002,
+      "ss": -0.05299
+     },
+     "bic_fit_episodes": -6311.9,
+     "rms_fit_episodes_deg": 0.3921,
+     "rms_select_episodes_deg": 0.6663
+    }
+   },
+   "mjcf": {
+    "kp": 155.87314,
+    "kv": 12.6349,
+    "delay": 0.05111,
+    "frictionloss": 0.0,
+    "inertia_kg_m2": 0.101153,
+    "command_recentre_deg": 0.0055
+   }
+  },
+  "wrist_roll": {
+   "mjcf_joint": "Wrist_Roll",
+   "law": "so2_deadband",
+   "title": "second-order servo with delay, deadband",
+   "params": {
+    "wn": {
+     "value": 15.60153,
+     "ci95": [
+      14.76497,
+      21.25559
+     ],
+     "at_bound": false,
+     "per_episode_median": 21.39665,
+     "per_episode_iqr": [
+      17.70341,
+      79.75293
+     ]
+    },
+    "zeta": {
+     "value": 0.77584,
+     "ci95": [
+      0.76028,
+      0.85527
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.82712,
+     "per_episode_iqr": [
+      0.77984,
+      2.22398
+     ]
+    },
+    "d": {
+     "value": 0.0,
+     "ci95": [
+      0.0,
+      0.0169
+     ],
+     "at_bound": true,
+     "per_episode_median": 0.03013,
+     "per_episode_iqr": [
+      0.00533,
+      0.03286
+     ]
+    },
+    "b": {
+     "value": -0.03214,
+     "ci95": [
+      -0.04909,
+      -0.00897
+     ],
+     "at_bound": false,
+     "per_episode_median": -0.03263,
+     "per_episode_iqr": [
+      -0.05229,
+      -0.00936
+     ]
+    },
+    "db": {
+     "value": 0.08856,
+     "ci95": [
+      0.0,
+      0.14003
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.12186,
+     "per_episode_iqr": [
+      0.0958,
+      0.14584
+     ]
+    }
+   },
+   "selection": [
+    {
+     "from": "lag1",
+     "to": "lag1_rate",
+     "heldout_gain_deg": 0.1014,
+     "ci95": [
+      0.0753,
+      0.1276
+     ],
+     "delta_bic": -4720.3,
+     "accepted": true
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_deadband",
+     "heldout_gain_deg": 0.0012,
+     "ci95": [
+      0.0003,
+      0.0021
+     ],
+     "delta_bic": 7.8,
+     "accepted": false
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_sag",
+     "heldout_gain_deg": -0.0024,
+     "ci95": [
+      -0.0051,
+      0.0004
+     ],
+     "delta_bic": 2.5,
+     "accepted": false
+    },
+    {
+     "from": "lag1",
+     "to": "so2",
+     "heldout_gain_deg": 0.1294,
+     "ci95": [
+      0.0964,
+      0.1624
+     ],
+     "delta_bic": -2410.1,
+     "accepted": true
+    },
+    {
+     "from": "so2",
+     "to": "so2_rate",
+     "heldout_gain_deg": -0.0275,
+     "ci95": [
+      -0.0342,
+      -0.0207
+     ],
+     "delta_bic": -2301.2,
+     "accepted": false
+    },
+    {
+     "from": "so2",
+     "to": "so2_coulomb",
+     "heldout_gain_deg": 0.0044,
+     "ci95": [
+      0.0025,
+      0.0064
+     ],
+     "delta_bic": -6.3,
+     "accepted": true
+    },
+    {
+     "from": "so2",
+     "to": "so2_deadband",
+     "heldout_gain_deg": 0.0081,
+     "ci95": [
+      0.0032,
+      0.0129
+     ],
+     "delta_bic": -10.0,
+     "accepted": true
+    },
+    {
+     "from": "so2",
+     "to": "so2_sag",
+     "heldout_gain_deg": 0.0023,
+     "ci95": [
+      -0.0005,
+      0.0051
+     ],
+     "delta_bic": -34.1,
+     "accepted": false
+    },
+    {
+     "from": "so2_deadband",
+     "to": "so2_deadband_sag",
+     "heldout_gain_deg": 0.0025,
+     "ci95": [
+      -0.0021,
+      0.007
+     ],
+     "delta_bic": -28.0,
+     "accepted": false
+    }
+   ],
+   "candidates": {
+    "lag1": {
+     "params": {
+      "tau": 0.10046,
+      "d": 0.00373,
+      "b": -0.03277
+     },
+     "bic_fit_episodes": -5099.4,
+     "rms_fit_episodes_deg": 0.4708,
+     "rms_select_episodes_deg": 0.4081
+    },
+    "lag1_rate": {
+     "params": {
+      "tau": 0.05072,
+      "d": 0.05,
+      "b": -0.02838,
+      "wmax": 115.69146
+     },
+     "bic_fit_episodes": -9819.8,
+     "rms_fit_episodes_deg": 0.2349,
+     "rms_select_episodes_deg": 0.3067
+    },
+    "lag1_deadband": {
+     "params": {
+      "tau": 0.09969,
+      "d": 0.0034,
+      "b": -0.03493,
+      "db": 0.03673
+     },
+     "bic_fit_episodes": -5091.6,
+     "rms_fit_episodes_deg": 0.4708,
+     "rms_select_episodes_deg": 0.4069
+    },
+    "lag1_sag": {
+     "params": {
+      "tau": 0.10081,
+      "d": 0.00333,
+      "b": 0.10094,
+      "sc": -0.15434,
+      "ss": 0.01409
+     },
+     "bic_fit_episodes": -5096.9,
+     "rms_fit_episodes_deg": 0.4699,
+     "rms_select_episodes_deg": 0.4105
+    },
+    "lag1_deadband_sag": {
+     "params": {
+      "tau": 0.09987,
+      "d": 0.00299,
+      "b": 0.11039,
+      "db": 0.04248,
+      "sc": -0.16793,
+      "ss": 0.01569
+     },
+     "bic_fit_episodes": -5091.8,
+     "rms_fit_episodes_deg": 0.4697,
+     "rms_select_episodes_deg": 0.409
+    },
+    "so2": {
+     "params": {
+      "wn": 14.96975,
+      "zeta": 0.76691,
+      "d": 0.0,
+      "b": -0.03672
+     },
+     "bic_fit_episodes": -7509.5,
+     "rms_fit_episodes_deg": 0.33,
+     "rms_select_episodes_deg": 0.2788
+    },
+    "so2_rate": {
+     "params": {
+      "wn": 119.99994,
+      "zeta": 3.15081,
+      "d": 0.0482,
+      "b": -0.02835,
+      "wmax": 115.55539
+     },
+     "bic_fit_episodes": -9810.7,
+     "rms_fit_episodes_deg": 0.235,
+     "rms_select_episodes_deg": 0.3062
+    },
+    "so2_coulomb": {
+     "params": {
+      "wn": 14.94991,
+      "zeta": 0.75722,
+      "d": 0.0,
+      "b": -0.04039,
+      "fc": 9.12422
+     },
+     "bic_fit_episodes": -7515.8,
+     "rms_fit_episodes_deg": 0.3293,
+     "rms_select_episodes_deg": 0.2743
+    },
+    "so2_deadband": {
+     "params": {
+      "wn": 15.10967,
+      "zeta": 0.75905,
+      "d": 0.0,
+      "b": -0.04431,
+      "db": 0.07283
+     },
+     "bic_fit_episodes": -7519.5,
+     "rms_fit_episodes_deg": 0.3291,
+     "rms_select_episodes_deg": 0.2707
+    },
+    "so2_sag": {
+     "params": {
+      "wn": 14.82873,
+      "zeta": 0.7597,
+      "d": 0.0,
+      "b": 0.05931,
+      "sc": -0.08381,
+      "ss": -0.12026
+     },
+     "bic_fit_episodes": -7543.6,
+     "rms_fit_episodes_deg": 0.3275,
+     "rms_select_episodes_deg": 0.2765
+    },
+    "so2_deadband_sag": {
+     "params": {
+      "wn": 14.97846,
+      "zeta": 0.75324,
+      "d": 0.0,
+      "b": 0.07869,
+      "db": 0.06896,
+      "sc": -0.11496,
+      "ss": -0.11697
+     },
+     "bic_fit_episodes": -7547.5,
+     "rms_fit_episodes_deg": 0.3269,
+     "rms_select_episodes_deg": 0.2682
+    }
+   },
+   "mjcf": {
+    "kp": 24.35063,
+    "kv": 2.42184,
+    "delay": 0.0,
+    "frictionloss": 0.03764,
+    "inertia_kg_m2": 0.10004,
+    "command_recentre_deg": -0.0072
+   }
+  },
+  "gripper": {
+   "mjcf_joint": "Jaw",
+   "law": "lag1_deadband",
+   "title": "first-order lag with delay, deadband",
+   "params": {
+    "tau": {
+     "value": 0.06404,
+     "ci95": [
+      0.05421,
+      0.08249
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.06566,
+     "per_episode_iqr": [
+      0.05735,
+      0.07668
+     ]
+    },
+    "d": {
+     "value": 0.02773,
+     "ci95": [
+      0.00608,
+      0.03879
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.0191,
+     "per_episode_iqr": [
+      0.00343,
+      0.03706
+     ]
+    },
+    "b": {
+     "value": 0.21043,
+     "ci95": [
+      0.10917,
+      0.34868
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.21163,
+     "per_episode_iqr": [
+      0.10868,
+      0.4642
+     ]
+    },
+    "db": {
+     "value": 0.55393,
+     "ci95": [
+      0.42736,
+      0.68472
+     ],
+     "at_bound": false,
+     "per_episode_median": 0.49329,
+     "per_episode_iqr": [
+      0.40995,
+      0.58307
+     ]
+    }
+   },
+   "selection": [
+    {
+     "from": "lag1",
+     "to": "lag1_rate",
+     "heldout_gain_deg": -0.0002,
+     "ci95": [
+      -0.0029,
+      0.0026
+     ],
+     "delta_bic": -46.2,
+     "accepted": false
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_deadband",
+     "heldout_gain_deg": 0.1271,
+     "ci95": [
+      0.0928,
+      0.1614
+     ],
+     "delta_bic": -267.2,
+     "accepted": true
+    },
+    {
+     "from": "lag1",
+     "to": "lag1_sag",
+     "heldout_gain_deg": 0.1068,
+     "ci95": [
+      0.0779,
+      0.1358
+     ],
+     "delta_bic": -300.2,
+     "accepted": true
+    },
+    {
+     "from": "lag1",
+     "to": "so2",
+     "heldout_gain_deg": -0.0013,
+     "ci95": [
+      -0.0028,
+      0.0002
+     ],
+     "delta_bic": -9.0,
+     "accepted": false
+    },
+    {
+     "from": "lag1_deadband",
+     "to": "lag1_deadband_sag",
+     "heldout_gain_deg": -0.0031,
+     "ci95": [
+      -0.0111,
+      0.0048
+     ],
+     "delta_bic": -51.2,
+     "accepted": false
+    },
+    {
+     "from": "lag1_deadband",
+     "to": "so2_deadband",
+     "heldout_gain_deg": -0.0018,
+     "ci95": [
+      -0.002,
+      -0.0017
+     ],
+     "delta_bic": -17.6,
+     "accepted": false
+    }
+   ],
+   "candidates": {
+    "lag1": {
+     "params": {
+      "tau": 0.08513,
+      "d": 0.021,
+      "b": 0.49669
+     },
+     "bic_fit_episodes": 177.3,
+     "rms_fit_episodes_deg": 1.0227,
+     "rms_select_episodes_deg": 0.5904
+    },
+    "lag1_rate": {
+     "params": {
+      "tau": 0.08194,
+      "d": 0.02193,
+      "b": 0.50136,
+      "wmax": 89.09578
+     },
+     "bic_fit_episodes": 131.1,
+     "rms_fit_episodes_deg": 1.0146,
+     "rms_select_episodes_deg": 0.5905
+    },
+    "lag1_deadband": {
+     "params": {
+      "tau": 0.06451,
+      "d": 0.02763,
+      "b": 0.23012,
+      "db": 0.57217
+     },
+     "bic_fit_episodes": -89.9,
+     "rms_fit_episodes_deg": 0.9822,
+     "rms_select_episodes_deg": 0.4632
+    },
+    "lag1_sag": {
+     "params": {
+      "tau": 0.06195,
+      "d": 0.04333,
+      "b": 19.99993,
+      "sc": -19.21859,
+      "ss": -6.32322
+     },
+     "bic_fit_episodes": -122.9,
+     "rms_fit_episodes_deg": 0.9762,
+     "rms_select_episodes_deg": 0.4835
+    },
+    "lag1_deadband_sag": {
+     "params": {
+      "tau": 0.06296,
+      "d": 0.03535,
+      "b": 17.76843,
+      "db": 0.31415,
+      "sc": -17.17277,
+      "ss": -5.06154
+     },
+     "bic_fit_episodes": -141.1,
+     "rms_fit_episodes_deg": 0.9725,
+     "rms_select_episodes_deg": 0.4664
+    },
+    "so2": {
+     "params": {
+      "wn": 23.71995,
+      "zeta": 1.21534,
+      "d": 0.00276,
+      "b": 0.49794
+     },
+     "bic_fit_episodes": 168.3,
+     "rms_fit_episodes_deg": 1.0202,
+     "rms_select_episodes_deg": 0.5916
+    },
+    "so2_rate": {
+     "params": {
+      "wn": 51.23917,
+      "zeta": 2.22872,
+      "d": 0.01691,
+      "b": 0.50119,
+      "wmax": 89.06101
+     },
+     "bic_fit_episodes": 138.9,
+     "rms_fit_episodes_deg": 1.0146,
+     "rms_select_episodes_deg": 0.5909
+    },
+    "so2_coulomb": {
+     "params": {
+      "wn": 22.12535,
+      "zeta": 1.04793,
+      "d": 0.0,
+      "b": 0.47445,
+      "fc": 203.54578
+     },
+     "bic_fit_episodes": 145.1,
+     "rms_fit_episodes_deg": 1.0155,
+     "rms_select_episodes_deg": 0.5472
+    },
+    "so2_deadband": {
+     "params": {
+      "wn": 27.07396,
+      "zeta": 1.13415,
+      "d": 0.00767,
+      "b": 0.23198,
+      "db": 0.57365
+     },
+     "bic_fit_episodes": -107.5,
+     "rms_fit_episodes_deg": 0.9785,
+     "rms_select_episodes_deg": 0.4651
+    },
+    "so2_sag": {
+     "params": {
+      "wn": 24.28829,
+      "zeta": 0.99045,
+      "d": 0.02333,
+      "b": 19.99986,
+      "sc": -19.20895,
+      "ss": -6.41722
+     },
+     "bic_fit_episodes": -139.1,
+     "rms_fit_episodes_deg": 0.9728,
+     "rms_select_episodes_deg": 0.4863
+    },
+    "so2_deadband_sag": {
+     "params": {
+      "wn": 29.48091,
+      "zeta": 1.16304,
+      "d": 0.0188,
+      "b": 14.41825,
+      "db": 0.33107,
+      "sc": -13.8505,
+      "ss": -4.31204
+     },
+     "bic_fit_episodes": -145.4,
+     "rms_fit_episodes_deg": 0.9707,
+     "rms_select_episodes_deg": 0.4677
+    }
+   },
+   "mjcf": "not written: Menagerie defaults kept (contact with objects; law at its bounds)"
+  }
+ },
+ "identified_model": {
+  "what": "the identified MJCF (so_arm100_identified.xml) driven by the logged command plus each joint's command offset: b and, where chosen, the angle-dependent offset, minus the recentring measured on the training episodes",
+  "joints": [
+   "shoulder_pan",
+   "shoulder_lift",
+   "elbow_flex",
+   "wrist_flex",
+   "wrist_roll"
+  ]
+ },
+ "fair_baseline": {
+  "what": "the default model with one command delay for all joints, chosen on the training episodes by MuJoCo replay",
+  "delay_s": 0.02,
+  "training_arm_rms_by_delay": {
+   "0.0": 34.712,
+   "0.01": 34.7109,
+   "0.02": 34.7105,
+   "0.03": 34.7109,
+   "0.04": 34.7121,
+   "0.05": 34.714,
+   "0.06": 34.7167,
+   "0.07": 34.72,
+   "0.08": 34.724,
+   "0.09": 34.7287,
+   "0.1": 34.7341,
+   "0.11": 34.7402,
+   "0.12": 34.747,
+   "0.13": 34.7546,
+   "0.14": 34.7631,
+   "0.15": 34.7721,
+   "0.16": 34.7819,
+   "0.17": 34.7922,
+   "0.18": 34.8032,
+   "0.19": 34.8148,
+   "0.2": 34.827
+  }
+ },
+ "stronger_baseline": {
+  "what": "the fair baseline plus a constant per-joint offset (mean measured minus commanded angle on the training episodes)",
+  "offsets_deg": [
+   -0.087,
+   -0.3507,
+   1.6477,
+   0.2864,
+   -0.0734,
+   0.4597
+  ]
+ },
+ "heldout": {
+  "default": {
+   "joints": {
+    "shoulder_pan": {
+     "rms_deg": 0.125,
+     "ci95": [
+      0.0,
+      0.3749
+     ]
+    },
+    "shoulder_lift": {
+     "rms_deg": 27.0097,
+     "ci95": [
+      0.0,
+      81.0292
+     ]
+    },
+    "elbow_flex": {
+     "rms_deg": 0.5047,
+     "ci95": [
+      0.0,
+      1.514
+     ]
+    },
+    "wrist_flex": {
+     "rms_deg": 0.1949,
+     "ci95": [
+      0.0,
+      0.5847
+     ]
+    },
+    "wrist_roll": {
+     "rms_deg": 0.115,
+     "ci95": [
+      0.0,
+      0.345
+     ]
+    },
+    "gripper": {
+     "rms_deg": 0.0865,
+     "ci95": [
+      0.0,
+      0.2594
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 12.0818,
+    "ci95": [
+     0.0,
+     36.2454
+    ]
+   }
+  },
+  "default_no_gravity": {
+   "joints": {
+    "shoulder_pan": {
+     "rms_deg": 0.125,
+     "ci95": [
+      0.0,
+      0.3749
+     ]
+    },
+    "shoulder_lift": {
+     "rms_deg": 27.0121,
+     "ci95": [
+      0.0,
+      81.0362
+     ]
+    },
+    "elbow_flex": {
+     "rms_deg": 0.5972,
+     "ci95": [
+      0.0,
+      1.7917
+     ]
+    },
+    "wrist_flex": {
+     "rms_deg": 0.2046,
+     "ci95": [
+      0.0,
+      0.6139
+     ]
+    },
+    "wrist_roll": {
+     "rms_deg": 0.115,
+     "ci95": [
+      0.0,
+      0.345
+     ]
+    },
+    "gripper": {
+     "rms_deg": 0.087,
+     "ci95": [
+      0.0,
+      0.2609
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 12.0837,
+    "ci95": [
+     0.0,
+     36.2511
+    ]
+   }
+  },
+  "baseline_delay": {
+   "joints": {
+    "shoulder_pan": {
+     "rms_deg": 0.1138,
+     "ci95": [
+      0.0,
+      0.3414
+     ]
+    },
+    "shoulder_lift": {
+     "rms_deg": 27.0097,
+     "ci95": [
+      0.0,
+      81.0292
+     ]
+    },
+    "elbow_flex": {
+     "rms_deg": 0.4709,
+     "ci95": [
+      0.0,
+      1.4127
+     ]
+    },
+    "wrist_flex": {
+     "rms_deg": 0.1628,
+     "ci95": [
+      0.0,
+      0.4884
+     ]
+    },
+    "wrist_roll": {
+     "rms_deg": 0.1161,
+     "ci95": [
+      0.0,
+      0.3484
+     ]
+    },
+    "gripper": {
+     "rms_deg": 0.0832,
+     "ci95": [
+      0.0,
+      0.2495
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 12.0814,
+    "ci95": [
+     0.0,
+     36.2442
+    ]
+   }
+  },
+  "baseline_delay_offset": {
+   "joints": {
+    "shoulder_pan": {
+     "rms_deg": 0.1109,
+     "ci95": [
+      0.0,
+      0.3328
+     ]
+    },
+    "shoulder_lift": {
+     "rms_deg": 27.0098,
+     "ci95": [
+      0.0,
+      81.0294
+     ]
+    },
+    "elbow_flex": {
+     "rms_deg": 0.328,
+     "ci95": [
+      0.0,
+      0.9841
+     ]
+    },
+    "wrist_flex": {
+     "rms_deg": 0.1724,
+     "ci95": [
+      0.0,
+      0.5171
+     ]
+    },
+    "wrist_roll": {
+     "rms_deg": 0.1202,
+     "ci95": [
+      0.0,
+      0.3605
+     ]
+    },
+    "gripper": {
+     "rms_deg": 0.1399,
+     "ci95": [
+      0.0,
+      0.4197
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 12.0805,
+    "ci95": [
+     0.0,
+     36.2415
+    ]
+   }
+  },
+  "identified_mjcf_only": {
+   "joints": {
+    "shoulder_pan": {
+     "rms_deg": 0.1076,
+     "ci95": [
+      0.0,
+      0.3227
+     ]
+    },
+    "shoulder_lift": {
+     "rms_deg": 27.0099,
+     "ci95": [
+      0.0,
+      81.0296
+     ]
+    },
+    "elbow_flex": {
+     "rms_deg": 0.9732,
+     "ci95": [
+      0.0,
+      2.9195
+     ]
+    },
+    "wrist_flex": {
+     "rms_deg": 0.1704,
+     "ci95": [
+      0.0,
+      0.5111
+     ]
+    },
+    "wrist_roll": {
+     "rms_deg": 0.0887,
+     "ci95": [
+      0.0,
+      0.2662
+     ]
+    },
+    "gripper": {
+     "rms_deg": 0.0865,
+     "ci95": [
+      0.0,
+      0.2594
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 12.0874,
+    "ci95": [
+     0.0,
+     36.2622
+    ]
+   }
+  },
+  "identified_not_recentred": {
+   "joints": {
+    "shoulder_pan": {
+     "rms_deg": 0.106,
+     "ci95": [
+      0.0,
+      0.318
+     ]
+    },
+    "shoulder_lift": {
+     "rms_deg": 27.0099,
+     "ci95": [
+      0.0,
+      81.0297
+     ]
+    },
+    "elbow_flex": {
+     "rms_deg": 0.7999,
+     "ci95": [
+      0.0,
+      2.3997
+     ]
+    },
+    "wrist_flex": {
+     "rms_deg": 0.1619,
+     "ci95": [
+      0.0,
+      0.4856
+     ]
+    },
+    "wrist_roll": {
+     "rms_deg": 0.0905,
+     "ci95": [
+      0.0,
+      0.2714
+     ]
+    },
+    "gripper": {
+     "rms_deg": 0.0865,
+     "ci95": [
+      0.0,
+      0.2594
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 12.0849,
+    "ci95": [
+     0.0,
+     36.2546
+    ]
+   }
+  },
+  "identified": {
+   "joints": {
+    "shoulder_pan": {
+     "rms_deg": 0.106,
+     "ci95": [
+      0.0,
+      0.3179
+     ]
+    },
+    "shoulder_lift": {
+     "rms_deg": 27.0099,
+     "ci95": [
+      0.0,
+      81.0297
+     ]
+    },
+    "elbow_flex": {
+     "rms_deg": 0.7932,
+     "ci95": [
+      0.0,
+      2.3797
+     ]
+    },
+    "wrist_flex": {
+     "rms_deg": 0.1618,
+     "ci95": [
+      0.0,
+      0.4854
+     ]
+    },
+    "wrist_roll": {
+     "rms_deg": 0.09,
+     "ci95": [
+      0.0,
+      0.2699
+     ]
+    },
+    "gripper": {
+     "rms_deg": 0.0865,
+     "ci95": [
+      0.0,
+      0.2594
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 12.0848,
+    "ci95": [
+     0.0,
+     36.2544
+    ]
+   }
+  },
+  "identified_servo_laws": {
+   "joints": {
+    "shoulder_pan": {
+     "rms_deg": 0.1074,
+     "ci95": [
+      0.0,
+      0.3222
+     ]
+    },
+    "shoulder_lift": {
+     "rms_deg": 0.4336,
+     "ci95": [
+      0.0,
+      1.3008
+     ]
+    },
+    "elbow_flex": {
+     "rms_deg": 0.3738,
+     "ci95": [
+      0.0,
+      1.1215
+     ]
+    },
+    "wrist_flex": {
+     "rms_deg": 0.1608,
+     "ci95": [
+      0.0,
+      0.4823
+     ]
+    },
+    "wrist_roll": {
+     "rms_deg": 0.0898,
+     "ci95": [
+      0.0,
+      0.2695
+     ]
+    },
+    "gripper": {
+     "rms_deg": 0.1346,
+     "ci95": [
+      0.0,
+      0.4039
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 0.2732,
+    "ci95": [
+     0.0,
+     0.8196
+    ]
+   }
+  }
+ },
+ "heldout_comparison": {
+  "default_minus_identified": {
+   "improvement_deg": -0.003,
+   "ci95": [
+    -0.009,
+    0.0
+   ],
+   "ratio": 1.0
+  },
+  "fair_baseline_minus_identified": {
+   "improvement_deg": -0.0034,
+   "ci95": [
+    -0.0102,
+    0.0
+   ],
+   "ratio": 1.0
+  },
+  "stronger_baseline_minus_identified": {
+   "improvement_deg": -0.0043,
+   "ci95": [
+    -0.0128,
+    0.0
+   ],
+   "ratio": 1.0
+  },
+  "gravity_effect_on_default": {
+   "improvement_deg": -0.0019,
+   "ci95": [
+    -0.0058,
+    0.0
+   ],
+   "ratio": 1.0
+  }
+ },
+ "limits": [
+  "only the motions in these 50 pick-and-place episodes (speeds up to about 170 deg/s); payloads, wear, temperature and other units of the arm are not covered",
+  "the measured angle is the arm's own encoder reading, so the identified delay includes the bus and logging latency; that is the delay a replay of logged commands needs",
+  "the gripper closes on objects that the simulator scene does not contain, so it is reported but not counted in the arm total",
+  "the map from logged degrees to model radians is an assumption (see model.joint_map); it only moves where gravity acts, and heldout_comparison.gravity_effect_on_default shows how much that matters"
+ ],
+ "trace": {
+  "episode": 7,
+  "dt_s": 0.06666666666666667,
+  "joints": {
+   "shoulder_pan": {
+    "measured": [
+     -0.352
+    ],
+    "command": [
+     5.629
+    ],
+    "public_model": [
+     -0.352
+    ],
+    "identified": [
+     -0.352
+    ]
+   },
+   "shoulder_lift": {
+    "measured": [
+     189.141
+    ],
+    "command": [
+     109.101
+    ],
+    "public_model": [
+     189.141
+    ],
+    "identified": [
+     189.141
+    ]
+   },
+   "elbow_flex": {
+    "measured": [
+     170.596
+    ],
+    "command": [
+     100.071
+    ],
+    "public_model": [
+     170.596
+    ],
+    "identified": [
+     170.596
+    ]
+   },
+   "wrist_flex": {
+    "measured": [
+     73.828
+    ],
+    "command": [
+     57.089
+    ],
+    "public_model": [
+     73.828
+    ],
+    "identified": [
+     73.828
+    ]
+   },
+   "wrist_roll": {
+    "measured": [
+     -5.889
+    ],
+    "command": [
+     -7.821
+    ],
+    "public_model": [
+     -5.889
+    ],
+    "identified": [
+     -5.889
+    ]
+   }
+  }
+ },
+ "runtime_s": 1057.5
+}

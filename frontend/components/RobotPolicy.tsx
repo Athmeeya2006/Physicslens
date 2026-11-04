@@ -9,8 +9,10 @@ import { useEffect, useState } from "react";
 interface Iv { mean: number; ci95: [number, number] }
 interface Arm { arm: string; rollouts: number; teleop_heldout: { own: Iv; baseline: Iv };
   policy: { own: Iv; baseline: Iv; borrowed_median: Iv }; policy_datasets: { dataset: string; licence: string }[] }
+interface Retrained { arm: string; train_rollouts: number; test_rollouts: number; teleop_calibration: Iv; policy_calibration: Iv }
 interface Policy {
   arms: Arm[];
+  calibrated_on_policy?: Retrained[];
   summary: { arms: number; rollouts: number; rollouts_own_better_than_baseline: number; rollouts_own_better_than_borrowed: number };
   limits: string[];
 }
@@ -36,8 +38,12 @@ export function RobotPolicy() {
         than a calibration borrowed from another arm in {s.rollouts_own_better_than_borrowed} of {s.rollouts}.</p>
       <p>What it also shows: the policy drives the arm differently from a person, and the error grows from{" "}
         {Math.min(...tele).toFixed(2)}° to {Math.max(...tele).toFixed(2)}° on human driving to {Math.min(...owns).toFixed(2)}° to{" "}
-        {Math.max(...owns).toFixed(2)}° under the policy. A calibration meant for policy training is best fitted on policy-like motion
-        too, and the same command does it from those logs.</p>
+        {Math.max(...owns).toFixed(2)}° under the policy.
+        {d.calibrated_on_policy && d.calibrated_on_policy.length > 0 && <> Calibrating on the policy&apos;s own motion closes that: fitted on{" "}
+          {d.calibrated_on_policy[0].train_rollouts} of an arm&apos;s policy rollouts, the calibration predicts the other{" "}
+          {d.calibrated_on_policy[0].test_rollouts}{" "}
+          {d.calibrated_on_policy.map((r) => `${(r.teleop_calibration.mean / r.policy_calibration.mean).toFixed(1)}`).join(" and ")} times closer than
+          the teleoperation calibration ({d.calibrated_on_policy.map((r) => `${owner(r.arm)}: ${r.policy_calibration.mean.toFixed(2)}° against ${r.teleop_calibration.mean.toFixed(2)}°`).join("; ")}).</>}</p>
       <div className="table-wrap">
         <table className="cards">
           <thead><tr><th>Arm (AI rollouts)</th><th className="num">Own calibration, human driving</th><th className="num">Own calibration, AI driving</th>

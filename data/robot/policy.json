@@ -457,6 +457,62 @@
    "borrowed_median_deg": 0.7555
   }
  ],
+ "calibrated_on_policy": [
+  {
+   "arm": "00ri__so100_battery",
+   "policy_dataset": "00ri/eval_act_so100_battery_bin_center",
+   "train_rollouts": 7,
+   "test_rollouts": 3,
+   "teleop_calibration": {
+    "mean": 0.8243,
+    "ci95": [
+     0.0,
+     2.4728
+    ]
+   },
+   "policy_calibration": {
+    "mean": 0.2731,
+    "ci95": [
+     0.0,
+     0.8194
+    ]
+   },
+   "policy_minus_teleop": {
+    "mean": -0.5511,
+    "ci95": [
+     -1.6534,
+     0.0
+    ]
+   }
+  },
+  {
+   "arm": "julyfun__so100_pick_and_place_v4_50",
+   "policy_dataset": "julyfun/eval_act_so100_test3",
+   "train_rollouts": 7,
+   "test_rollouts": 3,
+   "teleop_calibration": {
+    "mean": 2.8442,
+    "ci95": [
+     2.299,
+     3.7931
+    ]
+   },
+   "policy_calibration": {
+    "mean": 1.1089,
+    "ci95": [
+     0.9793,
+     1.3151
+    ]
+   },
+   "policy_minus_teleop": {
+    "mean": -1.7353,
+    "ci95": [
+     -2.478,
+     -1.3196
+    ]
+   }
+  }
+ ],
  "summary": {
   "arms": 3,
   "rollouts": 28,

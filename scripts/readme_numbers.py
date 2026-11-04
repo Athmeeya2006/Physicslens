@@ -466,6 +466,8 @@ CLAIMS = [
     Claim("Policy: ratio min", r"\(([\d.]+) to [\d.]+ times closer per arm\)", lambda: min(a["policy"]["baseline"]["mean"] / a["policy"]["own"]["mean"] for a in load("data/robot/policy.json")["arms"])),
     Claim("Policy: ratio max", r"\([\d.]+ to ([\d.]+) times closer per arm\)", lambda: max(a["policy"]["baseline"]["mean"] / a["policy"]["own"]["mean"] for a in load("data/robot/policy.json")["arms"])),
     Claim("Policy: worst under policy", r"to [\d.]+° to ([\d.]+)° under the policy", lambda: max(a["policy"]["own"]["mean"] for a in load("data/robot/policy.json")["arms"])),
+    Claim("Policy-trained: 00ri", r"predicts the other \d+ at ([\d.]+)° and", lambda: next(x["policy_calibration"]["mean"] for x in load("data/robot/policy.json")["calibrated_on_policy"] if x["arm"].startswith("00ri"))),
+    Claim("Policy-trained: julyfun", r"predicts the other \d+ at [\d.]+° and ([\d.]+)°", lambda: next(x["policy_calibration"]["mean"] for x in load("data/robot/policy.json")["calibrated_on_policy"] if x["arm"].startswith("julyfun"))),
     Claim("Drift: June repeat", r"calibration costs only ([\d.]+)° extra \(both", lambda: round(max(p["extra_deg"] for p in load("data/robot/drift.json")["pairs"] if p["days_apart"] <= 10 and p["used_on"].endswith(("0605", "0608"))), 2)),
     Claim("Drift: six months min", r"borrowed calibration costs ([\d.]+)° to [\d.]+° extra, worse in all", lambda: min(p["extra_deg"] for p in load("data/robot/drift.json")["pairs"] if p["days_apart"] > 100)),
     Claim("Drift: six months max", r"borrowed calibration costs [\d.]+° to ([\d.]+)° extra, worse in all", lambda: max(p["extra_deg"] for p in load("data/robot/drift.json")["pairs"] if p["days_apart"] > 100)),
