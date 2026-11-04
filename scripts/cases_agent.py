@@ -3,7 +3,8 @@
   MOCK_MODELS=1 python scripts/cases_agent.py [CASE ...]   # free: the test doubles answer (checks the plumbing only)
   python scripts/cases_agent.py [CASE ...]                 # PAID: Muse Spark Open on Baseten, a few cents per case
 
-CASES: wasp12b (transit-time residuals against time), kepler88b (the same for Kepler-88 b), fireball (Winchcombe's
+CASES: wasp12b (transit-time residuals against time), kepler88b (the same for Kepler-88 b), rocket-<launch> (a Falcon 9
+first stage's distance along its path, five launches), fireball (Winchcombe's
 distance along its track against time). The Sun's single spots are scripts/sun_agent.py.
 
 Each case already has laws a person chose (scripts/timing_demo.py, scripts/fireball_demo.py). Here the agent sees only
@@ -91,7 +92,36 @@ def coastdown() -> dict:
                       "heldout_rmse_rpm": law["heldout_rmse_rpm"]} for law in hp["runs"][0]["laws"]]}
 
 
-CASES = {"wasp12b": wasp12b, "kepler88b": kepler88b, "fireball": fireball, "coastdown": coastdown}
+ROCKET_LAUNCHES = ["SES-10", "SpaceX CRS-11", "Iridium NEXT 3", "KoreaSat 5A", "SES-11"]
+
+
+def rocket(mission: str) -> dict:
+    """A Falcon 9 first stage from lift-off to 3 s before cut-off (webcast telemetry, the Unlicense; scripts/rocket_demo.py):
+    the distance flown along the path, integrated from the speed readout, so the agent sees a motion like any other
+    and proposes its law with no hint that it is a rocket."""
+    from rocket_demo import load
+    f = load(mission)
+    if f is None:
+        raise SystemExit(f"{mission}: no first-stage telemetry; run python scripts/rocket_demo.py fetch")
+    k = slice(None, None, 10)  # one point per second: the readout changes in steps of about 0.3 m/s
+    t, v = f["t"][k], f["v"][k]
+    s = np.concatenate([[0.0], np.cumsum(0.5 * (v[1:] + v[:-1]) * np.diff(t))])
+    res = ROOT / "data" / "rocket" / "result.json"
+    hand = []
+    if res.exists():
+        row = next((r for r in json.loads(res.read_text())["launches"] if r["mission"] == mission), None)
+        if row:
+            hand = [{"law": k2, "title": f"{k2} (hand-chosen rocket law)", "heldout_nrmse": v2["heldout_nrmse"]}
+                    for k2, v2 in row["laws"].items()]
+    return {"t": t - t[0], "y": s, "name": "a vehicle's distance travelled along its path, measured from a broadcast",
+            "value_unit": "m", "time_unit": "s",
+            "provenance": {"data_source": f"{mission}: speed read from the launch webcast at 30 per second (shahar603/Telemetry-Data, the Unlicense)",
+                           "time_source": "webcast clock", "time_sigma_s": 0.05},
+            "hand": hand}
+
+
+CASES = {"wasp12b": wasp12b, "kepler88b": kepler88b, "fireball": fireball, "coastdown": coastdown,
+         **{f"rocket-{m.lower().replace(' ', '-')}": (lambda m=m: rocket(m)) for m in ROCKET_LAUNCHES}}
 
 
 def run(case: str, client, mock: bool) -> dict:

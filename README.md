@@ -30,7 +30,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 ## In 30 seconds
 
 - **The problem:** every cheap robot arm is slightly different from its simulator, so policies trained in simulation fail on the real thing (friction, delay, deadband, damping). Measuring real physics takes lab rigs and an expert.
-- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model, the simulator people use for this arm, from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and still 1.4 times as closely after the public model is given a fitted delay and per-joint offsets, and on seven owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm and setup needs its own. [See it](https://physicslens.vercel.app/robot).
+- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model, the simulator people use for this arm, from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and still 1.4 times as closely after the public model is given a fitted delay and per-joint offsets, and on seven owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm and setup needs its own. At the hand that is 3.2 mm from the real gripper against 7.5 mm for the public model, and a calibration fitted only on human teleoperation predicts the arm under a trained AI policy better than a fitted delay and offsets in 28 of 28 rollouts. [See it](https://physicslens.vercel.app/robot).
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
 - **An agent that knows when the data cannot decide:** when two laws tie, it designs the recording that would separate them and asks for it. On the spring glider and on the pendulum it asked for a longer recording; both public videos ran longer, and the longer recordings settled the questions it asked (dry friction for the glider; damping is real for the pendulum). [Spring](https://physicslens.vercel.app/?run=gallery-spring-longer), [pendulum](https://physicslens.vercel.app/?run=gallery-pendulum-longer).
@@ -1130,6 +1130,25 @@ The model alone writes a sensible textbook law every time (inverse-square gravit
 - physics audit: g = 14.2 with a real scale, a bounce with e = 1.1, a 15% period drift, a swing growing threefold over 10 s, a 15 cm teleport, a mask that more than doubles in size and a g that changes between flights (no scale) are each caught; of 40 seeded clean clips (bounces, pendulums, springs, 1 to 4 mm noise) none is accused, 39 are judged consistent and 1 can't be judged. **On real AI-generated video** it was then measured on 500 public clips (VideoPhy-2, MIT licence, against real footage from Physics-IQ, CC BY 4.0, as the control; see "Measured at scale" under Physics audit): the first real clips showed tracking artifacts at collisions being read as violations, and the contact rule above came from that.
 - 3D from one phone: a ball thrown away from a pinhole camera (2 m to 3.3 m, 1 px noise on its centre and diameter) gives g within 1% over five noise draws; a throw across the image plane gives the same g as the 2D analysis within 1%; blurred and partly hidden frames are rejected. Not yet validated on a real throw.
 
+## Where it goes next
+
+The same loop (propose laws, fit them, keep only what forecasts unseen data, ask for the experiment that settles a
+tie) needs only a record of motion and the inputs that drove it. Each next step below builds on a result already in
+this repository:
+
+- **Robot fleets, calibrated as they work.** Every arm needs its own calibration (42 of 42 pairs), one arm repeats
+  within 0.09° across days, and the laws inverted already recover the commands really sent within 0.54°. Next: run
+  the compensator on a physical arm, calibrate on policy-driven motion as well as teleoperation, and offer the
+  corrected models upstream (the MuJoCo Menagerie issue is drafted).
+- **Predictive maintenance from logs a machine already writes.** The drift check detects a change of about a tenth
+  of a degree on a stable arm, and the machine-health cases find damping and frequency changes on public fault
+  recordings. Next: a scheduled check that flags a joint whose deadband or delay grows beyond its repeat error.
+- **Vehicles, drones and rockets.** The paper bag's drag law, the coast-down friction law and the fireball's flight
+  are the same kind of fit as a vehicle's. Next: thrust and drag from flight logs, checked against thrust stands and
+  published engine figures.
+- **Any instrumented system.** Laws can take measured inputs (a logged command, a second tracked object, a CSV), so
+  anything with a sensor log and a driving signal can be identified the same way.
+
 ## Limitations
 
 - 2D motion in the camera plane; best results with the camera side-on and held still.
@@ -1424,7 +1443,7 @@ CI (`.github/workflows/ci.yml`) runs the linter and the whole suite on Python 3.
 
 The tests need no setup: they build their own temporary config with test-only caps, so a fresh clone runs `make test` (or plain `pytest` with `PYTHONPATH=backend MOCK_MODELS=1`) straight away and never reads your real `config/budget.yaml`. The app itself still refuses to start without that file.
 
-The suite (878 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
+The suite (883 tests, counted by `pytest --collect-only -q`; 63 marked slow in `tests/conftest.py`) covers:
 
 - **Physics:** synthetic trajectories with known equations plus noise; recovered parameters must land within tolerance (pendulum g within 3%), wrong laws must lose, and unmeasurable clips must be refused.
 - **Cost guard:** budget exceeded raises; kill switch blocks; the allowlist blocks unknown models; a cache hit records zero cost; concurrent reservations cannot overshoot; a missing price refuses the call; SDK clients have `max_retries=0`; cache-only mode never makes a request.
