@@ -439,6 +439,8 @@ CLAIMS = [
     Claim("ZTF: frames measured", r"(\d+) of\s+the \d+ frames found solved", lambda: load("data/astro/asteroids/ztf.json")["frames_measured"]),
     Claim("ZTF: frames found", r"\d+ of\s+the (\d+) frames found solved", lambda: load("data/astro/asteroids/ztf.json")["frames_found"]),
     Claim("Fleet: original arm own, servo replay", r"where the original arm's own calibration reaches\s+([\d.]+)°", lambda: load("data/robot/fleet.json")["matrix"]["lerobot__svla_so100_pickplace"]["lerobot__svla_so100_pickplace"]["rms_deg"]),
+    Claim("Calibrate: new arm held-out", r"its\s+own\s+laws\s+track\s+its\s+12\s+held-out\s+episodes\s+to\s+([\d.]+)°", lambda: load("data/robot/fleet/pranavsaroha__so100_medicine_0605/result.json")["heldout"]["identified_servo_laws"]["arm_total"]["rms_deg"]),
+    Claim("Calibrate: new arm episodes held out", r"its\s+own\s+laws\s+track\s+its\s+(\d+)\s+held-out", lambda: len(load("data/robot/fleet/pranavsaroha__so100_medicine_0605/result.json")["data"]["test_episodes"])),
     Claim("Pendulum longer: g", r"a longer stretch of the same swing gives ([\d.]+);", lambda: next(p["value"] for p in load("gallery/gallery-pendulum-longer/result.json")["agreed_parameters"] if p["name"] == "g")),
     Claim("Pendulum longer: simple pendulum BIC behind", r"simple pendulum falls (\d+) BIC behind while damping", lambda: pendulum_longer_gap()),
     Claim("Pendulum longer: damping held-out %", r"while damping forecasts the held-out motion within ([\d.]+)%", lambda: next(f["heldout_nrmse"] for f in load("gallery/gallery-pendulum-longer/result.json")["ranking"] if f["model_id"] == "pendulum_linear_damping") * 100),

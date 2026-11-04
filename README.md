@@ -30,7 +30,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 ## In 30 seconds
 
 - **The problem:** every cheap robot arm is slightly different from its simulator, so policies trained in simulation fail on the real thing (friction, delay, deadband, damping). Measuring real physics takes lab rigs and an expert.
-- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and on six owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm and setup needs its own. [See it](https://physicslens.vercel.app/robot).
+- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and on seven owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm and setup needs its own. [See it](https://physicslens.vercel.app/robot).
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
 - **An agent that knows when the data cannot decide:** when two laws tie, it designs the recording that would separate them and asks for it. On the spring glider and on the pendulum it asked for a longer recording; both public videos ran longer, and the longer recordings settled the questions it asked (dry friction for the glider; damping is real for the pendulum). [Spring](https://physicslens.vercel.app/?run=gallery-spring-longer), [pendulum](https://physicslens.vercel.app/?run=gallery-pendulum-longer).
@@ -49,7 +49,7 @@ Every link opens a complete, real analysis; nothing needs an account or a code.
 
 | # | Open | What to look for |
 |---|---|---|
-| 1 | [Robot arm, corrected](https://physicslens.vercel.app/robot) | **The impact.** The SO-100's public MuJoCo model against the real arm on held-out motion: the error chart shows the public model straying by up to about 3° while the corrected one stays within about 1°. Below it, six owners' arms: a borrowed calibration does worse in every pair |
+| 1 | [Robot arm, corrected](https://physicslens.vercel.app/robot) | **The impact.** The SO-100's public MuJoCo model against the real arm on held-out motion: the error chart shows the public model straying by up to about 3° while the corrected one stays within about 1°. Below it, seven owners' arms: a borrowed calibration does worse in every pair |
 | 2 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | **The agent thinks.** "How the agent reasoned" at the top: it proposes three laws, the math cannot separate damping from none, it designs the deciding recording and asks for it. Each line names Muse Spark Open or the math |
 | 3 | [Pendulum, the request answered](https://physicslens.vercel.app/?run=gallery-pendulum-longer) | **The loop closes.** The same swing filmed for longer: the simple pendulum falls 121 BIC behind, damping is confirmed, and the agent asks the next, finer question |
 | 4 | [Spring glider, answered](https://physicslens.vercel.app/?run=gallery-spring-longer) | The same loop on a second system: on 20 s instead of 15 the tie is settled for dry friction. The same verdict from Muse Glimmer 30B self-hosted (see "Meta models used") |
@@ -62,7 +62,7 @@ Every link opens a complete, real analysis; nothing needs an account or a code.
 | 11 | [Solar System Lab](https://physicslens.vercel.app/sky) | A 3D solar system from JPL data: change it (Jupiter ten times heavier, Neptune off) and see which law the agent finds |
 | 12 | [Your own clip](https://physicslens.vercel.app/#analyze-title) or the [live camera](https://physicslens.vercel.app/live) | The whole pipeline on your own footage, open to everyone (the header shows the analysis server's status) |
 
-| The impact: one arm, then six | The agent: request, then answer |
+| The impact: one arm, then seven | The agent: request, then answer |
 |---|---|
 | ![Error against the real joint on a held-out SO-100 episode: public model dashed, corrected model blue](frontend/public/readme/robot-before-after.png) | ![How the agent reasoned on the pendulum: proposes, cannot separate, designs and asks for the deciding recording](frontend/public/readme/agent-reasoning.png) |
 
@@ -454,7 +454,7 @@ Every case at a glance (each row is generated from its result file; the same cas
 | Case | Who has the problem | What PhysicsLens gives them | Against an independent truth | Meta models | Scope |
 |---|---|---|---|---|---|
 | [Robotics: sim-to-real](https://physicslens.vercel.app/?run=gallery-paperbag) | robotics engineers | a calibrated model with intervals, exported to MuJoCo, URDF and SDF, checked by replaying it in MuJoCo | on flight it never saw, the calibrated model of a thrown paper bag lands 11.5 times closer to the real track than the textbook (drag-free) one, and 2.0 times closer than the standard air-drag law (quadratic, its coefficient fitted to the same flight) | SAM 3.1 tracked the bag; Muse Spark Open (open weights) proposed the laws; verification, the fits and the MuJoCo replay are math | one rigid body at a time, filmed side-on; the control comparison runs in simulation only |
-| [Open-source robot arm: simulator corrected from public recordings](https://physicslens.vercel.app/robot) | anyone who simulates the SO-100 arm (MuJoCo Menagerie, LeRobot users) | measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model | SO-100 arm, 50 public recordings: on held-out episodes the corrected MuJoCo model tracks the real joints to 0.38° RMS against 0.75° for the MuJoCo Menagerie model (2.0 times closer; 1.7 times closer than the default with a fitted delay); per unit: on 6 owners' arms a borrowed calibration tracks worse than the arm's own in 30 of 30 pairs (0.78° against 0.43°) | SAM 3.1 checked the logged joints against the arm's camera video (the gripper tracked on 5 held-out episodes, a median 4.1 mm from the logged path); the servo laws themselves are fitted and verified by local math (held-out MuJoCo replay) | the motions in these recordings; payloads, wear and temperature are not covered, and the six arms compared recorded different tasks |
+| [Open-source robot arm: simulator corrected from public recordings](https://physicslens.vercel.app/robot) | anyone who simulates the SO-100 arm (MuJoCo Menagerie, LeRobot users) | measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model | SO-100 arm, 50 public recordings: on held-out episodes the corrected MuJoCo model tracks the real joints to 0.38° RMS against 0.75° for the MuJoCo Menagerie model (2.0 times closer; 1.7 times closer than the default with a fitted delay); per unit: on 7 owners' arms a borrowed calibration tracks worse than the arm's own in 42 of 42 pairs (0.99° against 0.48°) | SAM 3.1 checked the logged joints against the arm's camera video (the gripper tracked on 5 held-out episodes, a median 4.1 mm from the logged path); the servo laws themselves are fitted and verified by local math (held-out MuJoCo replay) | the motions in these recordings; payloads, wear and temperature are not covered, and the seven arms compared recorded different tasks |
 | [Lab measurement](https://physicslens.vercel.app/?run=gallery-pendulum) | test engineers, labs, anyone checking an experiment | the constant with a 95% interval, the law it follows, and the recording that would settle what is still open | 12 real clips with measured lengths: the local g inside the 95% interval in 0 of 12 (coverage 0% to 24% at 95%); median error 6.2% | SAM 3.1 tracked the bob; Muse Spark Open proposed the laws and designed the deciding experiment; verification is math | it needs a known length (or another scale) in the picture; the arc alone cannot fix the length when the pivot is out of view |
 | [Exoplanet transit timing](https://physicslens.vercel.app/timing) | observatories, amateur transit-timing networks, exoplanet researchers | refreshed transit windows (calendar and CSV), a list of stale ephemerides, and the law behind the timings | WASP-12b's orbit shrinks by 28.6 ms/yr against the published 29 ± 2; Kepler-88's unseen planet: partial | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | timing inversions are degenerate (mass against eccentricity); the Kepler-88 fit forecasts to 15 min, not the 3 min its data allow |
 | [Fireballs and meteorite falls](https://physicslens.vercel.app/fireball) | fireball networks, meteorite hunters | whether anything survived, the orbit it came from, and a strewn-field map (GeoJSON, KML) | Winchcombe, from the published trajectory: blind, 1 of 9 recovered stones inside their 95% landing regions; after review, all within 563 m of the fall line | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | it starts from a triangulated trajectory, not one video; masses carry a factor-of-two uncertainty from shape and density |
@@ -489,7 +489,7 @@ open-loop in MuJoCo on 15 held-out episodes never used before (`backend/physicsl
 - Every improvement is paired per episode with a 95% interval above zero, which is the case's acceptance rule;
   because the corrected model beats the current public one on held-out data, it improves on a public tool. The model and its diff are ready to offer upstream; nothing has been submitted.
 - Limits: only the motions in these pick-and-place episodes; payloads, wear, temperature and other units of the
-  arm are not covered by this one arm's fit (the six-arm comparison below covers other units); the gripper closes on
+  arm are not covered by this one arm's fit (the seven-arm comparison below covers other units); the gripper closes on
   objects the simulated scene lacks, so it is reported but not counted.
   The identification uses the logged joint angles; the video check below uses the camera.
 - **Checked against the video** (`scripts/robot_video_check.py`): SAM 3.1 tracked the gripper in the top camera on 5
@@ -504,15 +504,23 @@ open-loop in MuJoCo on 15 held-out episodes never used before (`backend/physicsl
   with every joint's law and a suggested upstream change, is `data/robot/REPORT.md`.
 
 **Each arm and setup needs its own calibration** (`scripts/fetch_robot_fleet.py`, `scripts/robot_fleet.py`). The
-same identification ran on five more SO-100 arms recorded by different owners (public LeRobot datasets, Apache-2.0, 40
+same identification ran on six more SO-100 arms recorded by different owners (public LeRobot datasets, Apache-2.0, 40
 to 50 episodes each). Each arm's servo laws were then replayed on every other arm's held-out episodes, with each arm's
 constant command offset re-centred from its own training episodes so that only the dynamics move between arms. An
-arm's own calibration tracks its joints to 0.43° on average; a calibration borrowed from another arm to 0.78°, worse in
-30 of 30 pairs at 95%. The fitted delays and deadbands differ from unit to unit: one model does not fit every arm or
+arm's own calibration tracks its joints to 0.48° on average; a calibration borrowed from another arm to 0.99°, worse in
+42 of 42 pairs at 95%. The fitted delays and deadbands differ from unit to unit: one model does not fit every arm or
 setup. These errors come from replaying the servo laws themselves, where the original arm's own calibration reaches
 0.27°; the 0.38° above is the full MuJoCo replay of the same arm, a different and stricter evaluator. The owners
-recorded different tasks (a battery, a block in a cup, strawberries, lego), so part of the gap can come from different
+recorded different tasks (a battery, a block in a cup, strawberries, lego, medicine boxes), so part of the gap can come from different
 speeds and loads rather than the hardware alone; no public dataset has several arms on one task.
+
+**Calibrate your own arm.** `physicslens robot calibrate <owner>/<dataset>` runs the same identification on any public
+SO-100 LeRobot recording (v2.1 joint tables, pinned to the revision it fetched): it prints each joint's law, delay, lag
+and deadband with the held-out error, and writes `data/robot/fleet/<owner>__<dataset>/` with every fitted value and its
+interval (`result.json`) and the identified MuJoCo model (`so_arm100_identified.xml`, with its diff against the public
+one). Free local math, no model calls. The seventh arm above (pranavsaroha/so100_medicine_0605, 40 episodes) was
+calibrated this way in about half an hour on 16 cores; its own laws track its 12 held-out episodes to 0.75° (95% 0.68
+to 0.83).
 
 ### Transit timing: a shrinking orbit and an unseen planet (`/timing`)
 
@@ -1242,6 +1250,7 @@ physicslens lens calibrate board.mp4 --out lens.json                 # free; the
 physicslens sky list                                                 # free, from cached JPL data
 physicslens sky simulate halley_all_planets --mass Jupiter=10
 physicslens sky discover apophis_sun_only --noise-px 2
+physicslens robot calibrate pranavsaroha/so100_medicine_0605      # free: an SO-100's own servo laws and MJCF from its public LeRobot logs
 ```
 
 Exit codes: 0 for a verified law, 1 for no law or a stop (with the reason on stderr), 2 for bad input.
@@ -1487,7 +1496,7 @@ All code in this repository was written during the hackathon building period (Oc
 - [x] Lab measurement on labelled real footage (Delfys75 pendulums): the real coverage of the 95% intervals is reported (0 of 12), and the bias is traced to the stated lengths and the time scale, not the fit
 - [x] Machine faults on public data scored against labels: the bearing rule is scored against the labels and falls short of its pre-set bar; a motor's coast-down friction matches the published values
 - [x] The real-world cases run through the agent (Muse Spark Open proposing, verification deciding) beside the hand-chosen laws, and 9 blind predictions registered before their answers exist
-- [x] Every SO-100 needs its own calibration: the same identification on six owners' arms from public LeRobot datasets, each arm's laws replayed on every other arm's held-out episodes (a borrowed calibration worse in 30 of 30 pairs), with a test of the comparison itself
+- [x] Every SO-100 needs its own calibration: the same identification on seven owners' arms from public LeRobot datasets, each arm's laws replayed on every other arm's held-out episodes (a borrowed calibration worse in 42 of 42 pairs), with a test of the comparison itself
 - [x] "How the agent reasoned" at the top of every result: the decisive moments of the decision trail, each tagged with the model or the math
 - [x] Experiment requests answered on public footage: the pendulum's (damping confirmed) and the spring glider's (dry friction confirmed), each from a longer stretch of the same video, linked both ways from the request
 - [x] Muse Glimmer 30B self-hosted on a university GPU cluster (llama.cpp built from source for RTX 2080 Ti), reaching Muse Spark Open's verdict on the spring

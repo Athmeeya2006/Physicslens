@@ -129,6 +129,35 @@ def _sky(a: argparse.Namespace) -> int:
         return 2
 
 
+def _robot(a: argparse.Namespace) -> int:
+    """Calibrate one SO-100 from its own public LeRobot recordings: the same identification as the robot arm case."""
+    import json
+    import os
+    import subprocess
+    root = Path(__file__).resolve().parents[2]
+    py = sys.executable
+    if not (root / "var" / "robot" / "raw" / "menagerie" / "so_arm100.xml").exists():
+        subprocess.run([py, str(root / "scripts" / "fetch_robot.py")], check=True, cwd=root)
+    subprocess.run([py, str(root / "scripts" / "fetch_robot_fleet.py"), a.dataset], check=True, cwd=root)
+    slug = a.dataset.replace("/", "__")
+    env = dict(os.environ, PL_ROBOT_FLEET=slug, PYTHONPATH=str(root / "backend"))
+    subprocess.run([py, str(root / "scripts" / "robot_demo.py")], check=True, cwd=root, env=env, stdout=subprocess.DEVNULL)
+    out = root / "data" / "robot" / "fleet" / slug
+    r = json.loads((out / "result.json").read_text())
+    print(f"{a.dataset}: {r['data']['episodes']} episodes, {len(r['data']['test_episodes'])} held out for the check")
+    for name, j in r["joints"].items():
+        p = {k: v["value"] for k, v in j["params"].items()}
+        bits = [f"delay {p['d'] * 1000:.0f} ms" if "d" in p else "", f"lag {p['tau'] * 1000:.0f} ms" if "tau" in p else "",
+                f"deadband {p['db']:.2f} deg" if "db" in p else "", f"wn {p['wn']:.1f} rad/s" if "wn" in p else ""]
+        print(f"  {name:13s} {j['title']}: " + ", ".join(b for b in bits if b))
+    servo = r["heldout"]["identified_servo_laws"]["arm_total"]
+    print(f"held-out error of this arm's laws: {servo['rms_deg']:.2f} deg rms over the five arm joints "
+          f"(95%: {servo['ci95'][0]:.2f} to {servo['ci95'][1]:.2f})")
+    rel = out.relative_to(root)
+    print(f"files: {rel / 'result.json'} (every fitted value with its interval), {rel / 'so_arm100_identified.xml'} (the MuJoCo model)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="physicslens", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="command", required=True)
@@ -151,8 +180,11 @@ def main(argv: list[str] | None = None) -> int:
     sky.add_argument("--mass", action="append", help="NAME=SCALE, e.g. Jupiter=10 (repeatable)")
     sky.add_argument("--years", type=float)
     sky.add_argument("--noise-px", type=float, default=2.0)
+    rb = sub.add_parser("robot", help="calibrate an SO-100 arm from its own LeRobot recordings: free, local")
+    rb.add_argument("action", choices=["calibrate"])
+    rb.add_argument("dataset", help="a public LeRobot dataset of one SO-100 arm (format v2.1), e.g. 00ri/so100_battery")
     a = ap.parse_args(argv)
-    return {"analyze": _analyze, "lens": _lens, "sky": _sky}[a.command](a)
+    return {"analyze": _analyze, "lens": _lens, "sky": _sky, "robot": _robot}[a.command](a)
 
 
 if __name__ == "__main__":
