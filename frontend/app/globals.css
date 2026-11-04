@@ -133,7 +133,9 @@ h4 { margin: 0; font-size: 1.05rem; font-weight: 600; }
 p { margin: 0; max-width: 70ch; }
 body { font-size: 16.5px; }
 .muted { color: var(--ink-3); }
-.small { font-size: 0.9rem; }
+/* Small print lists long dataset names (owner/name_with_underscores) with no break point: they may wrap inside a name,
+   only where they would otherwise push a phone page sideways. */
+.small { font-size: 0.9rem; overflow-wrap: anywhere; }
 .error { color: var(--bad); }
 
 /* ---------- shell ---------- */
