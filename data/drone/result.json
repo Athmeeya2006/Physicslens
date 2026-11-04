@@ -1,0 +1,74 @@
+{
+ "generated": "scripts/drone_demo.py",
+ "data": {
+  "dataset": "NeuroBEM (Bauersfeld et al., RSS 2021), University of Zurich",
+  "url": "https://download.ifi.uzh.ch/rpg/NeuroBEM/",
+  "licence": "none stated; no data redistributed here",
+  "segments": 247,
+  "train_segments": 234,
+  "test_segments": 13,
+  "test_samples": 53962,
+  "mass_kg": 0.772,
+  "rate_hz": 100.0
+ },
+ "chosen": {
+  "z": "thrust_climb",
+  "x": "rotor_drag",
+  "y": "rotor_drag"
+ },
+ "selection_rms_n": {
+  "z": {
+   "thrust": 1.374463651297071,
+   "thrust_climb": 1.0485852150193407,
+   "thrust_climb_inflow": 1.0409538873790178,
+   "thrust_climb_inflow_spinup": 1.03666943392548
+  },
+  "x": {
+   "none": 1.111731356399603,
+   "rotor_drag": 0.5522111372710955,
+   "rotor_drag_quadratic": 0.5491459907895664
+  },
+  "y": {
+   "none": 1.0564611085988678,
+   "rotor_drag": 0.4383377317759926,
+   "rotor_drag_quadratic": 0.44026442268751553
+  }
+ },
+ "params": {
+  "x": [
+   4.4215531718113674e-05
+  ],
+  "y": [
+   4.2660940420452565e-05
+  ],
+  "z": [
+   1.5820447554958754e-06,
+   -6.400896042168073e-05
+  ]
+ },
+ "thrust_coefficient_n_per_rad2_s2": 1.5820447554958754e-06,
+ "heldout_rms_n": {
+  "physicslens": {
+   "x": 0.41808458359210715,
+   "y": 0.374337452493087,
+   "z": 1.1651678736878937
+  },
+  "textbook": {
+   "x": 1.3273520338317482,
+   "y": 1.3849390939582984,
+   "z": 1.6423601396230534
+  },
+  "neurobem_bem_nn": {
+   "x": 0.1870467272575473,
+   "y": 0.19319562861794085,
+   "z": 0.6124113246202444
+  }
+ },
+ "heldout_total_rms_n": {
+  "physicslens": 0.7466680255755715,
+  "textbook": 1.4579970900649935,
+  "neurobem_bem_nn": 0.38616000984823334
+ },
+ "neurobem_test_segments_with_predictions": 13,
+ "hover_thrust_n": 7.5707338
+}
