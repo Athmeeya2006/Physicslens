@@ -1,4 +1,3 @@
-# Only the finished demo video is tracked; everything else here is working material.
+# Working material for the demo film; the finished video is hosted outside the repo and linked from the README.
 *
 !.gitignore
-!physicslens_demo.mp4
