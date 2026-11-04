@@ -15,6 +15,7 @@ Every entry in the published gallery (Apophis, Halley's comet, Jupiter, the pend
 - Baseten is one of the hackathon's inference partners, so its usage logs for our key independently show the calls.
 - Requests: `reasoning_effort` is sent on every call (the model defaults to `xhigh`, the most expensive), set per step in `config/limits.yaml` (`reasoning.baseten_effort_by_task`): low for naming the scene, medium for locating the object, checking the track and the agent's choice, high for the hypotheses, studies and the referee. Sampling is left at its defaults. The model always reasons; Baseten returns that reasoning in `reasoning_content`, and every result keeps it next to the answer.
 - If Baseten fails, the next model tried is Muse Glimmer on our own server (only when one is configured), and the decision trail says so. There is no third option: in demo and production the app then shows a "busy" message instead of reasoning on a closed model (`agent/llm.py`, `provider_chain`).
+- Meta's closed Muse Spark 1.3 appears in one place only: as the closed-model comparison in the physics audit study (`scripts/audit_study.py baseline --meta`), asked alone whether each clip breaks physics. It never produces a result, a law or a step of any analysis.
 
 ## Muse Glimmer 30B, self-hosted
 

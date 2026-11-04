@@ -1275,7 +1275,7 @@ this repository:
 | **Muse Voice Transcribe** | Meta Model API | Hands-free what-if questions and settings spoken while filming ("the string is 50 centimeters"), over the realtime endpoint with automatic end-of-speech detection |
 | **Muse Image** | Meta Model API | Draws the requested experiment setup onto the user's own frame; never measures anything. Judges and development only, on request ("Show me"), with its own small allowance |
 | **Muse Wonder** | Meta Model API | Writes controller code for an identified system; the code is used only after it passes simulation on the identified model and its uncertainty range. Judges and development only |
-| **Muse Spark 1.3** | Meta Model API | Development convenience only, with the same prompts and schemas; demo and production refuse to reason on anything but the open-weight model |
+| **Muse Spark 1.3** | Meta Model API | Development convenience only, with the same prompts and schemas; demo and production refuse to reason on anything but the open-weight model. In the physics audit it is also the closed-model comparison: asked alone whether each clip breaks physics, beside Muse Spark Open alone and the measured audit; it never reasons for a result |
 
 **Two open-weight models, one verdict.** The spring glider's 20 s recording was analyzed again end to end with Muse
 Glimmer 30B as the reasoning model, self-hosted with llama.cpp (release b11936, the pinned weights) on two RTX 2080 Ti
