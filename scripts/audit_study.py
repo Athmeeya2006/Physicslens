@@ -35,7 +35,7 @@ import time
 import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from itertools import zip_longest
 from pathlib import Path
 from typing import Any
@@ -182,12 +182,6 @@ def run_one(clip: dict[str, Any], profile: str = "full") -> dict[str, Any]:
     t0 = time.time()
     row: dict[str, Any] = {"id": clip["id"], "set": clip["set"], "generator": clip["generator"],
                            "human_pc": clip["human_pc"], "profile": profile}
-    def _overrun(*_: Any) -> None:
-        raise TimeoutError(f"clip took longer than {CLIP_TIMEOUT_S} s")
-
-    # Each clip runs in its own worker process, so an alarm here stops a hung clip without holding up the pool.
-    signal.signal(signal.SIGALRM, _overrun)
-    signal.alarm(CLIP_TIMEOUT_S)
     try:
         video = prepare(clip)
         client = CostGuardClient(load_settings())
@@ -209,10 +203,32 @@ def run_one(clip: dict[str, Any], profile: str = "full") -> dict[str, Any]:
         })
     except Exception as e:  # noqa: BLE001  one clip failing must not stop the study; the failure is a row of its own
         row.update({"status": "error", "audit": "error", "error": f"{type(e).__name__}: {e}"[:400]})
-    finally:
-        signal.alarm(0)
     row["seconds"] = round(time.time() - t0, 1)
     return row
+
+
+def run_isolated(clip: dict[str, Any], profile: str) -> dict[str, Any]:
+    """run_one in a process group of its own, killed whole when it overruns.
+
+    A clip once deadlocked inside the fitting's own process pool for hours; an exception raised in the worker cannot
+    end that (the pool's shutdown waits on the same locks), so the whole group is killed instead."""
+    t0 = time.time()
+    out = WORK / "rows" / f"{clip['id']}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.unlink(missing_ok=True)
+    p = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "one", json.dumps(clip), profile, str(out)],
+                         start_new_session=True)
+    try:
+        p.wait(timeout=CLIP_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        os.killpg(p.pid, signal.SIGKILL)
+        p.wait()
+    if out.exists():
+        return json.loads(out.read_text())
+    return {"id": clip["id"], "set": clip["set"], "generator": clip["generator"], "human_pc": clip["human_pc"],
+            "profile": profile, "status": "error", "audit": "error", "seconds": round(time.time() - t0, 1),
+            "error": f"clip took longer than {CLIP_TIMEOUT_S} s" if p.returncode == -signal.SIGKILL
+                     else f"worker exited with code {p.returncode}"}
 
 
 def rows_of(path: Path) -> list[dict[str, Any]]:
@@ -258,7 +274,8 @@ def run(limit: int, workers: int, max_usd: float, only: str | None, profile: str
     start = spent()
     est = 0.25 if profile == "full" else 0.15  # per clip, for the in-flight allowance; the ledger has the real figure afterwards
     WORK.mkdir(parents=True, exist_ok=True)
-    with ProcessPoolExecutor(max_workers=workers) as pool, RESULTS.open("a") as out:
+    # Threads only wait: each clip is its own process (run_isolated), so a hung one is killed, not waited on.
+    with ThreadPoolExecutor(max_workers=workers) as pool, RESULTS.open("a") as out:
         pending: dict[Any, dict[str, Any]] = {}
         queue = list(order)
         while queue or pending:
@@ -268,7 +285,7 @@ def run(limit: int, workers: int, max_usd: float, only: str | None, profile: str
                     queue = []
                     break
                 c = queue.pop(0)
-                pending[pool.submit(run_one, c, profile)] = c
+                pending[pool.submit(run_isolated, c, profile)] = c
             if not pending:
                 break
             finished, _ = wait(pending, return_when=FIRST_COMPLETED)
@@ -599,6 +616,10 @@ def main() -> None:
     r.add_argument("--generator", help="only this generator's clips (e.g. sora), or real")
     b = sub.add_parser("baseline")
     b.add_argument("--max-usd", type=float, required=True)
+    o = sub.add_parser("one", help="internal: one clip, row written to a file (used by run)")
+    o.add_argument("clip")
+    o.add_argument("profile")
+    o.add_argument("out")
     sub.add_parser("report")
     sub.add_parser("replay", help="apply the current audit rules to every stored run (free)")
     sub.add_parser("analysis", help="every metric of the study, under the current rules (free)")
@@ -612,6 +633,8 @@ def main() -> None:
     os.nice(10)
     if a.cmd == "select":
         select(a.generated, a.real, a.seed)
+    elif a.cmd == "one":
+        Path(a.out).write_text(json.dumps(run_one(json.loads(a.clip), a.profile)))
     elif a.cmd == "run":
         run(a.limit, a.workers, a.max_usd, a.only, a.profile, a.retry_errors, a.generator)
     elif a.cmd == "baseline":
