@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import pickle
 import sys
 import time
@@ -39,11 +40,21 @@ from physicslens.robot import arm_sim as A
 from physicslens.robot import servo as S
 
 DATASET, REVISION = "lerobot/aloha_static_coffee", "b144896feb1f37398a862927b22cd3abdf005a6b"
+# PL_ALOHA_DATASET=<owner>/<name> calibrates another ALOHA recording (physicslens robot calibrate), pinned to the
+# revision fetched, into data/robot/aloha/<owner>__<name>/; unset, the published case exactly as it stands.
+OTHER = os.environ.get("PL_ALOHA_DATASET")
 MENAGERIE = "fb36886b3023db08c198264e1e9956ab202c3e3b"
-RAW = ROOT / "var" / "robot" / "aloha"
-XML = RAW / "menagerie" / "aloha" / "aloha.xml"
-OUT = ROOT / "data" / "robot" / "aloha"
-CACHE = ROOT / "var" / "robot" / "identification_aloha.pkl"  # the identification, so a later stage can rerun alone
+ROOT_RAW = ROOT / "var" / "robot" / "aloha"
+XML = ROOT_RAW / "menagerie" / "aloha" / "aloha.xml"
+if OTHER:
+    DATASET, REVISION = OTHER, None
+    RAW = ROOT_RAW / "other" / OTHER.replace("/", "__")
+    OUT = ROOT / "data" / "robot" / "aloha" / OTHER.replace("/", "__")
+    CACHE = ROOT / "var" / "robot" / f"identification_aloha_{OTHER.replace('/', '__')}.pkl"
+else:
+    RAW = ROOT_RAW
+    OUT = ROOT / "data" / "robot" / "aloha"
+    CACHE = ROOT / "var" / "robot" / "identification_aloha.pkl"  # the identification, so a later stage can rerun alone
 MOTORS = ["waist", "shoulder", "elbow", "forearm_roll", "wrist_angle", "wrist_rotate"]
 # Log columns of the twelve arm joints (the grippers, columns 6 and 13, are left out) and their MJCF joint names.
 COLS = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12]
@@ -54,18 +65,27 @@ DELAY_GRID = np.round(np.arange(0.0, 0.2001, 0.01), 3)
 
 
 def fetch() -> None:
+    global REVISION
+    with urllib.request.urlopen(f"https://huggingface.co/api/datasets/{DATASET}", timeout=60) as r:
+        meta = json.loads(r.read())
+    REVISION = REVISION or meta["sha"]
+    licence = next((x.split(":", 1)[1] for x in meta.get("tags", []) if x.startswith("license:")), None)
     base = f"https://huggingface.co/datasets/{DATASET}/resolve/{REVISION}"
     for rel in ("meta/info.json", "data/chunk-000/file-000.parquet"):
         p = RAW / "lerobot" / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         with urllib.request.urlopen(f"{base}/{rel}", timeout=300) as r:
             p.write_bytes(r.read())
+    (RAW / "source.json").write_text(json.dumps({"dataset": DATASET, "revision": REVISION, "licence": licence}))
+    if XML.exists():
+        print("fetched", DATASET, REVISION[:10], "(menagerie aloha already present)")
+        return
     with urllib.request.urlopen(f"https://api.github.com/repos/google-deepmind/mujoco_menagerie/git/trees/{MENAGERIE}?recursive=1",
                                 timeout=60) as r:
         tree = json.loads(r.read())["tree"]
     for item in tree:
         if item["type"] == "blob" and item["path"].startswith("aloha/"):
-            p = RAW / "menagerie" / item["path"]
+            p = ROOT_RAW / "menagerie" / item["path"]
             p.parent.mkdir(parents=True, exist_ok=True)
             url = f"https://raw.githubusercontent.com/google-deepmind/mujoco_menagerie/{MENAGERIE}/{item['path']}"
             with urllib.request.urlopen(url, timeout=120) as r:
@@ -273,7 +293,8 @@ def mujoco_stage(pool: ProcessPoolExecutor, t0: float, winners, steps, refit, se
         "generated": "scripts/aloha_demo.py", "status": status,
         "status_rule": ("proven only if the identified model's held-out error is lower than both the Menagerie model's and "
                         "the fair baseline's, with the 95% interval of each paired improvement above zero"),
-        "data": {"dataset": DATASET, "revision": REVISION, "licence": "MIT", "fps": 1 / DT, "episodes": N,
+        "data": {"dataset": DATASET, **{k: v for k, v in json.loads((RAW / "source.json").read_text()).items() if k != "dataset"},
+                 "fps": 1 / DT, "episodes": N,
                  "frames": int(sum(len(u) for u in US.values())), "fit_episodes": FIT_EPS, "select_episodes": SELECT_EPS,
                  "train_episodes": TRAIN_EPS, "test_episodes": TEST_EPS, "units": "degrees (logged in radians)"},
         "model": {"source": "MuJoCo Menagerie aloha", "commit": MENAGERIE, "licence": "BSD-3-Clause",

@@ -556,7 +556,7 @@ must exceed the few-day one beyond both intervals), no drift is claimed. That th
 unit is the owner's naming.
 
 **Calibrate your own arm.** No torque sensor, test rig or extra recording: the identification needs only the command and joint log a LeRobot arm already writes while it is teleoperated. `physicslens robot calibrate <owner>/<dataset>` runs the same identification on any public
-SO-100 LeRobot recording (v2.0 or v2.1 joint tables, pinned to the revision it fetched): it prints each joint's law, delay, lag
+SO-100 or ALOHA LeRobot recording (the robot type is read from the recording; for an ALOHA, all twelve arm joints, written into the Menagerie model) (v2.0 or v2.1 joint tables, pinned to the revision it fetched): it prints each joint's law, delay, lag
 and deadband with the held-out error, and writes `data/robot/fleet/<owner>__<dataset>/` with every fitted value and its
 interval (`result.json`) and the identified MuJoCo model (`so_arm100_identified.xml`, with its diff against the public
 one). Free local math, no model calls. The seventh arm above (pranavsaroha/so100_medicine_0605, 40 episodes) was

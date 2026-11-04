@@ -129,12 +129,46 @@ def _sky(a: argparse.Namespace) -> int:
         return 2
 
 
+def _robot_type(dataset: str) -> str:
+    """The robot a public LeRobot recording was made on, from its meta/info.json on the Hugging Face hub."""
+    import json
+    import urllib.request
+    with urllib.request.urlopen(f"https://huggingface.co/datasets/{dataset}/resolve/main/meta/info.json", timeout=60) as r:
+        return str(json.loads(r.read()).get("robot_type") or "")
+
+
+def _aloha(a: argparse.Namespace, root: Path) -> int:
+    """Calibrate an ALOHA's twelve arm joints from a public recording: the same identification as the ALOHA case."""
+    import json
+    import os
+    import subprocess
+    py = sys.executable
+    env = dict(os.environ, PL_ALOHA_DATASET=a.dataset, PYTHONPATH=str(root / "backend"))
+    for step in (["fetch"], []):
+        subprocess.run([py, str(root / "scripts" / "aloha_demo.py"), *step], check=True, cwd=root, env=env, stdout=subprocess.DEVNULL)
+    out = root / "data" / "robot" / "aloha" / a.dataset.replace("/", "__")
+    r = json.loads((out / "result.json").read_text())
+    print(f"{a.dataset}: {r['data']['episodes']} episodes, {len(r['data']['test_episodes'])} held out for the check")
+    for name, j in r["joints"].items():
+        p = {k: v["value"] for k, v in j["params"].items()}
+        print(f"  {name:20s} {j['title']}: delay {p['d'] * 1000:.0f} ms" + (f", deadband {p['db']:.2f} deg" if "db" in p else ""))
+    h = r["heldout"]
+    print(f"held-out error over the twelve arm joints: {h['identified']['arm_total']['rms_deg']:.2f} deg corrected, "
+          f"{h['default']['arm_total']['rms_deg']:.2f} deg for the published model")
+    rel = out.relative_to(root)
+    print(f"files: {rel / 'result.json'} (every fitted value with its interval), {rel / 'aloha_identified.xml'} (the MuJoCo model)")
+    return 0
+
+
 def _robot(a: argparse.Namespace) -> int:
-    """Calibrate one SO-100 from its own public LeRobot recordings: the same identification as the robot arm case."""
+    """Calibrate one arm from its own public LeRobot recordings: an SO-100 (the robot arm case's identification) or
+    an ALOHA (the ALOHA case's), chosen by the recording's robot type."""
     import json
     import os
     import subprocess
     root = Path(__file__).resolve().parents[2]
+    if "aloha" in _robot_type(a.dataset).lower():
+        return _aloha(a, root)
     py = sys.executable
     if not (root / "var" / "robot" / "raw" / "menagerie" / "so_arm100.xml").exists():
         subprocess.run([py, str(root / "scripts" / "fetch_robot.py")], check=True, cwd=root)
@@ -180,7 +214,7 @@ def main(argv: list[str] | None = None) -> int:
     sky.add_argument("--mass", action="append", help="NAME=SCALE, e.g. Jupiter=10 (repeatable)")
     sky.add_argument("--years", type=float)
     sky.add_argument("--noise-px", type=float, default=2.0)
-    rb = sub.add_parser("robot", help="calibrate an SO-100 arm from its own LeRobot recordings: free, local")
+    rb = sub.add_parser("robot", help="calibrate an SO-100 or ALOHA arm from its own LeRobot recordings: free, local")
     rb.add_argument("action", choices=["calibrate"])
     rb.add_argument("dataset", help="a public LeRobot dataset of one SO-100 arm (format v2.1), e.g. 00ri/so100_battery")
     a = ap.parse_args(argv)
