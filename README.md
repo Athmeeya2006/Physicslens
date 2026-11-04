@@ -588,7 +588,8 @@ The corrected model tracks this ALOHA 2.0 times as closely as a model that was a
 system-identified, with the paired improvement's 95% interval above zero (0.27° to
 0.35°). The largest gains are at the wrists, where the published gains are the lowest
 (the right wrist angle from 1.41° to 0.18°). The corrected model is `data/robot/aloha/aloha_identified.xml` (BSD-3-Clause,
-derived from Menagerie's, notice and licence beside it).
+derived from Menagerie's, notice and licence beside it); how to use it, with every joint's law, is in
+`data/robot/aloha/REPORT.md`.
 
 **It carries to the robot's other tasks: closer on 149 of 149 episodes.** The correction identified on the coffee task, with nothing refitted, against
 the published model on every episode of three other public tasks of the same ALOHA (`python scripts/aloha_demo.py
