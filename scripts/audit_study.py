@@ -277,7 +277,7 @@ def done_ids(path: Path, retry_errors: bool = False) -> set[str]:
     # A clip refused for budget (a daily cap reached mid-batch) is not a result: it always runs again.
     def retry(err: str) -> bool:  # refused for budget, or the network was down: not a result, run it again
         err = err.lower()
-        return any(k in err for k in ("busy", "budget", "urlopen error", "name or service", "timed out", "connection",
+        return any(k in err for k in ("busy", "budget", "malformed", "urlopen error", "name or service", "timed out", "connection",
                                       "open-weight model failed", "no file found", "outputtruncated", "took longer than"))
     # Study rows keep a failure in "error"; baseline rows in "reason" (with verdict "error").
     return {r["id"] for r in rows_of(path)

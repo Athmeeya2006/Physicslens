@@ -101,12 +101,31 @@ def main() -> None:
                          "policy": {"own": iv(own_pol), "baseline": iv(base_pol), "borrowed_median": iv(np.median(borrowed, axis=0)),
                                     "own_minus_baseline": iv(own_pol - base_pol)}})
         print(aid, json.dumps(arms_out[-1]["teleop_heldout"]), json.dumps(arms_out[-1]["policy"]), flush=True)
+    # Calibrated on the policy's own motion: where an arm's rollouts were also calibrated by robot_demo.py
+    # (PL_ROBOT_GROUP=policy), both calibrations predict that calibration's held-out rollouts, each with its constant
+    # offset re-centred on the same policy training rollouts.
+    retrained = []
+    for aid, slugs in POLICIES.items():
+        res = ROOT / "data" / "robot" / "policy" / slugs[0] / "result.json"
+        if len(slugs) != 1 or not res.exists():
+            continue
+        pr = json.loads(res.read_text())
+        plaws = {n: (pr["joints"][n]["law"], {k: v["value"] for k, v in pr["joints"][n]["params"].items()}) for n in F.NAMES}
+        src = ROOT / "var" / "robot" / "policy" / slugs[0]
+        pu, py = F.episodes(sorted((src / "data").rglob("episode_*.parquet")))
+        tr, te = pr["data"]["train_episodes"], pr["data"]["test_episodes"]
+        tele = F.arm_error(laws[aid], pu, py, tr, te, DT)
+        pol_cal = F.arm_error(plaws, pu, py, tr, te, DT)
+        retrained.append({"arm": aid, "policy_dataset": slugs[0].replace("__", "/"), "train_rollouts": len(tr), "test_rollouts": len(te),
+                          "teleop_calibration": iv(tele), "policy_calibration": iv(pol_cal),
+                          "policy_minus_teleop": iv(pol_cal - tele)})
+        print("retrained", aid, json.dumps(retrained[-1]), flush=True)
     own = np.array([r["own_deg"] for r in rows])
     base = np.array([r["baseline_deg"] for r in rows])
     bor = np.array([r["borrowed_median_deg"] for r in rows])
     mu, lo, hi = S.mean_interval(base - own)
     mu2, lo2, hi2 = S.mean_interval(bor - own)
-    out = {"generated": "scripts/robot_policy.py", "arms": arms_out, "rollouts": rows,
+    out = {"generated": "scripts/robot_policy.py", "arms": arms_out, "rollouts": rows, "calibrated_on_policy": retrained,
            "summary": {"arms": len(arms_out), "rollouts": len(rows), "own_mean_deg": round(float(own.mean()), 4),
                        "baseline_mean_deg": round(float(base.mean()), 4), "borrowed_mean_deg": round(float(bor.mean()), 4),
                        "baseline_over_own": round(float(base.mean() / own.mean()), 3),
