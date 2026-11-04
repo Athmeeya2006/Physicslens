@@ -2,6 +2,8 @@
 
   python scripts/aloha_demo.py fetch     download the pinned public files into var/robot/aloha/ (free)
   python scripts/aloha_demo.py           identify every arm joint, replay held-out episodes in MuJoCo, write data/robot/aloha/
+  python scripts/aloha_demo.py fetch-transfer && python scripts/aloha_demo.py transfer
+                                         the same correction, unchanged, on the robot's other tasks (free)
 
 Data: 50 teleoperated episodes of a real ALOHA (two ViperX arms; LeRobot, lerobot/aloha_static_coffee, MIT): per
 frame, the leader arms' joint angles ("action", the command) and the follower arms' ("observation.state"), radians,
@@ -304,8 +306,77 @@ def mujoco_stage(pool: ProcessPoolExecutor, t0: float, winners, steps, refit, se
                       "vs_default": vs_default, "vs_fair": vs_fair, "vs_stronger": vs_strong}, indent=1))
 
 
+# ---------- transfer: the coffee-task correction, unchanged, on the same robot's other tasks ----------
+
+TRANSFER = ["lerobot/aloha_static_battery", "lerobot/aloha_static_candy", "lerobot/aloha_static_tape"]
+
+
+def fetch_transfer() -> None:
+    for repo in TRANSFER:
+        with urllib.request.urlopen(f"https://huggingface.co/api/datasets/{repo}", timeout=60) as r:
+            meta = json.loads(r.read())
+        rev = meta["sha"]
+        licence = next((x.split(":", 1)[1] for x in meta.get("tags", []) if x.startswith("license:")), None)
+        out = RAW / "transfer" / repo.split("/")[1]
+        for rel in ("meta/info.json", "data/chunk-000/file-000.parquet"):
+            f = out / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            with urllib.request.urlopen(f"https://huggingface.co/datasets/{repo}/resolve/{rev}/{rel}", timeout=300) as r:
+                f.write_bytes(r.read())
+        (out / "source.json").write_text(json.dumps({"dataset": repo, "revision": rev, "licence": licence}))
+        print("fetched", repo, rev[:10], licence, flush=True)
+
+
+def job_transfer(args: tuple) -> tuple[str, int, list[list[float]]]:
+    label, e, gains, u, y0, corr = args
+    m = spec(gains).compile()
+    off = np.zeros(J)
+    if corr is not None:
+        laws, recentre = corr
+        off = np.column_stack([A.command_correction(laws[j][0], laws[j][1], u[:, j]) - recentre[j] for j in range(J)])
+    return label, e, A.replay(m, joint_map(), u, y0, DT, ctrl_offset_deg=off).tolist()
+
+
+def transfer() -> None:
+    """Every episode of each other task, replayed with the published model and with the coffee-task correction,
+    nothing refitted (gains, laws and the command recentring all as identified on coffee)."""
+    r = json.loads((OUT / "result.json").read_text())
+    gains = {n: {k: r["joints"][n]["mjcf"][k] for k in ("kp", "kv", "delay", "frictionloss")} for n in NAMES}
+    laws = {j: (r["joints"][n]["law"], {k: v["value"] for k, v in r["joints"][n]["params"].items()}) for j, n in enumerate(NAMES)}
+    recentre = np.array([r["joints"][n]["mjcf"]["command_recentre_deg"] for n in NAMES])
+    out = {"generated": "scripts/aloha_demo.py transfer", "identified_on": DATASET, "tasks": []}
+    with ProcessPoolExecutor(WORKERS) as pool:
+        for repo in TRANSFER:
+            src = RAW / "transfer" / repo.split("/")[1]
+            d = pd.read_parquet(src / "data" / "chunk-000" / "file-000.parquet")
+            us, ys = {}, {}
+            for e, g in d.groupby("episode_index"):
+                g = g.sort_values("frame_index")
+                us[int(e)] = np.degrees(np.stack(g["action"].to_numpy()).astype(float)[:, COLS])
+                ys[int(e)] = np.degrees(np.stack(g["observation.state"].to_numpy()).astype(float)[:, COLS])
+            eps = sorted(us)
+            jobs = [(k, e, gn, us[e], ys[e][0], c) for e in eps
+                    for k, gn, c in (("default", None, None), ("identified", gains, (laws, recentre)))]
+            sims: dict[str, dict[int, np.ndarray]] = {}
+            for label, e, sim in pool.map(job_transfer, jobs):
+                sims.setdefault(label, {})[e] = np.asarray(sim)
+            rows = {k: np.array([np.sqrt(np.mean((v[e] - ys[e]) ** 2, axis=0)) for e in eps]) for k, v in sims.items()}
+            src_meta = json.loads((src / "source.json").read_text())
+            task = {**src_meta, "episodes": len(eps), "default": summarize(rows["default"])["arm_total"],
+                    "identified": summarize(rows["identified"])["arm_total"],
+                    "default_minus_identified": paired(rows["default"], rows["identified"]),
+                    "episodes_better": int(np.sum(total(rows["identified"]) < total(rows["default"])))}
+            out["tasks"].append(task)
+            print(repo, task["default"]["rms_deg"], task["identified"]["rms_deg"], task["default_minus_identified"], flush=True)
+    (OUT / "transfer.json").write_text(json.dumps(out, indent=1) + "\n")
+
+
 if __name__ == "__main__":
     if sys.argv[1:] == ["fetch"]:
         fetch()
+    elif sys.argv[1:] == ["fetch-transfer"]:
+        fetch_transfer()
+    elif sys.argv[1:] == ["transfer"]:
+        transfer()
     else:
         main()

@@ -22,10 +22,15 @@ const ROWS: [string, string][] = [
   ["identified", "Corrected by PhysicsLens"],
 ];
 
+interface Transfer { tasks: { dataset: string; episodes: number; episodes_better: number; default: Rms; identified: Rms;
+  default_minus_identified: { ratio: number } }[] }
+
 export function RobotAloha() {
   const [d, setD] = useState<Aloha | null>(null);
+  const [tr, setTr] = useState<Transfer | null>(null);
   useEffect(() => {
     fetch("/astro/robot_aloha.json").then((r) => (r.ok ? r.json() : null)).then(setD).catch(() => setD(null));
+    fetch("/astro/robot_aloha_transfer.json").then((r) => (r.ok ? r.json() : null)).then(setTr).catch(() => setTr(null));
   }, []);
   if (!d) return null;
   const c = d.heldout_comparison.default_minus_identified;
@@ -56,6 +61,28 @@ export function RobotAloha() {
           </tbody>
         </table>
       </div>
+      {tr && (
+        <>
+          <p><strong>It carries to the robot&apos;s other tasks.</strong> Identified on the coffee task and refitted on nothing, the correction
+            beats the published model on {tr.tasks.reduce((a, t) => a + t.episodes_better, 0)} of{" "}
+            {tr.tasks.reduce((a, t) => a + t.episodes, 0)} episodes of three other tasks.</p>
+          <div className="table-wrap">
+            <table className="cards">
+              <thead><tr><th>Task</th><th className="num">Menagerie</th><th className="num">Corrected on coffee</th><th className="num">Episodes closer</th></tr></thead>
+              <tbody>
+                {tr.tasks.map((t) => (
+                  <tr key={t.dataset}>
+                    <td data-label="Task">{t.dataset.split("_static_")[1]}</td>
+                    <td data-label="Menagerie" className="num">{t.default.rms_deg.toFixed(2)}°</td>
+                    <td data-label="Corrected on coffee" className="num"><strong>{t.identified.rms_deg.toFixed(2)}°</strong></td>
+                    <td data-label="Episodes closer" className="num">{t.episodes_better} of {t.episodes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
       <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
         <a className="button secondary" href="/astro/aloha_identified.xml" download><Download size={16} aria-hidden="true" /> Corrected ALOHA MJCF</a>
       </div>

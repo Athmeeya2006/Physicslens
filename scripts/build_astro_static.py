@@ -37,6 +37,7 @@ FILES = {
     "drone.json": ROOT / "data" / "drone" / "result.json",
     "rocket.json": ROOT / "data" / "rocket" / "result.json",
     "robot_aloha.json": ROOT / "data" / "robot" / "aloha" / "result.json",
+    "robot_aloha_transfer.json": ROOT / "data" / "robot" / "aloha" / "transfer.json",
     "aloha_identified.xml": ROOT / "data" / "robot" / "aloha" / "aloha_identified.xml",
     "LICENSE-menagerie-aloha.txt": ROOT / "data" / "robot" / "aloha" / "LICENSE-menagerie-aloha",
     "health_public.json": ROOT / "data" / "health_public" / "result.json",

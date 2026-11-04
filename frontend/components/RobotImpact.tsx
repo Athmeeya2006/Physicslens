@@ -21,10 +21,13 @@ export function RobotImpact() {
     pairs_significantly_worse: number } } | null>(null);
   // Where the gripper ends up (scripts/robot_impact.py): the same replays, in millimetres at the hand.
   const [hand, setHand] = useState<{ gripper: Record<string, { rms_mm: { mean: number } }> } | null>(null);
+  // A second robot (scripts/aloha_demo.py): the ALOHA against a model that was already identified.
+  const [aloha, setAloha] = useState<{ heldout: Record<string, { arm_total: Rms }>; heldout_comparison: Record<string, { ratio: number }> } | null>(null);
   useEffect(() => {
     fetch("/astro/robot.json").then((r) => (r.ok ? r.json() : null)).then(setD).catch(() => setD(null));
     fetch("/astro/robot_fleet.json").then((r) => (r.ok ? r.json() : null)).then(setFleet).catch(() => setFleet(null));
     fetch("/astro/robot_impact.json").then((r) => (r.ok ? r.json() : null)).then(setHand).catch(() => setHand(null));
+    fetch("/astro/robot_aloha.json").then((r) => (r.ok ? r.json() : null)).then(setAloha).catch(() => setAloha(null));
   }, []);
   if (!d) return null;
   const pub = d.heldout.default.arm_total, id = d.heldout.identified.arm_total;
@@ -44,6 +47,12 @@ export function RobotImpact() {
             <p>And it is per unit: on {fleet.summary.arms} owners&apos; arms, a calibration borrowed from another arm tracks worse than
               the arm&apos;s own in {fleet.summary.pairs_significantly_worse} of {fleet.summary.pairs} pairs
               ({fleet.summary.borrowed_mean_deg.toFixed(2)}° against {fleet.summary.own_mean_deg.toFixed(2)}°). Each arm and setup needs its own.</p>
+          )}
+          {aloha && (
+            <p>And it is not one arm&apos;s trick: on the ALOHA arms the corrected simulator is{" "}
+              {aloha.heldout_comparison.default_minus_identified.ratio.toFixed(1)} times closer to the real joints
+              ({aloha.heldout.identified.arm_total.rms_deg.toFixed(2)}° against {aloha.heldout.default.arm_total.rms_deg.toFixed(2)}°) than
+              MuJoCo Menagerie&apos;s model, which its authors had already identified on a real ALOHA.</p>
           )}
           <ul className="stat-strip count-strip">
             <li><span className="stat-number">{pub.rms_deg.toFixed(2)}°</span><span className="stat-label">public MuJoCo model, held-out error</span></li>

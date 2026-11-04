@@ -1,0 +1,93 @@
+{
+ "generated": "scripts/aloha_demo.py transfer",
+ "identified_on": "lerobot/aloha_static_coffee",
+ "tasks": [
+  {
+   "dataset": "lerobot/aloha_static_battery",
+   "revision": "06dc3da83c4fd3d1889b00f1dfd3780da8421f64",
+   "licence": "apache-2.0",
+   "episodes": 49,
+   "default": {
+    "rms_deg": 0.7138,
+    "ci95": [
+     0.6982,
+     0.7288
+    ]
+   },
+   "identified": {
+    "rms_deg": 0.4044,
+    "ci95": [
+     0.3963,
+     0.4131
+    ]
+   },
+   "default_minus_identified": {
+    "improvement_deg": 0.3093,
+    "ci95": [
+     0.293,
+     0.3254
+    ],
+    "ratio": 1.765
+   },
+   "episodes_better": 49
+  },
+  {
+   "dataset": "lerobot/aloha_static_candy",
+   "revision": "6728831ef9674b74f3ce20bf517890e9ee20b0d9",
+   "licence": "mit",
+   "episodes": 50,
+   "default": {
+    "rms_deg": 0.6328,
+    "ci95": [
+     0.6127,
+     0.6554
+    ]
+   },
+   "identified": {
+    "rms_deg": 0.4966,
+    "ci95": [
+     0.4916,
+     0.5018
+    ]
+   },
+   "default_minus_identified": {
+    "improvement_deg": 0.1362,
+    "ci95": [
+     0.1176,
+     0.1558
+    ],
+    "ratio": 1.274
+   },
+   "episodes_better": 50
+  },
+  {
+   "dataset": "lerobot/aloha_static_tape",
+   "revision": "92955878beb0da15eee5d4d869841577f87e903e",
+   "licence": "apache-2.0",
+   "episodes": 50,
+   "default": {
+    "rms_deg": 0.7668,
+    "ci95": [
+     0.7565,
+     0.7767
+    ]
+   },
+   "identified": {
+    "rms_deg": 0.5036,
+    "ci95": [
+     0.5007,
+     0.5066
+    ]
+   },
+   "default_minus_identified": {
+    "improvement_deg": 0.2632,
+    "ci95": [
+     0.2531,
+     0.2732
+    ],
+    "ratio": 1.523
+   },
+   "episodes_better": 50
+  }
+ ]
+}

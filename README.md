@@ -30,7 +30,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 ## In 30 seconds
 
 - **The problem:** every cheap robot arm is slightly different from its simulator, so policies trained in simulation fail on the real thing (friction, delay, deadband, damping). Measuring real physics takes lab rigs and an expert.
-- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model, the simulator people use for this arm, from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and still 1.4 times as closely after the public model is given a fitted delay and per-joint offsets, and on seven owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm and setup needs its own. At the hand that is 3.2 mm from the real gripper against 7.5 mm for the public model, and a calibration fitted only on human teleoperation predicts the arm under a trained AI policy better than a fitted delay and offsets in 28 of 28 rollouts. On a second robot, the ALOHA arms, the corrected simulator is 1.9 times closer to the real joints than MuJoCo Menagerie's model, which its authors had already identified on a real ALOHA. [See it](https://physicslens.vercel.app/robot).
+- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model, the simulator people use for this arm, from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and still 1.4 times as closely after the public model is given a fitted delay and per-joint offsets, and on seven owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm and setup needs its own. At the hand that is 3.2 mm from the real gripper against 7.5 mm for the public model, and a calibration fitted only on human teleoperation predicts the arm under a trained AI policy better than a fitted delay and offsets in 28 of 28 rollouts. On a second robot, the ALOHA arms, the corrected simulator is 1.9 times closer to the real joints than MuJoCo Menagerie's model, which its authors had already identified on a real ALOHA, and, refitted on nothing, closer on all 149 episodes of three other tasks. [See it](https://physicslens.vercel.app/robot).
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
 - **An agent that knows when the data cannot decide:** when two laws tie, it designs the recording that would separate them and asks for it. On the spring glider and on the pendulum it asked for a longer recording; both public videos ran longer, and the longer recordings settled the questions it asked (dry friction for the glider; damping is real for the pendulum). [Spring](https://physicslens.vercel.app/?run=gallery-spring-longer), [pendulum](https://physicslens.vercel.app/?run=gallery-pendulum-longer).
@@ -585,7 +585,19 @@ The corrected model tracks this ALOHA 1.9 times as closely as a model that was a
 system-identified, with the paired improvement's 95% interval above zero (0.26° to
 0.33°). The largest gains are at the wrists, where the published gains are the lowest
 (the right wrist angle from 1.41° to 0.18°). The corrected model is `data/robot/aloha/aloha_identified.xml` (BSD-3-Clause,
-derived from Menagerie's, notice and licence beside it); every fitted value with its interval is in
+derived from Menagerie's, notice and licence beside it).
+
+**It carries to the robot's other tasks: closer on 149 of 149 episodes.** The correction identified on the coffee task, with nothing refitted, against
+the published model on every episode of three other public tasks of the same ALOHA (`python scripts/aloha_demo.py
+transfer`, `data/robot/aloha/transfer.json`):
+
+| Task | Menagerie | Corrected on coffee | Closer |
+|---|---|---|---|
+| battery (49 episodes) | 0.71° | **0.40°** | 1.8 times, better in 49 of 49 |
+| candy (50 episodes) | 0.63° | **0.50°** | 1.3 times, better in 50 of 50 |
+| tape (50 episodes) | 0.77° | **0.50°** | 1.5 times, better in 50 of 50 |
+
+Every fitted value with its interval is in
 `data/robot/aloha/result.json`. Reproduce with `python scripts/aloha_demo.py fetch` then `python scripts/aloha_demo.py`
 (free, local; about 25 minutes on 28 cores).
 
