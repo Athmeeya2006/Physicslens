@@ -585,6 +585,13 @@ camera solution's errors are not published and were assumed (2 km, 2 km, 3°). I
 published: a hit for each recovered stone inside its mass bin's 95% region. On Winchcombe the same rule placed only
 1 of 9 inside, so a miss here would not surprise; it is registered anyway, so either way the record stands.
 
+**Other recent falls, checked for usable data.** 2024 BX1 (Ribbeck, Germany) and 2023 CX1 (Normandy, France) were
+both recovered, but neither has published find coordinates to score a prediction against: the 2024 BX1 trajectory paper
+(Spurný et al. 2024, A&A 686, A67) gives the trajectory and fragmentation in full and states that the exact locations of
+most finds are not known, and the 2023 CX1 finds are on a community map without a table. A prediction checked only
+against another team's prediction would not be a test, so neither is run. Triangulating a fall from raw multi-station
+video (Global Meteor Network) needs per-station observations, which are not published with the network's summaries.
+
 ### The Sun's rotation from real images (`/sun`)
 
 `scripts/sun_demo.py` tracks sunspots across SDO/HMI continuum images (Helioviewer, one every 6 hours over five
