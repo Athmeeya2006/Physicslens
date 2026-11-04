@@ -14,7 +14,7 @@ import sys
 from playwright.sync_api import sync_playwright
 
 PAGES = ["index", "cases", "predictions", "timing", "fireball", "sun", "satellites", "occultation", "asteroids",
-         "audit", "dataset", "health", "sky", "study", "live", "glossary", "index?run=gallery-pendulum",
+         "audit", "dataset", "health", "flight", "robot", "sky", "study", "live", "glossary", "index?run=gallery-pendulum",
          "index?run=gallery-paperbag", "index?run=gallery-apophis"]
 MIN_WORDS = 120
 

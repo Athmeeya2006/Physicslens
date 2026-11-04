@@ -151,7 +151,7 @@ def drone() -> dict[str, Any] | None:
             "status": "proven" if e["physicslens"] < e["textbook"] else "partial",
             "status_rule": "proven when the identified law predicts the held-out flights' forces better than the textbook law",
             "cant": "one vehicle in a motion-capture arena; the neural hybrid remains closer",
-            "link": None}
+            "link": "/flight"}
 
 
 def rocket() -> dict[str, Any] | None:
@@ -171,7 +171,7 @@ def rocket() -> dict[str, Any] | None:
             "status": "proven" if abs(s["isp_vac_median_s"] - s["published"]["isp_vac_s"]) < 0.05 * s["published"]["isp_vac_s"] else "partial",
             "status_rule": "proven when the fitted vacuum specific impulse is within 5% of SpaceX's published figure",
             "cant": "first stage only, from the webcast's speed and altitude readout",
-            "link": None}
+            "link": "/flight"}
 
 
 def aloha() -> dict[str, Any] | None:
@@ -188,7 +188,7 @@ def aloha() -> dict[str, Any] | None:
                        f"model, itself fitted to test motions on a real ALOHA ({c['default_minus_identified']['ratio']:.1f} times closer)"),
             "status": r["status"], "status_rule": r["status_rule"],
             "cant": "one unit and one task",
-            "link": None,
+            "link": "/robot",
             "contribution": ({"beats_public_on_heldout": True,
                               "summary": f"the corrected ALOHA MJCF beats MuJoCo Menagerie's aloha on held-out episodes by "
                                          f"{c['default_minus_identified']['improvement_deg']:.2f}° RMS"}

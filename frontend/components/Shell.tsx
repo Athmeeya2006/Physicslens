@@ -36,7 +36,7 @@ const TOOLS: Item[] = [
   { href: "/health", label: "Machine health", icon: Activity, text: "Two recordings of one part: did it drift?" },
 ];
 // Pages that belong to Evidence (the case pages too), for the header's current-section mark.
-export const EVIDENCE_PATHS = ["/cases", "/predictions", "/audit", "/dataset", "/robot", "/timing", "/fireball", "/sun",
+export const EVIDENCE_PATHS = ["/cases", "/predictions", "/audit", "/dataset", "/robot", "/flight", "/timing", "/fireball", "/sun",
   "/satellites", "/occultation", "/asteroids"];
 const TOOL_PATHS = ["/live", "/study", "/health"];
 
