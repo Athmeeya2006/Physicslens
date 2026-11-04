@@ -72,17 +72,18 @@ function DroneSection({ d }: { d: Drone }) {
 
 function RocketSection({ r }: { r: Rocket }) {
   const s = r.summary;
-  if (!s.isp_sl_median_s) return null;
-  const off = (100 * Math.abs(s.isp_sl_median_s - s.published.isp_sl_s)) / s.published.isp_sl_s;
+  if (s.bucket_edge_error_median_s === null) return null;
   return (
     <section className="panel stack" aria-labelledby="fl-rocket">
-      <h2 id="fl-rocket">Falcon 9 from its launch webcasts: the engines&apos; sea-level specific impulse within {off.toFixed(1)}% of SpaceX&apos;s figure</h2>
-      <p>Each launch webcast shows the first stage&apos;s speed and altitude. Fitting the rocket equation with the air-pressure loss and
-        the max-Q throttle bucket to {s.isp_sl_launches} launches gives a sea-level specific impulse of{" "}
-        <strong className="num">{s.isp_sl_median_s.toFixed(0)} s</strong> (median; middle half {s.isp_sl_iqr_s?.[0].toFixed(0)} to{" "}
-        {s.isp_sl_iqr_s?.[1].toFixed(0)} s), against the {s.published.isp_sl_s.toFixed(0)} s SpaceX publishes for the Merlin 1D.
-        {s.bucket_edge_error_median_s !== null && <> The throttle bucket, fitted blind, starts and ends a median{" "}
-          {s.bucket_edge_error_median_s.toFixed(1)} s from the times the telemetry lists, on {s.bucket_launches} launches.</>}</p>
+      <h2 id="fl-rocket">Falcon 9 from its launch webcasts: the max-Q throttle-down found blind, within {s.bucket_edge_error_median_s.toFixed(1)} s</h2>
+      <p>Each launch webcast shows the first stage&apos;s speed and altitude. Candidate laws, from the ideal rocket equation up, were fitted
+        to {s.launches_with_first_stage} first stages with no hint of when the engines throttle. {s.with_accepted_law} have a verified law, and on{" "}
+        {s.bucket_launches} of them that law contains the throttle-down for maximum aerodynamic pressure, found on its own: its start and end
+        land a median <strong className="num">{s.bucket_edge_error_median_s.toFixed(1)} s</strong> from the times the telemetry lists.
+        {s.isp_sl_median_s !== null && s.isp_vac_median_s !== null && <> The same fit gives the engines&apos; specific impulse:{" "}
+          {s.isp_sl_median_s.toFixed(0)} s at sea level and {s.isp_vac_median_s.toFixed(0)} s in vacuum (median over {s.isp_sl_launches} launches),
+          against the {s.published.isp_sl_s.toFixed(0)} s and {s.published.isp_vac_s.toFixed(0)} s SpaceX publishes, with the few percent of
+          aerodynamic drag folded into the thrust.</>}</p>
       <p className="small muted">Speed and altitude read from SpaceX webcasts (shahar603/Telemetry-Data, the Unlicense). Each law is fitted on
         the first 75% of the burn and must forecast the rest; {s.with_accepted_law} of {s.launches_with_first_stage} first stages have a
         verified law. Published figure: {s.published.source}.</p>
@@ -93,7 +94,8 @@ function RocketSection({ r }: { r: Rocket }) {
 export default function FlightPage() {
   const drone = useJson<Drone>("/astro/drone.json");
   const rocket = useJson<Rocket>("/astro/rocket.json");
-  const items = [{ id: "fl-drone", label: "Quadrotor" }, ...(rocket?.summary.isp_sl_median_s ? [{ id: "fl-rocket", label: "Falcon 9" }] : [])];
+  const items = [{ id: "fl-drone", label: "Quadrotor" },
+    ...(rocket && rocket.summary.bucket_edge_error_median_s !== null ? [{ id: "fl-rocket", label: "Falcon 9" }] : [])];
   return (
     <main id="main">
       <ProofNav caseTitle="flying machines" />

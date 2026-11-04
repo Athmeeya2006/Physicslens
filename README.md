@@ -38,6 +38,7 @@ PhysicsLens turns a phone video into a verified physics model. SAM 3.1 tracks th
 - **On real footage:** a pendulum given as 0.5 m long gives g = 9.91 m/s² (95% interval 9.82 to 9.99), 0.98% above the local 9.811 at the filming site in Aachen, just outside its interval (see Limitations), and a longer stretch of the same swing gives 9.828; a thrown paper bag rejects free fall for linear drag; and when the data cannot decide, the agent asks for the experiment that would.
 - **Where the evidence stands:** the robot arm's corrected simulator beats the public one on held-out data; 9 blind predictions are registered for outside checking, scored from 15 November, after judging; every result, its data and its exports are open for outside use.
 - **Real-world cases, each checked against an independent answer:** an open-source robot arm's simulator corrected from public recordings (on held-out motion about twice as close to the real arm as the public model), all 17 recorded ISS reboosts that five years of archived NASA trajectories cover found by a rule fixed in advance (1 false alarm in 572 quiet days), the Winchcombe meteorite fall from its published trajectory (its orbit within 0.4 sigma of the published one, every recovered stone within 563 m of the simulated fall line, but only 1 of 9 inside its blind 95% landing region, so partial), WASP-12b's shrinking orbit (28.6 ms per year, 95% interval 24.5 to 32.7, against the published 29 ± 2 at one standard deviation), the Sun's rotation from real SDO images, Uranus's moon Umbriel sized from a star's disappearance, and how much one more night helped track asteroid 2024 YR4. Each is a page that also says what it cannot do.
+- **Flying machines too:** the same loop gives a real quadrotor its thrust and drag laws from flight logs, halving the textbook simulator's force error on held-out flights, and finds Falcon 9's max-Q throttle-down from its launch webcasts with no hint of when it happens, within a median 0.9 s of the recorded times. [See it](https://physicslens.vercel.app/flight).
 - **Meta models doing real work:** Muse Spark Open (open weights, on Baseten) reasons, SAM 3.1 tracks, Muse Voice Transcribe listens, Muse Image draws setup guides, Muse Wonder writes controllers that only simulation can accept, and Muse Glimmer 30B is the fully offline open-weight path.
 
 
@@ -88,6 +89,7 @@ Every link opens a complete, real analysis; nothing needs an account or a code.
 - [Real-world cases on public data](#real-world-cases-on-public-data)
 - [Open-source robot arm: its simulator corrected](#open-source-robot-arm-its-simulator-corrected-from-public-recordings-robot)
 - [A second robot: the ALOHA arms](#a-second-robot-the-aloha-arms-against-a-model-that-was-already-identified-scriptsaloha_demopy)
+- [Falcon 9: engine performance from its launch webcasts](#falcon-9-engine-performance-from-its-launch-webcasts-flight-scriptsrocket_demopy)
 - [A real quadrotor: thrust and drag from its flight logs](#a-real-quadrotor-thrust-and-drag-from-its-flight-logs-scriptsdrone_demopy)
 - [Lab measurement on labelled real footage](#lab-measurement-on-labelled-real-footage-scriptslab_footagepy)
 - [The agent on the real-world cases](#the-agent-on-the-real-world-cases-scriptscases_agentpy)
@@ -459,6 +461,7 @@ Every case at a glance (each row is generated from its result file; the same cas
 | [Open-source robot arm: simulator corrected from public recordings](https://physicslens.vercel.app/robot) | anyone who simulates the SO-100 arm (MuJoCo Menagerie, LeRobot users) | measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model | SO-100 arm, 50 public recordings: on held-out episodes the corrected MuJoCo model tracks the real joints to 0.38° RMS against 0.75° for the MuJoCo Menagerie model (2.0 times closer; 1.7 times closer than the default with a fitted delay); per unit: on 7 owners' arms a borrowed calibration tracks worse than the arm's own in 42 of 42 pairs (0.99° against 0.48°); at the gripper the hand is 3.2 mm from the real one against 7.5 mm for the public model | SAM 3.1 checked the logged joints against the arm's camera video (the gripper tracked on 5 held-out episodes, a median 4.1 mm from the logged path); the servo laws themselves are fitted and verified by local math (held-out MuJoCo replay) | the motions in these recordings; payloads, wear and temperature are not covered, and the seven arms compared recorded different tasks |
 | [ALOHA arms: a second robot, against an already-identified model](https://physicslens.vercel.app/robot) | anyone who simulates the ALOHA arms (MuJoCo Menagerie, LeRobot users) | per-joint servo laws for all twelve arm joints and a corrected MJCF, from task recordings | 50 public recordings: on held-out episodes the corrected model tracks the real joints to 0.33° against 0.63° for the Menagerie model, itself fitted to test motions on a real ALOHA (1.9 times closer) | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | one unit and one task |
 | [Quadrotor: thrust and drag from flight logs](https://physicslens.vercel.app/flight) | drone builders and flight-controller engineers | the vehicle's own thrust and rotor-drag laws with their coefficients, from logs it already records | 247 real NeuroBEM flights: on the authors' held-out test flights a four-parameter law halves the textbook force error (0.75 N against 1.46 N), against 0.39 N for their blade-element neural hybrid | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | one vehicle in a motion-capture arena; the neural hybrid remains closer |
+| [Falcon 9: engine performance from launch webcasts](https://physicslens.vercel.app/flight) | launch analysts, insurers and space agencies | the throttle profile and engine specific impulse from the public webcast telemetry of each launch | 29 Falcon 9 first stages: the max-Q throttle-down, fitted blind, starts and ends a median 0.9 s from the listed times on 17 launches; specific impulse 268 s at sea level and 289 s in vacuum against SpaceX's 282 s and 311 s, drag folded in | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | first stage only, from the webcast's speed and altitude readout; drag is folded into the thrust |
 | [Lab measurement](https://physicslens.vercel.app/?run=gallery-pendulum) | test engineers, labs, anyone checking an experiment | the constant with a 95% interval, the law it follows, and the recording that would settle what is still open | 12 real clips with measured lengths: the local g inside the 95% interval in 0 of 12 (coverage 0% to 24% at 95%); median error 6.2% | SAM 3.1 tracked the bob; Muse Spark Open proposed the laws and designed the deciding experiment; verification is math | it needs a known length (or another scale) in the picture; the arc alone cannot fix the length when the pivot is out of view |
 | [Exoplanet transit timing](https://physicslens.vercel.app/timing) | observatories, amateur transit-timing networks, exoplanet researchers | refreshed transit windows (calendar and CSV), a list of stale ephemerides, and the law behind the timings | WASP-12b's orbit shrinks by 28.6 ms/yr against the published 29 ± 2; Kepler-88's unseen planet: partial | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | timing inversions are degenerate (mass against eccentricity); the Kepler-88 fit forecasts to 15 min, not the 3 min its data allow |
 | [Fireballs and meteorite falls](https://physicslens.vercel.app/fireball) | fireball networks, meteorite hunters | whether anything survived, the orbit it came from, and a strewn-field map (GeoJSON, KML) | Winchcombe, from the published trajectory: blind, 1 of 9 recovered stones inside their 95% landing regions; after review, all within 563 m of the fall line | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | it starts from a triangulated trajectory, not one video; masses carry a factor-of-two uncertainty from shape and density |
@@ -607,6 +610,23 @@ neural hybrid; the sideways forces, which the textbook law leaves out entirely, 
 coefficient comes out at 1.58e-06 N per (rad/s)². The forward-inflow and spin-up terms were tried and
 improved the choosing flights by less than 2%, so the simpler law stands. The dataset states no licence, so none of
 its data is redistributed here; download it from https://download.ifi.uzh.ch/rpg/NeuroBEM/ to reproduce.
+
+### Falcon 9: engine performance from its launch webcasts (`/flight`, `scripts/rocket_demo.py`)
+
+A launch vehicle's performance is published only by its maker. Each SpaceX webcast shows the first stage's speed and
+altitude, read off at 30 per second for 29 Falcon 9 launches with first-stage telemetry (shahar603/Telemetry-Data, the
+Unlicense), with the time of each launch's max-Q throttle-down where the broadcast states it. `scripts/rocket_demo.py`
+fits the rocket equation along the flight path (thrust c/(τ − t) as the stage empties, gravity from the measured
+climb, the standard atmosphere), with candidates from the ideal rocket up: a throttle bucket whose start and end are
+free, the thrust lost to air pressure at low altitude, and drag. Each is fitted on the first 75% of the burn and must
+forecast the rest, and a law whose fitted value sits at a limit of its range is not verified (drag, a few percent of
+the speed by cut-off, goes to zero and is folded into the thrust).
+
+- 21 first stages have a verified law; on 17 it contains the throttle bucket, found with no hint of when it happens,
+  and its start and end land a median **0.9 s** from the throttle times the telemetry lists.
+- The same fit weighs the engines: specific impulse 268 s at sea level and 289 s in vacuum (median over
+  12 launches; middle half 264 to 277 s and 276 to 295 s), against the 282 s and 311 s SpaceX
+  publishes for the Merlin 1D, with the drag folded in.
 
 ### Transit timing: a shrinking orbit and an unseen planet (`/timing`)
 
@@ -1196,9 +1216,10 @@ this repository:
 - **Predictive maintenance from logs a machine already writes.** The drift check detects a change of about a tenth
   of a degree on a stable arm, and the machine-health cases find damping and frequency changes on public fault
   recordings. Next: a scheduled check that flags a joint whose deadband or delay grows beyond its repeat error.
-- **Vehicles, drones and rockets.** The paper bag's drag law, the coast-down friction law and the fireball's flight
-  are the same kind of fit as a vehicle's. Next: thrust and drag from flight logs, checked against thrust stands and
-  published engine figures.
+- **Vehicles, drones and rockets.** Already shown: a real quadrotor's thrust and rotor-drag laws from its flight logs
+  (half the textbook force error) and Falcon 9's throttle profile and specific impulse from its launch webcasts (the
+  throttle-down found blind within 0.9 s). Next: the same calibration feeding a flight controller, and thrust-stand
+  data for the motors themselves.
 - **Any instrumented system.** Laws can take measured inputs (a logged command, a second tracked object, a CSV), so
   anything with a sensor log and a driving signal can be identified the same way.
 

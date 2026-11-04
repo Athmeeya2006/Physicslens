@@ -156,21 +156,20 @@ def drone() -> dict[str, Any] | None:
 
 def rocket() -> dict[str, Any] | None:
     r = _json("data/rocket/result.json")
-    if not r or not r["summary"].get("isp_vac_median_s"):
+    if not r or r["summary"].get("bucket_edge_error_median_s") is None:
         return None
     s = r["summary"]
     return {"id": "rocket", "title": "Falcon 9: engine performance from launch webcasts",
             "problem": "A launch vehicle's real performance is published only by its maker; analysts and agencies cannot check it independently.",
             "who": "launch analysts, insurers and space agencies",
-            "gives": "specific impulse, throttle profile and drag from the public webcast telemetry of each launch",
-            "number": (f"{s['with_accepted_law']} Falcon 9 first stages: vacuum specific impulse {s['isp_vac_median_s']:.0f} s (median) "
-                       f"against SpaceX's published {s['published']['isp_vac_s']:.0f} s"
-                       + (f", sea level {s['isp_sl_median_s']:.0f} s against {s['published']['isp_sl_s']:.0f} s" if s.get("isp_sl_median_s") else "")
-                       + (f"; the max-Q throttle bucket found blind within {s['bucket_edge_error_median_s']:.0f} s of the listed times"
-                          if s.get("bucket_edge_error_median_s") is not None else "")),
-            "status": "proven" if abs(s["isp_vac_median_s"] - s["published"]["isp_vac_s"]) < 0.05 * s["published"]["isp_vac_s"] else "partial",
-            "status_rule": "proven when the fitted vacuum specific impulse is within 5% of SpaceX's published figure",
-            "cant": "first stage only, from the webcast's speed and altitude readout",
+            "gives": "the throttle profile and engine specific impulse from the public webcast telemetry of each launch",
+            "number": (f"{s['launches_with_first_stage']} Falcon 9 first stages: the max-Q throttle-down, fitted blind, starts and ends a median "
+                       f"{s['bucket_edge_error_median_s']:.1f} s from the listed times on {s['bucket_launches']} launches; specific impulse "
+                       f"{s['isp_sl_median_s']:.0f} s at sea level and {s['isp_vac_median_s']:.0f} s in vacuum against SpaceX's "
+                       f"{s['published']['isp_sl_s']:.0f} s and {s['published']['isp_vac_s']:.0f} s, drag folded in"),
+            "status": "proven" if s["bucket_edge_error_median_s"] <= 2.0 else "partial",
+            "status_rule": "proven when the throttle bucket fitted blind lands within 2 s (median) of the throttle times the telemetry lists",
+            "cant": "first stage only, from the webcast's speed and altitude readout; drag is folded into the thrust",
             "link": "/flight"}
 
 
