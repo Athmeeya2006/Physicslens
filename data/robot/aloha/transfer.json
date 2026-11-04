@@ -15,19 +15,19 @@
     ]
    },
    "identified": {
-    "rms_deg": 0.4044,
+    "rms_deg": 0.3639,
     "ci95": [
-     0.3963,
-     0.4131
+     0.3566,
+     0.3715
     ]
    },
    "default_minus_identified": {
-    "improvement_deg": 0.3093,
+    "improvement_deg": 0.3499,
     "ci95": [
-     0.293,
-     0.3254
+     0.3325,
+     0.367
     ],
-    "ratio": 1.765
+    "ratio": 1.962
    },
    "episodes_better": 49
   },
@@ -44,19 +44,19 @@
     ]
    },
    "identified": {
-    "rms_deg": 0.4966,
+    "rms_deg": 0.4887,
     "ci95": [
-     0.4916,
-     0.5018
+     0.4838,
+     0.4938
     ]
    },
    "default_minus_identified": {
-    "improvement_deg": 0.1362,
+    "improvement_deg": 0.1442,
     "ci95": [
-     0.1176,
-     0.1558
+     0.1257,
+     0.164
     ],
-    "ratio": 1.274
+    "ratio": 1.295
    },
    "episodes_better": 50
   },
@@ -73,19 +73,19 @@
     ]
    },
    "identified": {
-    "rms_deg": 0.5036,
+    "rms_deg": 0.4863,
     "ci95": [
-     0.5007,
-     0.5066
+     0.4837,
+     0.4889
     ]
    },
    "default_minus_identified": {
-    "improvement_deg": 0.2632,
+    "improvement_deg": 0.2805,
     "ci95": [
-     0.2531,
-     0.2732
+     0.2705,
+     0.2905
     ],
-    "ratio": 1.523
+    "ratio": 1.577
    },
    "episodes_better": 50
   }

@@ -1,0 +1,254 @@
+<!-- Derived from MuJoCo Menagerie's aloha model (commit fb36886b30), Copyright (c) 2023, Trossen Robotics, BSD-3-Clause; see LICENSE-menagerie-aloha beside this file. Changed by scripts/aloha_demo.py: for each arm joint marked used_in_mjcf in result.json, the actuator's kp, kv and delay, and each arm joint's frictionloss in place of its damping, identified from lerobot/aloha_static_coffee. Commands also need the per-joint offsets in result.json. -->
+<mujoco model="aloha">
+  <compiler angle="radian" meshdir="assets"/>
+
+  <option impratio="10" cone="elliptic"/>
+
+  <size nkey="1"/>
+
+  <default>
+    <default class="vx300s">
+      <joint actuatorfrcrange="-35 35" axis="0 1 0"/>
+      <site group="4"/>
+      <default class="waist">
+        <joint range="-3.14158 3.14158" damping="5.76" axis="0 0 1"/>
+        <general ctrlrange="-3.14158 3.14158" input="pos" biastype="affine" gainprm="43" biasprm="0 -43"/>
+      </default>
+      <default class="shoulder">
+        <joint range="-1.85005 1.25664" actuatorfrcrange="-144 144" armature="0.395" damping="20" frictionloss="2"/>
+        <general ctrlrange="-1.85005 1.25664" input="pos" biastype="affine" gainprm="265" biasprm="0 -265"/>
+      </default>
+      <default class="elbow">
+        <joint range="-1.76278 1.6057" actuatorfrcrange="-59 59" armature="0.383" damping="18.49" frictionloss="1.15"/>
+        <general ctrlrange="-1.76278 1.6057" input="pos" biastype="affine" gainprm="227" biasprm="0 -227"/>
+      </default>
+      <default class="forearm_roll">
+        <joint range="-3.14158 3.14158" actuatorfrcrange="-22 22" armature="0.14" damping="6.78" axis="1 0 0"/>
+        <general ctrlrange="-3.14158 3.14158" input="pos" biastype="affine" gainprm="78" biasprm="0 -78"/>
+      </default>
+      <default class="wrist_angle">
+        <joint range="-1.8675 2.23402" armature="0.008" damping="6.28"/>
+        <general ctrlrange="-1.8675 2.23402" input="pos" biastype="affine" gainprm="37" biasprm="0 -37"/>
+      </default>
+      <default class="wrist_rotate">
+        <joint range="-3.14158 3.14158" damping="1.2" axis="1 0 0"/>
+        <general ctrlrange="-3.14158 3.14158" input="pos" biastype="affine" gainprm="10.4" biasprm="0 -10.4"/>
+      </default>
+      <default class="finger">
+        <joint type="slide" armature="0.243" damping="40"/>
+        <general ctrlrange="0.002 0.037" input="pos" biastype="affine" gainprm="2000" biasprm="0 -2000 -124"/>
+        <default class="left_finger">
+          <joint range="0 0.041" axis="0 0 -1"/>
+        </default>
+        <default class="right_finger">
+          <joint range="0 0.041" axis="0 0 -1"/>
+        </default>
+      </default>
+      <default class="visual">
+        <geom type="mesh" contype="0" conaffinity="0" group="2" material="black"/>
+      </default>
+      <default class="collision">
+        <geom type="mesh" condim="6" group="3" friction="1 0.005 0.0005" solref="0.01"/>
+        <default class="sphere_collision">
+          <geom size="0.0006 0 0" type="sphere" rgba="1 0 0 1"/>
+        </default>
+      </default>
+    </default>
+  </default>
+
+  <asset>
+    <material name="black" rgba="0.15 0.15 0.15 1"/>
+    <mesh name="vx300s_1_base" content_type="model/stl" file="vx300s_1_base.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="vx300s_2_shoulder" content_type="model/stl" file="vx300s_2_shoulder.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="vx300s_3_upper_arm" content_type="model/stl" file="vx300s_3_upper_arm.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="vx300s_4_upper_forearm" content_type="model/stl" file="vx300s_4_upper_forearm.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="vx300s_5_lower_forearm" content_type="model/stl" file="vx300s_5_lower_forearm.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="vx300s_6_wrist" content_type="model/stl" file="vx300s_6_wrist.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="vx300s_7_gripper_prop" content_type="model/stl" file="vx300s_7_gripper_prop.stl"/>
+    <mesh name="vx300s_7_gripper_bar" content_type="model/stl" file="vx300s_7_gripper_bar.stl"/>
+    <mesh name="vx300s_7_gripper_wrist_mount" content_type="model/stl" file="vx300s_7_gripper_wrist_mount.stl"/>
+    <mesh name="vx300s_8_custom_finger_left" content_type="model/stl" file="vx300s_8_custom_finger_left.stl"/>
+    <mesh name="vx300s_8_custom_finger_right" content_type="model/stl" file="vx300s_8_custom_finger_right.stl"/>
+    <mesh name="d405_solid" content_type="model/stl" file="d405_solid.stl"/>
+  </asset>
+
+  <worldbody>
+    <camera name="teleoperator_pov" quat="0.788205 0.615412 0 0" pos="0 -1.354 0.685"/>
+    <camera name="collaborator_pov" quat="0 0 0.615412 0.788205" pos="0 1.5 0.8"/>
+    <body name="left/base_link" childclass="vx300s" pos="-0.469 -0.019 0.02">
+      <inertial pos="-0.0534774 -0.000562575 0.0205961" quat="-0.00292324 0.712517 0.00480387 0.701633" mass="0.969034" diaginertia="0.0071633 0.00602451 0.00169819"/>
+      <geom class="visual" pos="0 0 0" quat="0.707107 0 0 0.707107" mass="0" mesh="vx300s_1_base"/>
+      <geom class="collision" pos="0 0 0" quat="0.707107 0 0 0.707107" mesh="vx300s_1_base"/>
+      <body name="left/shoulder_link" pos="0 0 0.079">
+        <inertial pos="0.000259233 -3.3552e-06 0.0116129" quat="-0.476119 0.476083 0.52279 0.522826" mass="0.798614" diaginertia="0.00120156 0.00113744 0.0009388"/>
+        <joint name="left/waist" class="waist" damping="0" frictionloss="0.118902"/>
+        <geom class="visual" pos="0 0 -0.003" quat="0.707107 0 0 0.707107" mass="0" mesh="vx300s_2_shoulder"/>
+        <geom class="collision" pos="0 0 -0.003" quat="0.707107 0 0 0.707107" mesh="vx300s_2_shoulder"/>
+        <body name="left/upper_arm_link" pos="0 0 0.04805">
+          <inertial pos="0.0206949 4e-10 0.226459" quat="0 0.0728458 0 0.997343" mass="0.792592" diaginertia="0.00911338 0.008925 0.000759317"/>
+          <joint name="left/shoulder" class="shoulder"/>
+          <geom class="visual" pos="0 0 0" quat="0.707107 0 0 0.707107" mass="0" mesh="vx300s_3_upper_arm"/>
+          <geom class="collision" pos="0 0 0" quat="0.707107 0 0 0.707107" mesh="vx300s_3_upper_arm"/>
+          <body name="left/upper_forearm_link" pos="0.05955 0 0.3">
+            <inertial pos="0.105723 0 0" quat="-0.000621631 0.704724 0.0105292 0.709403" mass="0.322228" diaginertia="0.00144107 0.00134228 0.000152047"/>
+            <joint name="left/elbow" class="elbow" damping="0" frictionloss="2.11612"/>
+            <geom class="visual" pos="0 0 0" quat="1 0 0 0" mass="0" mesh="vx300s_4_upper_forearm"/>
+            <geom class="collision" pos="0 0 0" quat="1 0 0 0" mesh="vx300s_4_upper_forearm"/>
+            <body name="left/lower_forearm_link" pos="0.2 0 0">
+              <inertial pos="0.0513477 0.00680462 0" quat="-0.702604 -0.0796724 -0.702604 0.0796724" mass="0.414823" diaginertia="0.0005911 0.000546493 0.000155707"/>
+              <joint name="left/forearm_roll" class="forearm_roll" damping="0" frictionloss="0.915235"/>
+              <geom class="visual" pos="0 0 0" quat="0 1 0 0" mass="0" mesh="vx300s_5_lower_forearm"/>
+              <geom class="collision" pos="0 0 0" quat="0 1 0 0" mesh="vx300s_5_lower_forearm"/>
+              <body name="left/wrist_link" pos="0.1 0 0">
+                <inertial pos="0.046743 -7.6652e-06 0.010565" quat="-0.00100191 0.544586 0.0026583 0.8387" mass="0.115395" diaginertia="5.45707e-05 4.63101e-05 4.32692e-05"/>
+                <joint name="left/wrist_angle" class="wrist_angle" damping="0" frictionloss="0.0502663"/>
+                <geom class="visual" pos="0 0 0" quat="0.707107 0 0 0.707107" mass="0" mesh="vx300s_6_wrist"/>
+                <geom class="collision" pos="0 0 0" quat="0.707107 0 0 0.707107" mesh="vx300s_6_wrist"/>
+                <body name="left/gripper_link" pos="0.069744 0 0">
+                  <inertial pos="0.0395662 -2.56311e-07 0.00400649" quat="0.62033 0.619916 -0.339682 0.339869" mass="0.251652" diaginertia="0.000689546 0.000650316 0.000468142"/>
+                  <joint name="left/wrist_rotate" class="wrist_rotate" damping="0" frictionloss="0.0199998"/>
+                  <site name="left/gripper" pos="0.13 0 -0.003" group="5"/>
+                  <body name="left/gripper_base" pos="0.035 0 0" quat="0.500398 -0.499602 0.5 -0.5">
+                    <inertial pos="0.000182154 -0.0341589 -0.0106026" quat="0.435286 0.557074 -0.551539 0.442718" mass="0.42158" diaginertia="0.00110438 0.000790537 0.000469727"/>
+                    <geom class="visual" quat="1 0 0 0" mass="0" mesh="vx300s_7_gripper_prop"/>
+                    <geom class="collision" quat="1 0 0 0" mesh="vx300s_7_gripper_prop"/>
+                    <geom class="visual" quat="1 0 0 0" mass="0" mesh="vx300s_7_gripper_bar"/>
+                    <geom class="collision" quat="1 0 0 0" mesh="vx300s_7_gripper_bar"/>
+                    <geom class="visual" pos="0 -0.03525 -0.0227" quat="0 -0.707107 0 -0.707107" mass="0" mesh="vx300s_7_gripper_wrist_mount"/>
+                    <geom class="collision" pos="0 -0.03525 -0.0227" quat="0 -0.707107 0 -0.707107" mesh="vx300s_7_gripper_wrist_mount"/>
+                    <geom class="visual" pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296" mass="0" mesh="d405_solid"/>
+                    <geom class="collision" pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296" mesh="d405_solid"/>
+                    <camera name="wrist_cam_left" quat="0.21644 0.976296 0 0" resolution="1280 720" pos="0 -0.0824748 -0.0095955" sensorsize="0.003896 0.00214" focal="0.00193 0.00193"/>
+                    <body name="left/left_finger_link" pos="0.0191 -0.0141637 0.0211727" quat="0.5 -0.5 -0.5 0.5">
+                      <inertial pos="0.0143478 -0.0284791 0.0122897" quat="0.535486 0.458766 -0.450407 0.547651" mass="0.0862937" diaginertia="5.86848e-05 4.46887e-05 1.8397e-05"/>
+                      <joint name="left/left_finger" class="left_finger"/>
+                      <geom class="visual" pos="0.0141637 0.0211727 0.06" quat="0.5 0.5 0.5 -0.5" mass="0" mesh="vx300s_8_custom_finger_left"/>
+                      <geom class="collision" pos="0.0141637 0.0211727 0.06" quat="0.5 0.5 0.5 -0.5" mesh="vx300s_8_custom_finger_left"/>
+                      <geom name="left/left_g0" class="sphere_collision" pos="0.013 -0.0892 0.0268"/>
+                      <geom name="left/left_g1" class="sphere_collision" pos="0.0222 -0.0892 0.0268"/>
+                      <geom name="left/left_g2" class="sphere_collision" pos="0.0182 -0.0845 0.0266"/>
+                      <site name="left/left_finger" pos="0.015 -0.06 0.02"/>
+                    </body>
+                    <body name="left/right_finger_link" pos="-0.0191 -0.0141637 0.0211727" quat="0.5 0.5 0.5 0.5">
+                      <inertial pos="0.0143711 0.0284792 0.0121421" quat="0.461317 0.537615 -0.545478 0.447894" mass="0.0862932" diaginertia="5.86828e-05 4.46887e-05 1.83949e-05"/>
+                      <joint name="left/right_finger" class="right_finger"/>
+                      <geom class="visual" pos="0.0141637 -0.0211727 0.0597067" quat="0.5 -0.5 -0.5 -0.5" mass="0" mesh="vx300s_8_custom_finger_right"/>
+                      <geom class="collision" pos="0.0141637 -0.0211727 0.0597067" quat="0.5 -0.5 -0.5 -0.5" mesh="vx300s_8_custom_finger_right"/>
+                      <geom name="left/right_g0" class="sphere_collision" pos="0.013 0.0892 0.0268"/>
+                      <geom name="left/right_g1" class="sphere_collision" pos="0.0222 0.0892 0.0268"/>
+                      <geom name="left/right_g2" class="sphere_collision" pos="0.0182 0.0845 0.0266"/>
+                      <site name="left/right_finger" pos="0.015 0.06 0.02"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="right/base_link" childclass="vx300s" pos="0.469 -0.019 0.02" quat="0 0 0 1">
+      <inertial pos="-0.0534774 -0.000562575 0.0205961" quat="-0.00292324 0.712517 0.00480387 0.701633" mass="0.969034" diaginertia="0.0071633 0.00602451 0.00169819"/>
+      <geom class="visual" pos="0 0 0" quat="0.707107 0 0 0.707107" mass="0" mesh="vx300s_1_base"/>
+      <geom class="collision" pos="0 0 0" quat="0.707107 0 0 0.707107" mesh="vx300s_1_base"/>
+      <body name="right/shoulder_link" pos="0 0 0.079">
+        <inertial pos="0.000259233 -3.3552e-06 0.0116129" quat="-0.476119 0.476083 0.52279 0.522826" mass="0.798614" diaginertia="0.00120156 0.00113744 0.0009388"/>
+        <joint name="right/waist" class="waist" damping="0" frictionloss="2.2548"/>
+        <geom class="visual" pos="0 0 -0.003" quat="0.707107 0 0 0.707107" mass="0" mesh="vx300s_2_shoulder"/>
+        <geom class="collision" pos="0 0 -0.003" quat="0.707107 0 0 0.707107" mesh="vx300s_2_shoulder"/>
+        <body name="right/upper_arm_link" pos="0 0 0.04805">
+          <inertial pos="0.0206949 4e-10 0.226459" quat="0 0.0728458 0 0.997343" mass="0.792592" diaginertia="0.00911338 0.008925 0.000759317"/>
+          <joint name="right/shoulder" class="shoulder" damping="0" frictionloss="98.7788"/>
+          <geom class="visual" pos="0 0 0" quat="0.707107 0 0 0.707107" mass="0" mesh="vx300s_3_upper_arm"/>
+          <geom class="collision" pos="0 0 0" quat="0.707107 0 0 0.707107" mesh="vx300s_3_upper_arm"/>
+          <body name="right/upper_forearm_link" pos="0.05955 0 0.3">
+            <inertial pos="0.105723 0 0" quat="-0.000621631 0.704724 0.0105292 0.709403" mass="0.322228" diaginertia="0.00144107 0.00134228 0.000152047"/>
+            <joint name="right/elbow" class="elbow" damping="0" frictionloss="7.39857"/>
+            <geom class="visual" pos="0 0 0" quat="1 0 0 0" mass="0" mesh="vx300s_4_upper_forearm"/>
+            <geom class="collision" pos="0 0 0" quat="1 0 0 0" mesh="vx300s_4_upper_forearm"/>
+            <body name="right/lower_forearm_link" pos="0.2 0 0">
+              <inertial pos="0.0513477 0.00680462 0" quat="-0.702604 -0.0796724 -0.702604 0.0796724" mass="0.414823" diaginertia="0.0005911 0.000546493 0.000155707"/>
+              <joint name="right/forearm_roll" class="forearm_roll" damping="0" frictionloss="0.909478"/>
+              <geom class="visual" pos="0 0 0" quat="0 1 0 0" mass="0" mesh="vx300s_5_lower_forearm"/>
+              <geom class="collision" pos="0 0 0" quat="0 1 0 0" mesh="vx300s_5_lower_forearm"/>
+              <body name="right/wrist_link" pos="0.1 0 0">
+                <inertial pos="0.046743 -7.6652e-06 0.010565" quat="-0.00100191 0.544586 0.0026583 0.8387" mass="0.115395" diaginertia="5.45707e-05 4.63101e-05 4.32692e-05"/>
+                <joint name="right/wrist_angle" class="wrist_angle" damping="0" frictionloss="0.118771"/>
+                <geom class="visual" pos="0 0 0" quat="0.707107 0 0 0.707107" mass="0" mesh="vx300s_6_wrist"/>
+                <geom class="collision" pos="0 0 0" quat="0.707107 0 0 0.707107" mesh="vx300s_6_wrist"/>
+                <body name="right/gripper_link" pos="0.069744 0 0">
+                  <inertial pos="0.0395662 -2.56311e-07 0.00400649" quat="0.62033 0.619916 -0.339682 0.339869" mass="0.251652" diaginertia="0.000689546 0.000650316 0.000468142"/>
+                  <joint name="right/wrist_rotate" class="wrist_rotate"/>
+                  <site name="right/gripper" pos="0.13 0 -0.003" group="5"/>
+                  <body name="right/gripper_base" pos="0.035 0 0" quat="0.500398 -0.499602 0.5 -0.5">
+                    <inertial pos="0.000182154 -0.0341589 -0.0106026" quat="0.435286 0.557074 -0.551539 0.442718" mass="0.42158" diaginertia="0.00110438 0.000790537 0.000469727"/>
+                    <geom class="visual" quat="1 0 0 0" mass="0" mesh="vx300s_7_gripper_prop"/>
+                    <geom class="collision" quat="1 0 0 0" mesh="vx300s_7_gripper_prop"/>
+                    <geom class="visual" quat="1 0 0 0" mass="0" mesh="vx300s_7_gripper_bar"/>
+                    <geom class="collision" quat="1 0 0 0" mesh="vx300s_7_gripper_bar"/>
+                    <geom class="visual" pos="0 -0.03525 -0.0227" quat="0 -0.707107 0 -0.707107" mass="0" mesh="vx300s_7_gripper_wrist_mount"/>
+                    <geom class="collision" pos="0 -0.03525 -0.0227" quat="0 -0.707107 0 -0.707107" mesh="vx300s_7_gripper_wrist_mount"/>
+                    <geom class="visual" pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296" mass="0" mesh="d405_solid"/>
+                    <geom class="collision" pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296" mesh="d405_solid"/>
+                    <camera name="wrist_cam_right" quat="0.21644 0.976296 0 0" resolution="1280 720" pos="0 -0.0824748 -0.0095955" sensorsize="0.003896 0.00214" focal="0.00193 0.00193"/>
+                    <body name="right/left_finger_link" pos="0.0191 -0.0141637 0.0211727" quat="0.5 -0.5 -0.5 0.5">
+                      <inertial pos="0.0143478 -0.0284791 0.0122897" quat="0.535486 0.458766 -0.450407 0.547651" mass="0.0862937" diaginertia="5.86848e-05 4.46887e-05 1.8397e-05"/>
+                      <joint name="right/left_finger" class="left_finger"/>
+                      <geom class="visual" pos="0.0141637 0.0211727 0.06" quat="0.5 0.5 0.5 -0.5" mass="0" mesh="vx300s_8_custom_finger_left"/>
+                      <geom class="collision" pos="0.0141637 0.0211727 0.06" quat="0.5 0.5 0.5 -0.5" mesh="vx300s_8_custom_finger_left"/>
+                      <geom name="right/left_g0" class="sphere_collision" pos="0.013 -0.0892 0.0268"/>
+                      <geom name="right/left_g1" class="sphere_collision" pos="0.0222 -0.0892 0.0268"/>
+                      <geom name="right/left_g2" class="sphere_collision" pos="0.0182 -0.0845 0.0266"/>
+                      <site name="right/left_finger" pos="0.015 -0.06 0.02"/>
+                    </body>
+                    <body name="right/right_finger_link" pos="-0.0191 -0.0141637 0.0211727" quat="0.5 0.5 0.5 0.5">
+                      <inertial pos="0.0143711 0.0284792 0.0121421" quat="0.461317 0.537615 -0.545478 0.447894" mass="0.0862932" diaginertia="5.86828e-05 4.46887e-05 1.83949e-05"/>
+                      <joint name="right/right_finger" class="right_finger"/>
+                      <geom class="visual" pos="0.0141637 -0.0211727 0.0597067" quat="0.5 -0.5 -0.5 -0.5" mass="0" mesh="vx300s_8_custom_finger_right"/>
+                      <geom class="collision" pos="0.0141637 -0.0211727 0.0597067" quat="0.5 -0.5 -0.5 -0.5" mesh="vx300s_8_custom_finger_right"/>
+                      <geom name="right/right_g0" class="sphere_collision" pos="0.013 0.0892 0.0268"/>
+                      <geom name="right/right_g1" class="sphere_collision" pos="0.0222 0.0892 0.0268"/>
+                      <geom name="right/right_g2" class="sphere_collision" pos="0.0182 0.0845 0.0266"/>
+                      <site name="right/right_finger" pos="0.015 0.06 0.02"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <contact>
+    <exclude body1="left/base_link" body2="left/shoulder_link"/>
+    <exclude body1="right/base_link" body2="right/shoulder_link"/>
+  </contact>
+
+  <equality>
+    <joint joint1="left/left_finger" joint2="left/right_finger"/>
+    <joint joint1="right/left_finger" joint2="right/right_finger"/>
+  </equality>
+
+  <actuator>
+    <general name="left/waist" class="waist" joint="left/waist" nsample="6" delay="0.00673398" gainprm="45.5919" biasprm="0 -45.5919 -3.80917"/>
+    <general name="left/shoulder" class="shoulder" joint="left/shoulder"/>
+    <general name="left/elbow" class="elbow" joint="left/elbow" nsample="17" delay="0.0292041" gainprm="783.503" biasprm="0 -783.503 -47.3245"/>
+    <general name="left/forearm_roll" class="forearm_roll" joint="left/forearm_roll" nsample="22" delay="0.0380778" gainprm="643.805" biasprm="0 -643.805 -31.0024"/>
+    <general name="left/wrist_angle" class="wrist_angle" joint="left/wrist_angle" nsample="15" delay="0.0243502" gainprm="25.4775" biasprm="0 -25.4775 -1.70698"/>
+    <general name="left/wrist_rotate" class="wrist_rotate" joint="left/wrist_rotate" nsample="18" delay="0.0309514" gainprm="22.3022" biasprm="0 -22.3022 -0.716846"/>
+    <general name="left/gripper" class="finger" joint="left/left_finger"/>
+    <general name="right/waist" class="waist" joint="right/waist" nsample="27" delay="0.0497312" gainprm="376.04" biasprm="0 -376.04 -21.5519"/>
+    <general name="right/shoulder" class="shoulder" joint="right/shoulder" nsample="38" delay="0.0708294" gainprm="15701" biasprm="0 -15701 -306.801"/>
+    <general name="right/elbow" class="elbow" joint="right/elbow" nsample="20" delay="0.034125" gainprm="1779.03" biasprm="0 -1779.03 -100.893"/>
+    <general name="right/forearm_roll" class="forearm_roll" joint="right/forearm_roll" nsample="20" delay="0.0345786" gainprm="518.141" biasprm="0 -518.141 -27.5859"/>
+    <general name="right/wrist_angle" class="wrist_angle" joint="right/wrist_angle" nsample="22" delay="0.0393043" gainprm="69.8661" biasprm="0 -69.8661 -3.85754"/>
+    <general name="right/wrist_rotate" class="wrist_rotate" joint="right/wrist_rotate"/>
+    <general name="right/gripper" class="finger" joint="right/left_finger"/>
+  </actuator>
+
+  <keyframe>
+    <key name="neutral_pose" qpos="0 -0.96 1.16 0 -0.3 0 0.0084 0.0084 0 -0.96 1.16 0 -0.3 0 0.0084 0.0084" ctrl="0 -0.96 1.16 0 -0.3 0 0.0084 0 -0.96 1.16 0 -0.3 0 0.0084"/>
+  </keyframe>
+</mujoco>

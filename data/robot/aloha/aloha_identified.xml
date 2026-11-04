@@ -1,4 +1,4 @@
-<!-- Derived from MuJoCo Menagerie's aloha model (commit fb36886b30), Copyright (c) 2023, Trossen Robotics, BSD-3-Clause; see LICENSE-menagerie-aloha beside this file. Changed by scripts/aloha_demo.py: each arm actuator's kp, kv and delay, and each arm joint's frictionloss in place of its damping, identified from lerobot/aloha_static_coffee. Commands also need the per-joint offsets in result.json. -->
+<!-- Derived from MuJoCo Menagerie's aloha model (commit fb36886b30), Copyright (c) 2023, Trossen Robotics, BSD-3-Clause; see LICENSE-menagerie-aloha beside this file. Changed by scripts/aloha_demo.py: for each arm joint marked used_in_mjcf in result.json, the actuator's kp, kv and delay, and each arm joint's frictionloss in place of its damping, identified from lerobot/aloha_static_coffee. Commands also need the per-joint offsets in result.json. -->
 <mujoco model="aloha">
   <compiler angle="radian" meshdir="assets"/>
 
@@ -86,17 +86,17 @@
         <geom class="collision" pos="0 0 -0.003" quat="0.707107 0 0 0.707107" mesh="vx300s_2_shoulder"/>
         <body name="left/upper_arm_link" pos="0 0 0.04805">
           <inertial pos="0.0206949 4e-10 0.226459" quat="0 0.0728458 0 0.997343" mass="0.792592" diaginertia="0.00911338 0.008925 0.000759317"/>
-          <joint name="left/shoulder" class="shoulder" damping="0" frictionloss="22.6091"/>
+          <joint name="left/shoulder" class="shoulder"/>
           <geom class="visual" pos="0 0 0" quat="0.707107 0 0 0.707107" mass="0" mesh="vx300s_3_upper_arm"/>
           <geom class="collision" pos="0 0 0" quat="0.707107 0 0 0.707107" mesh="vx300s_3_upper_arm"/>
           <body name="left/upper_forearm_link" pos="0.05955 0 0.3">
             <inertial pos="0.105723 0 0" quat="-0.000621631 0.704724 0.0105292 0.709403" mass="0.322228" diaginertia="0.00144107 0.00134228 0.000152047"/>
-            <joint name="left/elbow" class="elbow" damping="0" frictionloss="14.3585"/>
+            <joint name="left/elbow" class="elbow"/>
             <geom class="visual" pos="0 0 0" quat="1 0 0 0" mass="0" mesh="vx300s_4_upper_forearm"/>
             <geom class="collision" pos="0 0 0" quat="1 0 0 0" mesh="vx300s_4_upper_forearm"/>
             <body name="left/lower_forearm_link" pos="0.2 0 0">
               <inertial pos="0.0513477 0.00680462 0" quat="-0.702604 -0.0796724 -0.702604 0.0796724" mass="0.414823" diaginertia="0.0005911 0.000546493 0.000155707"/>
-              <joint name="left/forearm_roll" class="forearm_roll" damping="0" frictionloss="0.69109"/>
+              <joint name="left/forearm_roll" class="forearm_roll"/>
               <geom class="visual" pos="0 0 0" quat="0 1 0 0" mass="0" mesh="vx300s_5_lower_forearm"/>
               <geom class="collision" pos="0 0 0" quat="0 1 0 0" mesh="vx300s_5_lower_forearm"/>
               <body name="left/wrist_link" pos="0.1 0 0">
@@ -158,12 +158,12 @@
         <geom class="collision" pos="0 0 -0.003" quat="0.707107 0 0 0.707107" mesh="vx300s_2_shoulder"/>
         <body name="right/upper_arm_link" pos="0 0 0.04805">
           <inertial pos="0.0206949 4e-10 0.226459" quat="0 0.0728458 0 0.997343" mass="0.792592" diaginertia="0.00911338 0.008925 0.000759317"/>
-          <joint name="right/shoulder" class="shoulder" damping="0" frictionloss="1.84932"/>
+          <joint name="right/shoulder" class="shoulder"/>
           <geom class="visual" pos="0 0 0" quat="0.707107 0 0 0.707107" mass="0" mesh="vx300s_3_upper_arm"/>
           <geom class="collision" pos="0 0 0" quat="0.707107 0 0 0.707107" mesh="vx300s_3_upper_arm"/>
           <body name="right/upper_forearm_link" pos="0.05955 0 0.3">
             <inertial pos="0.105723 0 0" quat="-0.000621631 0.704724 0.0105292 0.709403" mass="0.322228" diaginertia="0.00144107 0.00134228 0.000152047"/>
-            <joint name="right/elbow" class="elbow" damping="0" frictionloss="15.4051"/>
+            <joint name="right/elbow" class="elbow"/>
             <geom class="visual" pos="0 0 0" quat="1 0 0 0" mass="0" mesh="vx300s_4_upper_forearm"/>
             <geom class="collision" pos="0 0 0" quat="1 0 0 0" mesh="vx300s_4_upper_forearm"/>
             <body name="right/lower_forearm_link" pos="0.2 0 0">
@@ -233,15 +233,15 @@
 
   <actuator>
     <general name="left/waist" class="waist" joint="left/waist" nsample="27" delay="0.0480006" gainprm="616.858" biasprm="0 -616.858 -27.179"/>
-    <general name="left/shoulder" class="shoulder" joint="left/shoulder" nsample="25" delay="0.044" gainprm="4064.65" biasprm="0 -4064.65 -157.783"/>
-    <general name="left/elbow" class="elbow" joint="left/elbow" nsample="20" delay="0.0349064" gainprm="2413.08" biasprm="0 -2413.08 -118.372"/>
-    <general name="left/forearm_roll" class="forearm_roll" joint="left/forearm_roll" nsample="13" delay="0.0212762" gainprm="309.085" biasprm="0 -309.085 -21.1222"/>
+    <general name="left/shoulder" class="shoulder" joint="left/shoulder"/>
+    <general name="left/elbow" class="elbow" joint="left/elbow"/>
+    <general name="left/forearm_roll" class="forearm_roll" joint="left/forearm_roll"/>
     <general name="left/wrist_angle" class="wrist_angle" joint="left/wrist_angle" nsample="3" delay="0" gainprm="11.4933" biasprm="0 -11.4933 -0.91617"/>
     <general name="left/wrist_rotate" class="wrist_rotate" joint="left/wrist_rotate" nsample="17" delay="0.0284546" gainprm="15.0776" biasprm="0 -15.0776 -0.589411"/>
     <general name="left/gripper" class="finger" joint="left/left_finger"/>
     <general name="right/waist" class="waist" joint="right/waist" nsample="23" delay="0.0400004" gainprm="362.592" biasprm="0 -362.592 -15.4897"/>
-    <general name="right/shoulder" class="shoulder" joint="right/shoulder" nsample="3" delay="1.02862e-11" gainprm="258.314" biasprm="0 -258.314 -18.7165"/>
-    <general name="right/elbow" class="elbow" joint="right/elbow" nsample="21" delay="0.0367324" gainprm="2855.96" biasprm="0 -2855.96 -128.174"/>
+    <general name="right/shoulder" class="shoulder" joint="right/shoulder"/>
+    <general name="right/elbow" class="elbow" joint="right/elbow"/>
     <general name="right/forearm_roll" class="forearm_roll" joint="right/forearm_roll" nsample="16" delay="0.0277457" gainprm="445.191" biasprm="0 -445.191 -25.4932"/>
     <general name="right/wrist_angle" class="wrist_angle" joint="right/wrist_angle" nsample="14" delay="0.0238908" gainprm="54.4769" biasprm="0 -54.4769 -3.40361"/>
     <general name="right/wrist_rotate" class="wrist_rotate" joint="right/wrist_rotate" nsample="15" delay="0.0254696" gainprm="16.6062" biasprm="0 -16.6062 -0.618568"/>

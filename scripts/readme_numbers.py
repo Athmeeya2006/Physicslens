@@ -472,6 +472,7 @@ CLAIMS = [
     Claim("Drift: six months min", r"borrowed calibration costs ([\d.]+)° to [\d.]+° extra, worse in all", lambda: min(p["extra_deg"] for p in load("data/robot/drift.json")["pairs"] if p["days_apart"] > 100)),
     Claim("Drift: six months max", r"borrowed calibration costs [\d.]+° to ([\d.]+)° extra, worse in all", lambda: max(p["extra_deg"] for p in load("data/robot/drift.json")["pairs"] if p["days_apart"] > 100)),
     Claim("ALOHA: Menagerie", r"already identified on a real ALOHA\) \| ([\d.]+)°", lambda: load("data/robot/aloha/result.json")["heldout"]["default"]["arm_total"]["rms_deg"]),
+    Claim("ALOHA: cups_open corrected", r"by itself: ([\d.]+)° against", lambda: load("data/robot/aloha/lerobot__aloha_static_cups_open/result.json")["heldout"]["identified"]["arm_total"]["rms_deg"]),
     Claim("ALOHA: corrected", r"\*\*Corrected by PhysicsLens\*\* \| \*\*([\d.]+)°", lambda: load("data/robot/aloha/result.json")["heldout"]["identified"]["arm_total"]["rms_deg"]),
     Claim("ALOHA: ratio", r"tracks this ALOHA ([\d.]+) times as closely", lambda: load("data/robot/aloha/result.json")["heldout_comparison"]["default_minus_identified"]["ratio"]),
     Claim("ALOHA: right wrist before", r"right wrist angle from ([\d.]+)° to", lambda: load("data/robot/aloha/result.json")["heldout"]["default"]["joints"]["right/wrist_angle"]["rms_deg"]),

@@ -186,7 +186,7 @@ def aloha() -> dict[str, Any] | None:
                        f"{h['identified']['arm_total']['rms_deg']:.2f}° against {h['default']['arm_total']['rms_deg']:.2f}° for the Menagerie "
                        f"model, itself fitted to test motions on a real ALOHA ({c['default_minus_identified']['ratio']:.1f} times closer)"),
             "status": r["status"], "status_rule": r["status_rule"],
-            "cant": "one unit and one task",
+            "cant": "one unit; the correction is checked on its other tasks, not on other units",
             "link": "/robot",
             "contribution": ({"beats_public_on_heldout": True,
                               "summary": f"the corrected ALOHA MJCF beats MuJoCo Menagerie's aloha on held-out episodes by "

@@ -149,7 +149,7 @@ def spec(identified: dict[str, dict[str, float]] | None = None) -> mujoco.MjSpec
     for act in s.actuators:
         if act.target in NAMES:
             act.name = act.target
-            if identified:
+            if identified and act.target in identified:
                 g = identified[act.target]
                 act.gainprm[0] = g["kp"]
                 act.biasprm[0], act.biasprm[1], act.biasprm[2] = 0.0, -g["kp"], -g["kv"]
@@ -262,12 +262,22 @@ def mujoco_stage(pool: ProcessPoolExecutor, t0: float, winners, steps, refit, se
     laws = {j: (winners[j], refit[j]) for j in range(J)}
     first = run_replays(pool, [("ident0", e, gains, 0.0, None, (laws, np.zeros(J))) for e in TRAIN_EPS])
     recentre = np.mean(np.concatenate([first["ident0"][e] - YS[e] for e in TRAIN_EPS]), axis=0)
+    # Each joint's laws written into MuJoCo must reproduce themselves there: on the training episodes only, a joint
+    # whose translation tracks worse than the published actuator keeps the published one (a law can be right while
+    # its MJCF form is not, e.g. a very light joint given a weak actuator).
+    second = run_replays(pool, [("ident1", e, gains, 0.0, None, (laws, recentre)) for e in TRAIN_EPS])
+    train_ident = episode_rms(second["ident1"], TRAIN_EPS).mean(axis=0)
+    train_default = episode_rms(grid["delay=0.0"], TRAIN_EPS).mean(axis=0)
+    used = [j for j in range(J) if train_ident[j] < train_default[j]]
+    gains_used = {NAMES[j]: gains[NAMES[j]] for j in used}
+    laws_used = {j: laws[j] for j in used}
+    print("joints keeping the published actuator:", [NAMES[j] for j in range(J) if j not in used], flush=True)
     jobs = []
     for e in TEST_EPS:
         jobs += [("default", e, None, 0.0, None, None),
                  ("baseline_delay", e, None, best_delay, None, None),
                  ("baseline_delay_offset", e, None, best_delay, offsets.tolist(), None),
-                 ("identified", e, gains, 0.0, None, (laws, recentre))]
+                 ("identified", e, gains_used, 0.0, None, (laws_used, recentre))]
     sims = run_replays(pool, jobs)
     print(f"MuJoCo replays done ({time.time() - t0:.0f} s)", flush=True)
 
@@ -286,6 +296,10 @@ def mujoco_stage(pool: ProcessPoolExecutor, t0: float, winners, steps, refit, se
                                     "ci95": [round(float(np.percentile(b[:, k], 2.5)), 5), round(float(np.percentile(b[:, k], 97.5)), 5)]}
                                 for k, p in enumerate(law.params)},
                      "mjcf": {k: round(v, 5) for k, v in gains[n].items()} | {"command_recentre_deg": round(float(recentre[j]), 4)},
+                     # False: on the training episodes this joint's MJCF form tracked worse than the published
+                     # actuator, so the corrected model keeps the published one for it.
+                     "used_in_mjcf": j in used,
+                     "training_rms_deg": {"identified": round(float(train_ident[j]), 4), "menagerie": round(float(train_default[j]), 4)},
                      "menagerie": {"kp": float(m0.actuator_gainprm[m0.actuator(n).id, 0]),
                                    "damping": float(m0.dof_damping[m0.joint(n).dofadr[0]]),
                                    "frictionloss": float(m0.dof_frictionloss[m0.joint(n).dofadr[0]])}}
@@ -318,10 +332,10 @@ def mujoco_stage(pool: ProcessPoolExecutor, t0: float, winners, steps, refit, se
     (OUT / "result.json").write_text(json.dumps(result, indent=1) + "\n")
     # The Menagerie model is BSD-3-Clause (Trossen Robotics): the derived file keeps its notice and licence beside it.
     note = ("<!-- Derived from MuJoCo Menagerie's aloha model (commit fb36886b30), Copyright (c) 2023, Trossen Robotics, "
-            "BSD-3-Clause; see LICENSE-menagerie-aloha beside this file. Changed by scripts/aloha_demo.py: each arm actuator's "
+            "BSD-3-Clause; see LICENSE-menagerie-aloha beside this file. Changed by scripts/aloha_demo.py: for each arm joint marked used_in_mjcf in result.json, the actuator's "
             "kp, kv and delay, and each arm joint's frictionloss in place of its damping, identified from lerobot/aloha_static_coffee. "
             "Commands also need the per-joint offsets in result.json. -->\n")
-    (OUT / "aloha_identified.xml").write_text(note + spec(gains).to_xml())
+    (OUT / "aloha_identified.xml").write_text(note + spec(gains_used).to_xml())
     (OUT / "LICENSE-menagerie-aloha").write_text((XML.parent / "LICENSE").read_text())
     print(json.dumps({"status": status, "heldout": {k: v["arm_total"] for k, v in result["heldout"].items()},
                       "vs_default": vs_default, "vs_fair": vs_fair, "vs_stronger": vs_strong}, indent=1))
@@ -354,7 +368,9 @@ def job_transfer(args: tuple) -> tuple[str, int, list[list[float]]]:
     off = np.zeros(J)
     if corr is not None:
         laws, recentre = corr
-        off = np.column_stack([A.command_correction(laws[j][0], laws[j][1], u[:, j]) - recentre[j] for j in range(J)])
+        off = np.zeros_like(u)
+        for j, (law, p) in laws.items():
+            off[:, j] = A.command_correction(law, p, u[:, j]) - recentre[j]
     return label, e, A.replay(m, joint_map(), u, y0, DT, ctrl_offset_deg=off).tolist()
 
 
@@ -362,8 +378,9 @@ def transfer() -> None:
     """Every episode of each other task, replayed with the published model and with the coffee-task correction,
     nothing refitted (gains, laws and the command recentring all as identified on coffee)."""
     r = json.loads((OUT / "result.json").read_text())
-    gains = {n: {k: r["joints"][n]["mjcf"][k] for k in ("kp", "kv", "delay", "frictionloss")} for n in NAMES}
-    laws = {j: (r["joints"][n]["law"], {k: v["value"] for k, v in r["joints"][n]["params"].items()}) for j, n in enumerate(NAMES)}
+    used = [j for j, n in enumerate(NAMES) if r["joints"][n].get("used_in_mjcf", True)]
+    gains = {NAMES[j]: {k: r["joints"][NAMES[j]]["mjcf"][k] for k in ("kp", "kv", "delay", "frictionloss")} for j in used}
+    laws = {j: (r["joints"][NAMES[j]]["law"], {k: v["value"] for k, v in r["joints"][NAMES[j]]["params"].items()}) for j in used}
     recentre = np.array([r["joints"][n]["mjcf"]["command_recentre_deg"] for n in NAMES])
     out = {"generated": "scripts/aloha_demo.py transfer", "identified_on": DATASET, "tasks": []}
     with ProcessPoolExecutor(WORKERS) as pool:

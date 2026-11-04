@@ -30,7 +30,7 @@ PhysicsLens turns a phone video, or the logs a machine already writes, into a ve
 ## In 30 seconds
 
 - **The problem:** every cheap robot arm is slightly different from its simulator, so policies trained in simulation fail on the real thing (friction, delay, deadband, damping). Measuring real physics takes lab rigs and an expert.
-- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model, the simulator people use for this arm, from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and still 1.4 times as closely after the public model is given a fitted delay and per-joint offsets, and on seven owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm and setup needs its own. At the hand that is 3.2 mm from the real gripper against 7.5 mm for the public model, and a calibration fitted only on human teleoperation predicts the arm under a trained AI policy better than a fitted delay and offsets in 28 of 28 rollouts. On a second robot, the ALOHA arms, the corrected simulator is 1.9 times closer to the real joints than MuJoCo Menagerie's model, which its authors had already identified on a real ALOHA, and, refitted on nothing, closer on all 149 episodes of three other tasks. [See it](https://physicslens.vercel.app/robot).
+- **The fix, already shown on a real arm:** for the SO-100, the low-cost arm at the centre of Hugging Face's LeRobot community, PhysicsLens corrected the public MuJoCo model, the simulator people use for this arm, from public recordings: on held-out motion the corrected simulator tracks the real joints about twice as closely as the public one, and still 1.4 times as closely after the public model is given a fitted delay and per-joint offsets, and on seven owners' arms a calibration borrowed from another arm tracks worse in every pair: each arm and setup needs its own. At the hand that is 3.2 mm from the real gripper against 7.5 mm for the public model, and a calibration fitted only on human teleoperation predicts the arm under a trained AI policy better than a fitted delay and offsets in 28 of 28 rollouts. On a second robot, the ALOHA arms, the corrected simulator is 2.0 times closer to the real joints than MuJoCo Menagerie's model, which its authors had already identified on a real ALOHA, and, refitted on nothing, closer on all 149 episodes of three other tasks. [See it](https://physicslens.vercel.app/robot).
 - **What PhysicsLens does:** film anything moving with a phone. You get the equation that governs it, its parameters with uncertainty, a simulated "ghost" over the real video, and an export a robot simulator can run (MuJoCo, Python, JSON).
 - **Why you can trust it:** no equation is accepted unless it forecasts motion it never saw. A second "referee" model tries to break every accepted law, and every step names the model or the math that decided it.
 - **An agent that knows when the data cannot decide:** when two laws tie, it designs the recording that would separate them and asks for it. On the spring glider and on the pendulum it asked for a longer recording; both public videos ran longer, and the longer recordings settled the questions it asked (dry friction for the glider; damping is real for the pendulum). [Spring](https://physicslens.vercel.app/?run=gallery-spring-longer), [pendulum](https://physicslens.vercel.app/?run=gallery-pendulum-longer).
@@ -50,7 +50,7 @@ Every link opens a complete, real analysis; nothing needs an account or a code.
 
 | # | Open | What to look for |
 |---|---|---|
-| 1 | [Robot arm, corrected](https://physicslens.vercel.app/robot) | **The impact.** The SO-100's public MuJoCo model against the real arm on held-out motion: the error chart shows the public model straying by up to about 3° while the corrected one stays within about 1°. Below it, seven owners' arms: a borrowed calibration does worse in every pair. At the hand: 3.2 mm against 7.5 mm; under a trained AI policy: closer in 28 of 28 rollouts; and on a second robot, the ALOHA, 1.9 times closer than an already-identified model |
+| 1 | [Robot arm, corrected](https://physicslens.vercel.app/robot) | **The impact.** The SO-100's public MuJoCo model against the real arm on held-out motion: the error chart shows the public model straying by up to about 3° while the corrected one stays within about 1°. Below it, seven owners' arms: a borrowed calibration does worse in every pair. At the hand: 3.2 mm against 7.5 mm; under a trained AI policy: closer in 28 of 28 rollouts; and on a second robot, the ALOHA, 2.0 times closer than an already-identified model |
 | 2 | [Flying machines](https://physicslens.vercel.app/flight) | A real quadrotor's thrust and drag laws from its flight logs (half the textbook force error on held-out flights); Falcon 9's max-Q throttle-down found from its launch webcasts with no hint, within 0.9 s |
 | 3 | [Pendulum](https://physicslens.vercel.app/?run=gallery-pendulum) | **The agent thinks.** "How the agent reasoned" at the top: it proposes three laws, the math cannot separate damping from none, it designs the deciding recording and asks for it. Each line names Muse Spark Open or the math |
 | 4 | [Pendulum, the request answered](https://physicslens.vercel.app/?run=gallery-pendulum-longer) | **The loop closes.** The same swing filmed for longer: the simple pendulum falls 121 BIC behind, damping is confirmed, and the agent asks the next, finer question |
@@ -460,7 +460,7 @@ Every case at a glance (each row is generated from its result file; the same cas
 |---|---|---|---|---|---|
 | [Robotics: sim-to-real](https://physicslens.vercel.app/?run=gallery-paperbag) | robotics engineers | a calibrated model with intervals, exported to MuJoCo, URDF and SDF, checked by replaying it in MuJoCo | on flight it never saw, the calibrated model of a thrown paper bag lands 11.5 times closer to the real track than the textbook (drag-free) one, and 2.0 times closer than the standard air-drag law (quadratic, its coefficient fitted to the same flight) | SAM 3.1 tracked the bag; Muse Spark Open (open weights) proposed the laws; verification, the fits and the MuJoCo replay are math | one rigid body at a time, filmed side-on; the control comparison runs in simulation only |
 | [Open-source robot arm: simulator corrected from public recordings](https://physicslens.vercel.app/robot) | anyone who simulates the SO-100 arm (MuJoCo Menagerie, LeRobot users) | measured per-joint servo dynamics with intervals and a corrected MJCF, with its diff against the public model | SO-100 arm, 50 public recordings: on held-out episodes the corrected MuJoCo model tracks the real joints to 0.38° RMS against 0.75° for the MuJoCo Menagerie model (2.0 times closer; 1.7 times closer than the default with a fitted delay); per unit: on 7 owners' arms a borrowed calibration tracks worse than the arm's own in 42 of 42 pairs (0.99° against 0.48°); at the gripper the hand is 3.2 mm from the real one against 7.5 mm for the public model | SAM 3.1 checked the logged joints against the arm's camera video (the gripper tracked on 5 held-out episodes, a median 4.1 mm from the logged path); the servo laws themselves are fitted and verified by local math (held-out MuJoCo replay) | the motions in these recordings; payloads, wear and temperature are not covered, and the seven arms compared recorded different tasks |
-| [ALOHA arms: a second robot, against an already-identified model](https://physicslens.vercel.app/robot) | anyone who simulates the ALOHA arms (MuJoCo Menagerie, LeRobot users) | per-joint servo laws for all twelve arm joints and a corrected MJCF, from task recordings | 50 public recordings: on held-out episodes the corrected model tracks the real joints to 0.33° against 0.63° for the Menagerie model, itself fitted to test motions on a real ALOHA (1.9 times closer) | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | one unit and one task |
+| [ALOHA arms: a second robot, against an already-identified model](https://physicslens.vercel.app/robot) | anyone who simulates the ALOHA arms (MuJoCo Menagerie, LeRobot users) | per-joint servo laws for all twelve arm joints and a corrected MJCF, from task recordings | 50 public recordings: on held-out episodes the corrected model tracks the real joints to 0.32° against 0.63° for the Menagerie model, itself fitted to test motions on a real ALOHA (2.0 times closer) | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | one unit; the correction is checked on its other tasks, not on other units |
 | [Quadrotor: thrust and drag from flight logs](https://physicslens.vercel.app/flight) | drone builders and flight-controller engineers | the vehicle's own thrust and rotor-drag laws with their coefficients, from logs it already records | 247 real NeuroBEM flights: on the authors' held-out test flights a four-parameter law halves the textbook force error (0.75 N against 1.46 N), against 0.39 N for their blade-element neural hybrid | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | one vehicle in a motion-capture arena; the neural hybrid remains closer |
 | [Falcon 9: engine performance from launch webcasts](https://physicslens.vercel.app/flight) | launch analysts, insurers and space agencies | the throttle profile and engine specific impulse from the public webcast telemetry of each launch | 29 Falcon 9 first stages: the max-Q throttle-down, fitted blind, starts and ends a median 0.9 s from the listed times on 17 launches; specific impulse 268 s at sea level and 289 s in vacuum against SpaceX's 282 s and 311 s, drag folded in | local math on published data: no Meta model in this case (the same engine runs with Muse Spark Open on the orbit videos) | first stage only, from the webcast's speed and altitude readout; drag is folded into the thrust |
 | [Lab measurement](https://physicslens.vercel.app/?run=gallery-pendulum) | test engineers, labs, anyone checking an experiment | the constant with a 95% interval, the law it follows, and the recording that would settle what is still open | 12 real clips with measured lengths: the local g inside the 95% interval in 0 of 12 (coverage 0% to 24% at 95%); median error 6.2% | SAM 3.1 tracked the bob; Muse Spark Open proposed the laws and designed the deciding experiment; verification is math | it needs a known length (or another scale) in the picture; the arc alone cannot fix the length when the pivot is out of view |
@@ -573,19 +573,20 @@ its actuator gains, torque limits, joint damping, armature and friction to sinus
 `scripts/aloha_demo.py` runs the same identification as the SO-100 case on ordinary task recordings of another unit
 (50 teleoperated episodes of `lerobot/aloha_static_coffee`, MIT, 50 per second, all twelve arm
 joints), writes the laws into the Menagerie model, and replays the logged commands open loop on the
-15 held-out episodes.
+15 held-out episodes. Each joint's laws must reproduce themselves in MuJoCo on the training episodes, or that
+joint keeps the published actuator (5 of 12 do here: left shoulder, left elbow, left forearm roll, right shoulder, right elbow).
 
 | Simulator (held-out RMS over the twelve arm joints) | Error |
 |---|---|
 | Menagerie ALOHA, as published (already identified on a real ALOHA) | 0.63° |
 | Menagerie + one fitted command delay (the best delay is 0) | 0.63° |
 | Menagerie + fitted delay and per-joint offsets | 0.90° |
-| **Corrected by PhysicsLens** | **0.33°** |
+| **Corrected by PhysicsLens** | **0.32°** |
 | The identified joint laws on their own | 0.15° |
 
-The corrected model tracks this ALOHA 1.9 times as closely as a model that was already
-system-identified, with the paired improvement's 95% interval above zero (0.26° to
-0.33°). The largest gains are at the wrists, where the published gains are the lowest
+The corrected model tracks this ALOHA 2.0 times as closely as a model that was already
+system-identified, with the paired improvement's 95% interval above zero (0.27° to
+0.35°). The largest gains are at the wrists, where the published gains are the lowest
 (the right wrist angle from 1.41° to 0.18°). The corrected model is `data/robot/aloha/aloha_identified.xml` (BSD-3-Clause,
 derived from Menagerie's, notice and licence beside it).
 
@@ -595,12 +596,15 @@ transfer`, `data/robot/aloha/transfer.json`):
 
 | Task | Menagerie | Corrected on coffee | Closer |
 |---|---|---|---|
-| battery (49 episodes) | 0.71° | **0.40°** | 1.8 times, better in 49 of 49 |
-| candy (50 episodes) | 0.63° | **0.50°** | 1.3 times, better in 50 of 50 |
-| tape (50 episodes) | 0.77° | **0.50°** | 1.5 times, better in 50 of 50 |
+| battery (49 episodes) | 0.71° | **0.36°** | 2.0 times, better in 49 of 49 |
+| candy (50 episodes) | 0.63° | **0.49°** | 1.3 times, better in 50 of 50 |
+| tape (50 episodes) | 0.77° | **0.49°** | 1.6 times, better in 50 of 50 |
 
-Every fitted value with its interval is in
-`data/robot/aloha/result.json`. Reproduce with `python scripts/aloha_demo.py fetch` then `python scripts/aloha_demo.py`
+**And it calibrates any ALOHA recording.** `physicslens robot calibrate lerobot/aloha_static_cups_open` ran the same
+identification on a fifth task by itself: 0.39° against 0.84° for the published model on its held-out
+episodes (2.2 times closer), written to `data/robot/aloha/lerobot__aloha_static_cups_open/`.
+
+Every fitted value with its interval is in `data/robot/aloha/result.json`. Reproduce with `python scripts/aloha_demo.py fetch` then `python scripts/aloha_demo.py`
 (free, local; about 25 minutes on 28 cores).
 
 ### A real quadrotor: thrust and drag from its flight logs (`scripts/drone_demo.py`)
