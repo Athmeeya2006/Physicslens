@@ -1,0 +1,98 @@
+{
+ "generated": "scripts/cases_agent.py",
+ "case": "rocket-spacex-crs-11",
+ "mock": false,
+ "points": 135,
+ "status": "no_fit",
+ "reason": "No candidate predicts the held-out motion: best forecast error 42% (Constant acceleration).",
+ "equation": null,
+ "parameters": null,
+ "agent_ranking": [
+  {
+   "model_id": "line_constant_accel",
+   "title": "Constant acceleration",
+   "heldout_nrmse": 0.4177879752715421,
+   "bic": 153.73546489547448,
+   "status": "rejected",
+   "why": "forecast error 42% on held-out data"
+  },
+  {
+   "model_id": "custom_6b398b0cdb",
+   "title": "Constant thrust with quadratic air drag",
+   "heldout_nrmse": 0.41778802544886984,
+   "bic": 156.03804998846866,
+   "status": "rejected",
+   "why": "forecast error 42% on held-out data"
+  },
+  {
+   "model_id": "line_constant_velocity",
+   "title": "Constant velocity (no net force)",
+   "heldout_nrmse": 1.1180200387673973,
+   "bic": 182.33189375977545,
+   "status": "rejected",
+   "why": "forecast error 112% on held-out data"
+  }
+ ],
+ "agent_proposed_free_form": [
+  "Constant thrust with quadratic air drag"
+ ],
+ "hand_chosen": [
+  {
+   "law": "ideal",
+   "title": "ideal (hand-chosen rocket law)",
+   "heldout_nrmse": 0.18493
+  },
+  {
+   "law": "drag",
+   "title": "drag (hand-chosen rocket law)",
+   "heldout_nrmse": 0.57592
+  },
+  {
+   "law": "bucket",
+   "title": "bucket (hand-chosen rocket law)",
+   "heldout_nrmse": 0.1659
+  },
+  {
+   "law": "bucket_pressure",
+   "title": "bucket_pressure (hand-chosen rocket law)",
+   "heldout_nrmse": 0.00662
+  },
+  {
+   "law": "drag_bucket",
+   "title": "drag_bucket (hand-chosen rocket law)",
+   "heldout_nrmse": 0.1659
+  },
+  {
+   "law": "drag_bucket_pressure",
+   "title": "drag_bucket_pressure (hand-chosen rocket law)",
+   "heldout_nrmse": 0.00662
+  }
+ ],
+ "trail": [
+  {
+   "step": "data",
+   "provider": null,
+   "model": "provenance",
+   "text": "SpaceX CRS-11: speed read from the launch webcast at 30 per second (shahar603/Telemetry-Data, the Unlicense); times from webcast clock (\u00b10.05 s)."
+  },
+  {
+   "step": "hypotheses",
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026",
+   "text": "Proposed 4 laws: Constant velocity (no net force), Constant acceleration, Constant thrust with quadratic air drag, Constant thrust with linear viscous drag."
+  },
+  {
+   "step": "verdict",
+   "provider": null,
+   "model": "held-out verification",
+   "text": "No candidate predicts the held-out motion: best forecast error 42% (Constant acceleration)."
+  }
+ ],
+ "llm_calls": [
+  {
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026"
+  }
+ ],
+ "seconds": 16.640724182128906
+}

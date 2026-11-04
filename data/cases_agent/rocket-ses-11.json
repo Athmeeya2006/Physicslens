@@ -1,0 +1,143 @@
+{
+ "generated": "scripts/cases_agent.py",
+ "case": "rocket-ses-11",
+ "mock": false,
+ "points": 148,
+ "status": "accepted",
+ "reason": "Constant jerk (uniformly increasing acceleration) forecasts held-out data within 14.6%; next best (Increasing thrust with quadratic air drag) is 2 BIC worse.",
+ "equation": {
+  "model_id": "custom_d5e8a2e4ce",
+  "title": "Constant jerk (uniformly increasing acceleration)",
+  "latex": "\\ddot s = a0 + j\\,t"
+ },
+ "parameters": [
+  {
+   "name": "a0",
+   "latex": "a0",
+   "unit": "m/s^2",
+   "value": 1.9481329254848354e-13,
+   "std": 0.6551827174754857,
+   "ci95": [
+    -1.2841581262517572,
+    1.2841581262521466
+   ]
+  },
+  {
+   "name": "j",
+   "latex": "j",
+   "unit": "m/s^3",
+   "value": 0.1851264770896153,
+   "std": 0.009343212279482512,
+   "ci95": [
+    0.1668137810218296,
+    0.203439173157401
+   ]
+  }
+ ],
+ "agent_ranking": [
+  {
+   "model_id": "custom_d5e8a2e4ce",
+   "title": "Constant jerk (uniformly increasing acceleration)",
+   "heldout_nrmse": 0.14636012206034613,
+   "bic": 139.43464672118756,
+   "status": "accepted",
+   "why": "forecasts held-out motion within 14.6% and has the best BIC; from 4 later starting points, median error 4.4%"
+  },
+  {
+   "model_id": "custom_50667e30f5",
+   "title": "Rocket mass-loss model",
+   "heldout_nrmse": 0.186161070353533,
+   "bic": 141.51767915289525,
+   "status": "rejected",
+   "why": "forecast error 19% on held-out data"
+  },
+  {
+   "model_id": "custom_60453e76a1",
+   "title": "Increasing thrust with quadratic air drag",
+   "heldout_nrmse": 0.1463600993709924,
+   "bic": 141.737231814032,
+   "status": "rejected",
+   "why": "extra parameters don't improve on Constant jerk (uniformly increasing acceleration)"
+  },
+  {
+   "model_id": "line_constant_accel",
+   "title": "Constant acceleration",
+   "heldout_nrmse": 0.4583538479839482,
+   "bic": 163.2307691824573,
+   "status": "rejected",
+   "why": "forecast error 46% on held-out data"
+  },
+  {
+   "model_id": "line_constant_velocity",
+   "title": "Constant velocity (no net force)",
+   "heldout_nrmse": 1.1947751206506725,
+   "bic": 191.23122468941332,
+   "status": "rejected",
+   "why": "forecast error 119% on held-out data"
+  }
+ ],
+ "agent_proposed_free_form": [
+  "Constant jerk (uniformly increasing acceleration)",
+  "Rocket mass-loss model",
+  "Increasing thrust with quadratic air drag"
+ ],
+ "hand_chosen": [
+  {
+   "law": "ideal",
+   "title": "ideal (hand-chosen rocket law)",
+   "heldout_nrmse": 0.0944
+  },
+  {
+   "law": "drag",
+   "title": "drag (hand-chosen rocket law)",
+   "heldout_nrmse": 0.28452
+  },
+  {
+   "law": "bucket",
+   "title": "bucket (hand-chosen rocket law)",
+   "heldout_nrmse": 0.13301
+  },
+  {
+   "law": "bucket_pressure",
+   "title": "bucket_pressure (hand-chosen rocket law)",
+   "heldout_nrmse": 0.13301
+  },
+  {
+   "law": "drag_bucket",
+   "title": "drag_bucket (hand-chosen rocket law)",
+   "heldout_nrmse": 0.13301
+  },
+  {
+   "law": "drag_bucket_pressure",
+   "title": "drag_bucket_pressure (hand-chosen rocket law)",
+   "heldout_nrmse": 0.13301
+  }
+ ],
+ "trail": [
+  {
+   "step": "data",
+   "provider": null,
+   "model": "provenance",
+   "text": "SES-11: speed read from the launch webcast at 30 per second (shahar603/Telemetry-Data, the Unlicense); times from webcast clock (\u00b10.05 s)."
+  },
+  {
+   "step": "hypotheses",
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026",
+   "text": "Proposed 5 laws: Constant velocity (no net force), Constant acceleration, Constant jerk (uniformly increasing acceleration), Increasing thrust with quadratic air drag, Rocket mass-loss model."
+  },
+  {
+   "step": "verdict",
+   "provider": null,
+   "model": "held-out verification",
+   "text": "Constant jerk (uniformly increasing acceleration) forecasts held-out data within 14.6%; next best (Increasing thrust with quadratic air drag) is 2 BIC worse."
+  }
+ ],
+ "llm_calls": [
+  {
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026"
+  }
+ ],
+ "seconds": 21.473024129867554
+}

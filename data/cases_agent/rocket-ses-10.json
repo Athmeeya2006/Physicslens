@@ -1,0 +1,116 @@
+{
+ "generated": "scripts/cases_agent.py",
+ "case": "rocket-ses-10",
+ "mock": false,
+ "points": 150,
+ "status": "no_fit",
+ "reason": "No candidate predicts the held-out motion: best forecast error 16% (Phenomenological linearly increasing acceleration).",
+ "equation": null,
+ "parameters": null,
+ "agent_ranking": [
+  {
+   "model_id": "custom_4d6eb366a7",
+   "title": "Phenomenological linearly increasing acceleration",
+   "heldout_nrmse": 0.15635347408353648,
+   "bic": 140.08001746757552,
+   "status": "rejected",
+   "why": "forecast error 16% on held-out data"
+  },
+  {
+   "model_id": "custom_7f065d549e",
+   "title": "Rocket with linearly decreasing mass",
+   "heldout_nrmse": 0.18768164260074174,
+   "bic": 140.9880361248828,
+   "status": "rejected",
+   "why": "forecast error 19% on held-out data"
+  },
+  {
+   "model_id": "custom_b70a642883",
+   "title": "Rocket with mass loss and quadratic drag",
+   "heldout_nrmse": 0.18768123474878246,
+   "bic": 143.2906212224149,
+   "status": "rejected",
+   "why": "forecast error 19% on held-out data"
+  },
+  {
+   "model_id": "line_constant_accel",
+   "title": "Constant acceleration",
+   "heldout_nrmse": 0.4723073733350952,
+   "bic": 163.44418334096522,
+   "status": "rejected",
+   "why": "forecast error 47% on held-out data"
+  },
+  {
+   "model_id": "line_constant_velocity",
+   "title": "Constant velocity (no net force)",
+   "heldout_nrmse": 1.2091969011489447,
+   "bic": 191.2152646121121,
+   "status": "rejected",
+   "why": "forecast error 121% on held-out data"
+  }
+ ],
+ "agent_proposed_free_form": [
+  "Phenomenological linearly increasing acceleration",
+  "Rocket with linearly decreasing mass",
+  "Rocket with mass loss and quadratic drag"
+ ],
+ "hand_chosen": [
+  {
+   "law": "ideal",
+   "title": "ideal (hand-chosen rocket law)",
+   "heldout_nrmse": 0.10171
+  },
+  {
+   "law": "drag",
+   "title": "drag (hand-chosen rocket law)",
+   "heldout_nrmse": 0.39385
+  },
+  {
+   "law": "bucket",
+   "title": "bucket (hand-chosen rocket law)",
+   "heldout_nrmse": 0.17683
+  },
+  {
+   "law": "bucket_pressure",
+   "title": "bucket_pressure (hand-chosen rocket law)",
+   "heldout_nrmse": 0.08864
+  },
+  {
+   "law": "drag_bucket",
+   "title": "drag_bucket (hand-chosen rocket law)",
+   "heldout_nrmse": 0.17683
+  },
+  {
+   "law": "drag_bucket_pressure",
+   "title": "drag_bucket_pressure (hand-chosen rocket law)",
+   "heldout_nrmse": 0.08864
+  }
+ ],
+ "trail": [
+  {
+   "step": "data",
+   "provider": null,
+   "model": "provenance",
+   "text": "SES-10: speed read from the launch webcast at 30 per second (shahar603/Telemetry-Data, the Unlicense); times from webcast clock (\u00b10.05 s)."
+  },
+  {
+   "step": "hypotheses",
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026",
+   "text": "Proposed 5 laws: Constant velocity (no net force), Constant acceleration, Rocket with linearly decreasing mass, Rocket with mass loss and quadratic drag, Phenomenological linearly increasing acceleration."
+  },
+  {
+   "step": "verdict",
+   "provider": null,
+   "model": "held-out verification",
+   "text": "No candidate predicts the held-out motion: best forecast error 16% (Phenomenological linearly increasing acceleration)."
+  }
+ ],
+ "llm_calls": [
+  {
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026"
+  }
+ ],
+ "seconds": 22.813424825668335
+}

@@ -223,7 +223,10 @@ def health() -> dict[str, Any]:
 
 def audit() -> dict[str, Any]:
     a = _json("frontend/public/audit_study.json")
-    real = next((x for x in (a or {}).get("sources", []) if x["key"] == "real"), None)
+    # All real footage the audit judged: the study's scenes and the wider control of Physics-IQ's other scenes.
+    real_sets = [x for x in (a or {}).get("sources", []) if x["key"] in ("real", "real_wide")]
+    real = ({"flagged": sum(x["flagged"] for x in real_sets), "judged": sum(x["judged"] for x in real_sets)}
+            if real_sets else None)
     gen = (a or {}).get("analysis", {}).get("sets", {}).get("generated", {}).get("flagged_among_judged")
     number = (f"real footage: {real['flagged']} of {real['judged']} judged clips flagged; AI-generated: {gen['k']} of {gen['n']}"
               if real and gen else None)

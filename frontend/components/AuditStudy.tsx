@@ -17,6 +17,8 @@ interface Analysis {
   generators: Record<string, Record<string, number> & { flagged_among_judged: Share }>;
   forecast_error_auc_generated_vs_real: number | null;
   false_accusation?: { accused: number; judged_real: number; upper_95: number | null };
+  // Every real clip judged: the study's scenes and the wider control from Physics-IQ's other scenes.
+  false_accusation_all_real?: { accused: number; judged_real: number; upper_95: number | null; clips: number };
 }
 interface Example { id: string; generator: string; caption: string; human_pc: number; headline: string; url: string }
 interface Summary { clips: number; examples: Example[]; analysis?: Analysis }
@@ -154,9 +156,11 @@ export function AuditStudy() {
   const gens = Object.keys(a.generators).filter((g) => a.generators[g] && g !== "ray2").sort();
   const lawRows = [{ label: "Real footage", s: real.verified_law_among_tracked, reference: true },
                    { label: "AI-generated", s: gen.verified_law_among_tracked }];
+  const wide = a.sets.real_wide;
   const flagRows = [{ label: "Real footage", s: real.flagged_among_judged, reference: true },
+                    ...(wide ? [{ label: "Real footage, 48 more scenes", s: wide.flagged_among_judged, reference: true }] : []),
                     ...gens.map((g) => ({ label: NAMES[g] ?? g, s: a.generators[g].flagged_among_judged }))];
-  const fa = a.false_accusation;
+  const fa = a.false_accusation_all_real ?? a.false_accusation;
   const alone = (set: SetStats) => {
     const m = set.model_alone;
     const n = Object.values(m).reduce((x, y) => x + y, 0);
@@ -166,9 +170,9 @@ export function AuditStudy() {
     <section className="panel stack" style={{ gap: 16 }}>
       <h2>Measured at scale: AI-generated video against real footage</h2>
       <p>
-        The same pipeline, with the same settings, on {real.clips + gen.clips} public clips: AI-generated video from
+        The same pipeline, with the same settings, on {real.clips + gen.clips + (wide?.clips ?? 0)} public clips: AI-generated video from
         public benchmarks (VideoPhy-2, MIT licence) and real footage of the same kinds of motion (Physics-IQ, CC BY 4.0)
-        as the control. Every verdict below is from the current rules, replayed on each clip&apos;s saved measurements.
+        as the control{wide ? `, plus ${wide.clips} more real clips from Physics-IQ's other scenes as a wider control` : ""}. Every verdict below is from the current rules, replayed on each clip&apos;s saved measurements.
       </p>
       <ul className="stat-strip count-strip">
         <li><span className="stat-number">{pct(real.verified_law_among_tracked.rate ?? 0)} vs {pct(gen.verified_law_among_tracked.rate ?? 0)}</span>

@@ -1,0 +1,107 @@
+{
+ "generated": "scripts/cases_agent.py",
+ "case": "rocket-koreasat-5a",
+ "mock": false,
+ "points": 145,
+ "status": "no_fit",
+ "reason": "No candidate predicts the held-out motion: best forecast error 43% (Constant acceleration).",
+ "equation": null,
+ "parameters": null,
+ "agent_ranking": [
+  {
+   "model_id": "line_constant_accel",
+   "title": "Constant acceleration",
+   "heldout_nrmse": 0.4263097152016325,
+   "bic": 161.29690329397144,
+   "status": "rejected",
+   "why": "forecast error 43% on held-out data"
+  },
+  {
+   "model_id": "custom_8c9688fad3",
+   "title": "Constant thrust with quadratic aero drag",
+   "heldout_nrmse": 0.42650341337198494,
+   "bic": 163.61457602896579,
+   "status": "rejected",
+   "why": "forecast error 43% on held-out data"
+  },
+  {
+   "model_id": "custom_2353fbd97e",
+   "title": "Constant thrust with linear and quadratic drag",
+   "heldout_nrmse": 0.4283212670255742,
+   "bic": 166.03154649920705,
+   "status": "rejected",
+   "why": "forecast error 43% on held-out data"
+  },
+  {
+   "model_id": "line_constant_velocity",
+   "title": "Constant velocity (no net force)",
+   "heldout_nrmse": 1.1741908183278549,
+   "bic": 190.52531793689928,
+   "status": "rejected",
+   "why": "forecast error 117% on held-out data"
+  }
+ ],
+ "agent_proposed_free_form": [
+  "Constant thrust with quadratic aero drag",
+  "Constant thrust with linear and quadratic drag"
+ ],
+ "hand_chosen": [
+  {
+   "law": "ideal",
+   "title": "ideal (hand-chosen rocket law)",
+   "heldout_nrmse": 0.06066
+  },
+  {
+   "law": "drag",
+   "title": "drag (hand-chosen rocket law)",
+   "heldout_nrmse": 0.17238
+  },
+  {
+   "law": "bucket",
+   "title": "bucket (hand-chosen rocket law)",
+   "heldout_nrmse": 0.11831
+  },
+  {
+   "law": "bucket_pressure",
+   "title": "bucket_pressure (hand-chosen rocket law)",
+   "heldout_nrmse": 0.19541
+  },
+  {
+   "law": "drag_bucket",
+   "title": "drag_bucket (hand-chosen rocket law)",
+   "heldout_nrmse": 0.11831
+  },
+  {
+   "law": "drag_bucket_pressure",
+   "title": "drag_bucket_pressure (hand-chosen rocket law)",
+   "heldout_nrmse": 0.19541
+  }
+ ],
+ "trail": [
+  {
+   "step": "data",
+   "provider": null,
+   "model": "provenance",
+   "text": "KoreaSat 5A: speed read from the launch webcast at 30 per second (shahar603/Telemetry-Data, the Unlicense); times from webcast clock (\u00b10.05 s)."
+  },
+  {
+   "step": "hypotheses",
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026",
+   "text": "Proposed 4 laws: Constant velocity (no net force), Constant acceleration, Constant thrust with quadratic aero drag, Constant thrust with linear and quadratic drag."
+  },
+  {
+   "step": "verdict",
+   "provider": null,
+   "model": "held-out verification",
+   "text": "No candidate predicts the held-out motion: best forecast error 43% (Constant acceleration)."
+  }
+ ],
+ "llm_calls": [
+  {
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026"
+  }
+ ],
+ "seconds": 30.208199977874756
+}

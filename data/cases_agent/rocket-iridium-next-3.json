@@ -1,0 +1,143 @@
+{
+ "generated": "scripts/cases_agent.py",
+ "case": "rocket-iridium-next-3",
+ "mock": false,
+ "points": 138,
+ "status": "accepted",
+ "reason": "Increasing acceleration - constant jerk forecasts held-out data within 11.3%.",
+ "equation": {
+  "model_id": "custom_dded191900",
+  "title": "Increasing acceleration - constant jerk",
+  "latex": "\\ddot s = a0 + j\\,t"
+ },
+ "parameters": [
+  {
+   "name": "a0",
+   "latex": "a0",
+   "unit": "m/s^2",
+   "value": 1.1129587112971435e-12,
+   "std": 0.25602245517194655,
+   "ci95": [
+    -0.5018040121359022,
+    0.5018040121381282
+   ]
+  },
+  {
+   "name": "j",
+   "latex": "j",
+   "unit": "m/s^3",
+   "value": 0.1821075312192597,
+   "std": 0.003863670690839284,
+   "ci95": [
+    0.1745347366652147,
+    0.1896803257733047
+   ]
+  }
+ ],
+ "agent_ranking": [
+  {
+   "model_id": "custom_dded191900",
+   "title": "Increasing acceleration - constant jerk",
+   "heldout_nrmse": 0.11290336739571052,
+   "bic": 125.59358881829904,
+   "status": "accepted",
+   "why": "forecasts held-out motion within 11.3% and has the best BIC; from 4 later starting points, median error 2.4%"
+  },
+  {
+   "model_id": "custom_c242a391c8",
+   "title": "Rocket with decreasing mass",
+   "heldout_nrmse": 0.15631514939445737,
+   "bic": 135.44759097055612,
+   "status": "rejected",
+   "why": "forecast error 16% on held-out data"
+  },
+  {
+   "model_id": "custom_c7fda0930b",
+   "title": "Rocket with mass loss and quadratic drag",
+   "heldout_nrmse": 0.15631519322845003,
+   "bic": 137.75017606005463,
+   "status": "rejected",
+   "why": "forecast error 16% on held-out data"
+  },
+  {
+   "model_id": "line_constant_accel",
+   "title": "Constant acceleration",
+   "heldout_nrmse": 0.3854777840045363,
+   "bic": 156.18622199921148,
+   "status": "rejected",
+   "why": "forecast error 39% on held-out data"
+  },
+  {
+   "model_id": "line_constant_velocity",
+   "title": "Constant velocity (no net force)",
+   "heldout_nrmse": 1.1393498404407736,
+   "bic": 186.6733807355888,
+   "status": "rejected",
+   "why": "forecast error 114% on held-out data"
+  }
+ ],
+ "agent_proposed_free_form": [
+  "Increasing acceleration - constant jerk",
+  "Rocket with decreasing mass",
+  "Rocket with mass loss and quadratic drag"
+ ],
+ "hand_chosen": [
+  {
+   "law": "ideal",
+   "title": "ideal (hand-chosen rocket law)",
+   "heldout_nrmse": 0.12857
+  },
+  {
+   "law": "drag",
+   "title": "drag (hand-chosen rocket law)",
+   "heldout_nrmse": 0.12857
+  },
+  {
+   "law": "bucket",
+   "title": "bucket (hand-chosen rocket law)",
+   "heldout_nrmse": 0.12798
+  },
+  {
+   "law": "bucket_pressure",
+   "title": "bucket_pressure (hand-chosen rocket law)",
+   "heldout_nrmse": 0.38208
+  },
+  {
+   "law": "drag_bucket",
+   "title": "drag_bucket (hand-chosen rocket law)",
+   "heldout_nrmse": 0.1678
+  },
+  {
+   "law": "drag_bucket_pressure",
+   "title": "drag_bucket_pressure (hand-chosen rocket law)",
+   "heldout_nrmse": 0.14562
+  }
+ ],
+ "trail": [
+  {
+   "step": "data",
+   "provider": null,
+   "model": "provenance",
+   "text": "Iridium NEXT 3: speed read from the launch webcast at 30 per second (shahar603/Telemetry-Data, the Unlicense); times from webcast clock (\u00b10.05 s)."
+  },
+  {
+   "step": "hypotheses",
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026",
+   "text": "Proposed 5 laws: Constant velocity (no net force), Constant acceleration, Increasing acceleration - constant jerk, Rocket with decreasing mass, Rocket with mass loss and quadratic drag."
+  },
+  {
+   "step": "verdict",
+   "provider": null,
+   "model": "held-out verification",
+   "text": "Increasing acceleration - constant jerk forecasts held-out data within 11.3%."
+  }
+ ],
+ "llm_calls": [
+  {
+   "provider": "baseten",
+   "model": "meta-models/muse-spark-open-1026"
+  }
+ ],
+ "seconds": 20.457130432128906
+}
