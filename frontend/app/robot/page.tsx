@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { OnThisPage } from "@/components/OnThisPage";
 import { ProofNav } from "@/components/ProofNav";
+import { RobotAloha } from "@/components/RobotAloha";
 import { RobotDrift } from "@/components/RobotDrift";
 import { RobotFleet } from "@/components/RobotFleet";
 import { RobotPolicy } from "@/components/RobotPolicy";
@@ -71,7 +72,7 @@ export default function RobotPage() {
         <>
           <OnThisPage items={[{ id: "rb-out", label: "Result" }, { id: "rb-joints", label: "Each joint's law" }, { id: "rb-trace", label: "Before and after" },
             { id: "rb-mm", label: "At the gripper" }, { id: "rb-comp", label: "Compensator" }, { id: "rb-fleet", label: "Seven arms" }, { id: "rb-policy", label: "Under an AI policy" },
-            { id: "rb-drift", label: "Six months later" }, { id: "rb-cmp", label: "Against the public model" }, { id: "rb-data", label: "Data" }]} />
+            { id: "rb-drift", label: "Six months later" }, { id: "rb-aloha", label: "A second robot" }, { id: "rb-cmp", label: "Against the public model" }, { id: "rb-data", label: "Data" }]} />
           <section className="panel stack" aria-labelledby="rb-out">
             <h2 id="rb-out">Result</h2>
             <p className="case-number">On {d.data.test_episodes.length} held-out episodes the corrected model tracks the real arm to{" "}
@@ -115,6 +116,7 @@ export default function RobotPage() {
           <RobotFleet />
           <RobotPolicy />
           <RobotDrift />
+          <RobotAloha />
           <section className="panel stack" aria-labelledby="rb-cmp">
             <h2 id="rb-cmp">Against the public model and fair baselines (held-out RMS, degrees)</h2>
             <div className="table-wrap">

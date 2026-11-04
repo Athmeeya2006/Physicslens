@@ -1,0 +1,1382 @@
+{
+ "generated": "scripts/aloha_demo.py",
+ "status": "proven",
+ "status_rule": "proven only if the identified model's held-out error is lower than both the Menagerie model's and the fair baseline's, with the 95% interval of each paired improvement above zero",
+ "data": {
+  "dataset": "lerobot/aloha_static_coffee",
+  "revision": "b144896feb1f37398a862927b22cd3abdf005a6b",
+  "licence": "MIT",
+  "fps": 50.0,
+  "episodes": 50,
+  "frames": 55000,
+  "fit_episodes": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "select_episodes": [
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34
+  ],
+  "train_episodes": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34
+  ],
+  "test_episodes": [
+   35,
+   36,
+   37,
+   38,
+   39,
+   40,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   48,
+   49
+  ],
+  "units": "degrees (logged in radians)"
+ },
+ "model": {
+  "source": "MuJoCo Menagerie aloha",
+  "commit": "fb36886b3023db08c198264e1e9956ab202c3e3b",
+  "licence": "BSD-3-Clause",
+  "already_identified": "its authors fitted actuator gains, torque limits, joint damping, armature and friction to 11 sinusoidal trajectories on a real ALOHA (Menagerie aloha README)",
+  "joint_map": "The log's radians are the model's: ALOHA's calibration zeroes each joint where the URDF, and the Menagerie"
+ },
+ "joints": {
+  "left/waist": {
+   "law": "lag1_deadband_sag",
+   "title": "first-order lag with delay, deadband, angle-dependent offset",
+   "params": {
+    "tau": {
+     "value": 0.03916,
+     "ci95": [
+      0.03379,
+      0.04445
+     ]
+    },
+    "d": {
+     "value": 0.048,
+     "ci95": [
+      0.04412,
+      0.05289
+     ]
+    },
+    "b": {
+     "value": 0.56207,
+     "ci95": [
+      -3.26141,
+      3.32222
+     ]
+    },
+    "db": {
+     "value": 0.15572,
+     "ci95": [
+      0.14109,
+      0.16503
+     ]
+    },
+    "sc": {
+     "value": -0.658,
+     "ci95": [
+      -3.41713,
+      3.14733
+     ]
+    },
+    "ss": {
+     "value": -0.29383,
+     "ci95": [
+      -0.68957,
+      -0.04307
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 616.85806,
+    "kv": 27.179,
+    "delay": 0.048,
+    "frictionloss": 1.67648,
+    "command_recentre_deg": 0.0004
+   },
+   "menagerie": {
+    "kp": 43.0,
+    "damping": 5.76,
+    "frictionloss": 0.0
+   }
+  },
+  "left/shoulder": {
+   "law": "lag1_deadband_sag",
+   "title": "first-order lag with delay, deadband, angle-dependent offset",
+   "params": {
+    "tau": {
+     "value": 0.03451,
+     "ci95": [
+      0.03228,
+      0.03725
+     ]
+    },
+    "d": {
+     "value": 0.044,
+     "ci95": [
+      0.04139,
+      0.04645
+     ]
+    },
+    "b": {
+     "value": -0.49846,
+     "ci95": [
+      -0.77086,
+      -0.30606
+     ]
+    },
+    "db": {
+     "value": 0.3187,
+     "ci95": [
+      0.30084,
+      0.3369
+     ]
+    },
+    "sc": {
+     "value": 1.77428,
+     "ci95": [
+      1.56708,
+      2.0542
+     ]
+    },
+    "ss": {
+     "value": 1.11366,
+     "ci95": [
+      1.06402,
+      1.18638
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 4064.65134,
+    "kv": 157.78265,
+    "delay": 0.044,
+    "frictionloss": 22.60908,
+    "command_recentre_deg": 0.0037
+   },
+   "menagerie": {
+    "kp": 265.0,
+    "damping": 20.0,
+    "frictionloss": 2.0
+   }
+  },
+  "left/elbow": {
+   "law": "lag1_deadband_sag",
+   "title": "first-order lag with delay, deadband, angle-dependent offset",
+   "params": {
+    "tau": {
+     "value": 0.0436,
+     "ci95": [
+      0.04065,
+      0.04564
+     ]
+    },
+    "d": {
+     "value": 0.03491,
+     "ci95": [
+      0.03301,
+      0.03762
+     ]
+    },
+    "b": {
+     "value": 2.79752,
+     "ci95": [
+      2.45861,
+      3.34988
+     ]
+    },
+    "db": {
+     "value": 0.34093,
+     "ci95": [
+      0.3305,
+      0.34975
+     ]
+    },
+    "sc": {
+     "value": -1.19546,
+     "ci95": [
+      -1.65455,
+      -0.91288
+     ]
+    },
+    "ss": {
+     "value": -1.38156,
+     "ci95": [
+      -1.71644,
+      -1.18265
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 2413.07558,
+    "kv": 118.37214,
+    "delay": 0.03491,
+    "frictionloss": 14.35854,
+    "command_recentre_deg": 0.1747
+   },
+   "menagerie": {
+    "kp": 227.0,
+    "damping": 18.49,
+    "frictionloss": 1.15
+   }
+  },
+  "left/forearm_roll": {
+   "law": "lag1_deadband_sag",
+   "title": "first-order lag with delay, deadband, angle-dependent offset",
+   "params": {
+    "tau": {
+     "value": 0.06074,
+     "ci95": [
+      0.05905,
+      0.0624
+     ]
+    },
+    "d": {
+     "value": 0.02128,
+     "ci95": [
+      0.01971,
+      0.02278
+     ]
+    },
+    "b": {
+     "value": -0.20044,
+     "ci95": [
+      -0.35602,
+      -0.12633
+     ]
+    },
+    "db": {
+     "value": 0.12811,
+     "ci95": [
+      0.11981,
+      0.13692
+     ]
+    },
+    "sc": {
+     "value": 0.18991,
+     "ci95": [
+      0.1162,
+      0.34314
+     ]
+    },
+    "ss": {
+     "value": 0.00652,
+     "ci95": [
+      -0.03352,
+      0.08265
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 309.08521,
+    "kv": 21.12224,
+    "delay": 0.02128,
+    "frictionloss": 0.69109,
+    "command_recentre_deg": -0.0429
+   },
+   "menagerie": {
+    "kp": 78.0,
+    "damping": 6.78,
+    "frictionloss": 0.0
+   }
+  },
+  "left/wrist_angle": {
+   "law": "so2_deadband_sag",
+   "title": "second-order servo with delay, deadband, angle-dependent offset",
+   "params": {
+    "wn": {
+     "value": 23.37665,
+     "ci95": [
+      22.34872,
+      23.71925
+     ]
+    },
+    "zeta": {
+     "value": 0.93172,
+     "ci95": [
+      0.88857,
+      0.9423
+     ]
+    },
+    "d": {
+     "value": 0.0,
+     "ci95": [
+      0.0,
+      0.00074
+     ]
+    },
+    "b": {
+     "value": 0.26602,
+     "ci95": [
+      0.16708,
+      0.61675
+     ]
+    },
+    "db": {
+     "value": 0.11557,
+     "ci95": [
+      0.10942,
+      0.12119
+     ]
+    },
+    "sc": {
+     "value": 0.03081,
+     "ci95": [
+      -0.32975,
+      0.12873
+     ]
+    },
+    "ss": {
+     "value": -0.25752,
+     "ci95": [
+      -0.34895,
+      -0.24081
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 11.49326,
+    "kv": 0.91617,
+    "delay": 0.0,
+    "frictionloss": 0.02318,
+    "command_recentre_deg": 3.3291
+   },
+   "menagerie": {
+    "kp": 37.0,
+    "damping": 6.28,
+    "frictionloss": 0.0
+   }
+  },
+  "left/wrist_rotate": {
+   "law": "lag1_deadband_sag",
+   "title": "first-order lag with delay, deadband, angle-dependent offset",
+   "params": {
+    "tau": {
+     "value": 0.03475,
+     "ci95": [
+      0.03369,
+      0.03652
+     ]
+    },
+    "d": {
+     "value": 0.02845,
+     "ci95": [
+      0.02695,
+      0.02955
+     ]
+    },
+    "b": {
+     "value": 0.07665,
+     "ci95": [
+      0.04947,
+      0.16694
+     ]
+    },
+    "db": {
+     "value": 0.06234,
+     "ci95": [
+      0.05944,
+      0.065
+     ]
+    },
+    "sc": {
+     "value": -0.05438,
+     "ci95": [
+      -0.14184,
+      -0.02588
+     ]
+    },
+    "ss": {
+     "value": 0.04621,
+     "ci95": [
+      0.02958,
+      0.10254
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 15.07758,
+    "kv": 0.58941,
+    "delay": 0.02845,
+    "frictionloss": 0.01641,
+    "command_recentre_deg": 0.0982
+   },
+   "menagerie": {
+    "kp": 10.4,
+    "damping": 1.2,
+    "frictionloss": 0.0
+   }
+  },
+  "right/waist": {
+   "law": "so2_deadband_sag",
+   "title": "second-order servo with delay, deadband, angle-dependent offset",
+   "params": {
+    "wn": {
+     "value": 52.73729,
+     "ci95": [
+      22.78584,
+      51.84536
+     ]
+    },
+    "zeta": {
+     "value": 1.12645,
+     "ci95": [
+      0.67282,
+      1.18888
+     ]
+    },
+    "d": {
+     "value": 0.04,
+     "ci95": [
+      0.01955,
+      0.04
+     ]
+    },
+    "b": {
+     "value": -1.39884,
+     "ci95": [
+      -1.60756,
+      -0.76978
+     ]
+    },
+    "db": {
+     "value": 0.43237,
+     "ci95": [
+      0.4223,
+      0.48893
+     ]
+    },
+    "sc": {
+     "value": 1.48491,
+     "ci95": [
+      0.87745,
+      1.71049
+     ]
+    },
+    "ss": {
+     "value": -0.41192,
+     "ci95": [
+      -0.45621,
+      -0.25274
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 362.59157,
+    "kv": 15.48965,
+    "delay": 0.04,
+    "frictionloss": 2.73623,
+    "command_recentre_deg": 0.0555
+   },
+   "menagerie": {
+    "kp": 43.0,
+    "damping": 5.76,
+    "frictionloss": 0.0
+   }
+  },
+  "right/shoulder": {
+   "law": "so2_deadband_sag",
+   "title": "second-order servo with delay, deadband, angle-dependent offset",
+   "params": {
+    "wn": {
+     "value": 20.4427,
+     "ci95": [
+      20.19234,
+      23.17679
+     ]
+    },
+    "zeta": {
+     "value": 0.74061,
+     "ci95": [
+      0.73008,
+      0.7647
+     ]
+    },
+    "d": {
+     "value": 0.0,
+     "ci95": [
+      0.0,
+      0.00723
+     ]
+    },
+    "b": {
+     "value": -0.41801,
+     "ci95": [
+      -0.61837,
+      -0.29514
+     ]
+    },
+    "db": {
+     "value": 0.41019,
+     "ci95": [
+      0.38344,
+      0.42089
+     ]
+    },
+    "sc": {
+     "value": 1.53341,
+     "ci95": [
+      1.41799,
+      1.71859
+     ]
+    },
+    "ss": {
+     "value": 1.02328,
+     "ci95": [
+      0.91776,
+      1.08193
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 258.31369,
+    "kv": 18.71655,
+    "delay": 0.0,
+    "frictionloss": 1.84932,
+    "command_recentre_deg": 0.787
+   },
+   "menagerie": {
+    "kp": 265.0,
+    "damping": 20.0,
+    "frictionloss": 2.0
+   }
+  },
+  "right/elbow": {
+   "law": "lag1_deadband_sag",
+   "title": "first-order lag with delay, deadband, angle-dependent offset",
+   "params": {
+    "tau": {
+     "value": 0.03989,
+     "ci95": [
+      0.0382,
+      0.04167
+     ]
+    },
+    "d": {
+     "value": 0.03673,
+     "ci95": [
+      0.03483,
+      0.03839
+     ]
+    },
+    "b": {
+     "value": 2.02406,
+     "ci95": [
+      1.66073,
+      2.43786
+     ]
+    },
+    "db": {
+     "value": 0.30905,
+     "ci95": [
+      0.30229,
+      0.31352
+     ]
+    },
+    "sc": {
+     "value": -0.44447,
+     "ci95": [
+      -0.68281,
+      -0.23477
+     ]
+    },
+    "ss": {
+     "value": -0.89712,
+     "ci95": [
+      -1.24791,
+      -0.5841
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 2855.96401,
+    "kv": 128.17358,
+    "delay": 0.03673,
+    "frictionloss": 15.40509,
+    "command_recentre_deg": 0.0889
+   },
+   "menagerie": {
+    "kp": 227.0,
+    "damping": 18.49,
+    "frictionloss": 1.15
+   }
+  },
+  "right/forearm_roll": {
+   "law": "lag1_deadband",
+   "title": "first-order lag with delay, deadband",
+   "params": {
+    "tau": {
+     "value": 0.0509,
+     "ci95": [
+      0.05028,
+      0.0518
+     ]
+    },
+    "d": {
+     "value": 0.02775,
+     "ci95": [
+      0.02708,
+      0.02831
+     ]
+    },
+    "b": {
+     "value": -0.01729,
+     "ci95": [
+      -0.01938,
+      -0.01289
+     ]
+    },
+    "db": {
+     "value": 0.09119,
+     "ci95": [
+      0.08237,
+      0.09604
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 445.19128,
+    "kv": 25.49316,
+    "delay": 0.02775,
+    "frictionloss": 0.70852,
+    "command_recentre_deg": -0.0067
+   },
+   "menagerie": {
+    "kp": 78.0,
+    "damping": 6.78,
+    "frictionloss": 0.0
+   }
+  },
+  "right/wrist_angle": {
+   "law": "lag1_deadband",
+   "title": "first-order lag with delay, deadband",
+   "params": {
+    "tau": {
+     "value": 0.05554,
+     "ci95": [
+      0.05502,
+      0.05587
+     ]
+    },
+    "d": {
+     "value": 0.02389,
+     "ci95": [
+      0.02329,
+      0.02447
+     ]
+    },
+    "b": {
+     "value": 0.39189,
+     "ci95": [
+      0.3884,
+      0.39449
+     ]
+    },
+    "db": {
+     "value": 0.20652,
+     "ci95": [
+      0.20111,
+      0.21402
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 54.47694,
+    "kv": 3.40361,
+    "delay": 0.02389,
+    "frictionloss": 0.19636,
+    "command_recentre_deg": 0.9042
+   },
+   "menagerie": {
+    "kp": 37.0,
+    "damping": 6.28,
+    "frictionloss": 0.0
+   }
+  },
+  "right/wrist_rotate": {
+   "law": "lag1_deadband_sag",
+   "title": "first-order lag with delay, deadband, angle-dependent offset",
+   "params": {
+    "tau": {
+     "value": 0.03311,
+     "ci95": [
+      0.03217,
+      0.0339
+     ]
+    },
+    "d": {
+     "value": 0.02547,
+     "ci95": [
+      0.02453,
+      0.02643
+     ]
+    },
+    "b": {
+     "value": 0.12814,
+     "ci95": [
+      0.06399,
+      0.19919
+     ]
+    },
+    "db": {
+     "value": 0.05224,
+     "ci95": [
+      0.05051,
+      0.05444
+     ]
+    },
+    "sc": {
+     "value": -0.10879,
+     "ci95": [
+      -0.17581,
+      -0.0501
+     ]
+    },
+    "ss": {
+     "value": 0.04048,
+     "ci95": [
+      0.00825,
+      0.06611
+     ]
+    }
+   },
+   "mjcf": {
+    "kp": 16.60618,
+    "kv": 0.61857,
+    "delay": 0.02547,
+    "frictionloss": 0.01514,
+    "command_recentre_deg": 0.1385
+   },
+   "menagerie": {
+    "kp": 10.4,
+    "damping": 1.2,
+    "frictionloss": 0.0
+   }
+  }
+ },
+ "fair_baseline": {
+  "what": "the Menagerie model with one command delay for all joints, chosen on the training episodes",
+  "delay_s": 0.0,
+  "training_rms_by_delay": {
+   "0.0": 0.6574,
+   "0.01": 0.7233,
+   "0.02": 0.802,
+   "0.03": 0.8899,
+   "0.04": 0.9845,
+   "0.05": 1.084,
+   "0.06": 1.1869,
+   "0.07": 1.2925,
+   "0.08": 1.3998,
+   "0.09": 1.5086,
+   "0.1": 1.6183,
+   "0.11": 1.7286,
+   "0.12": 1.8394,
+   "0.13": 1.9504,
+   "0.14": 2.0615,
+   "0.15": 2.1726,
+   "0.16": 2.2836,
+   "0.17": 2.3943,
+   "0.18": 2.5048,
+   "0.19": 2.6149,
+   "0.2": 2.7246
+  }
+ },
+ "stronger_baseline": {
+  "what": "the fair baseline plus a constant per-joint offset (mean measured minus commanded)",
+  "offsets_deg": [
+   -0.0876,
+   0.7317,
+   1.0135,
+   -0.1844,
+   0.2787,
+   0.1396,
+   0.0303,
+   0.5991,
+   1.1803,
+   0.0965,
+   0.4004,
+   -0.0477
+  ]
+ },
+ "heldout": {
+  "default": {
+   "joints": {
+    "left/waist": {
+     "rms_deg": 0.1993,
+     "ci95": [
+      0.1796,
+      0.2198
+     ]
+    },
+    "left/shoulder": {
+     "rms_deg": 0.2224,
+     "ci95": [
+      0.207,
+      0.2394
+     ]
+    },
+    "left/elbow": {
+     "rms_deg": 0.2023,
+     "ci95": [
+      0.1932,
+      0.2126
+     ]
+    },
+    "left/forearm_roll": {
+     "rms_deg": 0.1064,
+     "ci95": [
+      0.0976,
+      0.1154
+     ]
+    },
+    "left/wrist_angle": {
+     "rms_deg": 1.24,
+     "ci95": [
+      1.1497,
+      1.3197
+     ]
+    },
+    "left/wrist_rotate": {
+     "rms_deg": 0.7013,
+     "ci95": [
+      0.6662,
+      0.7387
+     ]
+    },
+    "right/waist": {
+     "rms_deg": 0.4637,
+     "ci95": [
+      0.4454,
+      0.484
+     ]
+    },
+    "right/shoulder": {
+     "rms_deg": 0.2542,
+     "ci95": [
+      0.2455,
+      0.2633
+     ]
+    },
+    "right/elbow": {
+     "rms_deg": 0.1745,
+     "ci95": [
+      0.1618,
+      0.1853
+     ]
+    },
+    "right/forearm_roll": {
+     "rms_deg": 0.1257,
+     "ci95": [
+      0.1193,
+      0.1313
+     ]
+    },
+    "right/wrist_angle": {
+     "rms_deg": 1.4091,
+     "ci95": [
+      1.3592,
+      1.461
+     ]
+    },
+    "right/wrist_rotate": {
+     "rms_deg": 0.4863,
+     "ci95": [
+      0.4443,
+      0.5303
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 0.629,
+    "ci95": [
+     0.604,
+     0.6537
+    ]
+   }
+  },
+  "baseline_delay": {
+   "joints": {
+    "left/waist": {
+     "rms_deg": 0.1993,
+     "ci95": [
+      0.1796,
+      0.2198
+     ]
+    },
+    "left/shoulder": {
+     "rms_deg": 0.2224,
+     "ci95": [
+      0.207,
+      0.2394
+     ]
+    },
+    "left/elbow": {
+     "rms_deg": 0.2023,
+     "ci95": [
+      0.1932,
+      0.2126
+     ]
+    },
+    "left/forearm_roll": {
+     "rms_deg": 0.1064,
+     "ci95": [
+      0.0976,
+      0.1154
+     ]
+    },
+    "left/wrist_angle": {
+     "rms_deg": 1.24,
+     "ci95": [
+      1.1497,
+      1.3197
+     ]
+    },
+    "left/wrist_rotate": {
+     "rms_deg": 0.7013,
+     "ci95": [
+      0.6662,
+      0.7387
+     ]
+    },
+    "right/waist": {
+     "rms_deg": 0.4637,
+     "ci95": [
+      0.4454,
+      0.484
+     ]
+    },
+    "right/shoulder": {
+     "rms_deg": 0.2542,
+     "ci95": [
+      0.2455,
+      0.2633
+     ]
+    },
+    "right/elbow": {
+     "rms_deg": 0.1745,
+     "ci95": [
+      0.1618,
+      0.1853
+     ]
+    },
+    "right/forearm_roll": {
+     "rms_deg": 0.1257,
+     "ci95": [
+      0.1193,
+      0.1313
+     ]
+    },
+    "right/wrist_angle": {
+     "rms_deg": 1.4091,
+     "ci95": [
+      1.3592,
+      1.461
+     ]
+    },
+    "right/wrist_rotate": {
+     "rms_deg": 0.4863,
+     "ci95": [
+      0.4443,
+      0.5303
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 0.629,
+    "ci95": [
+     0.604,
+     0.6537
+    ]
+   }
+  },
+  "baseline_delay_offset": {
+   "joints": {
+    "left/waist": {
+     "rms_deg": 0.1834,
+     "ci95": [
+      0.1629,
+      0.2052
+     ]
+    },
+    "left/shoulder": {
+     "rms_deg": 0.7386,
+     "ci95": [
+      0.7094,
+      0.7693
+     ]
+    },
+    "left/elbow": {
+     "rms_deg": 1.1242,
+     "ci95": [
+      1.1123,
+      1.1356
+     ]
+    },
+    "left/forearm_roll": {
+     "rms_deg": 0.2446,
+     "ci95": [
+      0.2358,
+      0.2534
+     ]
+    },
+    "left/wrist_angle": {
+     "rms_deg": 1.3979,
+     "ci95": [
+      1.307,
+      1.4795
+     ]
+    },
+    "left/wrist_rotate": {
+     "rms_deg": 0.7542,
+     "ci95": [
+      0.7208,
+      0.7887
+     ]
+    },
+    "right/waist": {
+     "rms_deg": 0.4672,
+     "ci95": [
+      0.4488,
+      0.4872
+     ]
+    },
+    "right/shoulder": {
+     "rms_deg": 0.6748,
+     "ci95": [
+      0.6624,
+      0.6864
+     ]
+    },
+    "right/elbow": {
+     "rms_deg": 1.191,
+     "ci95": [
+      1.1838,
+      1.1988
+     ]
+    },
+    "right/forearm_roll": {
+     "rms_deg": 0.1693,
+     "ci95": [
+      0.1631,
+      0.1754
+     ]
+    },
+    "right/wrist_angle": {
+     "rms_deg": 1.6952,
+     "ci95": [
+      1.6529,
+      1.7383
+     ]
+    },
+    "right/wrist_rotate": {
+     "rms_deg": 0.4751,
+     "ci95": [
+      0.4328,
+      0.5198
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 0.8984,
+    "ci95": [
+     0.8791,
+     0.918
+    ]
+   }
+  },
+  "identified": {
+   "joints": {
+    "left/waist": {
+     "rms_deg": 0.1288,
+     "ci95": [
+      0.1134,
+      0.1478
+     ]
+    },
+    "left/shoulder": {
+     "rms_deg": 0.2276,
+     "ci95": [
+      0.2125,
+      0.2422
+     ]
+    },
+    "left/elbow": {
+     "rms_deg": 0.2088,
+     "ci95": [
+      0.1977,
+      0.221
+     ]
+    },
+    "left/forearm_roll": {
+     "rms_deg": 0.1317,
+     "ci95": [
+      0.1219,
+      0.1403
+     ]
+    },
+    "left/wrist_angle": {
+     "rms_deg": 0.8818,
+     "ci95": [
+      0.7646,
+      1.0084
+     ]
+    },
+    "left/wrist_rotate": {
+     "rms_deg": 0.1865,
+     "ci95": [
+      0.1788,
+      0.1938
+     ]
+    },
+    "right/waist": {
+     "rms_deg": 0.3104,
+     "ci95": [
+      0.288,
+      0.3356
+     ]
+    },
+    "right/shoulder": {
+     "rms_deg": 0.3662,
+     "ci95": [
+      0.3572,
+      0.3748
+     ]
+    },
+    "right/elbow": {
+     "rms_deg": 0.2118,
+     "ci95": [
+      0.2017,
+      0.2207
+     ]
+    },
+    "right/forearm_roll": {
+     "rms_deg": 0.1144,
+     "ci95": [
+      0.1089,
+      0.1192
+     ]
+    },
+    "right/wrist_angle": {
+     "rms_deg": 0.1845,
+     "ci95": [
+      0.1784,
+      0.1907
+     ]
+    },
+    "right/wrist_rotate": {
+     "rms_deg": 0.1359,
+     "ci95": [
+      0.1305,
+      0.1412
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 0.3305,
+    "ci95": [
+     0.3045,
+     0.3588
+    ]
+   }
+  },
+  "identified_servo_laws": {
+   "joints": {
+    "left/waist": {
+     "rms_deg": 0.1055,
+     "ci95": [
+      0.0907,
+      0.1226
+     ]
+    },
+    "left/shoulder": {
+     "rms_deg": 0.1826,
+     "ci95": [
+      0.1706,
+      0.1947
+     ]
+    },
+    "left/elbow": {
+     "rms_deg": 0.1347,
+     "ci95": [
+      0.1276,
+      0.1417
+     ]
+    },
+    "left/forearm_roll": {
+     "rms_deg": 0.0853,
+     "ci95": [
+      0.0751,
+      0.0974
+     ]
+    },
+    "left/wrist_angle": {
+     "rms_deg": 0.0935,
+     "ci95": [
+      0.087,
+      0.1005
+     ]
+    },
+    "left/wrist_rotate": {
+     "rms_deg": 0.074,
+     "ci95": [
+      0.0713,
+      0.0768
+     ]
+    },
+    "right/waist": {
+     "rms_deg": 0.2676,
+     "ci95": [
+      0.2413,
+      0.2976
+     ]
+    },
+    "right/shoulder": {
+     "rms_deg": 0.2211,
+     "ci95": [
+      0.2105,
+      0.2323
+     ]
+    },
+    "right/elbow": {
+     "rms_deg": 0.1819,
+     "ci95": [
+      0.1696,
+      0.1931
+     ]
+    },
+    "right/forearm_roll": {
+     "rms_deg": 0.0804,
+     "ci95": [
+      0.0759,
+      0.0856
+     ]
+    },
+    "right/wrist_angle": {
+     "rms_deg": 0.134,
+     "ci95": [
+      0.1263,
+      0.142
+     ]
+    },
+    "right/wrist_rotate": {
+     "rms_deg": 0.0634,
+     "ci95": [
+      0.0601,
+      0.0668
+     ]
+    }
+   },
+   "arm_total": {
+    "rms_deg": 0.1504,
+    "ci95": [
+     0.1449,
+     0.1567
+    ]
+   }
+  }
+ },
+ "heldout_comparison": {
+  "default_minus_identified": {
+   "improvement_deg": 0.2985,
+   "ci95": [
+    0.2582,
+    0.3332
+   ],
+   "ratio": 1.903
+  },
+  "fair_baseline_minus_identified": {
+   "improvement_deg": 0.2985,
+   "ci95": [
+    0.2582,
+    0.3332
+   ],
+   "ratio": 1.903
+  },
+  "stronger_baseline_minus_identified": {
+   "improvement_deg": 0.5679,
+   "ci95": [
+    0.5312,
+    0.5986
+   ],
+   "ratio": 2.718
+  }
+ },
+ "limits": [
+  "one ALOHA unit and one task (coffee); the Menagerie model was identified on another unit",
+  "the grippers are not identified (command and state are in different units)",
+  "the measured angle is the arm's own encoder reading; the delay includes bus and logging latency"
+ ],
+ "runtime_s": 1421.4
+}
