@@ -526,7 +526,7 @@ setup. These errors come from replaying the servo laws themselves, where the ori
 recorded different tasks (a battery, a block in a cup, strawberries, lego, medicine boxes), so part of the gap can come from different
 speeds and loads rather than the hardware alone; no public dataset has several arms on one task.
 
-**Calibrate your own arm.** `physicslens robot calibrate <owner>/<dataset>` runs the same identification on any public
+**Calibrate your own arm.** No torque sensor, test rig or extra recording: the identification needs only the command and joint log a LeRobot arm already writes while it is teleoperated. `physicslens robot calibrate <owner>/<dataset>` runs the same identification on any public
 SO-100 LeRobot recording (v2.0 or v2.1 joint tables, pinned to the revision it fetched): it prints each joint's law, delay, lag
 and deadband with the held-out error, and writes `data/robot/fleet/<owner>__<dataset>/` with every fitted value and its
 interval (`result.json`) and the identified MuJoCo model (`so_arm100_identified.xml`, with its diff against the public
