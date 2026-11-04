@@ -68,7 +68,8 @@ export default function RobotPage() {
               {d.heldout.identified.arm_total.rms_deg.toFixed(2)}° RMS, against {d.heldout.default.arm_total.rms_deg.toFixed(2)}° for the public
               model: {d.heldout_comparison.default_minus_identified.ratio.toFixed(1)} times closer, and{" "}
               {d.heldout_comparison.fair_baseline_minus_identified.ratio.toFixed(1)} times closer than the public model with a fitted delay.</p>
-            <p className="small"><strong>Status: {d.status}.</strong> Rule: {d.status_rule}.</p>
+            <p className="small"><strong>Status: {d.status}{d.status === "proven" ? ", and it improves a public tool" : ""}.</strong>{" "}
+              Rule: {d.status_rule}.{d.status === "proven" ? " Because the model it beats is the current public one, the correction improves a public tool (the cases page lists it that way)." : ""}</p>
             <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
               <a className="button" href="/astro/so_arm100_identified.xml" download><Download size={16} aria-hidden="true" /> Corrected MJCF</a>
               <a className="button secondary" href="/astro/so_arm100_identified.diff" download><Download size={16} aria-hidden="true" /> Diff against the public model</a>

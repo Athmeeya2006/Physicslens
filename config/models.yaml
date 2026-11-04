@@ -1,5 +1,5 @@
 # Model allowlist. costguard/client.py refuses any model ID not listed here.
-# muse-image-1.0 and muse-wonder-1.0 are approved by the human for one narrow use each, judges and dev only:
+# muse-image-1.0 and muse-wonder-1.0 are approved for one narrow use each, judges and dev only:
 # Image draws setup guides (cap setup_guide_daily_cap_usd); Wonder writes controller code that simulation then
 # tests (cap model_daily_caps_usd). Neither is ever offered to public visitors.
 

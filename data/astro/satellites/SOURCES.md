@@ -14,7 +14,7 @@
 - Zonal harmonics J2, J3, J4 (EGM2008, unnormalised); the acceleration is tested against the gradient of the
   potential.
 - No real manoeuvre is reproduced: NASA's current ephemeris lists none, and historical catalogue orbits need a
-  Space-Track account (the human's to create).
+  Space-Track account (not yet created).
 
 ## Trajectory history and burn records (for `history.json`)
 

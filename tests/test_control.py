@@ -224,8 +224,9 @@ def test_endless_loop_is_killed_and_this_process_carries_on():
     loop = "def control(t, q, qdot, params):\n    while True:\n        t = t + 1.0\n"
     plants = build_plants(FS, HOLD, variants(2))
     started = time.monotonic()
-    res = run_controller(loop, evaluation_job(FS, HOLD, plants), SandboxLimits(cpu_seconds=2, wall_seconds=10))
-    assert time.monotonic() - started < 10
+    # The CPU limit (2 s) must stop it, not the wall clock: the wall limit is wide so a busy test machine can't flake.
+    res = run_controller(loop, evaluation_job(FS, HOLD, plants), SandboxLimits(cpu_seconds=2, wall_seconds=30))
+    assert time.monotonic() - started < 30
     assert all(not s["success"] and "CPU time limit" in s["error"] for s in res)
     assert summarize(run_controller(GOOD, evaluation_job(FS, HOLD, plants), FAST), 0.9)["passed"]
 

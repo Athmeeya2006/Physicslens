@@ -52,6 +52,7 @@ function ThemeToggle() {
     setDark(next);
     if (next) document.documentElement.dataset.theme = "dark";
     else delete document.documentElement.dataset.theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next ? "#12110f" : "#f6f3ec");
     try {
       localStorage.setItem("physicslens-theme", next ? "dark" : "light");
     } catch {

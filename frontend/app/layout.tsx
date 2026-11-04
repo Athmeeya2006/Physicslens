@@ -23,7 +23,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#f6f3ec" };
 
 // Applied before the first paint, so a visitor who chose dark never sees a light flash (light is the default).
-const THEME_SCRIPT = `try{if(localStorage.getItem("physicslens-theme")==="dark")document.documentElement.dataset.theme="dark"}catch(e){}`;
+// The phone's browser bar follows too (theme-color), so dark pages don't sit under a light bar.
+const THEME_SCRIPT = `try{if(localStorage.getItem("physicslens-theme")==="dark"){document.documentElement.dataset.theme="dark";document.addEventListener("DOMContentLoaded",function(){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content","#12110f")})}}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

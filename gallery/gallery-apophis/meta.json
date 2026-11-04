@@ -6,6 +6,6 @@
  "truth": {
   "name": "mu",
   "value": 0.00029591220828559115,
-  "source": "the Sun's GM, JPL DE440 (AU^3/day^2)"
+  "source": "the Sun's GM, JPL DE440 (AU³/day²)"
  }
 }

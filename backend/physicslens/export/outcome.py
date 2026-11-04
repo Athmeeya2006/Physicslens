@@ -91,12 +91,24 @@ def _why_not(r: dict[str, Any], winner_bic: float | None) -> str:
     return "did not fit"
 
 
+def tex_number(text: str) -> str:
+    """A formatted number for LaTeX: "4.36e-09" becomes 4.36\\times 10^{-9} (KaTeX would set the e as a variable and
+    the exponent's sign as a minus)."""
+    m = re.fullmatch(r"(-?[0-9.]+)e([+-])0*([0-9]+)", text)
+    if not m:
+        return text
+    mant, sign, exp = m.groups()
+    return f"{mant}\\times 10^{{{'-' if sign == '-' else ''}{exp}}}"
+
+
 def numeric_latex(latex: str, params: list[dict[str, Any]]) -> str:
     """The law with its fitted values written in (each parameter symbol replaced by its number)."""
     out = latex
     for p in sorted(params, key=lambda q: -len(q.get("latex") or q["name"])):
         sym = p.get("latex") or p["name"]
-        val = _fmt(p["value"], p.get("std"))
+        val = tex_number(_fmt(p["value"], p.get("std")))
+        if val.startswith("-"):
+            val = f"\\left({val}\\right)"  # after a minus or a plus sign in the law, a bare "-" would read as "- -"
         if sym.startswith("\\"):
             out = re.sub(re.escape(sym) + r"(?![A-Za-z])", lambda _m, v=val: "{" + v + "}", out)
         else:
@@ -146,6 +158,21 @@ def _agreed_confidence(result: dict[str, Any]) -> str | None:
             "bootstrap interval)")
 
 
+# Names that stay capitalised when a law's title is set inside a sentence ("Kepler + constant along-track push").
+PROPER_NAMES = {"kepler", "keplerian", "newton", "newtonian", "coulomb", "duffing", "hooke", "stokes", "plummer",
+                "einstein", "sun", "jupiter", "earth", "mujoco"}
+
+
+def inline_title(title: str) -> str:
+    """A law's title for the middle of a sentence: only its first word is lowercased, and not when it is a name or
+    an acronym, so "Spring with dry friction" reads "spring with dry friction" and "Keplerian point-mass gravity"
+    keeps its capital."""
+    first, sep, rest = title.partition(" ")
+    if first.lower().strip("(-+,") in PROPER_NAMES or (len(first) > 1 and first[1:2].isupper()):
+        return title
+    return first[:1].lower() + first[1:] + sep + rest
+
+
 def build_outcome(result: dict[str, Any], truth: dict[str, Any] | None = None, action: str | None = None,
                   artifacts: list[dict[str, str]] | None = None) -> dict[str, Any]:
     """truth: {"name", "value", "source"} for the parameter an independent measurement exists for."""
@@ -157,7 +184,7 @@ def build_outcome(result: dict[str, Any], truth: dict[str, Any] | None = None, a
     checked = None
     outcome_status = "not yet validated"
     if status == "accepted":
-        headline = (f"The {noun} follows one law, {eq.get('title', 'the fitted law').lower()}: fitted on the first three "
+        headline = (f"The {noun} follows one law, {inline_title(eq.get('title') or 'the fitted law')}: fitted on the first three "
                     f"quarters, it predicted the last quarter"
                     + (f" within {held:.1%}" if isinstance(held, (int, float)) and math.isfinite(held) else "") + ".")
         outcome_status = "partial"

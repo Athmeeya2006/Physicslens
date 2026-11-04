@@ -667,6 +667,10 @@ export default function SkyLab() {
           {fictional && <p><span className="whatif-chip">Fictional: {changed(changes) ? "changed from the real system" : "not the real solar system"}</span></p>}
           <fieldset className="stack" style={{ gap: 8 }}>
             <legend>Bodies</legend>
+            {others.length === 0 && (
+              <p className="small muted">Only the Sun pulls in this scenario, so there is nothing to switch off or scale. Pick
+                a scenario with planets, or add a hypothetical body below.</p>
+            )}
             {others.map((n) => {
               const off = changes.disabled.includes(n);
               const scale = changes.mass_scale[n] ?? sc?.mass_scale[n] ?? 1;

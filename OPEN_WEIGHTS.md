@@ -7,13 +7,13 @@ PhysicsLens reasons only on Meta's open-weight models. This page lists exactly w
 | 1 (primary) | **Muse Spark Open** (816B mixture of experts, 42B active) | Baseten, OpenAI-compatible Chat Completions | `"provider": "baseten", "model": "meta-models/muse-spark-open-1026"` |
 | 2 (fallback, and fully offline path) | **Muse Glimmer 30B** (Apache 2.0) | our own llama.cpp server | `"provider": "glimmer", "model": "muse-glimmer-30b"` |
 
-Every entry in the published gallery (Apophis, Jupiter, the pendulum, the paper bag and the spring cart) ran on Muse Spark Open. The first version of the spring cart entry ran on Muse Glimmer 30B (second section below); it is kept in the git history. Each result names the provider and model behind every step.
+Every entry in the published gallery (Apophis, Halley's comet, Jupiter, the pendulum and its longer recording, the paper bag, and the spring cart and its longer recording) ran on Muse Spark Open. The first version of the spring cart entry ran on Muse Glimmer 30B (second section below); it is kept in the git history. Each result names the provider and model behind every step.
 
 ## Muse Spark Open on Baseten
 
 - Model id `meta-models/muse-spark-open-1026` (the hackathon deployment; Baseten's catalog lists the same weights as `meta-models/muse-spark-open`, Hugging Face id `meta-models/Muse-Spark-Open-816B-A42B-NVFP4`).
 - Baseten is one of the hackathon's inference partners, so its usage logs for our key independently show the calls.
-- Requests: `reasoning_effort: "low"` on every call (the model defaults to `xhigh`), sampling left at its defaults. The model always reasons; Baseten returns that reasoning in `reasoning_content`, and every result keeps it next to the answer.
+- Requests: `reasoning_effort` is sent on every call (the model defaults to `xhigh`, the most expensive), set per step in `config/limits.yaml` (`reasoning.baseten_effort_by_task`): low for naming the scene, medium for locating the object, checking the track and the agent's choice, high for the hypotheses, studies and the referee. Sampling is left at its defaults. The model always reasons; Baseten returns that reasoning in `reasoning_content`, and every result keeps it next to the answer.
 - If Baseten fails, the next model tried is Muse Glimmer on our own server (only when one is configured), and the decision trail says so. There is no third option: in demo and production the app then shows a "busy" message instead of reasoning on a closed model (`agent/llm.py`, `provider_chain`).
 
 ## Muse Glimmer 30B, self-hosted

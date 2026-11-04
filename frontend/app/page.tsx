@@ -47,8 +47,10 @@ export default function Home() {
   const [inputsCsv, setInputsCsv] = useState<File | null>(null);
   const [tilt, setTilt] = useState<Level | null>(null);
   const [lens, setLens] = useState<LensCalibration | null>(null);
-  const [depth3d, setDepth3d] = useState(false);  // a ball's depth from its apparent size: needs the lens and its size  // the phone's tilt, saved by the filmer for this clip
+  const [depth3d, setDepth3d] = useState(false);  // a ball's depth from its apparent size: needs the lens and its size
   const [run, setRun] = useState<RunView | null>(null);
+  // Opening a shared result (?run=...): show a short loading line, not the home page, until its first answer arrives.
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -65,7 +67,10 @@ export default function Home() {
     getGallery().then(setGallery).catch(() => setGallery([]));
     // ?run=<id> opens a finished run, so results can be reloaded and shared by link.
     const shared = new URLSearchParams(window.location.search).get("run");
-    if (shared) poll(shared);
+    if (shared) {
+      setOpening(true);
+      poll(shared);
+    }
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
@@ -74,13 +79,17 @@ export default function Home() {
   const poll = (id: string, failures = 0) => {
     getRun(id)
       .then((r) => {
+        setOpening(false);
         setRun(r);
         if (r.status === "queued" || r.status === "running") timer.current = setTimeout(() => poll(id), POLL_MS);
       })
       .catch((e: Error) => {
         // A dropped request on a phone shouldn't end a two-minute analysis: retry with backoff first.
         if (failures < 5) timer.current = setTimeout(() => poll(id, failures + 1), POLL_MS * 2 ** (failures + 1));
-        else setError(e.message);
+        else {
+          setOpening(false);
+          setError(e.message);
+        }
       });
   };
 
@@ -153,7 +162,7 @@ export default function Home() {
           {" "}({new Date(NEXT_SESSION_UTC).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} your time).</p>
       )}
       <p className="muted small">
-        The analysis server runs in sessions on a free GPU and is between sessions right now.
+        The analysis server runs in scheduled sessions and is between sessions right now.
         Every recording on this page is a complete, real analysis; a <a href="/study">study</a> shows the agent
         planning several recordings toward one goal.
       </p>
@@ -164,7 +173,11 @@ export default function Home() {
     <>
       {health?.mock_mode && <div className="mock-banner">Mock mode: model responses are fake (automated tests only)</div>}
       <main id="main" className="stack" style={{ gap: 32 }}>
-        {done ? (
+        {opening && !done ? (
+          <section className="panel" aria-live="polite">
+            <p className="muted"><Loader2 size={14} className="spin" aria-hidden="true" /> Opening the result...</p>
+          </section>
+        ) : done ? (
           <div className="stack">
             <p><button className="back-link" onClick={closeRun}><ArrowLeft size={16} aria-hidden="true" />All results</button></p>
             <ResultView runId={run.run_id} result={run.result!} credit={gallery.find((g) => g.id === run.run_id)?.credit} />
@@ -181,7 +194,7 @@ export default function Home() {
         )}
 
         {/* With a result open, the result is the page: the upload form and the list come back with "All recordings". */}
-        <div className={`home-grid${others.length ? "" : " single"}`} hidden={!!done}>
+        <div className={`home-grid${others.length ? "" : " single"}`} hidden={!!done || opening}>
           <section className="panel stack" aria-labelledby="analyze-title">
             <h2 id="analyze-title">Analyze a recording</h2>
             {health && !offline && (

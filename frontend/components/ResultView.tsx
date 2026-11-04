@@ -161,7 +161,16 @@ export function ResultView({ runId, result, credit }: { runId: string; result: A
         <div className="chip-row">
           <StatusChip status={r.status} label={STATUS_TEXT[r.status]} />
         </div>
-        <h1 id="result-title">{r.outcome ? formatUnit(r.outcome.headline) : STATUS_TEXT[r.status]}</h1>
+        {answering(runId) ? (
+          <>
+            <h1 id="result-title">{answering(runId)!.headline}</h1>
+            {r.outcome && (
+              <p className="tagline">{r.status !== "accepted" && <strong>Still open: </strong>}{formatUnit(r.outcome.headline)}</p>
+            )}
+          </>
+        ) : (
+          <h1 id="result-title">{r.outcome ? formatUnit(r.outcome.headline) : STATUS_TEXT[r.status]}</h1>
+        )}
         {credit && <p className="credit">{credit}</p>}
         {FOLLOWUPS[runId] && (
           <p className="followup-note"><strong>The experiment the agent asked for was run.</strong> {FOLLOWUPS[runId].settled}{" "}

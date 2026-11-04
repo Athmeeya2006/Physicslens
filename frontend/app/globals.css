@@ -433,6 +433,9 @@ a.gallery-item { text-decoration: none; }
   table.cards td { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 8px; padding: 3px 0; border: 0; text-align: left; }
   table.cards td::before { content: attr(data-label); color: var(--ink-3); font-size: 0.8rem; font-weight: 600; }
   table.cards td { overflow-wrap: anywhere; white-space: normal; }
+  /* A cell with several elements (a list of parameters, a value and its interval) keeps them all in the value
+     column, under one another, instead of letting the second one wrap into the label column. */
+  table.cards td > * { grid-column: 2; }
 }
 
 /* A law the agent wrote, typeset under its name; long laws scroll inside their own box on a phone. */
@@ -562,7 +565,14 @@ select:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
   pointer-events: auto; cursor: pointer; }
 .sky3d-label.picked { color: #fff; font-weight: 600; outline: 1px solid #8fb4ff; outline-offset: 2px; border-radius: 3px; }
 .sky3d-canvas canvas { cursor: crosshair; }
-.law-scroll { overflow-x: auto; }
+.law-scroll { overflow-x: auto; scrollbar-width: thin;
+  /* Scroll shadows: a soft edge shows on the side where more of a long law is hidden, and vanishes when it fits.
+     The covers move with the content (local), the shadows stay at the box's edges (scroll). */
+  background:
+    linear-gradient(to right, var(--ground) 40%, transparent) left center / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--ground) 40%, transparent) right center / 28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.22), transparent) left center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.22), transparent) right center / 12px 100% no-repeat scroll; }
 
 /* Bubble level for filming: words carry the state, colour only repeats it. */
 .level { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border-radius: var(--radius);
@@ -1064,4 +1074,9 @@ tbody tr:last-child td { border-bottom: 1px solid var(--line-soft); }
   .stat-strip.count-strip { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 14px 0; }
   .stat-strip.count-strip li { border-top: 0; padding: 0 12px; border-left: 1px solid var(--line); }
   .stat-strip.count-strip li:first-child { border-left: 0; padding-left: 0; }
+}
+/* On a phone the strip wraps to two columns: each row starts flush, with no hairline before its first number. */
+@media (max-width: 600px) {
+  .stat-strip.count-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat-strip.count-strip li:nth-child(odd) { border-left: 0; padding-left: 0; }
 }
