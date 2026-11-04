@@ -1,0 +1,651 @@
+{
+ "generated": "scripts/robot_drift.py",
+ "recordings": [
+  {
+   "id": "pranavsaroha__so100_onelego3",
+   "dataset": "pranavsaroha/so100_onelego3",
+   "recorded": "2024-12-26",
+   "revision": "d252adcdb80aa7e3b65a60173b3f321eab0eca63",
+   "licence": "apache-2.0",
+   "episodes": 40,
+   "own_rms_deg": 1.3423
+  },
+  {
+   "id": "pranavsaroha__so100_squishy",
+   "dataset": "pranavsaroha/so100_squishy",
+   "recorded": "2024-12-30",
+   "revision": "e05d7a4eb0035384a7474f68e062fee674a65bb3",
+   "licence": "apache-2.0",
+   "episodes": 50,
+   "own_rms_deg": 1.1312
+  },
+  {
+   "id": "pranavsaroha__so100_medicine_0605",
+   "dataset": "pranavsaroha/so100_medicine_0605",
+   "recorded": "2025-06-05",
+   "revision": "3838f8c932d933804a79d17f52c456b59932840b",
+   "licence": "apache-2.0",
+   "episodes": 40,
+   "own_rms_deg": 0.7498
+  },
+  {
+   "id": "pranavsaroha__so100_med_cubes_0608",
+   "dataset": "pranavsaroha/so100_med_cubes_0608",
+   "recorded": "2025-06-08",
+   "revision": "cea071a747c24ba85cea332aa5bf123adfcfaa6e",
+   "licence": "apache-2.0",
+   "episodes": 40,
+   "own_rms_deg": 0.6459
+  }
+ ],
+ "pairs": [
+  {
+   "calibration_from": "pranavsaroha__so100_onelego3",
+   "used_on": "pranavsaroha__so100_squishy",
+   "days_apart": 4,
+   "own_rms_deg": 1.1312,
+   "borrowed_rms_deg": 2.5165,
+   "extra_deg": 1.3852,
+   "extra_ci95": [
+    1.3036,
+    1.4714
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_onelego3",
+   "used_on": "pranavsaroha__so100_medicine_0605",
+   "days_apart": 161,
+   "own_rms_deg": 0.7498,
+   "borrowed_rms_deg": 1.9602,
+   "extra_deg": 1.2104,
+   "extra_ci95": [
+    1.0634,
+    1.3659
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_onelego3",
+   "used_on": "pranavsaroha__so100_med_cubes_0608",
+   "days_apart": 164,
+   "own_rms_deg": 0.6459,
+   "borrowed_rms_deg": 2.4351,
+   "extra_deg": 1.7892,
+   "extra_ci95": [
+    1.518,
+    2.1455
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_squishy",
+   "used_on": "pranavsaroha__so100_onelego3",
+   "days_apart": 4,
+   "own_rms_deg": 1.3423,
+   "borrowed_rms_deg": 2.5192,
+   "extra_deg": 1.1769,
+   "extra_ci95": [
+    1.1167,
+    1.2393
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_squishy",
+   "used_on": "pranavsaroha__so100_medicine_0605",
+   "days_apart": 157,
+   "own_rms_deg": 0.7498,
+   "borrowed_rms_deg": 1.4463,
+   "extra_deg": 0.6965,
+   "extra_ci95": [
+    0.6372,
+    0.7578
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_squishy",
+   "used_on": "pranavsaroha__so100_med_cubes_0608",
+   "days_apart": 160,
+   "own_rms_deg": 0.6459,
+   "borrowed_rms_deg": 1.183,
+   "extra_deg": 0.5371,
+   "extra_ci95": [
+    0.4838,
+    0.6137
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_medicine_0605",
+   "used_on": "pranavsaroha__so100_onelego3",
+   "days_apart": 161,
+   "own_rms_deg": 1.3423,
+   "borrowed_rms_deg": 2.0944,
+   "extra_deg": 0.752,
+   "extra_ci95": [
+    0.6932,
+    0.8079
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_medicine_0605",
+   "used_on": "pranavsaroha__so100_squishy",
+   "days_apart": 157,
+   "own_rms_deg": 1.1312,
+   "borrowed_rms_deg": 2.1577,
+   "extra_deg": 1.0265,
+   "extra_ci95": [
+    0.9547,
+    1.0995
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_medicine_0605",
+   "used_on": "pranavsaroha__so100_med_cubes_0608",
+   "days_apart": 3,
+   "own_rms_deg": 0.6459,
+   "borrowed_rms_deg": 0.7409,
+   "extra_deg": 0.0949,
+   "extra_ci95": [
+    0.0814,
+    0.1069
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_med_cubes_0608",
+   "used_on": "pranavsaroha__so100_onelego3",
+   "days_apart": 164,
+   "own_rms_deg": 1.3423,
+   "borrowed_rms_deg": 2.0259,
+   "extra_deg": 0.6836,
+   "extra_ci95": [
+    0.6241,
+    0.7412
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_med_cubes_0608",
+   "used_on": "pranavsaroha__so100_squishy",
+   "days_apart": 160,
+   "own_rms_deg": 1.1312,
+   "borrowed_rms_deg": 2.0205,
+   "extra_deg": 0.8892,
+   "extra_ci95": [
+    0.8186,
+    0.9612
+   ]
+  },
+  {
+   "calibration_from": "pranavsaroha__so100_med_cubes_0608",
+   "used_on": "pranavsaroha__so100_medicine_0605",
+   "days_apart": 3,
+   "own_rms_deg": 0.7498,
+   "borrowed_rms_deg": 0.8373,
+   "extra_deg": 0.0875,
+   "extra_ci95": [
+    0.0751,
+    0.1002
+   ]
+  }
+ ],
+ "summary": {
+  "days_apart_extra_deg": 0.6861,
+  "days_apart_ci95": [
+   0.0912,
+   1.2811
+  ],
+  "days_apart_pairs": 4,
+  "six_months_extra_deg": 0.9481,
+  "six_months_ci95": [
+   0.7229,
+   1.2331
+  ],
+  "six_months_pairs": 8,
+  "other_owners_median_extra_deg": 0.4525,
+  "drift_seen": false
+ },
+ "params": {
+  "shoulder_pan": {
+   "pranavsaroha__so100_onelego3": {
+    "law": "so2_coulomb",
+    "d": {
+     "value": 0.01333,
+     "ci95": [
+      0.00848,
+      0.01975
+     ]
+    },
+    "wn": {
+     "value": 25.72636,
+     "ci95": [
+      23.52217,
+      32.02056
+     ]
+    }
+   },
+   "pranavsaroha__so100_squishy": {
+    "law": "so2_sag",
+    "d": {
+     "value": 0.01333,
+     "ci95": [
+      0.00861,
+      0.01831
+     ]
+    },
+    "wn": {
+     "value": 19.93814,
+     "ci95": [
+      18.2255,
+      21.74646
+     ]
+    }
+   },
+   "pranavsaroha__so100_medicine_0605": {
+    "law": "so2_deadband",
+    "d": {
+     "value": 0.01747,
+     "ci95": [
+      0.00873,
+      0.02705
+     ]
+    },
+    "wn": {
+     "value": 15.19442,
+     "ci95": [
+      13.70688,
+      17.39364
+     ]
+    },
+    "db": {
+     "value": 0.58752,
+     "ci95": [
+      0.56509,
+      0.61123
+     ]
+    }
+   },
+   "pranavsaroha__so100_med_cubes_0608": {
+    "law": "so2_deadband_sag",
+    "d": {
+     "value": 0.01617,
+     "ci95": [
+      0.01276,
+      0.01982
+     ]
+    },
+    "wn": {
+     "value": 17.99608,
+     "ci95": [
+      17.11404,
+      19.13107
+     ]
+    },
+    "db": {
+     "value": 0.52772,
+     "ci95": [
+      0.50498,
+      0.55449
+     ]
+    }
+   }
+  },
+  "shoulder_lift": {
+   "pranavsaroha__so100_onelego3": {
+    "law": "so2_deadband_sag",
+    "d": {
+     "value": 0.0,
+     "ci95": [
+      0.0,
+      0.0
+     ]
+    },
+    "wn": {
+     "value": 16.10027,
+     "ci95": [
+      15.59877,
+      16.69043
+     ]
+    },
+    "db": {
+     "value": 1.31397,
+     "ci95": [
+      1.21359,
+      1.36992
+     ]
+    }
+   },
+   "pranavsaroha__so100_squishy": {
+    "law": "so2_deadband_sag",
+    "d": {
+     "value": 0.01234,
+     "ci95": [
+      0.00787,
+      0.0176
+     ]
+    },
+    "wn": {
+     "value": 16.15931,
+     "ci95": [
+      15.42499,
+      17.1171
+     ]
+    },
+    "db": {
+     "value": 1.28132,
+     "ci95": [
+      1.18513,
+      1.37547
+     ]
+    }
+   },
+   "pranavsaroha__so100_medicine_0605": {
+    "law": "lag1_deadband_sag",
+    "d": {
+     "value": 0.05333,
+     "ci95": [
+      0.05083,
+      0.05537
+     ]
+    },
+    "tau": {
+     "value": 0.07677,
+     "ci95": [
+      0.07367,
+      0.07939
+     ]
+    },
+    "db": {
+     "value": 2.27269,
+     "ci95": [
+      2.19009,
+      2.35256
+     ]
+    }
+   },
+   "pranavsaroha__so100_med_cubes_0608": {
+    "law": "lag1_deadband_sag",
+    "d": {
+     "value": 0.03832,
+     "ci95": [
+      0.03379,
+      0.04458
+     ]
+    },
+    "tau": {
+     "value": 0.07216,
+     "ci95": [
+      0.06644,
+      0.07793
+     ]
+    },
+    "db": {
+     "value": 2.31527,
+     "ci95": [
+      2.24547,
+      2.3851
+     ]
+    }
+   }
+  },
+  "elbow_flex": {
+   "pranavsaroha__so100_onelego3": {
+    "law": "lag1",
+    "d": {
+     "value": 0.0,
+     "ci95": [
+      0.0,
+      0.0352
+     ]
+    },
+    "tau": {
+     "value": 0.1649,
+     "ci95": [
+      0.09669,
+      0.24359
+     ]
+    }
+   },
+   "pranavsaroha__so100_squishy": {
+    "law": "lag1_deadband_sag",
+    "d": {
+     "value": 0.07807,
+     "ci95": [
+      0.07393,
+      0.08248
+     ]
+    },
+    "tau": {
+     "value": 0.06228,
+     "ci95": [
+      0.05532,
+      0.07083
+     ]
+    },
+    "db": {
+     "value": 1.79641,
+     "ci95": [
+      1.59509,
+      1.98957
+     ]
+    }
+   },
+   "pranavsaroha__so100_medicine_0605": {
+    "law": "lag1_deadband_sag",
+    "d": {
+     "value": 0.05651,
+     "ci95": [
+      0.05365,
+      0.05925
+     ]
+    },
+    "tau": {
+     "value": 0.0702,
+     "ci95": [
+      0.06493,
+      0.07623
+     ]
+    },
+    "db": {
+     "value": 1.78429,
+     "ci95": [
+      1.70313,
+      1.85404
+     ]
+    }
+   },
+   "pranavsaroha__so100_med_cubes_0608": {
+    "law": "lag1_deadband_sag",
+    "d": {
+     "value": 0.05704,
+     "ci95": [
+      0.05398,
+      0.05967
+     ]
+    },
+    "tau": {
+     "value": 0.07089,
+     "ci95": [
+      0.06264,
+      0.07687
+     ]
+    },
+    "db": {
+     "value": 2.00539,
+     "ci95": [
+      1.91724,
+      2.12561
+     ]
+    }
+   }
+  },
+  "wrist_flex": {
+   "pranavsaroha__so100_onelego3": {
+    "law": "lag1_deadband_sag",
+    "d": {
+     "value": 0.03243,
+     "ci95": [
+      0.01511,
+      0.0522
+     ]
+    },
+    "tau": {
+     "value": 0.04952,
+     "ci95": [
+      0.02768,
+      0.06666
+     ]
+    },
+    "db": {
+     "value": 1.9903,
+     "ci95": [
+      1.67645,
+      2.29371
+     ]
+    }
+   },
+   "pranavsaroha__so100_squishy": {
+    "law": "lag1_rate",
+    "d": {
+     "value": 0.0255,
+     "ci95": [
+      0.02441,
+      0.02673
+     ]
+    },
+    "tau": {
+     "value": 0.09266,
+     "ci95": [
+      0.09128,
+      0.09385
+     ]
+    }
+   },
+   "pranavsaroha__so100_medicine_0605": {
+    "law": "lag1_deadband_sag",
+    "d": {
+     "value": 0.05396,
+     "ci95": [
+      0.05309,
+      0.05501
+     ]
+    },
+    "tau": {
+     "value": 0.08123,
+     "ci95": [
+      0.08009,
+      0.08235
+     ]
+    },
+    "db": {
+     "value": 0.25028,
+     "ci95": [
+      0.22684,
+      0.28003
+     ]
+    }
+   },
+   "pranavsaroha__so100_med_cubes_0608": {
+    "law": "lag1_deadband_sag",
+    "d": {
+     "value": 0.03206,
+     "ci95": [
+      0.03144,
+      0.03306
+     ]
+    },
+    "tau": {
+     "value": 0.08304,
+     "ci95": [
+      0.08176,
+      0.08392
+     ]
+    },
+    "db": {
+     "value": 0.26419,
+     "ci95": [
+      0.2372,
+      0.29388
+     ]
+    }
+   }
+  },
+  "wrist_roll": {
+   "pranavsaroha__so100_onelego3": {
+    "law": "so2_deadband_sag",
+    "d": {
+     "value": 0.00333,
+     "ci95": [
+      0.0,
+      0.00667
+     ]
+    },
+    "wn": {
+     "value": 26.92552,
+     "ci95": [
+      25.16415,
+      29.32147
+     ]
+    },
+    "db": {
+     "value": 0.18353,
+     "ci95": [
+      0.13627,
+      0.22378
+     ]
+    }
+   },
+   "pranavsaroha__so100_squishy": {
+    "law": "lag1",
+    "d": {
+     "value": 0.02879,
+     "ci95": [
+      0.02742,
+      0.03036
+     ]
+    },
+    "tau": {
+     "value": 0.08607,
+     "ci95": [
+      0.08431,
+      0.08775
+     ]
+    }
+   },
+   "pranavsaroha__so100_medicine_0605": {
+    "law": "lag1_rate",
+    "d": {
+     "value": 0.0604,
+     "ci95": [
+      0.0551,
+      0.06831
+     ]
+    },
+    "tau": {
+     "value": 0.08017,
+     "ci95": [
+      0.07272,
+      0.08532
+     ]
+    }
+   },
+   "pranavsaroha__so100_med_cubes_0608": {
+    "law": "lag1_rate",
+    "d": {
+     "value": 0.05885,
+     "ci95": [
+      0.05346,
+      0.06588
+     ]
+    },
+    "tau": {
+     "value": 0.08263,
+     "ci95": [
+      0.07581,
+      0.08719
+     ]
+    }
+   }
+  }
+ },
+ "method": "each recording's winning servo law per joint run on every other recording's held-out episodes, the constant command offset re-centred from the target's training episodes; extra = borrowed minus own per held-out episode, 95% bootstrap interval over episodes; the summary intervals are over pairs",
+ "limits": [
+  "one owner, four recordings, different tasks; that they are one physical unit is the owner's naming",
+  "the summary intervals are over few pairs (4 near, 8 far), so they are wide"
+ ]
+}

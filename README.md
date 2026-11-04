@@ -526,6 +526,18 @@ setup. These errors come from replaying the servo laws themselves, where the ori
 recorded different tasks (a battery, a block in a cup, strawberries, lego, medicine boxes), so part of the gap can come from different
 speeds and loads rather than the hardware alone; no public dataset has several arms on one task.
 
+**Same arm, days and months apart** (`scripts/robot_drift.py`, `data/robot/drift.json`). One owner's public
+recordings (pranavsaroha, Apache-2.0) give the same arm twice a few days apart in December 2024 and twice in June
+2025, each calibrated on its own and replayed on the others' held-out episodes. Three days apart in June, on similar
+tasks, the arm repeats: the other recording's calibration costs only 0.09° extra (both directions), so a change of
+about a tenth of a degree is visible on a stable setup, from logs the arm already writes. Across the six months a
+borrowed calibration costs 0.54° to 1.79° extra, worse in all 8 pairs: the arm's dynamics changed between the
+seasons. The logs cannot say why: December's own two recordings, on different tasks, already disagree by 1.2° to
+1.4°, and fit worse even with their own calibration (1.13° to 1.34° against 0.65° to 0.75° in June), so a change of
+setup explains it as well as wear does. By the rule written into the script before it ran (the six-month penalty
+must exceed the few-day one beyond both intervals), no drift is claimed. That the four recordings are one physical
+unit is the owner's naming.
+
 **Calibrate your own arm.** No torque sensor, test rig or extra recording: the identification needs only the command and joint log a LeRobot arm already writes while it is teleoperated. `physicslens robot calibrate <owner>/<dataset>` runs the same identification on any public
 SO-100 LeRobot recording (v2.0 or v2.1 joint tables, pinned to the revision it fetched): it prints each joint's law, delay, lag
 and deadband with the held-out error, and writes `data/robot/fleet/<owner>__<dataset>/` with every fitted value and its
