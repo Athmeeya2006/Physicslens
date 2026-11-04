@@ -975,6 +975,264 @@
     "wrist_roll": "so2_deadband"
    }
   },
+  "pranavsaroha__so100_medicine_0605": {
+   "dataset": "pranavsaroha/so100_medicine_0605",
+   "revision": "3838f8c932d933804a79d17f52c456b59932840b",
+   "licence": "apache-2.0",
+   "episodes": 40,
+   "train": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27
+   ],
+   "test": [
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39
+   ],
+   "params": {
+    "shoulder_pan": {
+     "wn": {
+      "value": 15.19442,
+      "ci95": [
+       13.70688,
+       17.39364
+      ]
+     },
+     "zeta": {
+      "value": 0.78737,
+      "ci95": [
+       0.7636,
+       0.82684
+      ]
+     },
+     "d": {
+      "value": 0.01747,
+      "ci95": [
+       0.00873,
+       0.02705
+      ]
+     },
+     "b": {
+      "value": 0.26606,
+      "ci95": [
+       0.23761,
+       0.29891
+      ]
+     },
+     "db": {
+      "value": 0.58752,
+      "ci95": [
+       0.56509,
+       0.61123
+      ]
+     }
+    },
+    "shoulder_lift": {
+     "tau": {
+      "value": 0.07677,
+      "ci95": [
+       0.07367,
+       0.07939
+      ]
+     },
+     "d": {
+      "value": 0.05333,
+      "ci95": [
+       0.05083,
+       0.05537
+      ]
+     },
+     "b": {
+      "value": 2.26867,
+      "ci95": [
+       1.46087,
+       2.89264
+      ]
+     },
+     "db": {
+      "value": 2.27269,
+      "ci95": [
+       2.19009,
+       2.35256
+      ]
+     },
+     "sc": {
+      "value": 1.60186,
+      "ci95": [
+       0.92954,
+       2.21006
+      ]
+     },
+     "ss": {
+      "value": -5.97066,
+      "ci95": [
+       -6.38537,
+       -5.42482
+      ]
+     }
+    },
+    "elbow_flex": {
+     "tau": {
+      "value": 0.0702,
+      "ci95": [
+       0.06493,
+       0.07623
+      ]
+     },
+     "d": {
+      "value": 0.05651,
+      "ci95": [
+       0.05365,
+       0.05925
+      ]
+     },
+     "b": {
+      "value": 3.96329,
+      "ci95": [
+       3.73709,
+       4.22406
+      ]
+     },
+     "db": {
+      "value": 1.78429,
+      "ci95": [
+       1.70313,
+       1.85404
+      ]
+     },
+     "sc": {
+      "value": 0.55064,
+      "ci95": [
+       0.37062,
+       0.78883
+      ]
+     },
+     "ss": {
+      "value": -0.87548,
+      "ci95": [
+       -1.06481,
+       -0.67843
+      ]
+     }
+    },
+    "wrist_flex": {
+     "tau": {
+      "value": 0.08123,
+      "ci95": [
+       0.08009,
+       0.08235
+      ]
+     },
+     "d": {
+      "value": 0.05396,
+      "ci95": [
+       0.05309,
+       0.05501
+      ]
+     },
+     "b": {
+      "value": -0.11754,
+      "ci95": [
+       -0.51474,
+       0.12405
+      ]
+     },
+     "db": {
+      "value": 0.25028,
+      "ci95": [
+       0.22684,
+       0.28003
+      ]
+     },
+     "sc": {
+      "value": 0.80239,
+      "ci95": [
+       0.59353,
+       1.12534
+      ]
+     },
+     "ss": {
+      "value": -0.04842,
+      "ci95": [
+       -0.22173,
+       0.23785
+      ]
+     }
+    },
+    "wrist_roll": {
+     "tau": {
+      "value": 0.08017,
+      "ci95": [
+       0.07272,
+       0.08532
+      ]
+     },
+     "d": {
+      "value": 0.0604,
+      "ci95": [
+       0.0551,
+       0.06831
+      ]
+     },
+     "b": {
+      "value": 0.1282,
+      "ci95": [
+       0.1079,
+       0.13983
+      ]
+     },
+     "wmax": {
+      "value": 159.1198,
+      "ci95": [
+       143.92481,
+       178.57256
+      ]
+     }
+    }
+   },
+   "laws": {
+    "shoulder_pan": "so2_deadband",
+    "shoulder_lift": "lag1_deadband_sag",
+    "elbow_flex": "lag1_deadband_sag",
+    "wrist_flex": "lag1_deadband_sag",
+    "wrist_roll": "lag1_rate"
+   }
+  },
   "sergiov2000__so100_lego_and_ball_40_lego": {
    "dataset": "sergiov2000/so100_lego_and_ball_40_lego",
    "revision": "7e2bd539571322193a97210278e5d28b8cb31a31",
@@ -1563,6 +1821,18 @@
      0.4504
     ]
    },
+   "pranavsaroha__so100_medicine_0605": {
+    "rms_deg": 1.6007,
+    "ci95": [
+     1.4445,
+     1.7799
+    ],
+    "minus_own_deg": 1.3286,
+    "minus_own_ci95": [
+     1.1809,
+     1.4962
+    ]
+   },
    "sergiov2000__so100_lego_and_ball_40_lego": {
     "rms_deg": 0.8832,
     "ci95": [
@@ -1635,6 +1905,18 @@
     "minus_own_ci95": [
      0.12,
      0.1451
+    ]
+   },
+   "pranavsaroha__so100_medicine_0605": {
+    "rms_deg": 1.3153,
+    "ci95": [
+     1.2844,
+     1.346
+    ],
+    "minus_own_deg": 1.0013,
+    "minus_own_ci95": [
+     0.9705,
+     1.0315
     ]
    },
    "sergiov2000__so100_lego_and_ball_40_lego": {
@@ -1711,6 +1993,18 @@
      0.0713
     ]
    },
+   "pranavsaroha__so100_medicine_0605": {
+    "rms_deg": 1.2494,
+    "ci95": [
+     1.181,
+     1.3178
+    ],
+    "minus_own_deg": 0.6693,
+    "minus_own_ci95": [
+     0.6091,
+     0.7322
+    ]
+   },
    "sergiov2000__so100_lego_and_ball_40_lego": {
     "rms_deg": 0.7813,
     "ci95": [
@@ -1785,6 +2079,18 @@
      0.0
     ]
    },
+   "pranavsaroha__so100_medicine_0605": {
+    "rms_deg": 1.1745,
+    "ci95": [
+     1.1471,
+     1.2005
+    ],
+    "minus_own_deg": 0.8598,
+    "minus_own_ci95": [
+     0.8134,
+     0.9039
+    ]
+   },
    "sergiov2000__so100_lego_and_ball_40_lego": {
     "rms_deg": 0.5563,
     "ci95": [
@@ -1807,6 +2113,92 @@
     "minus_own_ci95": [
      0.3566,
      0.4189
+    ]
+   }
+  },
+  "pranavsaroha__so100_medicine_0605": {
+   "lerobot__svla_so100_pickplace": {
+    "rms_deg": 1.4554,
+    "ci95": [
+     1.3821,
+     1.5398
+    ],
+    "minus_own_deg": 0.7056,
+    "minus_own_ci95": [
+     0.6517,
+     0.7599
+    ]
+   },
+   "00ri__so100_battery": {
+    "rms_deg": 1.4815,
+    "ci95": [
+     1.4163,
+     1.5562
+    ],
+    "minus_own_deg": 0.7317,
+    "minus_own_ci95": [
+     0.678,
+     0.7824
+    ]
+   },
+   "jccj__so100_block_in_cup": {
+    "rms_deg": 1.3648,
+    "ci95": [
+     1.2904,
+     1.4533
+    ],
+    "minus_own_deg": 0.615,
+    "minus_own_ci95": [
+     0.5537,
+     0.6747
+    ]
+   },
+   "julyfun__so100_pick_and_place_v4_50": {
+    "rms_deg": 1.3722,
+    "ci95": [
+     1.3053,
+     1.4502
+    ],
+    "minus_own_deg": 0.6224,
+    "minus_own_ci95": [
+     0.5659,
+     0.674
+    ]
+   },
+   "pranavsaroha__so100_medicine_0605": {
+    "rms_deg": 0.7498,
+    "ci95": [
+     0.6823,
+     0.8304
+    ],
+    "minus_own_deg": 0.0,
+    "minus_own_ci95": [
+     0.0,
+     0.0
+    ]
+   },
+   "sergiov2000__so100_lego_and_ball_40_lego": {
+    "rms_deg": 1.5428,
+    "ci95": [
+     1.4548,
+     1.6466
+    ],
+    "minus_own_deg": 0.793,
+    "minus_own_ci95": [
+     0.7263,
+     0.8636
+    ]
+   },
+   "youliangtan__so100_strawberry_grape": {
+    "rms_deg": 1.7692,
+    "ci95": [
+     1.696,
+     1.8572
+    ],
+    "minus_own_deg": 1.0195,
+    "minus_own_ci95": [
+     0.9567,
+     1.0802
     ]
    }
   },
@@ -1857,6 +2249,18 @@
     "minus_own_ci95": [
      0.289,
      0.3399
+    ]
+   },
+   "pranavsaroha__so100_medicine_0605": {
+    "rms_deg": 1.0567,
+    "ci95": [
+     1.0298,
+     1.08
+    ],
+    "minus_own_deg": 0.7266,
+    "minus_own_ci95": [
+     0.7004,
+     0.7506
     ]
    },
    "sergiov2000__so100_lego_and_ball_40_lego": {
@@ -1933,6 +2337,18 @@
      0.5437
     ]
    },
+   "pranavsaroha__so100_medicine_0605": {
+    "rms_deg": 2.8643,
+    "ci95": [
+     2.7288,
+     2.9956
+    ],
+    "minus_own_deg": 2.0844,
+    "minus_own_ci95": [
+     1.9528,
+     2.2259
+    ]
+   },
    "sergiov2000__so100_lego_and_ball_40_lego": {
     "rms_deg": 1.1732,
     "ci95": [
@@ -1960,13 +2376,13 @@
   }
  },
  "summary": {
-  "arms": 6,
-  "pairs": 30,
-  "own_mean_deg": 0.4318,
-  "borrowed_mean_deg": 0.7831,
-  "ratio": 1.813,
-  "pairs_significantly_worse": 30,
-  "median_extra_deg": 0.3567
+  "arms": 7,
+  "pairs": 42,
+  "own_mean_deg": 0.4772,
+  "borrowed_mean_deg": 0.9938,
+  "ratio": 2.082,
+  "pairs_significantly_worse": 42,
+  "median_extra_deg": 0.4525
  },
  "method": "each arm's winning servo law per joint (tau, delay, deadband, damping as fitted) run on every arm's held-out episodes, the constant command offset re-centred from the target arm's training episodes; per-episode RMS over the five arm joints, 95% bootstrap intervals over episodes"
 }

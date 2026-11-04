@@ -19,7 +19,8 @@ FLEET = ROOT / "var" / "robot" / "fleet"
 
 # Five owners, each a different physical arm: single-arm SO-100, 40 to 50 episodes, Apache-2.0 (checked on the hub).
 DATASETS = ["00ri/so100_battery", "jccj/so100_block_in_cup", "julyfun/so100_pick_and_place_v4_50",
-            "youliangtan/so100_strawberry_grape", "sergiov2000/so100_lego_and_ball_40_lego"]
+            "youliangtan/so100_strawberry_grape", "sergiov2000/so100_lego_and_ball_40_lego",
+            "pranavsaroha/so100_medicine_0605"]
 
 
 def slug(repo: str) -> str:
