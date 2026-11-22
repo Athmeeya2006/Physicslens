@@ -1,29 +1,29 @@
 # Pinned backend dependencies (Python 3.11+).
-openai==3.39.0
-pydantic==2.14.1
+openai==3.55.1
+pydantic==2.14.3
 PyYAML==6.0.3
 python-dotenv==1.2.4
-fastapi==0.162.0
+fastapi==0.165.0
 uvicorn[standard]==0.54.0
-websockets==17.3
+websockets==17.4
 httpx==0.28.1
 mcp==2.3.0
-python-multipart==0.0.32
-meta-sam-parser==0.1.0
-numpy==2.5.4
+python-multipart==0.0.34
+meta-sam-parser==0.2.0
+numpy==2.5.5
 scipy==1.18.1
 pysindy==2.1.0
 matplotlib==3.11.2
-opencv-python-headless==5.0.0.93
+opencv-python-headless==5.1.0.95
 pillow==13.0.0
-mujoco==3.17.0
+mujoco==4.0.1
 
 # Dev / test
-pytest==9.1.1
+pytest==9.2.0
 pytest-xdist==3.8.0
-ruff==0.17.2
+ruff==0.17.5
 # Astronomy: FITS, WCS, times, coordinates, photometry, catalogue queries (astro/)
-astropy==8.0.2
+astropy==8.0.3
 photutils==3.1.1
 astroquery==0.4.11
 # Transit timing: Kepler/TESS light curves from MAST and transit models (astro/transits.py); batman needs distutils
@@ -31,7 +31,7 @@ lightkurve==2.6.0
 batman-package==2.5.3
 setuptools==84.2.1
 # Hidden companions: N-body transit times (astro/ttv.py)
-rebound==5.2.2
+rebound==5.2.3
 # Fireballs: NRLMSIS 2.1 air density for the flight and dark flight (astro/fireball.py)
 pymsis==0.13.0
 # The Sun: solar coordinates and maps (astro/sun.py); its map extras
@@ -39,4 +39,4 @@ sunpy==8.0.1
 reproject==0.21.0
 mpl-animators==1.2.4
 # Satellites: SGP4 propagation of catalogue orbits (astro/satellites.py)
-sgp4==2.24
+sgp4==2.27
